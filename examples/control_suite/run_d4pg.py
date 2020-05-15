@@ -1,0 +1,121 @@
+# python3
+# Copyright 2018 DeepMind Technologies Limited. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Example running D4PG on the control suite."""
+
+from typing import Mapping, Sequence
+
+from absl import app
+from absl import flags
+
+import acme
+from acme import networks
+from acme import specs
+from acme import types
+from acme import wrappers
+from acme.agents import actors_tf2 as actors
+from acme.agents import d4pg
+from acme.utils import tf2_utils
+
+from dm_control import suite
+import dm_env
+
+import numpy as np
+import sonnet as snt
+
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('num_episodes', 100,
+                     'Number of training episodes to run for.')
+
+flags.DEFINE_integer('num_episodes_per_eval', 10,
+                     'Number of training episodes to run between evaluation '
+                     'episodes.')
+
+
+def make_environment(domain_name: str = 'cartpole',
+                     task_name: str = 'balance') -> dm_env.Environment:
+  environment = suite.load(domain_name, task_name)
+  environment = wrappers.SinglePrecisionWrapper(environment)
+  return environment
+
+
+def make_networks(
+    action_spec: specs.BoundedArray,
+    policy_layer_sizes: Sequence[int] = (256, 256, 256),
+    critic_layer_sizes: Sequence[int] = (512, 512, 256),
+    vmin: float = -150.,
+    vmax: float = 150.,
+    num_atoms: int = 51,
+) -> Mapping[str, types.TensorTransformation]:
+  """Creates networks used by the agent."""
+
+  num_dimensions = np.prod(action_spec.shape, dtype=int)
+  policy_layer_sizes = list(policy_layer_sizes) + [int(num_dimensions)]
+
+  policy_network = snt.Sequential([
+      networks.LayerNormMLP(policy_layer_sizes),
+      networks.TanhToSpec(action_spec)
+  ])
+
+  # The multiplexer concatenates the (maybe transformed) observations/actions.
+  critic_network = snt.Sequential([
+      networks.CriticMultiplexer(
+          critic_network=networks.LayerNormMLP(
+              critic_layer_sizes, activate_final=True)),
+      networks.DiscreteValuedHead(vmin, vmax, num_atoms)
+  ])
+
+  return {
+      'policy': policy_network,
+      'critic': critic_network,
+      'observation': tf2_utils.batch_concat,
+  }
+
+
+def main(_):
+  # Create an environment, grab the spec, and use it to create networks.
+  environment = make_environment()
+  environment_spec = specs.make_environment_spec(environment)
+  agent_networks = make_networks(environment_spec.actions)
+
+  # Construct the agent.
+  agent = d4pg.D4PG(
+      environment_spec=environment_spec,
+      policy_network=agent_networks['policy'],
+      critic_network=agent_networks['critic'],
+      observation_network=agent_networks['observation'],
+  )
+
+  # Create the environment loop used for training.
+  train_loop = acme.EnvironmentLoop(environment, agent, label='train_loop')
+
+  # Create the evaluation policy.
+  eval_policy = snt.Sequential([
+      agent_networks['observation'],
+      agent_networks['policy'],
+  ])
+
+  # Create the evaluation actor and loop.
+  eval_actor = actors.FeedForwardActor(policy_network=eval_policy)
+  eval_env = make_environment()
+  eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop')
+
+  for _ in range(FLAGS.num_episodes // FLAGS.num_episodes_per_eval):
+    train_loop.run(num_episodes=FLAGS.num_episodes_per_eval)
+    eval_loop.run(num_episodes=1)
+
+
+if __name__ == '__main__':
+  app.run(main)
