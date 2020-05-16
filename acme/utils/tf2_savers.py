@@ -20,7 +20,6 @@ import datetime
 import os
 import pickle
 import signal
-import threading
 import time
 from typing import Mapping, Union
 
@@ -174,9 +173,9 @@ class CheckpointingRunner(core.Worker):
 
   def __init__(
       self,
-      wrapped: Union[Checkpointable, core.Saveable, core.Worker, TFSaveable],
+      wrapped: Union[Checkpointable, core.Saveable, core.Learner, TFSaveable],
       *,
-      time_delta_minutes: int = 5,
+      time_delta_minutes: int = 30,
       **kwargs,
   ):
 
@@ -191,7 +190,7 @@ class CheckpointingRunner(core.Worker):
     self._time_delta_minutes = time_delta_minutes
     self._checkpointer = Checkpointer(
         objects_to_save={'wrapped': objects_to_save},
-        time_delta_minutes=0,
+        time_delta_minutes=time_delta_minutes,
         **kwargs)
 
   def run(self):
@@ -211,11 +210,11 @@ class CheckpointingRunner(core.Worker):
           'This probably means we are not running in the main thread. '
           'Proceeding without checkpointing-on-preemption.')
 
-    if isinstance(self._wrapped, core.Worker):
-      # Wrapped object already has a run() method so we don't override that.
-      # Do periodic checkpoints in a separate thread.
-      threading.Thread(target=self.checkpoint).start()
-      self._wrapped.run()
+    if isinstance(self._wrapped, core.Learner):
+      # Learners have a step() method, so alternate between that and ckpt call.
+      while True:
+        self._wrapped.step()
+        self._checkpointer.save()
     else:
       # Wrapped object doesn't have a run method; set our run method to ckpt.
       self.checkpoint()
