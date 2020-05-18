@@ -24,7 +24,7 @@ pip install gym[atari]
 pip install -i https://test.pypi.org/simple/ \
     --pre \
     --extra-index-url https://pypi.org/simple/ \
-    dm-reverb-nightly==0.0.2.dev20200515
+    dm-reverb-nightly==0.0.2.dev20200518
 
 # Run all tests.
 pip install pytest
