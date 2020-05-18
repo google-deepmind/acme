@@ -15,8 +15,9 @@
 
 """Recurrent Replay Distributed DQN (R2D2) learner implementation."""
 
+import functools
 import time
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Union
 
 import acme
 from acme import losses
@@ -47,8 +48,8 @@ class R2D2Learner(acme.Learner):
   def __init__(
       self,
       environment_spec: specs.EnvironmentSpec,
-      network: networks.RNNCore,
-      target_network: networks.RNNCore,
+      network: Union[networks.RNNCore, snt.RNNCore],
+      target_network: Union[networks.RNNCore, snt.RNNCore],
       burn_in_length: int,
       sequence_length: int,
       dataset: tf.data.Dataset,
@@ -65,6 +66,11 @@ class R2D2Learner(acme.Learner):
       n_step: int = 5,
       checkpoint: bool = True,
   ):
+
+    if isinstance(network, snt.RNNCore):
+      network.unroll = functools.partial(snt.static_unroll, network)
+      target_network.unroll = functools.partial(snt.static_unroll,
+                                                target_network)
 
     # Internalise agent components (replay buffer, networks, optimizer).
     # TODO(b/155086959): Fix type stubs and remove.
@@ -85,6 +91,11 @@ class R2D2Learner(acme.Learner):
     self._num_actions = environment_spec.actions.num_values
     self._sequence_length = sequence_length
     self._n_step = n_step
+
+    if burn_in_length:
+      self._burn_in = lambda o, s: self._network.unroll(o, s, burn_in_length)
+    else:
+      self._burn_in = lambda o, s: (o, s)  # pylint: disable=unnecessary-lambda
 
     # Learner state.
     self._variables = network.variables
@@ -131,11 +142,8 @@ class R2D2Learner(acme.Learner):
     # Before training, optionally unroll the LSTM for a fixed warmup period.
     burn_in_obs = tree.map_structure(lambda x: x[:self._burn_in_length],
                                      observations)
-    _, core_state = self._network.unroll(burn_in_obs, core_state,
-                                         self._burn_in_length)
-    _, target_core_state = self._target_network.unroll(burn_in_obs,
-                                                       target_core_state,
-                                                       self._burn_in_length)
+    _, core_state = self._burn_in(burn_in_obs, core_state)
+    _, target_core_state = self._burn_in(burn_in_obs, target_core_state)
 
     # Don't train on the warmup period.
     observations, actions, rewards, discounts, extra = tree.map_structure(
