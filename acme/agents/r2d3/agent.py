@@ -35,7 +35,7 @@ import tree
 import trfl
 
 
-class RecurrentDQfD(agent.Agent):
+class R2D3(agent.Agent):
   """R2D3 Agent.
 
   This implements a single-process R2D2 agent that mixes demonstrations with
@@ -61,6 +61,7 @@ class RecurrentDQfD(agent.Agent):
                learning_rate: float = 1e-3,
                log_to_bigtable: bool = False,
                log_name: str = 'agent',
+               checkpoint: bool = True,
                min_replay_size: int = 1000,
                max_replay_size: int = 1000000,
                samples_per_insert: float = 32.0):
@@ -128,6 +129,7 @@ class RecurrentDQfD(agent.Agent):
         max_replay_size=max_replay_size,
         learning_rate=learning_rate,
         store_lstm_state=False,
+        checkpoint=checkpoint,
     )
 
     policy_network = snt.DeepRNN([

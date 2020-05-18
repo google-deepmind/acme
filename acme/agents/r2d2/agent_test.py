@@ -47,7 +47,7 @@ class SimpleNetwork(networks.RNNCore):
     return snt.static_unroll(self._net, inputs, state, sequence_length)
 
 
-class RDQNTest(absltest.TestCase):
+class R2D2Test(absltest.TestCase):
 
   def test_r2d2(self):
     # Create a fake environment to test with.

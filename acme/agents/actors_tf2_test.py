@@ -39,7 +39,7 @@ def _make_fake_env() -> dm_env.Environment:
   return fakes.Environment(env_spec, episode_length=10)
 
 
-class ActorTF2Test(absltest.TestCase):
+class ActorTest(absltest.TestCase):
 
   def test_feedforward(self):
     environment = _make_fake_env()

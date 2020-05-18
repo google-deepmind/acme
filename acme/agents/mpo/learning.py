@@ -112,7 +112,7 @@ class MPOLearner(acme.Learner):
 
     if checkpoint:
       self._checkpointer = tf2_savers.Checkpointer(
-          subdirectory='dmpo_learner',
+          subdirectory='mpo_learner',
           objects_to_save={
               'counter': self._counter,
               'policy': self._policy_network,

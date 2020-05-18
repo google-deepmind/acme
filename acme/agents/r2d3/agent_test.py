@@ -71,7 +71,7 @@ class R2D3Test(absltest.TestCase):
     recorder.record_episode()
 
     # Construct the agent.
-    agent = r2d3.RecurrentDQfD(
+    agent = r2d3.R2D3(
         environment_spec=spec,
         network=SimpleNetwork(spec.actions),
         target_network=SimpleNetwork(spec.actions),
@@ -83,6 +83,7 @@ class R2D3Test(absltest.TestCase):
         burn_in_length=2,
         trace_length=6,
         replay_period=4,
+        checkpoint=False,
     )
 
     # Try running the environment loop. We have no assertions here because all

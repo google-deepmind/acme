@@ -63,6 +63,7 @@ class R2D2Learner(acme.Learner):
       store_lstm_state: bool = True,
       max_priority_weight: float = 0.9,
       n_step: int = 5,
+      checkpoint: bool = True,
   ):
 
     # Internalise agent components (replay buffer, networks, optimizer).
@@ -98,6 +99,7 @@ class R2D2Learner(acme.Learner):
     self._checkpointer = tf2_savers.Checkpointer(
         subdirectory='r2d2_learner',
         time_delta_minutes=5,
+        enable_checkpointing=checkpoint,
         objects_to_save={
             'network': network,
             'target_network': target_network,

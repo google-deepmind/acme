@@ -14,4 +14,4 @@
 
 """Module for Recurrent DQfD (R2D3)."""
 
-from acme.agents.r2d3.agent import RecurrentDQfD
+from acme.agents.r2d3.agent import R2D3
