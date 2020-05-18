@@ -15,6 +15,7 @@ source acme_testing/bin/activate
 pip install --upgrade pip setuptools
 pip --version
 pip install .
+pip install .[jax]
 pip install .[tf]
 pip install .[envs]
 pip install gym[atari]

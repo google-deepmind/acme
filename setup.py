@@ -23,6 +23,13 @@ spec = import_util.spec_from_file_location('_metadata', 'acme/_metadata.py')
 _metadata = import_util.module_from_spec(spec)
 spec.loader.exec_module(_metadata)
 
+jax_requirements = [
+    'jax',
+    'jaxlib',
+    'dm-haiku',
+    'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
+]
+
 tf_requirements = [
     'tf-nightly',
     'tfp-nightly',
@@ -56,6 +63,7 @@ setup(
         'pytest',
     ],
     extras_require={
+        'jax': jax_requirements,
         'tf': tf_requirements,
         'envs': env_requirements,
     },
