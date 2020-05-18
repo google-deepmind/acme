@@ -287,14 +287,19 @@ class Snapshotter:
       path = os.path.join(self.directory, name)
       self._snapshots[path] = make_snapshot(module)
 
-  def save(self) -> bool:
+  def save(self, force: bool = False) -> bool:
     """Snapshots if it's the appropriate time, otherwise no-ops.
+
+    Args:
+      force: If True, save new snapshot no matter how long it's been since the
+        last one.
 
     Returns:
       A boolean indicating if a save event happened.
     """
+    seconds_since_last = time.time() - self._last_saved
     if (self._snapshots and
-        (time.time() - self._last_saved) >= 60 * self._time_delta_minutes):
+        (force or seconds_since_last >= 60 * self._time_delta_minutes)):
       # Save any snapshots.
       for path, snapshot in self._snapshots.items():
         tf.saved_model.save(snapshot, path)

@@ -188,6 +188,26 @@ class SnapshotterTest(test_utils.TestCase):
 
     assert all(tree.map_structure(np.allclose, list(grads1), list(grads2)))
 
+  def test_force_snapshot(self):
+    """Test that the force feature in Snapshotter.save() works correctly."""
+    # Create a test network.
+    net = snt.Linear(10)
+    spec = specs.Array([10], dtype=np.float32)
+    tf2_utils.create_variables(net, [spec])
+
+    # Save the test network.
+    directory = self.get_tempdir()
+    objects_to_save = {'net': net}
+    # Very long time_delta_minutes.
+    snapshotter = tf2_savers.Snapshotter(objects_to_save, directory=directory,
+                                         time_delta_minutes=1000)
+    self.assertTrue(snapshotter.save(force=False))
+
+    # Due to the long time_delta_minutes, only force=True will create a new
+    # snapshot. This also checks the default is force=False.
+    self.assertFalse(snapshotter.save())
+    self.assertTrue(snapshotter.save(force=True))
+
   def test_rnn_snapshot(self):
     """Test that snapshotter correctly calls saves/restores snapshots on RNNs."""
     # Create a test network.
