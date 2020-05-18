@@ -17,8 +17,17 @@
 
 import os
 import os.path
-from typing import Optional
+import sys
+from typing import Optional, Tuple
 import uuid
+
+from absl import flags
+
+flags.DEFINE_string('acme_id', None, 'Experiment identifier to use for Acme.')
+FLAGS = flags.FLAGS
+
+# Pre-compute a unique identifier which is consistent within a single process.
+_ACME_ID = uuid.uuid1()
 
 
 def process_path(path: str,
@@ -38,7 +47,7 @@ def process_path(path: str,
     ttl_seconds: ignored.
     backups: ignored.
     add_uid: Whether to add a unique directory identifier between `path` and
-      `subpaths`.
+      `subpaths`. If FLAGS.acme_id is set, will use that as the identifier.
 
   Returns:
     the processed, expanded path string.
@@ -48,7 +57,18 @@ def process_path(path: str,
   path = os.path.expanduser(path)
   # TODO(b/145460917): consider replacing this---e.g. with a timestamp.
   if add_uid:
-    path = os.path.join(path, str(uuid.uuid1()))
+    path = os.path.join(path, *get_unique_id())
   path = os.path.join(path, *subpaths)
   os.makedirs(path, exist_ok=True)
   return path
+
+
+def get_unique_id() -> Tuple[str, ...]:
+  """Makes a unique identifier for this process; override with FLAGS.acme_id."""
+  try:
+    FLAGS.acme_id
+  except flags.UnparsedFlagAccessError:
+    # Parse flags if they haven't been parsed already (e.g. if under pytest).
+    FLAGS(sys.argv)
+  identifier = FLAGS.acme_id or str(_ACME_ID)
+  return (identifier,)

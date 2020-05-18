@@ -26,6 +26,7 @@ from acme import specs
 from acme.testing import test_utils
 from acme.utils import tf2_savers
 from acme.utils import tf2_utils
+from acme.utils import paths
 
 import numpy as np
 import sonnet as snt
@@ -60,6 +61,22 @@ class CheckpointerTest(test_utils.TestCase):
       self.assertTrue(saved)
       x.assign_add(1)
       checkpointer.restore()
+      np.testing.assert_array_equal(x.numpy(), np.int32(0))
+
+  def test_save_and_new_restore(self):
+    """Tests that a fresh checkpointer correctly restores an existing ckpt."""
+    with mock.patch.object(paths, 'get_unique_id') as mock_unique_id:
+      mock_unique_id.return_value = ('test',)
+      x = tf.Variable(0, dtype=tf.int32)
+      directory = self.get_tempdir()
+      checkpointer1 = tf2_savers.Checkpointer(
+          objects_to_save={'x': x}, time_delta_minutes=0., directory=directory)
+      checkpointer1.save()
+      x.assign_add(1)
+      # Simulate a preemption: x is changed, and we make a new Checkpointer.
+      checkpointer2 = tf2_savers.Checkpointer(
+          objects_to_save={'x': x}, time_delta_minutes=0., directory=directory)
+      checkpointer2.restore()
       np.testing.assert_array_equal(x.numpy(), np.int32(0))
 
   def test_save_and_restore_time_based(self):
