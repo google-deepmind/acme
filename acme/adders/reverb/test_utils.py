@@ -37,7 +37,7 @@ class FakeWriter:
     assert not self.closed, 'Trying to use closed Writer'
     self.timesteps.append(timestep)
 
-  def create_prioritized_item(self, table, num_timesteps, priority):
+  def create_item(self, table, num_timesteps, priority):
     assert not self.closed, 'Trying to use closed Writer'
     assert num_timesteps <= len(self.timesteps)
     assert num_timesteps <= self.max_sequence_length

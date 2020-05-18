@@ -120,4 +120,4 @@ class SequenceAdder(base.ReverbAdder):
 
     # Create a prioritized item for each table.
     for table_name, priority in table_priorities.items():
-      self._writer.create_prioritized_item(table_name, num_steps, priority)
+      self._writer.create_item(table_name, num_steps, priority)

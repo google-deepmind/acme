@@ -155,7 +155,7 @@ class NStepTransitionAdder(base.ReverbAdder):
     # Insert the transition into replay along with its priority.
     self._writer.append_timestep(transition)
     for table, priority in table_priorities.items():
-      self._writer.create_prioritized_item(
+      self._writer.create_item(
           table=table, num_timesteps=1, priority=priority)
 
   def _write_last(self):
