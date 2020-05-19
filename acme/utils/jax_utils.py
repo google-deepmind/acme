@@ -51,16 +51,25 @@ def zeros_like(nest: types.Nest) -> types.NestedArray:
   return tree_util.tree_map(lambda x: jnp.zeros(x.shape, x.dtype), nest)
 
 
+def squeeze_batch_dim(nest: types.Nest) -> types.NestedArray:
+  return tree_util.tree_map(lambda x: jnp.squeeze(x, axis=0), nest)
+
+
 def to_numpy_squeeze(values: types.Nest) -> types.NestedArray:
   """Converts to numpy and squeezes out dummy batch dimension."""
   return tree_util.tree_map(lambda x: np.array(x).squeeze(axis=0), values)
 
+
+def batch_to_sequence(values: types.Nest) -> types.NestedArray:
+  return tree_util.tree_map(
+      lambda x: jnp.transpose(x, axes=(1, 0, *range(2, len(x.shape)))), values)
+
+
 T = TypeVar('T')
 
 
-def prefetch(
-    iterable: Iterable[T],
-    buffer_size: int = 5) -> Generator[T, None, None]:
+def prefetch(iterable: Iterable[T],
+             buffer_size: int = 5) -> Generator[T, None, None]:
   """Performs prefetching of elements from an iterable in a separate thread.
 
   Args:

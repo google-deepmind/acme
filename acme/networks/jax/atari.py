@@ -15,6 +15,7 @@
 
 """Common networks for Atari."""
 
+import functools
 from typing import Any, Tuple
 
 from acme.networks.jax import base
@@ -66,7 +67,64 @@ def dqn_atari_network(num_actions: int) -> base.QNetwork:
   return network
 
 
-class IMPALAAtariNetwork(hk.RNNCore):
+class ResidualBlock(hk.Module):
+  """Residual block."""
+
+  def __init__(self, num_channels: int, name: str = 'residual_block'):
+    super().__init__(name=name)
+    self._block = hk.Sequential([
+        jax.nn.relu,
+        hk.Conv2D(
+            num_channels,
+            kernel_shape=[3, 3],
+            stride=[1, 1],
+            padding='SAME'),
+        jax.nn.relu,
+        hk.Conv2D(
+            num_channels,
+            kernel_shape=[3, 3],
+            stride=[1, 1],
+            padding='SAME'),
+    ])
+
+  def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
+    return self._block(x) + x
+
+
+class DeepAtariTorso(hk.Module):
+  """Deep torso for Atari, from the IMPALA paper."""
+
+  def __init__(self, name: str = 'deep_atari_torso'):
+    super().__init__(name=name)
+    layers = []
+    for i, (num_channels, num_blocks) in enumerate([(16, 2), (32, 2), (32, 2)]):
+      conv = hk.Conv2D(
+          num_channels, kernel_shape=[3, 3], stride=[1, 1], padding='SAME')
+      pooling = functools.partial(
+          hk.max_pool,
+          window_shape=[1, 3, 3, 1],
+          strides=[1, 2, 2, 1],
+          padding='SAME')
+      layers.append(conv)
+      layers.append(pooling)
+
+      for j in range(num_blocks):
+        block = ResidualBlock(num_channels, name='residual_{}_{}'.format(i, j))
+        layers.append(block)
+
+    layers.extend([
+        jax.nn.relu,
+        hk.Flatten(),
+        hk.Linear(256),
+        jax.nn.relu,
+    ])
+    self._network = hk.Sequential(layers)
+
+  def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
+    return self._network(x)
+
+
+class DeepIMPALAAtariNetwork(hk.RNNCore):
   """A recurrent network for use with IMPALA.
 
   See https://arxiv.org/pdf/1802.01561.pdf for more information.
@@ -74,25 +132,26 @@ class IMPALAAtariNetwork(hk.RNNCore):
 
   def __init__(self, num_actions: int):
     super().__init__(name='impala_atari_network')
-    self._torso = AtariTorso()
+    self._torso = DeepAtariTorso()
     self._core = hk.LSTM(256)
-    self._head = hk.Sequential([
-        hk.Linear(512),
-        jax.nn.relu,
-        policy_value.PolicyValueHead(num_actions),
-    ])
+    self._head = policy_value.PolicyValueHead(num_actions)
     self._num_actions = num_actions
 
-  def __call__(
-      self, inputs: observation_action_reward.OAR,
-      state: LSTMState) -> Tuple[Tuple[Logits, Value], LSTMState]:
-    if len(inputs.reward.shape.dims) == 1:
-      inputs = inputs._replace(reward=jnp.expand_dims(inputs.reward, axis=-1))
+  def __call__(self, inputs: observation_action_reward.OAR,
+               state: LSTMState) -> Tuple[Tuple[Logits, Value], LSTMState]:
     reward = jnp.tanh(inputs.reward)  # [B, 1]
+    if not reward.shape:
+      reward = jnp.expand_dims(reward, axis=0)
 
     action = hk.one_hot(inputs.action, self._num_actions)  # [B, A]
 
+    expand = len(inputs.observation.shape) == 3
+    if expand:
+      inputs = inputs._replace(
+          observation=jnp.expand_dims(inputs.observation, axis=0))
     embedding = self._torso(inputs.observation)
+    if expand:
+      embedding = jnp.squeeze(embedding, axis=0)
     embedding = jnp.concatenate([embedding, action, reward], axis=-1)
 
     embedding, new_state = self._core(embedding, state)
