@@ -26,6 +26,7 @@ from acme.agents import agent
 from acme.agents.r2d2 import learning
 from acme.utils import counting
 from acme.utils import loggers
+from acme.utils import tf2_savers
 from acme.utils import tf2_utils
 
 import reverb
@@ -129,8 +130,17 @@ class R2D3(agent.Agent):
         max_replay_size=max_replay_size,
         learning_rate=learning_rate,
         store_lstm_state=False,
-        checkpoint=checkpoint,
     )
+
+    self._checkpointer = tf2_savers.Checkpointer(
+        subdirectory='r2d2_learner',
+        time_delta_minutes=60,
+        objects_to_save=learner.state,
+        enable_checkpointing=checkpoint,
+    )
+
+    self._snapshotter = tf2_savers.Snapshotter(
+        objects_to_save={'network': network}, time_delta_minutes=60.)
 
     policy_network = snt.DeepRNN([
         network,
@@ -145,6 +155,11 @@ class R2D3(agent.Agent):
         learner=learner,
         min_observations=replay_period * max(batch_size, min_replay_size),
         observations_per_step=observations_per_step)
+
+  def update(self):
+    super().update()
+    self._snapshotter.save()
+    self._checkpointer.save()
 
 
 def _sequence_from_episode(observations: acme_types.NestedTensor,

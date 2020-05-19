@@ -17,7 +17,7 @@
 
 import functools
 import time
-from typing import Dict, Iterator, List, Union
+from typing import Dict, Iterator, List, Mapping, Union
 
 import acme
 from acme import losses
@@ -38,7 +38,7 @@ import tree
 Variables = List[np.ndarray]
 
 
-class R2D2Learner(acme.Learner):
+class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
   """R2D2 learner.
 
   This is the learning component of the R2D2 agent. It takes a dataset as input
@@ -64,7 +64,6 @@ class R2D2Learner(acme.Learner):
       store_lstm_state: bool = True,
       max_priority_weight: float = 0.9,
       n_step: int = 5,
-      checkpoint: bool = True,
   ):
 
     if isinstance(network, snt.RNNCore):
@@ -105,21 +104,6 @@ class R2D2Learner(acme.Learner):
     # Internalise logging/counting objects.
     self._counter = counting.Counter(counter, 'learner')
     self._logger = logger or loggers.TerminalLogger('learner', time_delta=100.)
-
-    # Checkpoint the networks.
-    self._checkpointer = tf2_savers.Checkpointer(
-        subdirectory='r2d2_learner',
-        time_delta_minutes=5,
-        enable_checkpointing=checkpoint,
-        objects_to_save={
-            'network': network,
-            'target_network': target_network,
-            'optimizer': self._optimizer,
-            'num_steps': self._num_steps,
-        })
-
-    self._snapshotter = tf2_savers.Snapshotter(
-        objects_to_save={'network': network}, time_delta_minutes=60.)
 
     # Do not record timestamps until after the first learning step is done.
     # This is to avoid including the time it takes for actors to come online and
@@ -231,14 +215,20 @@ class R2D2Learner(acme.Learner):
     # Update our counts and record it.
     counts = self._counter.increment(steps=1, walltime=elapsed_time)
     results.update(counts)
-
-    # Checkpoint and attempt to write the logs.
-    self._checkpointer.save()
-    self._snapshotter.save()
     self._logger.write(results)
 
   def get_variables(self, names: List[str]) -> List[Variables]:
     return [tf2_utils.to_numpy(self._variables)]
+
+  @property
+  def state(self) -> Mapping[str, tf2_savers.Checkpointable]:
+    """Returns the stateful parts of the learner for checkpointing."""
+    return {
+        'network': self._network,
+        'target_network': self._target_network,
+        'optimizer': self._optimizer,
+        'num_steps': self._num_steps,
+    }
 
 
 def compute_priority(errors: tf.Tensor, alpha: float):

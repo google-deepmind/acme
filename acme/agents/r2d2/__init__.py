@@ -14,4 +14,4 @@
 
 """Module for Recurrent DQN (R2D2)."""
 
-from acme.agents.r2d2.agent import RDQN
+from acme.agents.r2d2.agent import R2D2

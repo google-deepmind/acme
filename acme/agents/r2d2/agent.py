@@ -25,6 +25,7 @@ from acme.agents import agent
 from acme.agents.r2d2 import learning
 from acme.utils import counting
 from acme.utils import loggers
+from acme.utils import tf2_savers
 from acme.utils import tf2_utils
 
 import reverb
@@ -33,7 +34,7 @@ import tensorflow as tf
 import trfl
 
 
-class RDQN(agent.Agent):
+class R2D2(agent.Agent):
   """R2D2 Agent.
 
   This implements a single-process R2D2 agent. This is a Q-learning algorithm
@@ -64,6 +65,7 @@ class RDQN(agent.Agent):
       samples_per_insert: float = 32.0,
       store_lstm_state: bool = True,
       max_priority_weight: float = 0.9,
+      checkpoint: bool = True,
   ):
 
     replay_table = reverb.PriorityTable(
@@ -121,6 +123,15 @@ class RDQN(agent.Agent):
         max_priority_weight=max_priority_weight,
     )
 
+    self._checkpointer = tf2_savers.Checkpointer(
+        subdirectory='r2d2_learner',
+        time_delta_minutes=60,
+        objects_to_save=learner.state,
+        enable_checkpointing=checkpoint,
+    )
+    self._snapshotter = tf2_savers.Snapshotter(
+        objects_to_save={'network': network}, time_delta_minutes=60.)
+
     policy_network = snt.DeepRNN([
         network,
         lambda qs: trfl.epsilon_greedy(qs, epsilon=epsilon).sample(),
@@ -134,3 +145,8 @@ class RDQN(agent.Agent):
         learner=learner,
         min_observations=replay_period * max(batch_size, min_replay_size),
         observations_per_step=observations_per_step)
+
+  def update(self):
+    super().update()
+    self._snapshotter.save()
+    self._checkpointer.save()

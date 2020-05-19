@@ -51,7 +51,7 @@ class R2D2Test(absltest.TestCase):
 
   def test_r2d2(self):
     # Create a fake environment to test with.
-    # TODO(b/152596848): Allow RDQN to deal with integer observations.
+    # TODO(b/152596848): Allow R2D2 to deal with integer observations.
     environment = fakes.DiscreteEnvironment(
         num_actions=5,
         num_observations=10,
@@ -61,7 +61,7 @@ class R2D2Test(absltest.TestCase):
     spec = specs.make_environment_spec(environment)
 
     # Construct the agent.
-    agent = r2d2.RDQN(
+    agent = r2d2.R2D2(
         environment_spec=spec,
         network=SimpleNetwork(spec.actions),
         batch_size=10,
@@ -70,6 +70,7 @@ class R2D2Test(absltest.TestCase):
         burn_in_length=2,
         trace_length=6,
         replay_period=4,
+        checkpoint=False,
     )
 
     # Try running the environment loop. We have no assertions here because all
