@@ -34,7 +34,8 @@ def _reverb_server():
               'test_table',
               reverb.distributions.Uniform(),
               reverb.distributions.Fifo(),
-              max_size=100)
+              max_size=100,
+              rate_limiter=reverb.rate_limiters.MinSize(95))
       ],
       port=None)
 
