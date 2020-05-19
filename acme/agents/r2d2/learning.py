@@ -110,8 +110,12 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
     # fill the replay buffer.
     self._timestamp = None
 
-  @tf.function(experimental_compile=True)
-  def _xla_step(self, sample: reverb.ReplaySample):
+  @tf.function
+  def _step(self) -> Dict[str, tf.Tensor]:
+
+    # Draw a batch of data from replay.
+    sample: reverb.ReplaySample = next(self._iterator)
+
     data = tf2_utils.batch_to_sequence(sample.data)
     observations, actions, rewards, discounts, extra = data
     unused_sequence_length, batch_size = actions.shape
@@ -183,22 +187,10 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
     # Compute updated priorities.
     priorities = compute_priority(extra.errors, self._max_priority_weight)
 
-    return loss, keys[:, 0], priorities
-
-  @tf.function
-  def _step(self) -> Dict[str, tf.Tensor]:
-    """Do a step of SGD and update the priorities."""
-
-    # Pull out the data needed for updates/priorities.
-    sample: reverb.ReplaySample = next(self._iterator)
-
-    # Do a step of SGD.
-    loss, keys, priorities = self._xla_step(sample)
-
     # Compute priorities and add an op to update them on the reverb side.
     self._reverb_client.update_priorities(
         table=adders.DEFAULT_PRIORITY_TABLE,
-        keys=keys,
+        keys=keys[:, 0],
         priorities=tf.cast(priorities, tf.float64))
 
     return {'loss': loss}
