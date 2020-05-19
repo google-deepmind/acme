@@ -66,12 +66,12 @@ class EpisodeAdder(base.ReverbAdder):
 
   def _write(self):
     # Append the previous step.
-    self._writer.append_timestep(self._buffer[-1])
+    self._writer.append(self._buffer[-1])
 
   def _write_last(self):
     # Append a zero-filled final step.
     final_step = utils.final_step_like(self._buffer[0], self._next_observation)
-    self._writer.append_timestep(final_step)
+    self._writer.append(final_step)
 
     # The length of the sequence we will be adding is the size of the buffer
     # plus one due to the final step.

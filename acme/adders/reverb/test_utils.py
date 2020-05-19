@@ -33,7 +33,7 @@ class FakeWriter:
     self.priorities = []
     self.closed = False
 
-  def append_timestep(self, timestep):
+  def append(self, timestep):
     assert not self.closed, 'Trying to use closed Writer'
     self.timesteps.append(timestep)
 

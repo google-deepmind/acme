@@ -71,7 +71,7 @@ class SequenceAdder(base.ReverbAdder):
 
   def _write(self):
     # Append the previous step and increment number of steps written.
-    self._writer.append_timestep(self._buffer[-1])
+    self._writer.append(self._buffer[-1])
     self._step += 1
     self._maybe_add_priorities()
 
@@ -82,7 +82,7 @@ class SequenceAdder(base.ReverbAdder):
 
     # Append the final step.
     self._buffer.append(final_step)
-    self._writer.append_timestep(final_step)
+    self._writer.append(final_step)
     self._step += 1
 
     # NOTE: this always pads to the fixed length. but this is not equivalent to
@@ -98,7 +98,7 @@ class SequenceAdder(base.ReverbAdder):
     # Pad with zeros to get a full sequence.
     for _ in range(padding):
       self._buffer.append(zero_step)
-      self._writer.append_timestep(zero_step)
+      self._writer.append(zero_step)
       self._step += 1
 
     # Write priorities for the sequence.
