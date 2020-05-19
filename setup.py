@@ -60,7 +60,7 @@ setup(
         'pillow',
     ],
     tests_require=[
-        'pytest',
+        'pytest-xdist',
     ],
     extras_require={
         'jax': jax_requirements,

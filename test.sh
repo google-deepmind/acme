@@ -27,8 +27,8 @@ pip install -i https://test.pypi.org/simple/ \
     dm-reverb-nightly==0.0.2.dev20200518
 
 # Run all tests.
-pip install pytest
-pytest acme
+pip install pytest-xdist
+pytest -n auto acme
 
 # Clean-up.
 deactivate
