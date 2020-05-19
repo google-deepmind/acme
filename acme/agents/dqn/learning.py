@@ -155,22 +155,9 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
         dest.assign(src)
     self._num_steps.assign_add(1)
 
-    # Compute the global norm of the gradients for logging.
-    global_gradient_norm = tf.linalg.global_norm(gradients)
-
-    # Compute statistics of the Q-values for logging.
-    max_q = tf.reduce_max(q_t_value)
-    min_q = tf.reduce_min(q_t_value)
-    mean_q, var_q = tf.nn.moments(q_t_value, [0, 1])
-
     # Report loss & statistics for logging.
     fetches = {
-        'gradient_norm': global_gradient_norm,
         'loss': loss,
-        'max_q': max_q,
-        'mean_q': mean_q,
-        'min_q': min_q,
-        'var_q': var_q,
     }
 
     return fetches
