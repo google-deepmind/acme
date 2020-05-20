@@ -93,6 +93,9 @@ def make_reverb_dataset(
   # Extract the shapes and dtypes from these specs.
   get_dtype = lambda x: tf.as_dtype(x.dtype)
   get_shape = lambda x: tf.TensorShape(x.shape)
+  if sequence_length:
+    get_shape = lambda x: tf.TensorShape([sequence_length, *x.shape])
+
   if convert_zero_size_to_none:
     # TODO(b/143692455): Consider making this default behaviour.
     get_shape = lambda x: tf.TensorShape([s if s else None for s in x.shape])
@@ -105,9 +108,9 @@ def make_reverb_dataset(
         dtypes=dtypes,
         shapes=shapes,
         capacity=2 * batch_size if batch_size else 100,
+        sequence_length=sequence_length,
+        emit_timesteps=sequence_length is None,
     )
-    if sequence_length:
-      dataset = dataset.batch(sequence_length, drop_remainder=True)
     return dataset
 
   # Create the dataset.
