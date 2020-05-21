@@ -16,14 +16,22 @@
 """Base interfaces for networks."""
 
 import abc
-from typing import Callable
+from typing import Any, Callable, Tuple
 
 from acme import types
 import haiku as hk
 import jax.numpy as jnp
 
+# Commonly-used types.
 QValues = jnp.ndarray
+Logits = jnp.ndarray
+Value = jnp.ndarray
+
+# Commonly-used function/network signatures.
 QNetwork = Callable[[types.NestedArray], QValues]
+RNNState = Any
+PolicyValueRNN = Callable[[types.NestedArray, RNNState],
+                          Tuple[Tuple[Logits, Value], RNNState]]
 
 
 class Module(hk.Module):
