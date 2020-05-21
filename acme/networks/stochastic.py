@@ -61,13 +61,12 @@ class ExpQWeighedPolicy(snt.Module):
     self._beta = beta
 
   def __call__(self, inputs: types.NestedTensor) -> tf.Tensor:
-
-    batch_size = tree.flatten(inputs)[0].shape[0]
-    if batch_size != 1:
-      raise NotImplementedError('For now it only supports batch size 1.')
-
     # Inputs are of size [B, ...]. Here we tile them to be of shape [N, B, ...].
     tiled_inputs = tf2_utils.tile_nested(inputs, self._num_action_samples)
+    n, b = tf.shape(tree.flatten(tiled_inputs)[0])[:2]
+    if n != self._num_action_samples:
+      raise AssertionError('Internal Error. Unexpected tiled_inputs shape.')
+    dummy_zeros_n_b = tf.zeros((n, b))
     # Reshape to [N * B, ...].
     merge = lambda x: snt.merge_leading_dims(x, 2)
     tiled_inputs = tree.map_structure(merge, tiled_inputs)
@@ -78,11 +77,19 @@ class ExpQWeighedPolicy(snt.Module):
     q = self._critic_network(tiled_inputs, tiled_actions)
     boltzmann_probs = tf.nn.softmax(q / self._beta)
 
-    # Resample an action according to the Boltzmann distribution.
+    boltzmann_probs = snt.split_leading_dim(boltzmann_probs, dummy_zeros_n_b, 2)
+    # [B, N]
+    boltzmann_probs = tf.transpose(boltzmann_probs, perm=(1, 0))
+    # Resample one action per batch according to the Boltzmann distribution.
     action_idx = tfp.distributions.Categorical(probs=boltzmann_probs).sample()
-    action_sample = tiled_actions[action_idx]
+    # [B, 2], where the first dimension is 0, 1, 2,...
+    action_idx = tf.stack((tf.range(b), action_idx), axis=1)
 
-    # Add a batch dimension.
-    action_sample = action_sample[None]
+    tiled_actions = snt.split_leading_dim(tiled_actions, dummy_zeros_n_b, 2)
+    action_dim = len(tiled_actions.get_shape().as_list())
+    tiled_actions = tf.transpose(tiled_actions,
+                                 perm=[1, 0] + list(range(2, action_dim)))
+    # [B, ...]
+    action_sample = tf.gather_nd(tiled_actions, action_idx)
 
     return action_sample
