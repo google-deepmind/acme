@@ -91,8 +91,8 @@ class DQfD(agent.Agent):
     # order to allow the Agent interface to handle it.
     replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
-        sampler=reverb.distributions.Uniform(),
-        remover=reverb.distributions.Fifo(),
+        sampler=reverb.selectors.Uniform(),
+        remover=reverb.selectors.Fifo(),
         max_size=max_replay_size,
         rate_limiter=reverb.rate_limiters.MinSize(1))
     self._server = reverb.Server([replay_table], port=None)

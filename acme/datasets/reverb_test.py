@@ -32,8 +32,8 @@ def _reverb_server():
       priority_tables=[
           reverb.Table(
               'test_table',
-              reverb.distributions.Uniform(),
-              reverb.distributions.Fifo(),
+              reverb.selectors.Uniform(),
+              reverb.selectors.Fifo(),
               max_size=100,
               rate_limiter=reverb.rate_limiters.MinSize(95))
       ],

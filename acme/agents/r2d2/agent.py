@@ -70,8 +70,8 @@ class R2D2(agent.Agent):
 
     replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
-        sampler=reverb.distributions.Prioritized(priority_exponent),
-        remover=reverb.distributions.Fifo(),
+        sampler=reverb.selectors.Prioritized(priority_exponent),
+        remover=reverb.selectors.Fifo(),
         max_size=max_replay_size,
         rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1))
     self._server = reverb.Server([replay_table], port=None)

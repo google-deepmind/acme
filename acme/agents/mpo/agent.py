@@ -104,8 +104,8 @@ class MPO(agent.Agent):
     # Create a replay server to add data to.
     replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
-        sampler=reverb.distributions.Uniform(),
-        remover=reverb.distributions.Fifo(),
+        sampler=reverb.selectors.Uniform(),
+        remover=reverb.selectors.Fifo(),
         max_size=max_replay_size,
         rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1))
     self._server = reverb.Server([replay_table], port=None)
