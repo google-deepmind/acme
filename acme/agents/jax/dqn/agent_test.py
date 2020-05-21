@@ -48,7 +48,7 @@ class DQNTest(absltest.TestCase):
     # Construct the agent.
     agent = dqn.DQN(
         environment_spec=spec,
-        network=hk.transform(network),
+        network=network,
         batch_size=10,
         samples_per_insert=2,
         min_replay_size=10)
