@@ -30,7 +30,7 @@ import tree
 def _reverb_server():
   return reverb.Server(
       priority_tables=[
-          reverb.PriorityTable(
+          reverb.Table(
               'test_table',
               reverb.distributions.Uniform(),
               reverb.distributions.Fifo(),

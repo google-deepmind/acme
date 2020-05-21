@@ -67,7 +67,7 @@ class R2D3(agent.Agent):
                max_replay_size: int = 1000000,
                samples_per_insert: float = 32.0):
 
-    replay_table = reverb.PriorityTable(
+    replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
         sampler=reverb.distributions.Uniform(),
         remover=reverb.distributions.Fifo(),

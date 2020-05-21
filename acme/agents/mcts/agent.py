@@ -46,7 +46,7 @@ class MCTS(agent.Agent):
   ):
 
     # Create a replay server for storing transitions.
-    replay_table = reverb.PriorityTable(
+    replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
         sampler=reverb.distributions.Uniform(),
         remover=reverb.distributions.Fifo(),

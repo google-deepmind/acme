@@ -85,7 +85,7 @@ class DQN(agent.Agent):
 
     # Create a replay server to add data to. This uses no limiter behavior in
     # order to allow the Agent interface to handle it.
-    replay_table = reverb.PriorityTable(
+    replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
         sampler=reverb.distributions.Prioritized(priority_exponent),
         remover=reverb.distributions.Fifo(),

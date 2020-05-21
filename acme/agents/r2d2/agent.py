@@ -68,7 +68,7 @@ class R2D2(agent.Agent):
       checkpoint: bool = True,
   ):
 
-    replay_table = reverb.PriorityTable(
+    replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
         sampler=reverb.distributions.Prioritized(priority_exponent),
         remover=reverb.distributions.Fifo(),

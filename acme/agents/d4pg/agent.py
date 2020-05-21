@@ -90,7 +90,7 @@ class D4PG(agent.Agent):
     """
     # Create a replay server to add data to. This uses no limiter behavior in
     # order to allow the Agent interface to handle it.
-    replay_table = reverb.PriorityTable(
+    replay_table = reverb.Table(
         name=replay_table_name,
         sampler=reverb.distributions.Uniform(),
         remover=reverb.distributions.Fifo(),
