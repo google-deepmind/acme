@@ -22,7 +22,7 @@ from acme.agents.mcts import types
 import dm_env
 
 
-class Model(dm_env.Environment):
+class Model(dm_env.Environment, abc.ABC):
   """Base (abstract) class for models used for planning via MCTS."""
 
   @abc.abstractmethod
@@ -36,16 +36,11 @@ class Model(dm_env.Environment):
   @abc.abstractmethod
   def update(
       self,
-      observation: types.Observation,
+      timestep: dm_env.TimeStep,
       action: types.Action,
-      reward: types.Reward,
-      discount: types.Discount,
-  ):
+      next_timestep: dm_env.TimeStep,
+  ) -> dm_env.TimeStep:
     """Updates the model given an observation, action, reward, and discount."""
-
-  @abc.abstractmethod
-  def update_last(self, observation: types.Observation):
-    """Updates the model given a final observation."""
 
   @abc.abstractmethod
   def reset(self, initial_state: types.Observation = None):

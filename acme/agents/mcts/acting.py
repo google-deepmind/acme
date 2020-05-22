@@ -35,6 +35,8 @@ import tensorflow as tf
 class MCTSActor(acme.Actor):
   """Executes a policy- and value-network guided MCTS search."""
 
+  _prev_timestep: dm_env.TimeStep
+
   def __init__(
       self,
       environment_spec: specs.EnvironmentSpec,
@@ -57,7 +59,6 @@ class MCTSActor(acme.Actor):
     self._num_simulations = num_simulations
     self._actions = list(range(self._num_actions))
     self._discount = discount
-    self._prev_observation = None
 
     # We need to save the policy so as to add it to replay on the next step.
     self._probs = np.ones(
@@ -106,17 +107,15 @@ class MCTSActor(acme.Actor):
       self._variable_client.update()
 
   def observe_first(self, timestep: dm_env.TimeStep):
-    self._prev_observation = timestep.observation
+    self._prev_timestep = timestep
     if self._adder:
       self._adder.add_first(timestep)
 
   def observe(self, action: types.Action, next_timestep: dm_env.TimeStep):
     """Updates the agent's internal model and adds the transition to replay."""
-    self._model.update(self._prev_observation, action, next_timestep.reward,
-                       next_timestep.discount)
+    self._model.update(self._prev_timestep, action, next_timestep)
 
-    if next_timestep.last():
-      self._model.update_last(next_timestep.observation)
+    self._prev_timestep = next_timestep
 
     if self._adder:
       self._adder.add(action, next_timestep, extras={'pi': self._probs})

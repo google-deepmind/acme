@@ -37,16 +37,12 @@ class Simulator(base.Model):
 
   def update(
       self,
-      observation: types.Observation,
+      timestep: dm_env.TimeStep,
       action: types.Action,
-      reward: types.Reward,
-      discount: types.Discount,
-  ):
+      next_timestep: dm_env.TimeStep,
+  ) -> dm_env.TimeStep:
     # Call update() once per 'real' experience to keep this env in sync.
-    self.step(action)
-
-  def update_last(self, observation: types.Observation):
-    self._needs_reset = True
+    return self.step(action)
 
   def save_checkpoint(self):
     self._checkpoint = copy.deepcopy(self._env)
@@ -54,7 +50,7 @@ class Simulator(base.Model):
   def load_checkpoint(self):
     self._env = copy.deepcopy(self._checkpoint)
 
-  def step(self, action: types.Action):
+  def step(self, action: types.Action) -> dm_env.TimeStep:
     if self._needs_reset:
       raise ValueError('This model needs to be explicitly reset.')
     return self._env.step(action)

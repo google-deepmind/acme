@@ -48,7 +48,7 @@ def make_env_and_model() -> Tuple[dm_env.Environment, models.Model]:
         replay_capacity=1000,
         batch_size=16,
         hidden_sizes=(50,),
-        embedding_size=50)
+    )
   environment = wrappers.SinglePrecisionWrapper(environment)
 
   return environment, model
