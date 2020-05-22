@@ -26,9 +26,16 @@ pip install -i https://test.pypi.org/simple/ \
     --extra-index-url https://pypi.org/simple/ \
     dm-reverb-nightly==0.0.2.dev20200521
 
+
+N_CPU=$(grep -c ^processor /proc/cpuinfo)
+
+# Run static type-checking.
+pip install pytype
+pytype -j "${N_CPU}" acme
+
 # Run all tests.
 pip install pytest-xdist
-pytest -n auto acme
+pytest -n "${N_CPU}" acme
 
 # Clean-up.
 deactivate

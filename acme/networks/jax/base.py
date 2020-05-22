@@ -34,7 +34,7 @@ PolicyValueRNN = Callable[[types.NestedArray, RNNState],
                           Tuple[Tuple[Logits, Value], RNNState]]
 
 
-class Module(hk.Module):
+class Module(hk.Module, abc.ABC):
   """A base class for module with abstract __call__ method."""
 
   @abc.abstractmethod

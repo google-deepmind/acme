@@ -24,7 +24,7 @@ import sonnet as snt
 State = TypeVar('State')
 
 
-class Module(snt.Module):
+class Module(snt.Module, abc.ABC):
   """A base class for module with abstract __call__ method."""
 
   @abc.abstractmethod
@@ -32,7 +32,7 @@ class Module(snt.Module):
     """Forward pass of the module."""
 
 
-class RNNCore(snt.RNNCore):
+class RNNCore(snt.RNNCore, abc.ABC):
   """An RNN core with a custom `unroll` function."""
 
   @abc.abstractmethod

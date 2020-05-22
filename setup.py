@@ -60,6 +60,7 @@ setup(
         'pillow',
     ],
     tests_require=[
+        'pytype',
         'pytest-xdist',
     ],
     extras_require={

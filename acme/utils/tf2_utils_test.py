@@ -119,15 +119,15 @@ class Tf2UtilsTest(parameterized.TestCase):
     sequence = [{
         'action': np.array([1.0]),
         'observation': (np.array([0.0, 1.0, 2.0]),),
-        'reward': 1.0
+        'reward': np.array(1.0),
     }, {
         'action': np.array([0.5]),
         'observation': (np.array([1.0, 2.0, 3.0]),),
-        'reward': 0.0
+        'reward': np.array(0.0),
     }, {
         'action': np.array([0.3]),
         'observation': (np.array([2.0, 3.0, 4.0]),),
-        'reward': 0.5
+        'reward': np.array(0.5),
     }]
 
     stacked = tf2_utils.stack_sequence_fields(sequence)
