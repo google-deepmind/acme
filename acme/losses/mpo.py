@@ -15,6 +15,10 @@
 
 """Implements the MPO losses.
 
+The MPO loss is implemented as a Sonnet module rather than a function so that it
+can hold its own dual variables, as instances of `tf.Variable`, which it creates
+the first time the module is called.
+
 Tensor shapes are annotated, where helpful, as follow:
   B: batch size,
   N: number of sampled actions, see MPO paper for more details,
@@ -33,9 +37,17 @@ _MPO_FLOAT_EPSILON = 1e-8
 
 
 class MPO(snt.Module):
-  """MPO with decoupled KL constraints as in (Abdolmaleki et al., 2018).
+  """MPO loss with decoupled KL constraints as in (Abdolmaleki et al., 2018).
+
+  This implementation of the MPO loss includes the following features, as
+  options:
+  - Satisfying the KL-constraint on a per-dimension basis (on by default);
+  - Penalizing actions that fall outside of [-1, 1] (on by default) as a
+      special case of multi-objective MPO (MO-MPO; Abdolmaleki et al., 2020).
+  For best results on the control suite, keep both of these on.
 
   (Abdolmaleki et al., 2018): https://arxiv.org/pdf/1812.02256.pdf
+  (Abdolmaleki et al., 2020): https://arxiv.org/pdf/2005.07513.pdf
   """
 
   def __init__(self,
@@ -49,6 +61,32 @@ class MPO(snt.Module):
                action_penalization: bool = True,
                epsilon_penalty: float = 0.001,
                name: str = "MPO"):
+    """Initialize and configure the MPO loss.
+
+    Args:
+      epsilon: KL constraint on the non-parametric auxiliary policy, the one
+        associated with the dual variable called temperature.
+      epsilon_mean: KL constraint on the mean of the Gaussian policy, the one
+        associated with the dual variable called alpha_mean.
+      epsilon_stddev: KL constraint on the stddev of the Gaussian policy, the
+        one associated with the dual variable called alpha_mean.
+      init_log_temperature: initial value for the temperature in log-space, note
+        a softplus (rather than an exp) will be used to transform this.
+      init_log_alpha_mean: initial value for the alpha_mean in log-space, note
+        a softplus (rather than an exp) will be used to transform this.
+      init_log_alpha_stddev: initial value for the alpha_stddev in log-space,
+        note a softplus (rather than an exp) will be used to transform this.
+      per_dim_constraining: whether to enforce the KL constraint on each
+        dimension independently; this is the default. Otherwise the overall KL
+        is constrained, which allows some dimensions to change more at the
+        expense of others staying put.
+      action_penalization: whether to use a KL constraint to penalize actions
+        via the MO-MPO algorithm.
+      epsilon_penalty: KL constraint on the probability of violating the action
+        constraint.
+      name: a name for the module, passed directly to snt.Module.
+
+    """
     super().__init__(name=name)
 
     # MPO constrain thresholds.
