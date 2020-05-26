@@ -18,6 +18,8 @@ pip install .
 pip install .[jax]
 pip install .[tf]
 pip install .[envs]
+
+# Install manually since extra_dependencies ignores the foo[bar] notation.
 pip install gym[atari]
 
 # Reverb isn't quite ready yet.

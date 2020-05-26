@@ -23,18 +23,18 @@ spec = import_util.spec_from_file_location('_metadata', 'acme/_metadata.py')
 _metadata = import_util.module_from_spec(spec)
 spec.loader.exec_module(_metadata)
 
-jax_requirements = [
-    'jax',
-    'jaxlib',
-    'dm-haiku',
-    'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
-]
-
 tf_requirements = [
     'tf-nightly',
     'tfp-nightly',
     'dm-sonnet',
     'trfl',
+]
+
+jax_requirements = [
+    'jax',
+    'jaxlib',
+    'dm-haiku',
+    'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
 ]
 
 env_requirements = [
@@ -44,10 +44,20 @@ env_requirements = [
     'gym[atari]',
 ]
 
+# Use the first paragraph of our README as the long_description.
+with open('README.md', 'r') as fh:
+  long_description = fh.read().split('\n\n')[1]
+
+# Add a link to github.
+long_description += '\n\nFor more information see our '
+long_description += '[github repository](https://github.com/deepmind/acme).'
+
 setup(
     name='dm-acme',
     version=_metadata.__version__,
     description='A Python library for Reinforcement Learning.',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     author='DeepMind',
     license='Apache License, Version 2.0',
     keywords='reinforcement-learning python machine learning',
