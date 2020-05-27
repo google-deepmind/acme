@@ -25,6 +25,13 @@ import tree
 tfd = tfp.distributions
 
 
+class StochasticModeHead(snt.Module):
+  """Simple sonnet module to produce the mode of a tfp.Distribution."""
+
+  def __call__(self, distribution: tfd.Distribution):
+    return distribution.mode()
+
+
 class StochasticMeanHead(snt.Module):
   """Simple sonnet module to produce the mean of a tfp.Distribution."""
 

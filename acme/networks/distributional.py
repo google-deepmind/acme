@@ -19,6 +19,7 @@ There are useful modules in `acme.networks.stochastic` to either sample or
 take the mean of these distributions.
 """
 
+import types
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -229,3 +230,27 @@ class GaussianMixtureHead(snt.Module):
     distribution = tfd.Independent(distribution)
 
     return distribution
+
+
+class ApproximateMode(snt.Module):
+  """Override the mode function of the distribution.
+
+  For non-constant Jacobian transformed distributions, the mode is non-trivial
+  to compute, so for these distributions the mode function is not supported in
+  TFP. A frequently used approximation is to forward transform the mode of the
+  untransformed distribution.
+
+  Otherwise (an untransformed distribution or a transformed distribution with a
+  constant Jacobian), this is a no-op.
+  """
+
+  def __call__(self, inputs: tfd.Distribution) -> tfd.Distribution:
+    if isinstance(inputs, tfd.TransformedDistribution):
+      if not inputs.bijector.is_constant_jacobian:
+        def _mode(self, **kwargs):
+          distribution_kwargs, bijector_kwargs = self._kwargs_split_fn(kwargs)
+          x = self.distribution.mode(**distribution_kwargs)
+          y = self.bijector.forward(x, **bijector_kwargs)
+          return y
+        inputs._mode = types.MethodType(_mode, inputs)
+    return inputs

@@ -24,6 +24,7 @@ from acme.networks.base import RNNCore
 from acme.networks.continuous import LayerNormAndResidualMLP
 from acme.networks.continuous import LayerNormMLP
 from acme.networks.continuous import NearZeroInitializedLinear
+from acme.networks.distributional import ApproximateMode
 from acme.networks.distributional import DiscreteValuedDistribution
 from acme.networks.distributional import DiscreteValuedHead
 from acme.networks.distributional import GaussianMixtureHead
@@ -37,5 +38,6 @@ from acme.networks.rescaling import RescaleToSpec
 from acme.networks.rescaling import TanhToSpec
 from acme.networks.stochastic import ExpQWeighedPolicy
 from acme.networks.stochastic import StochasticMeanHead
+from acme.networks.stochastic import StochasticModeHead
 from acme.networks.stochastic import StochasticSamplingHead
 from acme.networks.vision import ResNetTorso
