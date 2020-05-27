@@ -33,7 +33,7 @@ tf_requirements = [
 jax_requirements = [
     'jax',
     'jaxlib',
-    'dm-haiku',
+    'dm-haiku @ git+git://github.com/deepmind/dm-haiku.git#egg=dm-haiku',
     'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
 ]
 
