@@ -29,7 +29,7 @@ import tree
 
 def _reverb_server():
   return reverb.Server(
-      priority_tables=[
+      tables=[
           reverb.Table(
               'test_table',
               reverb.selectors.Uniform(),
