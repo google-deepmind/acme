@@ -63,9 +63,10 @@ class ExpQWeighedPolicy(snt.Module):
   def __call__(self, inputs: types.NestedTensor) -> tf.Tensor:
     # Inputs are of size [B, ...]. Here we tile them to be of shape [N, B, ...].
     tiled_inputs = tf2_utils.tile_nested(inputs, self._num_action_samples)
-    n, b = tf.shape(tree.flatten(tiled_inputs)[0])[:2]
-    if n != self._num_action_samples:
-      raise AssertionError('Internal Error. Unexpected tiled_inputs shape.')
+    shape = tf.shape(tree.flatten(tiled_inputs)[0])
+    n, b = shape[0], shape[1]
+    tf.debugging.assert_equal(n, self._num_action_samples,
+                              'Internal Error. Unexpected tiled_inputs shape.')
     dummy_zeros_n_b = tf.zeros((n, b))
     # Reshape to [N * B, ...].
     merge = lambda x: snt.merge_leading_dims(x, 2)
