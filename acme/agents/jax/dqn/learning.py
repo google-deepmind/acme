@@ -135,9 +135,9 @@ class DQNLearner(acme.Learner, acme.Saveable):
 
     # Initialise parameters and optimiser state.
     initial_params = network.init(
-        next(rng), jnp.zeros(shape=(1, *obs_spec.shape)))
+        next(rng), jax_utils.add_batch_dim(jax_utils.zeros_like(obs_spec)))
     initial_target_params = network.init(
-        next(rng), jnp.zeros(shape=(1, *obs_spec.shape)))
+        next(rng), jax_utils.add_batch_dim(jax_utils.zeros_like(obs_spec)))
     initial_opt_state = optimizer.init(initial_params)
 
     self._state = TrainingState(
