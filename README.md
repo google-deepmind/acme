@@ -1,5 +1,7 @@
 # Acme
 
+![pytest](https://github.com/deepmind/acme/workflows/pytest/badge.svg)
+
 Acme is a library of reinforcement learning (RL) agents and agent building
 blocks. Acme strives to expose simple, efficient, and readable agents, that
 serve both as reference implementations of popular algorithms and as strong

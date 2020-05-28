@@ -18,6 +18,7 @@ pip install .
 pip install .[jax]
 pip install .[tf]
 pip install .[envs]
+pip install .[testing]
 
 # Install manually since extra_dependencies ignores the foo[bar] notation.
 pip install gym[atari]
@@ -28,15 +29,12 @@ pip install -i https://test.pypi.org/simple/ \
     --extra-index-url https://pypi.org/simple/ \
     dm-reverb-nightly==0.0.2.dev20200527
 
-
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
 
 # Run static type-checking.
-pip install pytype
 pytype -j "${N_CPU}" acme
 
 # Run all tests.
-pip install pytest-xdist
 pytest -n "${N_CPU}" acme
 
 # Clean-up.

@@ -44,9 +44,14 @@ env_requirements = [
     'gym[atari]',
 ]
 
+testing_requirements = [
+    'pytype',
+    'pytest-xdist',
+]
+
 # Use the first paragraph of our README as the long_description.
 with open('README.md', 'r') as fh:
-  long_description = fh.read().split('\n\n')[1]
+  long_description = fh.read().split('\n\n')[2]
 
 # Add a link to github.
 long_description += '\n\nFor more information see our '
@@ -69,14 +74,11 @@ setup(
         'numpy',
         'pillow',
     ],
-    tests_require=[
-        'pytype',
-        'pytest-xdist',
-    ],
     extras_require={
         'jax': jax_requirements,
         'tf': tf_requirements,
         'envs': env_requirements,
+        'testing': testing_requirements,
     },
     classifiers=[
         'Development Status :: 3 - Alpha',
