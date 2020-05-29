@@ -112,7 +112,7 @@ agent, trained on the control suite:
 ```python
 policy_layer_sizes: Sequence[int] = (256, 256, 256)
 
-mpo_policy_network = snt.Sequential([
+stochastic_policy_network = snt.Sequential([
     # MLP torso with initial layer normalization; activate the final layer since
     # it feeds into another module.
     networks.LayerNormMLP(policy_layer_sizes, activate_final=True),
@@ -128,10 +128,10 @@ additional head that will select the mean of the stochastic policy as a greedy
 action:
 
 ```python
-mpo_greedy_policy_network = snt.Sequential([
+greedy_policy_network = snt.Sequential([
     networks.LayerNormMLP(policy_layer_sizes, activate_final=True),
     networks.MultivariateNormalDiagHead(num_dimensions),
-    networks.StochasticMeanHead(),
+    networks.StochasticModeHead(),
   ])
 ```
 
@@ -146,7 +146,7 @@ network adapted for our D4PG experiments:
 ```python
 critic_layer_sizes: Sequence[int] = (512, 512, 256)
 
-critic_network = snt.Sequential([
+distributional_critic_network = snt.Sequential([
     # Flattens and concatenates inputs; see `tf2_utils.batch_concat` for more.
     networks.CriticMultiplexer(),
     networks.LayerNormMLP(critic_layer_sizes, activate_final=True),
@@ -154,6 +154,31 @@ critic_network = snt.Sequential([
     networks.DiscreteValuedHead(vmin=-150., vmax=150., num_atoms=51),
 ])
 ```
+
+Finally, our actor-critic control agents also allow the specification of an
+observation network that is shared by the policy and critic. This network embeds
+the observations once and uses the transformed input in both the policy and
+critic as needed, which saves computation particularly when the transformation
+is expensive. This is the case for example when learning from pixels where the
+observation network can be a large ResNet. In such cases, the shared visual
+network can be specified to any of DDPG, D4PG, MPO, DMPO by simply defining and
+passing the following:
+
+```python
+shared_resnet = networks.ResNetTorso()  # Default (deep) Impala network.
+
+agent = dmpo.DMPO(
+    # Networks defined above.
+    policy_network=stochastic_policy_network,
+    critic_network=distributional_critic_network,
+    # New ResNet visual module, shared by both policy and critic.
+    observation_network=shared_resnet,
+    # ...
+)
+```
+
+In this case, the `policy_` and `critic_network` act as heads on top of the
+shared visual torso.
 
 [networks]: ../acme/networks/
 [sonnet]: https://github.com/deepmind/sonnet/

@@ -11,8 +11,8 @@ following agents focus on this setting:
 
 -   [Deep Deterministic Policy Gradient (DDPG)](../acme/agents/ddpg/)
 -   [Distributed Distributional Deep Determinist (D4PG)](../acme/agents/d4pg/)
--   [Maximum _a Posteriori_ Policy Optimisation (MPO)](../acme/agents/mpo/)
--   [Distributional Maximum _a Posteriori_ Policy Optimisation (DMPO)](../acme/agents/dmpo/)
+-   [Maximum a posteriori Policy Optimisation (MPO)](../acme/agents/mpo/)
+-   [Distributional Maximum a posteriori Policy Optimisation (DMPO)](../acme/agents/dmpo/)
 
 **Discrete control.** We also include a number of agents built with discrete
 action-spaces in mind. Note that the distinction between these agents and the
