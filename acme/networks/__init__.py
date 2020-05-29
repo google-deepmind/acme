@@ -36,7 +36,7 @@ from acme.networks.policy_value import PolicyValueHead
 from acme.networks.rescaling import ClipToSpec
 from acme.networks.rescaling import RescaleToSpec
 from acme.networks.rescaling import TanhToSpec
-from acme.networks.stochastic import ExpQWeighedPolicy
+from acme.networks.stochastic import ExpQWeightedPolicy
 from acme.networks.stochastic import StochasticMeanHead
 from acme.networks.stochastic import StochasticModeHead
 from acme.networks.stochastic import StochasticSamplingHead

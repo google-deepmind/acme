@@ -46,7 +46,7 @@ class StochasticSamplingHead(snt.Module):
     return distribution.sample()
 
 
-class ExpQWeighedPolicy(snt.Module):
+class ExpQWeightedPolicy(snt.Module):
   """Exponentially Q-weighted policy.
 
   Given a stochastic policy and a critic, returns a (stochastic) policy which
@@ -61,7 +61,7 @@ class ExpQWeighedPolicy(snt.Module):
                critic_network: snt.Module,
                beta: float = 1.0,
                num_action_samples: int = 16):
-    super().__init__(name='ExpQWeighedPolicy')
+    super().__init__(name='ExpQWeightedPolicy')
     self._actor_network = actor_network
     self._critic_network = critic_network
     self._num_action_samples = num_action_samples
@@ -90,7 +90,8 @@ class ExpQWeighedPolicy(snt.Module):
     boltzmann_probs = tf.transpose(boltzmann_probs, perm=(1, 0))
     # Resample one action per batch according to the Boltzmann distribution.
     action_idx = tfp.distributions.Categorical(probs=boltzmann_probs).sample()
-    # [B, 2], where the first dimension is 0, 1, 2,...
+    # [B, 2], where the first column is 0, 1, 2,... corresponding to indices to
+    # the batch dimension.
     action_idx = tf.stack((tf.range(b), action_idx), axis=1)
 
     tiled_actions = snt.split_leading_dim(tiled_actions, dummy_zeros_n_b, 2)
