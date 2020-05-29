@@ -23,11 +23,8 @@ pip install .[testing]
 # Install manually since extra_dependencies ignores the foo[bar] notation.
 pip install gym[atari]
 
-# Reverb isn't quite ready yet.
-pip install -i https://test.pypi.org/simple/ \
-    --pre \
-    --extra-index-url https://pypi.org/simple/ \
-    dm-reverb-nightly==0.0.2.dev20200527
+# Installs reverb.
+pip install dm-reverb-nightly
 
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
 
