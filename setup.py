@@ -56,7 +56,7 @@ testing_requirements = [
 
 # Use the first paragraph of our README as the long_description.
 with open('README.md', 'r') as fh:
-  long_description = fh.read().split('\n\n')[2]
+  long_description = fh.read().split('\n\n')[4]
 
 # Add a link to github.
 long_description += '\n\nFor more information see our '

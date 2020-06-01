@@ -19,4 +19,4 @@ This is kept in a separate module so that it can be imported from setup.py, at
 a time when acme's dependencies may not have been installed yet.
 """
 
-__version__ = '0.1'  # https://www.python.org/dev/peps/pep-0440/
+__version__ = '0.1.1'  # https://www.python.org/dev/peps/pep-0440/
