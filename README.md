@@ -3,7 +3,7 @@
 # Acme: A research framework for reinforcement learning
 
 **[Overview](#overview)** | **[Installation](#installation)** |
-**[Documentation]** | **[Agents]** | **[Examples]**
+**[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]**
 
 ![pytest](https://github.com/deepmind/acme/workflows/pytest/badge.svg)
 
@@ -72,31 +72,31 @@ pip install dm-acme[envs]
 
 ## Citing Acme
 
-If you use Acme in your work, please cite the accompanying technical report:
+If you use Acme in your work, please cite the accompanying [technical report][Paper]:
 
 ```bibtex
 @article{hoffman2020acme,
     title={Acme: A Research Framework for Distributed Reinforcement Learning},
     author={Matt Hoffman and
-    Bobak Shahriari and
-    John Aslanides and
-    Gabriel Barth-Maron and
-    Feryal Behbahani and
-    Tamara Norman and
-    Abbas Abdolmaleki and
-    Albin Cassirer and
-    Fan Yang and
-    Kate Baumli and
-    Sarah Henderson and
-    Alex Novikov and
-    Sergio Gómez Colmenarejo and
-    Serkan Cabi and
-    Caglar Gulcehre and
-    Tom Le Paine and
-    Andrew Cowie and
-    Ziyu Wang and
-    Bilal Piot and
-    Nando de Freitas},
+            Bobak Shahriari and
+            John Aslanides and
+            Gabriel Barth-Maron and
+            Feryal Behbahani and
+            Tamara Norman and
+            Abbas Abdolmaleki and
+            Albin Cassirer and
+            Fan Yang and
+            Kate Baumli and
+            Sarah Henderson and
+            Alex Novikov and
+            Sergio Gómez Colmenarejo and
+            Serkan Cabi and
+            Caglar Gulcehre and
+            Tom Le Paine and
+            Andrew Cowie and
+            Ziyu Wang and
+            Bilal Piot and
+            Nando de Freitas},
     year={2020},
     journal={arXiv preprint},
 }
@@ -106,3 +106,4 @@ If you use Acme in your work, please cite the accompanying technical report:
 [Examples]: examples/
 [Agents]: acme/agents/
 [Reverb]: https://github.com/deepmind/reverb
+[Paper]: https://github.com/deepmind/acme/blob/master/acme/paper.pdf
