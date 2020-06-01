@@ -17,14 +17,12 @@ pip --version
 pip install .
 pip install .[jax]
 pip install .[tf]
+pip install .[reverb]
 pip install .[envs]
 pip install .[testing]
 
 # Install manually since extra_dependencies ignores the foo[bar] notation.
 pip install gym[atari]
-
-# Installs reverb.
-pip install dm-reverb-nightly
 
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
 

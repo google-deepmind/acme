@@ -23,8 +23,12 @@ spec = import_util.spec_from_file_location('_metadata', 'acme/_metadata.py')
 _metadata = import_util.module_from_spec(spec)
 spec.loader.exec_module(_metadata)
 
+reverb_requirements = [
+    'dm-reverb-nightly==0.1.0.dev20200529',
+]
+
 tf_requirements = [
-    'tf-nightly',
+    'tf-nightly==2.3.0.dev20200528',
     'tfp-nightly',
     'dm-sonnet',
     'trfl',
@@ -78,6 +82,7 @@ setup(
         'jax': jax_requirements,
         'tf': tf_requirements,
         'envs': env_requirements,
+        'reverb': reverb_requirements,
         'testing': testing_requirements,
     },
     classifiers=[
