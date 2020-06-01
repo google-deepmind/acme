@@ -37,6 +37,7 @@ FLAGS = flags.FLAGS
 
 def make_environment(domain_name: str = 'cartpole',
                      task_name: str = 'balance') -> dm_env.Environment:
+  """Creates a control suite environment."""
   environment = suite.load(domain_name, task_name)
   environment = wrappers.SinglePrecisionWrapper(environment)
   return environment
@@ -52,24 +53,33 @@ def make_networks(
 ) -> Dict[str, types.TensorTransformation]:
   """Creates networks used by the agent."""
 
+  # Get total number of action dimensions from action spec.
   num_dimensions = np.prod(action_spec.shape, dtype=int)
 
+  # Create the shared observation network; here simply a state-less operation.
+  observation_network = tf2_utils.batch_concat
+
+  # Create the policy network.
   policy_network = snt.Sequential([
       networks.LayerNormMLP(policy_layer_sizes),
       networks.MultivariateNormalDiagHead(num_dimensions)
   ])
-  # The multiplexer concatenates the (maybe transformed) observations/actions.
-  critic_network = networks.CriticMultiplexer(
+
+  # The multiplexer transforms concatenates the observations/actions.
+  multiplexer = networks.CriticMultiplexer(
       critic_network=networks.LayerNormMLP(critic_layer_sizes),
       action_network=networks.ClipToSpec(action_spec))
-  critic_network = snt.Sequential(
-      [critic_network,
-       networks.DiscreteValuedHead(vmin, vmax, num_atoms)])
+
+  # Create the critic network.
+  critic_network = snt.Sequential([
+      multiplexer,
+      networks.DiscreteValuedHead(vmin, vmax, num_atoms),
+  ])
 
   return {
       'policy': policy_network,
       'critic': critic_network,
-      'observation': tf2_utils.batch_concat,
+      'observation': observation_network,
   }
 
 
