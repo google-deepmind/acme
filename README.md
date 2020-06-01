@@ -106,4 +106,4 @@ If you use Acme in your work, please cite the accompanying [technical report][Pa
 [Examples]: examples/
 [Agents]: acme/agents/
 [Reverb]: https://github.com/deepmind/reverb
-[Paper]: https://github.com/deepmind/acme/blob/master/acme/paper.pdf
+[Paper]: https://github.com/deepmind/acme/blob/master/paper.pdf
