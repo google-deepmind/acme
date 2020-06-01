@@ -37,9 +37,10 @@ overview of Acme along with more detailed descriptions of its underlying
 components can be found by referring to the [documentation][Documentation].
 
 For a quick start, take a look at the more detailed working code examples found
-in the [examples][Examples] subdirectory. And finally, for more information on
-the various agent implementations available take a look at the [agents][Agents]
-subdirectory along with the `README.md` associated with each agent.
+in the [examples][Examples] subdirectory, which also includes a tutorial
+notebook to get you started. And finally, for more information on the various
+agent implementations available take a look at the [agents][Agents] subdirectory
+along with the `README.md` associated with each agent.
 
 ## Installation
 
