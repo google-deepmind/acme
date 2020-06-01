@@ -26,9 +26,9 @@ loop = acme.EnvironmentLoop(environment, actor)
 loop.run()
 ```
 
-however Acme also tries to maintain this level of simplicity while either diving
-deeper into the agent algorithms or by using them in more complicated settings.
-An overview of Acme along with more detailed descriptions of its underlying
+Acme also tries to maintain this level of simplicity while either diving deeper
+into the agent algorithms or by using them in more complicated settings. An
+overview of Acme along with more detailed descriptions of its underlying
 components can be found by referring to the [documentation].
 
 For a quick start, take a look at the more detailed working code examples found
@@ -39,3 +39,36 @@ with the `README.md` associated with each agent.
 [documentation]: docs/index.md
 [examples]: examples/
 [agents]: acme/agents/
+
+
+## Citing Acme
+
+If you use Acme in your work, please cite the accompanying technical report:
+
+```bibtex
+@article{hoffman2020acme,
+    title={Acme: A Research Framework for Distributed Reinforcement Learning},
+    author={Matt Hoffman and
+    Bobak Shahriari and
+    John Aslanides and
+    Gabriel Barth-Maron and
+    Feryal Behbahani and
+    Tamara Norman and
+    Abbas Abdolmaleki and
+    Albin Cassirer and
+    Fan Yang and
+    Kate Baumli and
+    Sarah Henderson and
+    Alex Novikov and
+    Sergio Gómez Colmenarejo and
+    Serkan Cabi and
+    Caglar Gulcehre and
+    Tom Le Paine and
+    Andrew Cowie and
+    Ziyu Wang and
+    Bilal Piot and
+    and Nando de Freitas},
+    year={2020},
+    journal={arXiv preprint},
+}
+```
