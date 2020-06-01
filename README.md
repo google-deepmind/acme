@@ -1,3 +1,5 @@
+![acme](docs/logos/acme.png)
+
 # Acme: A research framework for reinforcement learning
 
 **[Overview](#overview)** | **[Installation](#installation)** |
