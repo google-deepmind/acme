@@ -13,10 +13,10 @@ setting:
 
 Agent                                                          | Paper                    | Code
 -------------------------------------------------------------- | :----------------------: | :--:
-Deep Deterministic Policy Gradient (DDPG)                      | Lillicrap et al., 2015   | [![TF](../../docs/logos/tf.png)][DDPG_TF2]
-Distributed Distributional Deep Determinist (D4PG)             | Barth-Maron et al., 2018 | [![TF](../../docs/logos/tf.png)][D4PG_TF2] [![JAX](../../docs/logos/jax.png)][D4PG_JAX]
-Maximum a posteriori Policy Optimisation (MPO)                 | Abdolmaleki et al., 2018 | [![TF](../../docs/logos/tf.png)][MPO_TF2]
-Distributional Maximum a posteriori Policy Optimisation (DMPO) | -                        | [![TF](../../docs/logos/tf.png)][DMPO_TF2]
+Deep Deterministic Policy Gradient (DDPG)                      | Lillicrap et al., 2015   | [![TF](../../docs/logos/tf-small.png)][DDPG_TF2]
+Distributed Distributional Deep Determinist (D4PG)             | Barth-Maron et al., 2018 | [![TF](../../docs/logos/tf-small.png)][D4PG_TF2] [![JAX](../../docs/logos/jax-small.png)][D4PG_JAX]
+Maximum a posteriori Policy Optimisation (MPO)                 | Abdolmaleki et al., 2018 | [![TF](../../docs/logos/tf-small.png)][MPO_TF2]
+Distributional Maximum a posteriori Policy Optimisation (DMPO) | -                        | [![TF](../../docs/logos/tf-small.png)][DMPO_TF2]
 
 ### Discrete control
 
@@ -27,9 +27,9 @@ action spaces as well, but here we focus on a discrete-action variant.
 
 Agent                                                    | Paper                    | Code
 -------------------------------------------------------- | :----------------------: | :--:
-Deep Q-Networks (DQN)                                    | Horgan et al., 2018      | [![TF](../../docs/logos/tf.png)][DQN_TF2] [![JAX](../../docs/logos/jax.png)][DQN_JAX]
-Importance-Weighted Actor-Learner Architectures (IMPALA) | Espeholt et al., 2018    | [![TF](../../docs/logos/tf.png)][IMPALA_TF2] [![JAX](../../docs/logos/jax.png)][IMPALA_JAX]
-Recurrent Replay Distributed DQN (R2D2)                  | Kapturowski et al., 2019 | [![TF](../../docs/logos/tf.png)][R2D2_TF2]
+Deep Q-Networks (DQN)                                    | Horgan et al., 2018      | [![TF](../../docs/logos/tf-small.png)][DQN_TF2] [![JAX](../../docs/logos/jax-small.png)][DQN_JAX]
+Importance-Weighted Actor-Learner Architectures (IMPALA) | Espeholt et al., 2018    | [![TF](../../docs/logos/tf-small.png)][IMPALA_TF2] [![JAX](../../docs/logos/jax-small.png)][IMPALA_JAX]
+Recurrent Replay Distributed DQN (R2D2)                  | Kapturowski et al., 2019 | [![TF](../../docs/logos/tf-small.png)][R2D2_TF2]
 
 ### Batch RL
 
@@ -39,7 +39,7 @@ include:
 
 Agent | Paper | Code
 ----- | :---: | :------------------------------:
-Behavior Cloning (BC)    | -     | [![TF](../../docs/logos/tf.png)][BC_TF2]
+Behavior Cloning (BC)    | -     | [![TF](../../docs/logos/tf-small.png)][BC_TF2]
 
 ### Learning from demonstrations
 
@@ -48,8 +48,8 @@ demonstrations. Such algorithms include:
 
 Agent | Paper                 | Code
 ----- | :-------------------: | :--------------------------------:
-Deep Q-Learning from Demonstrations (DQfD)  | Hester et al., 2017   | [![TF](../../docs/logos/tf.png)][DQFD_TF2]
-Recurrent Replay Distributed DQN from Demonstratinos (R2D3)  | Gulcehre et al., 2020 | [![TF](../../docs/logos/tf.png)][R2D3_TF2]
+Deep Q-Learning from Demonstrations (DQfD)  | Hester et al., 2017   | [![TF](../../docs/logos/tf-small.png)][DQFD_TF2]
+Recurrent Replay Distributed DQN from Demonstratinos (R2D3)  | Gulcehre et al., 2020 | [![TF](../../docs/logos/tf-small.png)][R2D3_TF2]
 
 ### Model-based RL
 
@@ -58,7 +58,7 @@ RL using a given or learned simulator
 
 Agent                          | Paper               | Code
 ------------------------------ | :-----------------: | :--:
-Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![TF](../../docs/logos/tf.png)][MCTS_TF2]
+Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![TF](../../docs/logos/tf-small.png)][MCTS_TF2]
 
 <!-- TF agents -->
 
