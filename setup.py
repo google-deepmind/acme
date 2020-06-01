@@ -25,6 +25,7 @@ spec.loader.exec_module(_metadata)
 
 reverb_requirements = [
     'dm-reverb-nightly==0.1.0.dev20200529',
+    'tf-nightly==2.3.0.dev20200528',
 ]
 
 tf_requirements = [

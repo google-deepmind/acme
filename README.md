@@ -1,4 +1,6 @@
-# Acme
+# Acme: A research framework for reinforcement learning
+
+**[Overview](#overview)** | **[Installation](#installation)** | **[Documentation]** | **[Agents]** | **[Examples]**
 
 ![pytest](https://github.com/deepmind/acme/workflows/pytest/badge.svg)
 
@@ -29,16 +31,40 @@ loop.run()
 Acme also tries to maintain this level of simplicity while either diving deeper
 into the agent algorithms or by using them in more complicated settings. An
 overview of Acme along with more detailed descriptions of its underlying
-components can be found by referring to the [documentation].
+components can be found by referring to the [documentation][Documentation].
 
 For a quick start, take a look at the more detailed working code examples found
-in the [examples] subdirectory. And finally, for more information on the various
-agent implementations available take a look at the [agents] subdirectory along
-with the `README.md` associated with each agent.
+in the [examples][Examples] subdirectory. And finally, for more information on the various
+agent implementations available take a look at the [agents][Agents] subdirectory
+along with the `README.md` associated with each agent.
 
-[documentation]: docs/index.md
-[examples]: examples/
-[agents]: acme/agents/
+## Installation
+
+We support Python 3.6 and 3.7.
+
+To install `acme` core:
+
+```bash
+# Install Acme core dependencies.
+pip install dm-acme
+
+# Install Reverb, our replay backend.
+pip install dm-acme[reverb]
+```
+
+To install dependencies for our JAX/TensorFlow-based agents:
+
+```bash
+pip install dm-acme[tf]
+# and/or
+pip install dm-acme[jax]
+```
+
+Finally, to install environments (gym, dm_control, bsuite):
+
+```bash
+pip install dm-acme[envs]
+```
 
 
 ## Citing Acme
@@ -67,8 +93,13 @@ If you use Acme in your work, please cite the accompanying technical report:
     Andrew Cowie and
     Ziyu Wang and
     Bilal Piot and
-    and Nando de Freitas},
+    Nando de Freitas},
     year={2020},
     journal={arXiv preprint},
 }
 ```
+
+[Documentation]: docs/index.md
+[Examples]: examples/
+[Agents]: acme/agents/
+[Reverb]: https://github.com/deepmind/reverb

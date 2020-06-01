@@ -3,11 +3,10 @@
 Acme is a library of reinforcement learning (RL) agents and agent building
 blocks. Overall Acme strives to expose simple, efficient, and readable agent
 baselines while still providing enough flexibility to create novel
-implementations. 
+implementations.
 
 ## Links
 
--   [Agents](agents.md)
 -   [Components](components.md)
 -   [FAQ](faq.md)
 
@@ -41,12 +40,12 @@ while True:
   # Make an initial observation.
   step = environment.reset()
   actor.observe_first(step.observation)
-  
+
   while not step.last():
     # Evaluate the policy and take a step in the environment.
     action = actor.select_action(step.observation)
     step = environment.step(action)
-    
+
     # Make an observation and update the actor.
     actor.observe(action, next_step=step)
     actor.update()
@@ -91,5 +90,4 @@ checkpointing to snapshotting, various forms of logging, and other low-level
 computations. For more information on these components, as well as the structure
 described above, see our more detailed discussion of Acme
 [components](components.md) or take a look at the full implementations of
-various [agents](agents.md).
-
+various [agents](../agents/).
