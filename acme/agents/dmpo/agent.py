@@ -87,7 +87,9 @@ class DistributionalMPO(agent.Agent):
       max_replay_size: maximum replay size.
       samples_per_insert: number of samples to take from replay for every insert
         that is made.
-      policy_loss_module: loss function for the policy.
+      policy_loss_module: configured MPO loss function for the policy
+        optimization; defaults to sensible values on the control suite.
+        See `acme/losses/mpo.py` for more details on available configurations.
       policy_optimizer: optimizer to be used on the policy.
       critic_optimizer: optimizer to be used on the critic.
       n_step: number of steps to squash into a single transition.
