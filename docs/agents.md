@@ -5,55 +5,80 @@ agents listed below into different sections based on their different use cases,
 however these distinction are often subtle. For more information on each
 implementation see the relevant agent-specific README.
 
-**Continuous control.** Acme has long had a focus on continuous control agents
-(i.e. settings where the action space consists of a continuous space). The
-following agents focus on this setting:
+### Continuous control
 
-Agent                                                          | Paper                    | Code
--------------------------------------------------------------- | :----------------------: | :--:
-Deep Deterministic Policy Gradient (DDPG)                      | Lillicrap et al., 2015   | [![DDPG TF2](diagrams/tf.png){width="30" height="30"}][DDPG_TF2]
-Distributed Distributional Deep Determinist (D4PG)             | Barth-Maron et al., 2018 | [![D4PG TF2](diagrams/tf.png){width="30" height="30"}][D4PG_TF2] [![D4PG JAX](diagrams/jax.png){width="52" height="30"}][D4PG_JAX]
-Maximum a posteriori Policy Optimisation (MPO)                 | Abdolmaleki et al., 2018 | [![MPO TF2](diagrams/tf.png){width="30" height="30"}][MPO_TF2]
-Distributional Maximum a posteriori Policy Optimisation (DMPO) | -                        | [![DMPO TF2](diagrams/tf.png){width="30" height="30"}][DMPO_TF2]
+Acme has long had a focus on continuous control agents (i.e. settings where the
+action space consists of a continuous space). The following agents focus on this
+setting:
 
-**Discrete control.** We also include a number of agents built with discrete
-action-spaces in mind. Note that the distinction between these agents and the
-continuous agents listed can be somewhat arbitrary. E.g. Impala could be
-implemented for continuous action spaces as well, but here we focus on a
-discrete-action variant.
+| Agent             | Paper             | Code                                 |
+| ----------------- | :---------------: | :----------------------------------: |
+| Deep              | Lillicrap et al., | [![TF](diagrams/tf.png)][DDPG_TF2]   |
+: Deterministic     : 2015              :                                      :
+: Policy Gradient   :                   :                                      :
+: (DDPG)            :                   :                                      :
+| Distributed       | Barth-Maron et    | [![TF](diagrams/tf.png)][D4PG_TF2]   |
+: Distributional    : al., 2018         : [![JAX](diagrams/jax.png)][D4PG_JAX] :
+: Deep Determinist  :                   :                                      :
+: (D4PG)            :                   :                                      :
+| Maximum a         | Abdolmaleki et    | [![TF](diagrams/tf.png)][MPO_TF2]    |
+: posteriori Policy : al., 2018         :                                      :
+: Optimisation      :                   :                                      :
+: (MPO)             :                   :                                      :
+| Distributional    | -                 | [![TF](diagrams/tf.png)][DMPO_TF2]   |
+: Maximum a         :                   :                                      :
+: posteriori Policy :                   :                                      :
+: Optimisation      :                   :                                      :
+: (DMPO)            :                   :                                      :
 
-Agent                                                    | Paper                    | Code
--------------------------------------------------------- | :----------------------: | :--:
-Deep Q-Networks (DQN)                                    | Horgan et al., 2018      | [![DQN TF2](diagrams/tf.png){width="30" height="30"}][DQN_TF2] [![DQN JAX](diagrams/jax.png){width="52" height="30"}][DQN_JAX]
-Importance-Weighted Actor-Learner Architectures (IMPALA) | Espeholt et al., 2018    | [![IMPALA TF2](diagrams/tf.png){width="30" height="30"}][IMPALA_TF2] [![IMPALA JAX](diagrams/jax.png){width="52" height="30"}][IMPALA_JAX]
-Recurrent Replay Distributed DQN (R2D2)                  | Kapturowski et al., 2019 | [![R2D2 TF2](diagrams/tf.png){width="30" height="30"}][R2D2_TF2]
+### Discrete control
 
-**Batch RL.** The structure of Acme also lends itself quite nicely to
-"learner-only" algorithm for use in Batch RL (with no environment interactions).
-Implemented algorithms include:
+We also include a number of agents built with discrete action-spaces in mind.
+Note that the distinction between these agents and the continuous agents listed
+can be somewhat arbitrary. E.g. Impala could be implemented for continuous
+action spaces as well, but here we focus on a discrete-action variant.
+
+| Agent               | Paper        | Code                                   |
+| ------------------- | :----------: | :------------------------------------: |
+| Deep Q-Networks     | Horgan et    | [![TF](diagrams/tf.png)][DQN_TF2]      |
+: (DQN)               : al., 2018    : [![JAX](diagrams/jax.png)][DQN_JAX]    :
+| Importance-Weighted | Espeholt et  | [![TF](diagrams/tf.png)][IMPALA_TF2]   |
+: Actor-Learner       : al., 2018    : [![JAX](diagrams/jax.png)][IMPALA_JAX] :
+: Architectures       :              :                                        :
+: (IMPALA)            :              :                                        :
+| Recurrent Replay    | Kapturowski  | [![TF](diagrams/tf.png)][R2D2_TF2]     |
+: Distributed DQN     : et al., 2019 :                                        :
+: (R2D2)              :              :                                        :
+
+### Batch RL
+
+The structure of Acme also lends itself quite nicely to "learner-only" algorithm
+for use in Batch RL (with no environment interactions). Implemented algorithms
+include:
 
 Agent | Paper | Code
------ | :---: | :----------------------------------------------------------:
-BC    | -     | [![BC TF2](diagrams/tf.png){width="30" height="30"}][BC_TF2]
+----- | :---: | :------------------------------:
+BC    | -     | [![TF](diagrams/tf.png)][BC_TF2]
 
-**From Demonstrations.** Acme also easily allows active data acquisition to be
-combined with data from demonstrations. Such algorithms include:
+### Learning from demonstrations
 
-| Agent | Paper    | Code                                                     |
-| ----- | :------: | :------------------------------------------------------: |
-| DQfD  | Hester   | [![DQFD                                                  |
-:       : et al.,  : TF2](diagrams/tf.png){width="30" height="30"}][DQFD_TF2] :
-:       : 2017     :                                                          :
-| R2D3  | Gulcehre | [![R2D3                                                  |
-:       : et al.,  : TF2](diagrams/tf.png){width="30" height="30"}][R2D3_TF2] :
-:       : 2020     :                                                          :
+Acme also easily allows active data acquisition to be combined with data from
+demonstrations. Such algorithms include:
 
-**Model-based RL.** Finally, Acme also includes a variant of MCTS which can be
-used for model-based RL using a given or learned simulator
+Agent | Paper                 | Code
+----- | :-------------------: | :--------------------------------:
+DQfD  | Hester et al., 2017   | [![TF](diagrams/tf.png)][DQFD_TF2]
+R2D3  | Gulcehre et al., 2020 | [![TF](diagrams/tf.png)][R2D3_TF2]
 
-Agent                          | Paper               | Code
------------------------------- | :-----------------: | :--:
-Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![MCTS TF2](diagrams/tf.png){width="30" height="30"}][MCTS_TF2]
+### Model-based RL
+
+Finally, Acme also includes a variant of MCTS which can be used for model-based
+RL using a given or learned simulator
+
+| Agent            | Paper               | Code                               |
+| ---------------- | :-----------------: | :--------------------------------: |
+| Monte-Carlo Tree | Silver et al., 2018 | [![TF](diagrams/tf.png)][MCTS_TF2] |
+: Search (MCTS)    :                     :                                    :
 
 <!-- TF agents -->
 
