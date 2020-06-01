@@ -30,7 +30,7 @@ include
 - `AtariWrapper`: converts a standard ALE Atari environment using a stack of
   wrappers corresponding to the modifications used in the "[Human Level Control
   Through Deep Reinforcement Learning][nature-atari]" publication.
-  
+
 Acme also includes the `acme.wrappers.gym_wrapper` module which can be used to
 interact with [OpenAI Gym][gym] environments. This includes a general
 `GymWrapper` class as well as `AtariGymWrapper` which exposes a lives count
