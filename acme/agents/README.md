@@ -14,7 +14,7 @@ setting:
 Agent                                                          | Paper                    | Code
 -------------------------------------------------------------- | :----------------------: | :--:
 Deep Deterministic Policy Gradient (DDPG)                      | Lillicrap et al., 2015   | [![TF](../../docs/logos/tf-small.png)][DDPG_TF2]
-Distributed Distributional Deep Determinist (D4PG)             | Barth-Maron et al., 2018 | [![TF](../../docs/logos/tf-small.png)][D4PG_TF2] [![JAX](../../docs/logos/jax-small.png)][D4PG_JAX]
+Distributed Distributional Deep Determinist (D4PG)             | Barth-Maron et al., 2018 | [![TF](../../docs/logos/tf-small.png)][D4PG_TF2] ![JAX](../../docs/logos/jax-small.png) (coming soon!)
 Maximum a posteriori Policy Optimisation (MPO)                 | Abdolmaleki et al., 2018 | [![TF](../../docs/logos/tf-small.png)][MPO_TF2]
 Distributional Maximum a posteriori Policy Optimisation (DMPO) | -                        | [![TF](../../docs/logos/tf-small.png)][DMPO_TF2]
 
@@ -37,19 +37,19 @@ The structure of Acme also lends itself quite nicely to "learner-only" algorithm
 for use in Batch RL (with no environment interactions). Implemented algorithms
 include:
 
-Agent | Paper | Code
------ | :---: | :------------------------------:
-Behavior Cloning (BC)    | -     | [![TF](../../docs/logos/tf-small.png)][BC_TF2]
+Agent                 | Paper | Code
+--------------------- | :---: | :---------------------------------:
+Behavior Cloning (BC) | -     | [![TF](../../docs/logos/tf-small.png)][BC_TF2]
 
 ### Learning from demonstrations
 
 Acme also easily allows active data acquisition to be combined with data from
 demonstrations. Such algorithms include:
 
-Agent | Paper                 | Code
------ | :-------------------: | :--------------------------------:
-Deep Q-Learning from Demonstrations (DQfD)  | Hester et al., 2017   | [![TF](../../docs/logos/tf-small.png)][DQFD_TF2]
-Recurrent Replay Distributed DQN from Demonstratinos (R2D3)  | Gulcehre et al., 2020 | [![TF](../../docs/logos/tf-small.png)][R2D3_TF2]
+Agent                                                       | Paper                 | Code
+----------------------------------------------------------- | :-------------------: | :--:
+Deep Q-Learning from Demonstrations (DQfD)                  | Hester et al., 2017   | [![TF](../../docs/logos/tf-small.png)][DQFD_TF2]
+Recurrent Replay Distributed DQN from Demonstratinos (R2D3) | Gulcehre et al., 2020 | [![TF](../../docs/logos/tf-small.png)][R2D3_TF2]
 
 ### Model-based RL
 
