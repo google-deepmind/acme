@@ -84,6 +84,7 @@ class Checkpointer:
       add_uid: bool = True,
       max_to_keep: int = 1,
       checkpoint_ttl_seconds: int = _DEFAULT_CHECKPOINT_TTL,
+      keep_checkpoint_every_n_hours: int = None,
   ):
     """Builds the saver object.
 
@@ -98,6 +99,8 @@ class Checkpointer:
         `paths.get_unique_id()` for how this UID is generated.
       max_to_keep: The maximum number of checkpoints to keep.
       checkpoint_ttl_seconds: TTL (time to leave) in seconds for checkpoints.
+      keep_checkpoint_every_n_hours: keep_checkpoint_every_n_hours passed to
+        tf.train.CheckpointManager.
     """
 
     # Convert `Saveable` objects to TF `Checkpointable` first, if necessary.
@@ -128,7 +131,8 @@ class Checkpointer:
       self._checkpoint_manager = tf.train.CheckpointManager(
           self._checkpoint,
           directory=self._checkpoint_dir,
-          max_to_keep=max_to_keep)
+          max_to_keep=max_to_keep,
+          keep_checkpoint_every_n_hours=keep_checkpoint_every_n_hours)
 
       self.restore()
 
