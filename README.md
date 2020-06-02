@@ -98,7 +98,8 @@ If you use Acme in your work, please cite the accompanying [technical report][Pa
             Bilal Piot and
             Nando de Freitas},
     year={2020},
-    journal={arXiv preprint},
+    journal={arXiv preprint arXiv:2006.00979},
+    url={https://arxiv.org/abs/2006.00979},
 }
 ```
 
@@ -106,4 +107,4 @@ If you use Acme in your work, please cite the accompanying [technical report][Pa
 [Examples]: examples/
 [Agents]: acme/agents/
 [Reverb]: https://github.com/deepmind/reverb
-[Paper]: https://github.com/deepmind/acme/blob/master/paper.pdf
+[Paper]: https://arxiv.org/abs/2006.00979
