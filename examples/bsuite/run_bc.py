@@ -41,7 +41,12 @@ import tensorflow as tf
 import tree
 import trfl
 
+# Bsuite flags
 flags.DEFINE_string('bsuite_id', 'deep_sea/0', 'Bsuite id.')
+flags.DEFINE_string('results_dir', '/tmp/bsuite', 'CSV results directory.')
+flags.DEFINE_boolean('overwrite', False, 'Whether to overwrite csv results.')
+
+# Agent flags
 flags.DEFINE_float('learning_rate', 2e-4, 'Learning rate.')
 flags.DEFINE_integer('batch_size', 16, 'Batch size.')
 flags.DEFINE_float('epsilon', 0., 'Epsilon for the epsilon greedy in the env.')
@@ -120,7 +125,11 @@ def _n_step_transition_from_episode(observations: types.NestedTensor,
 
 def main(_):
   # Create an environment and grab the spec.
-  raw_environment = bsuite.load_from_id(FLAGS.bsuite_id)
+  raw_environment = bsuite.load_and_record_to_csv(
+      bsuite_id=FLAGS.bsuite_id,
+      results_dir=FLAGS.results_dir,
+      overwrite=FLAGS.overwrite,
+  )
   environment = single_precision.SinglePrecisionWrapper(raw_environment)
   environment_spec = specs.make_environment_spec(environment)
 

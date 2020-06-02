@@ -30,25 +30,36 @@ from acme.agents.mcts.models import mlp
 from acme.agents.mcts.models import simulator
 
 import bsuite
+from bsuite.logging import csv_logging
 import dm_env
 import sonnet as snt
 
+# Bsuite flags
+flags.DEFINE_string('bsuite_id', 'deep_sea/0', 'Bsuite id.')
+flags.DEFINE_string('results_dir', '/tmp/bsuite', 'CSV results directory.')
+flags.DEFINE_boolean('overwrite', False, 'Whether to overwrite csv results.')
+# Agent flags
 flags.DEFINE_boolean('simulator', True, 'Simulator or learned model?')
 FLAGS = flags.FLAGS
 
 
-def make_env_and_model() -> Tuple[dm_env.Environment, models.Model]:
+def make_env_and_model(
+    bsuite_id: str,
+    results_dir: str,
+    overwrite: bool) -> Tuple[dm_env.Environment, models.Model]:
   """Create environment and corresponding model (learned or simulator)."""
-  environment = bsuite.load('catch', kwargs={})
+  raw_env = bsuite.load_from_id(bsuite_id)
   if FLAGS.simulator:
-    model = simulator.Simulator(environment)  # pytype: disable=attribute-error
+    model = simulator.Simulator(raw_env)  # pytype: disable=attribute-error
   else:
     model = mlp.MLPModel(
-        specs.make_environment_spec(environment),
+        specs.make_environment_spec(raw_env),
         replay_capacity=1000,
         batch_size=16,
         hidden_sizes=(50,),
     )
+  environment = csv_logging.wrap_environment(
+      raw_env, bsuite_id, results_dir, overwrite)
   environment = wrappers.SinglePrecisionWrapper(environment)
 
   return environment, model
@@ -64,7 +75,11 @@ def make_network(action_spec: specs.DiscreteArray) -> snt.Module:
 
 def main(_):
   # Create an environment and environment model.
-  environment, model = make_env_and_model()
+  environment, model = make_env_and_model(
+      bsuite_id=FLAGS.bsuite_id,
+      results_dir=FLAGS.results_dir,
+      overwrite=FLAGS.overwrite,
+  )
   environment_spec = specs.make_environment_spec(environment)
 
   # Create the network and optimizer.

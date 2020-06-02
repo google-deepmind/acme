@@ -29,7 +29,12 @@ import bsuite
 import sonnet as snt
 
 
+# Bsuite flags
 flags.DEFINE_string('bsuite_id', 'deep_sea/0', 'Bsuite id.')
+flags.DEFINE_string('results_dir', '/tmp/bsuite', 'CSV results directory.')
+flags.DEFINE_boolean('overwrite', False, 'Whether to overwrite csv results.')
+
+# Agent flags
 flags.DEFINE_float('demonstration_ratio', 0.5,
                    ('Proportion of demonstration transitions in the replay '
                     'buffer.'))
@@ -52,7 +57,11 @@ def make_network(action_spec: specs.DiscreteArray) -> snt.Module:
 
 def main(_):
   # Create an environment and grab the spec.
-  raw_environment = bsuite.load_from_id(FLAGS.bsuite_id)
+  raw_environment = bsuite.load_and_record_to_csv(
+      bsuite_id=FLAGS.bsuite_id,
+      results_dir=FLAGS.results_dir,
+      overwrite=FLAGS.overwrite,
+  )
   environment = wrappers.SinglePrecisionWrapper(raw_environment)
   environment_spec = specs.make_environment_spec(environment)
 

@@ -16,6 +16,7 @@
 """Example running DQN on BSuite in a single process."""
 
 from absl import app
+from absl import flags
 
 import acme
 from acme import specs
@@ -25,11 +26,21 @@ from acme.agents import dqn
 import bsuite
 import sonnet as snt
 
+# Bsuite flags
+flags.DEFINE_string('bsuite_id', 'deep_sea/0', 'Bsuite id.')
+flags.DEFINE_string('results_dir', '/tmp/bsuite', 'CSV results directory.')
+flags.DEFINE_boolean('overwrite', False, 'Whether to overwrite csv results.')
+FLAGS = flags.FLAGS
+
 
 def main(_):
   # Create an environment and grab the spec.
-  environment = bsuite.load_from_id('catch/0')
-  environment = wrappers.SinglePrecisionWrapper(environment)
+  raw_environment = bsuite.load_and_record_to_csv(
+      bsuite_id=FLAGS.bsuite_id,
+      results_dir=FLAGS.results_dir,
+      overwrite=FLAGS.overwrite,
+  )
+  environment = wrappers.SinglePrecisionWrapper(raw_environment)
   environment_spec = specs.make_environment_spec(environment)
 
   network = snt.Sequential([
