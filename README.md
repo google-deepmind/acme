@@ -44,35 +44,46 @@ along with the `README.md` associated with each agent.
 
 ## Installation
 
-We support Python 3.6 and 3.7.
+We have tested `acme` on Python 3.6 & 3.7.
 
-To install `acme` core:
+1.  **Optional**: We recommend using a
+    [Python virtual environment](https://docs.python.org/3/tutorial/venv.html)
+    to manage your dependencies, so as to avoid version conflicts:
 
-```bash
-# Install Acme core dependencies.
-pip install dm-acme
+    ```bash
+    python3 -m venv acme
+    source acme/bin/activate
+    pip install --upgrade pip setuptools
+    ```
 
-# Install Reverb, our replay backend.
-pip install dm-acme[reverb]
-```
+1.  To install `acme` core:
 
-To install dependencies for our JAX/TensorFlow-based agents:
+    ```bash
+    # Install Acme core dependencies.
+    pip install dm-acme
 
-```bash
-pip install dm-acme[tf]
-# and/or
-pip install dm-acme[jax]
-```
+    # Install Reverb, our replay backend.
+    pip install dm-acme[reverb]
+    ```
 
-Finally, to install environments (gym, dm_control, bsuite):
+1.  To install dependencies for our JAX/TensorFlow-based agents:
 
-```bash
-pip install dm-acme[envs]
-```
+    ```bash
+    pip install dm-acme[tf]
+    # and/or
+    pip install dm-acme[jax]
+    ```
+
+1.  Finally, to install environments ([gym], [dm_control], [bsuite]):
+
+    ```bash
+    pip install dm-acme[envs]
+    ```
 
 ## Citing Acme
 
-If you use Acme in your work, please cite the accompanying [technical report][Paper]:
+If you use Acme in your work, please cite the accompanying
+[technical report][Paper]:
 
 ```bibtex
 @article{hoffman2020acme,
@@ -108,3 +119,6 @@ If you use Acme in your work, please cite the accompanying [technical report][Pa
 [Agents]: acme/agents/
 [Reverb]: https://github.com/deepmind/reverb
 [Paper]: https://arxiv.org/abs/2006.00979
+[gym]: https://github.com/openai/gym
+[dm_control]: https://github.com/deepmind/dm_control
+[bsuite]: https://github.com/deepmind/bsuite
