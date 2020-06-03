@@ -5,6 +5,7 @@
 **[Overview](#overview)** | **[Installation](#installation)** |
 **[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]**
 
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/dm-acme)
 ![pytest](https://github.com/deepmind/acme/workflows/pytest/badge.svg)
 
 Acme is a library of reinforcement learning (RL) agents and agent building
