@@ -1,9 +1,13 @@
 # Agents
 
-Acme includes a number of pre-built agents listed below. We have also broken the
-agents listed below into different sections based on their different use cases,
-however these distinction are often subtle. For more information on each
-implementation see the relevant agent-specific README.
+Acme includes a number of pre-built agents listed below. These are all
+single-process agents. While there is currently no plan to release the
+distributed variants of these agents, they share the exact same learning and
+acting code as their single-process counterparts available in this repository.
+
+We've also listed the agents below in separate sections based on their different
+use cases, however these distinction are often subtle. For more information on
+each implementation see the relevant agent-specific README.
 
 ### Continuous control
 
