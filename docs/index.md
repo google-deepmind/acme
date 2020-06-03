@@ -90,4 +90,4 @@ checkpointing to snapshotting, various forms of logging, and other low-level
 computations. For more information on these components, as well as the structure
 described above, see our more detailed discussion of Acme
 [components](components.md) or take a look at the full implementations of
-various [agents](../agents/).
+various [agents](../acme/agents/).
