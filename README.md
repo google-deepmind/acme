@@ -15,6 +15,26 @@ baselines, while still providing enough flexibility to do novel research. The
 design of Acme also attempts to provide multiple points of entry to the RL
 problem at differing levels of complexity.
 
+<div align="center" style="display: grid; grid-template-columns: auto auto;">
+  <div>
+    <video width="25%" autoplay loop muted>
+      <source src="https://storage.googleapis.com/dm-acme/videos/d4pg_humanoid_run_features_short.webm" type="video/webm">
+    </video>
+    <video width="25%" autoplay loop muted>
+      <source src="https://storage.googleapis.com/dm-acme/videos/d4pg_acrobot_swingup_features_short.webm" type="video/webm">
+    </video>
+  </div>
+  <div>
+    <video width="25%" autoplay loop muted>
+      <source src="https://storage.googleapis.com/dm-acme/videos/r2d2_breakout.webm" type="video/webm">
+    </video>
+    <video width="25%" autoplay loop muted>
+      <source src="https://storage.googleapis.com/dm-acme/videos/r2d2_ms_pacman.webm" type="video/webm">
+    </video>
+  </div>
+</div>
+
+
 ## Overview
 
 At the highest level Acme exposes a number of agents which can be used simply as
