@@ -52,6 +52,7 @@ class CSVLogger(base.Logger):
 
     # Append row to CSV.
     with self._open(self._file_path, mode='a') as f:
+      data = base.to_numpy(data)
       keys = sorted(data.keys())
       writer = csv.DictWriter(f, fieldnames=keys)
       if not self._header_exists:
