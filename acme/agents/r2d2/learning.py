@@ -165,7 +165,8 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
       )
 
       # Calculate importance weights and use them to scale the loss.
-      keys, probs, _ = sample.info
+      sample_info = sample.info
+      keys, probs = sample_info.key, sample_info.probability
       probs = tf2_utils.batch_to_sequence(probs)
       importance_weights = 1. / (self._max_replay_size * probs)  # [T, B]
       importance_weights **= self._importance_sampling_exponent
