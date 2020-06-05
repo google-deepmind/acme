@@ -23,6 +23,7 @@ from acme.utils import tf2_variable_utils
 
 import dm_env
 import sonnet as snt
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 tfd = tfp.distributions
@@ -43,6 +44,10 @@ class IMPALAActor(core.Actor):
     self._variable_client = variable_client
     self._network = network
 
+    # TODO(b/152382420): Ideally we would call tf.function(network) instead but
+    # this results in an error when using acme RNN snapshots.
+    self._policy = tf.function(network.__call__)
+
     self._state = None
     self._prev_state = None
     self._prev_logits = None
@@ -55,7 +60,7 @@ class IMPALAActor(core.Actor):
       self._state = self._network.initial_state(1)
 
     # Forward.
-    (logits, _), new_state = self._network(batched_obs, self._state)
+    (logits, _), new_state = self._policy(batched_obs, self._state)
 
     self._prev_logits = logits
     self._prev_state = self._state
