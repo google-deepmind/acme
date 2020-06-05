@@ -20,6 +20,7 @@ from typing import Dict, List
 
 import acme
 from acme import losses
+from acme import networks as acme_nets
 from acme import types
 from acme.utils import counting
 from acme.utils import loggers
@@ -140,9 +141,12 @@ class D4PGLearner(acme.Learner):
               'critic_optimizer': self._critic_optimizer,
               'num_steps': self._num_steps,
           })
+      critic_mean = snt.Sequential(
+          [self._critic_network, acme_nets.StochasticMeanHead()])
       self._snapshotter = tf2_savers.Snapshotter(
           objects_to_save={
               'policy': self._policy_network,
+              'critic': critic_mean,
           })
 
     # Do not record timestamps until after the first learning step is done.
