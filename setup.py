@@ -24,12 +24,12 @@ _metadata = import_util.module_from_spec(spec)
 spec.loader.exec_module(_metadata)
 
 reverb_requirements = [
-    'dm-reverb-nightly==0.1.0.dev20200529',
-    'tf-nightly==2.3.0.dev20200528',
+    'dm-reverb-nightly==0.1.0.dev20200605',
+    'tf-nightly==2.3.0.dev20200604',
 ]
 
 tf_requirements = [
-    'tf-nightly==2.3.0.dev20200528',
+    'tf-nightly==2.3.0.dev20200604',
     'tfp-nightly',
     'dm-sonnet',
     'trfl',
@@ -95,6 +95,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
 )
