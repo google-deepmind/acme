@@ -16,7 +16,7 @@
 """Learner for the IMPALA actor-critic agent."""
 
 import functools
-from typing import Callable, Iterator, List, NamedTuple
+from typing import Callable, Dict, Iterator, List, NamedTuple, Tuple
 
 import acme
 from acme import specs
@@ -59,15 +59,12 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       logger: loggers.Logger = None,
   ):
 
-    # Initialise training state (parameters & optimiser state).
+    # Transform into pure functions.
     network = hk.transform(network)
-    initial_network_state = hk.transform(initial_state_fn).apply(None)
-    initial_params = network.init(
-        next(rng), jax_utils.zeros_like(obs_spec), initial_network_state)
-    initial_opt_state = optimizer.init(initial_params)
+    initial_state_fn = hk.transform(initial_state_fn)
 
-    def loss(params: hk.Params, sample: reverb.ReplaySample):
-      """V-trace loss."""
+    def loss(params: hk.Params, sample: reverb.ReplaySample) -> jnp.ndarray:
+      """Entropy-regularised actor-critic loss."""
 
       # Extract the data.
       observations, actions, rewards, discounts, extra = sample.data
@@ -114,13 +111,18 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       return mean_loss
 
     @jax.jit
-    def sgd_step(state: TrainingState, sample: reverb.ReplaySample):
-      # Compute gradients and optionally apply clipping.
+    def sgd_step(
+        state: TrainingState, sample: reverb.ReplaySample
+    ) -> Tuple[TrainingState, Dict[str, jnp.ndarray]]:
+      """Computes an SGD step, returning new state and metrics for logging."""
+
+      # Compute gradients.
       batch_loss = jax.vmap(loss, in_axes=(None, 0))
       mean_loss = lambda p, s: jnp.mean(batch_loss(p, s))
       grad_fn = jax.value_and_grad(mean_loss)
       loss_value, gradients = grad_fn(state.params, sample)
 
+      # Apply updates
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
       new_params = optix.apply_updates(state.params, updates)
 
@@ -132,8 +134,15 @@ class IMPALALearner(acme.Learner, acme.Saveable):
 
       return new_state, metrics
 
-    self._state = TrainingState(
-        params=initial_params, opt_state=initial_opt_state)
+    def make_initial_state(key: jnp.ndarray) -> TrainingState:
+      """Initialises the training state (parameters and optimiser state)."""
+      dummy_obs = jax_utils.zeros_like(obs_spec)
+      initial_state = initial_state_fn.apply(None)
+      initial_params = network.init(key, dummy_obs, initial_state)
+      initial_opt_state = optimizer.init(initial_params)
+      return TrainingState(params=initial_params, opt_state=initial_opt_state)
+
+    self._state = make_initial_state(next(rng))
 
     # Internalise iterator.
     self._iterator = jax_utils.prefetch(iterator)
