@@ -5,7 +5,8 @@
 **[Overview](#overview)** | **[Installation](#installation)** |
 **[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]**
 
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/dm-acme)
+![PyPI Python Version](https://img.shields.io/pypi/pyversions/dm-acme)
+![PyPI version](https://badge.fury.io/py/dm-acme.svg)
 ![pytest](https://github.com/deepmind/acme/workflows/pytest/badge.svg)
 
 Acme is a library of reinforcement learning (RL) agents and agent building
@@ -34,42 +35,43 @@ problem at differing levels of complexity.
   </div>
 </div>
 
-
 ## Overview
 
-At the highest level Acme exposes a number of agents which can be used simply as
-follows:
+If you just want to get started using Acme quickly, the main thing to know about
+the library is that we expose a number of agent implementations and an
+`EnvironmentLoop` primitive that can be used as follows:
 
 ```python
-import acme
-
-# Create an environment and an actor.
-environment = ...
-actor = ...
-
-# Run the environment loop.
-loop = acme.EnvironmentLoop(environment, actor)
+loop = acme.EnvironmentLoop(environment, agent)
 loop.run()
 ```
+
+This will run a simple loop in which the given agent interacts with its
+environment and learns from this interaction. This assumes an `agent` instance
+(implementations of which you can find [here][Agents]) and an `environment`
+instance which implements the [Deepmind Environment API][dm_env]. Each
+individual agent also includes a `README.md` file describing the implementation
+in more detail. Of course, these two lines of code definitely simplify the
+picture. To actually get started, take a look at the detailed working code
+examples found in our [examples] subdirectory which show how to instantiate a
+few agents and environments. We also include a
+[quickstart notebook][Quickstart].
 
 Acme also tries to maintain this level of simplicity while either diving deeper
 into the agent algorithms or by using them in more complicated settings. An
 overview of Acme along with more detailed descriptions of its underlying
-components can be found by referring to the [documentation][Documentation].
-
-For a quick start, take a look at the more detailed working code examples found
-in the [examples][Examples] subdirectory, which also includes a tutorial
-notebook to get you started. And finally, for more information on the various
-agent implementations available take a look at the [agents][Agents] subdirectory
-along with the `README.md` associated with each agent.
+components can be found by referring to the [documentation]. And we also include
+a [tutorial notebook][Tutorial] which describes in more detail the underlying
+components behind a typical Acme agent and how these can be combined to form a
+novel implementation.
 
 ## Installation
 
 We have tested `acme` on Python 3.6 & 3.7.
 
-1.  **Optional**: We recommend using a
+1.  **Optional**: We strongly recommend using a
     [Python virtual environment](https://docs.python.org/3/tutorial/venv.html)
-    to manage your dependencies, so as to avoid version conflicts:
+    to manage your dependencies in order to avoid version conflicts:
 
     ```bash
     python3 -m venv acme
@@ -77,17 +79,14 @@ We have tested `acme` on Python 3.6 & 3.7.
     pip install --upgrade pip setuptools
     ```
 
-1.  To install `acme` core:
+1.  To install the core libraries (including [Reverb], our storage backend):
 
     ```bash
-    # Install Acme core dependencies.
     pip install dm-acme
-
-    # Install Reverb, our replay backend.
     pip install dm-acme[reverb]
     ```
 
-1.  To install dependencies for our JAX/TensorFlow-based agents:
+1.  To install dependencies for our [JAX]- or [TensorFlow]-based agents:
 
     ```bash
     pip install dm-acme[tf]
@@ -95,7 +94,8 @@ We have tested `acme` on Python 3.6 & 3.7.
     pip install dm-acme[jax]
     ```
 
-1.  Finally, to install environments ([gym], [dm_control], [bsuite]):
+1.  Finally, to install a few example environments (including [gym],
+    [dm_control], and [bsuite]):
 
     ```bash
     pip install dm-acme[envs]
@@ -109,37 +109,28 @@ If you use Acme in your work, please cite the accompanying
 ```bibtex
 @article{hoffman2020acme,
     title={Acme: A Research Framework for Distributed Reinforcement Learning},
-    author={Matt Hoffman and
-            Bobak Shahriari and
-            John Aslanides and
-            Gabriel Barth-Maron and
-            Feryal Behbahani and
-            Tamara Norman and
-            Abbas Abdolmaleki and
-            Albin Cassirer and
-            Fan Yang and
-            Kate Baumli and
-            Sarah Henderson and
-            Alex Novikov and
-            Sergio Gómez Colmenarejo and
-            Serkan Cabi and
-            Caglar Gulcehre and
-            Tom Le Paine and
-            Andrew Cowie and
-            Ziyu Wang and
-            Bilal Piot and
-            Nando de Freitas},
+    author={Matt Hoffman and Bobak Shahriari and John Aslanides and Gabriel
+        Barth-Maron and Feryal Behbahani and Tamara Norman and Abbas Abdolmaleki
+        and Albin Cassirer and Fan Yang and Kate Baumli and Sarah Henderson and
+        Alex Novikov and Sergio Gómez Colmenarejo and Serkan Cabi and Caglar
+        Gulcehre and Tom Le Paine and Andrew Cowie and Ziyu Wang and Bilal Piot
+        and Nando de Freitas},
     year={2020},
     journal={arXiv preprint arXiv:2006.00979},
     url={https://arxiv.org/abs/2006.00979},
 }
 ```
 
-[Documentation]: docs/index.md
-[Examples]: examples/
 [Agents]: acme/agents/
-[Reverb]: https://github.com/deepmind/reverb
+[Examples]: examples/
+[Tutorial]: examples/tutorial.ipynb
+[Quickstart]: examples/quickstart.ipynb
+[Documentation]: docs/index.md
 [Paper]: https://arxiv.org/abs/2006.00979
+[Reverb]: https://github.com/deepmind/reverb
+[JAX]: https://github.com/google/jax
+[TensorFlow]: https://tensorflow.org
 [gym]: https://github.com/openai/gym
-[dm_control]: https://github.com/deepmind/dm_control
+[dm_control]: https://github.com/deepmind/dm_env
+[dm_env]: https://github.com/deepmind/dm_env
 [bsuite]: https://github.com/deepmind/bsuite
