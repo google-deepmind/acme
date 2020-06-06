@@ -18,7 +18,7 @@ setting:
 Agent                                                          | Paper                    | Code
 -------------------------------------------------------------- | :----------------------: | :--:
 Deep Deterministic Policy Gradient (DDPG)                      | Lillicrap et al., 2015   | [![TF](../../docs/logos/tf-small.png)][DDPG_TF2]
-Distributed Distributional Deep Determinist (D4PG)             | Barth-Maron et al., 2018 | [![TF](../../docs/logos/tf-small.png)][D4PG_TF2] ![JAX](../../docs/logos/jax-small.png) (coming soon!)
+Distributed Distributional Deep Determinist (D4PG)             | Barth-Maron et al., 2018 | [![TF](../../docs/logos/tf-small.png)][D4PG_TF2]
 Maximum a posteriori Policy Optimisation (MPO)                 | Abdolmaleki et al., 2018 | [![TF](../../docs/logos/tf-small.png)][MPO_TF2]
 Distributional Maximum a posteriori Policy Optimisation (DMPO) | -                        | [![TF](../../docs/logos/tf-small.png)][DMPO_TF2]
 
@@ -66,20 +66,20 @@ Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![TF](../../docs/logos/t
 
 <!-- TF agents -->
 
-[DQN_TF2]: ../agents/dqn/
-[IMPALA_TF2]: ../agents/impala
-[R2D2_TF2]: ../agents/r2d2
-[MCTS_TF2]: ../agents/mcts
-[DDPG_TF2]: ../agents/ddpg
-[D4PG_TF2]: ../agents/d4pg
-[MPO_TF2]: ../agents/mpo
-[DMPO_TF2]: ../agents/dmpo
-[BC_TF2]: ../agents/bc
-[DQFD_TF2]: ../agents/dqfd
-[R2D3_TF2]: ../agents/r2d3
+[DQN_TF2]: dqn/
+[IMPALA_TF2]: impala/
+[R2D2_TF2]: r2d2/
+[MCTS_TF2]: mcts/
+[DDPG_TF2]: ddpg/
+[D4PG_TF2]: d4pg/
+[MPO_TF2]: mpo/
+[DMPO_TF2]: dmpo/
+[BC_TF2]: bc/
+[DQFD_TF2]: dqfd/
+[R2D3_TF2]: r2d3/
 
 <!-- JAX agents -->
 
-[DQN_JAX]: ../agents/jax/dqn/
-[IMPALA_JAX]: ../agents/jax/impala/
-[D4PG_JAX]: ../agents/jax/d4pg/
+[DQN_JAX]: jax/dqn/
+[IMPALA_JAX]: jax/impala/
+[D4PG_JAX]: jax/d4pg/
