@@ -49,7 +49,7 @@ loop.run()
 This will run a simple loop in which the given agent interacts with its
 environment and learns from this interaction. This assumes an `agent` instance
 (implementations of which you can find [here][Agents]) and an `environment`
-instance which implements the [Deepmind Environment API][dm_env]. Each
+instance which implements the [DeepMind Environment API][dm_env]. Each
 individual agent also includes a `README.md` file describing the implementation
 in more detail. Of course, these two lines of code definitely simplify the
 picture. To actually get started, take a look at the detailed working code
