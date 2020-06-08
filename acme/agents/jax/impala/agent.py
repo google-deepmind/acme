@@ -42,8 +42,9 @@ class IMPALA(acme.Actor):
   def __init__(
       self,
       environment_spec: specs.EnvironmentSpec,
-      network: networks.PolicyValueRNN,
-      initial_state_fn: Callable[[], networks.RNNState],
+      forward_fn: networks.PolicyValueRNN,
+      unroll_fn: networks.PolicyValueRNN,
+      initial_state_fn: Callable[[], hk.LSTMState],
       sequence_length: int,
       sequence_period: int,
       counter: counting.Counter = None,
@@ -93,9 +94,10 @@ class IMPALA(acme.Actor):
         optix.clip_by_global_norm(max_gradient_norm),
         optix.adam(learning_rate),
     )
+
     self._learner = learning.IMPALALearner(
         obs_spec=environment_spec.observations,
-        network=network,
+        unroll_fn=unroll_fn,
         initial_state_fn=initial_state_fn,
         iterator=dataset.as_numpy_iterator(),
         rng=rng,
@@ -111,7 +113,7 @@ class IMPALA(acme.Actor):
     variable_client = jax_variable_utils.VariableClient(
         self._learner, key='policy')
     self._actor = acting.IMPALAActor(
-        network=network,
+        forward_fn=forward_fn,
         initial_state_fn=initial_state_fn,
         rng=rng,
         adder=adder,

@@ -15,7 +15,6 @@
 
 """Learner for the IMPALA actor-critic agent."""
 
-import functools
 from typing import Callable, Dict, Iterator, List, NamedTuple, Tuple
 
 import acme
@@ -36,6 +35,7 @@ import tree
 
 
 class TrainingState(NamedTuple):
+  """Training state consists of network parameters and optimiser state."""
   params: hk.Params
   opt_state: optix.OptState
 
@@ -45,9 +45,9 @@ class IMPALALearner(acme.Learner, acme.Saveable):
 
   def __init__(
       self,
-      network: networks.PolicyValueRNN,
-      initial_state_fn: Callable[[], networks.RNNState],
       obs_spec: specs.Array,
+      unroll_fn: networks.PolicyValueRNN,
+      initial_state_fn: Callable[[], hk.LSTMState],
       iterator: Iterator[reverb.ReplaySample],
       optimizer: optix.InitUpdate,
       rng: hk.PRNGSequence,
@@ -60,7 +60,7 @@ class IMPALALearner(acme.Learner, acme.Saveable):
   ):
 
     # Transform into pure functions.
-    network = hk.transform(network)
+    unroll_fn = hk.transform(unroll_fn)
     initial_state_fn = hk.transform(initial_state_fn)
 
     def loss(params: hk.Params, sample: reverb.ReplaySample) -> jnp.ndarray:
@@ -71,38 +71,34 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       initial_state = tree.map_structure(lambda s: s[0], extra['core_state'])
       behaviour_logits = extra['logits']
 
-      #
-      actions = actions[:-1]  # [T-1]
-      rewards = rewards[:-1]  # [T-1]
-      discounts = discounts[:-1]  # [T-1]
+      # Apply reward clipping.
       rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
 
       # Unroll current policy over observations.
-      net = functools.partial(network.apply, params)
-      (logits, values), _ = hk.static_unroll(net, observations, initial_state)
+      (logits, values), _ = unroll_fn.apply(params, observations, initial_state)
 
       # Compute importance sampling weights: current policy / behavior policy.
       rhos = rlax.categorical_importance_sampling_ratios(
-          logits[:-1], behaviour_logits[:-1], actions)
+          logits[:-1], behaviour_logits[:-1], actions[:-1])
 
       # Critic loss.
       vtrace_returns = rlax.vtrace_td_error_and_advantage(
           v_tm1=values[:-1],
           v_t=values[1:],
-          r_t=rewards,
-          discount_t=discounts * discount,
+          r_t=rewards[:-1],
+          discount_t=discounts[:-1] * discount,
           rho_t=rhos)
       critic_loss = jnp.square(vtrace_returns.errors)
 
       # Policy gradient loss.
       policy_gradient_loss = rlax.policy_gradient_loss(
           logits_t=logits[:-1],
-          a_t=actions,
+          a_t=actions[:-1],
           adv_t=vtrace_returns.pg_advantage,
-          w_t=jnp.ones_like(rewards))
+          w_t=jnp.ones_like(rewards[:-1]))
 
       # Entropy regulariser.
-      entropy_loss = rlax.entropy_loss(logits[:-1], jnp.ones_like(rewards))
+      entropy_loss = rlax.entropy_loss(logits[:-1], jnp.ones_like(rewards[:-1]))
 
       # Combine weighted sum of actor & critic losses.
       mean_loss = jnp.mean(policy_gradient_loss + baseline_cost * critic_loss +
@@ -137,15 +133,18 @@ class IMPALALearner(acme.Learner, acme.Saveable):
     def make_initial_state(key: jnp.ndarray) -> TrainingState:
       """Initialises the training state (parameters and optimiser state)."""
       dummy_obs = jax_utils.zeros_like(obs_spec)
+      dummy_obs = jax_utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
       initial_state = initial_state_fn.apply(None)
-      initial_params = network.init(key, dummy_obs, initial_state)
+      initial_params = unroll_fn.init(key, dummy_obs, initial_state)
       initial_opt_state = optimizer.init(initial_params)
-      return TrainingState(params=initial_params, opt_state=initial_opt_state)
+      return TrainingState(
+          params=initial_params, opt_state=initial_opt_state)
 
+    # Initialise training state (parameters and optimiser state).
     self._state = make_initial_state(next(rng))
 
     # Internalise iterator.
-    self._iterator = jax_utils.prefetch(iterator)
+    self._iterator = iterator
     self._sgd_step = sgd_step
 
     # Set up logging/counting.
@@ -155,16 +154,15 @@ class IMPALALearner(acme.Learner, acme.Saveable):
   def step(self):
     """Does a step of SGD and logs the results."""
 
+    # Do a batch of SGD.
     sample = next(self._iterator)
     self._state, results = self._sgd_step(self._state, sample)
 
     # Update our counts and record it.
     counts = self._counter.increment(steps=1)
-    results = {k: np.array(v) for k, v in results.items()}
-    results.update(counts)
 
     # Snapshot and attempt to write logs.
-    self._logger.write(results)
+    self._logger.write({**results, **counts})
 
   def get_variables(self, names: List[str]) -> List[hk.Params]:
     return [self._state.params]

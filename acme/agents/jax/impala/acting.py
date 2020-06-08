@@ -32,14 +32,14 @@ import jax.numpy as jnp
 class IMPALAActor(core.Actor):
   """A recurrent actor."""
 
-  _state: networks.RNNState
-  _prev_state: networks.RNNState
+  _state: hk.LSTMState
+  _prev_state: hk.LSTMState
   _prev_logits: jnp.ndarray
 
   def __init__(
       self,
-      network: networks.PolicyValueRNN,
-      initial_state_fn: Callable[[], networks.RNNState],
+      forward_fn: networks.PolicyValueRNN,
+      initial_state_fn: Callable[[], hk.LSTMState],
       rng: hk.PRNGSequence,
       variable_client: jax_variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
@@ -48,7 +48,7 @@ class IMPALAActor(core.Actor):
     # Store these for later use.
     self._adder = adder
     self._variable_client = variable_client
-    self._network = jax.jit(hk.transform(network).apply, backend='cpu')
+    self._forward = jax.jit(hk.transform(forward_fn).apply, backend='cpu')
     self._rng = rng
 
     self._params = variable_client.update_and_wait()
@@ -60,7 +60,7 @@ class IMPALAActor(core.Actor):
       self._state = self._initial_state
 
     # Forward.
-    (logits, _), new_state = self._network(self._variable_client.params,
+    (logits, _), new_state = self._forward(self._variable_client.params,
                                            observation, self._state)
 
     self._prev_logits = logits

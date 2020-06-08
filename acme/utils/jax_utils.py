@@ -60,6 +60,16 @@ def to_numpy_squeeze(values: types.Nest) -> types.NestedArray:
   return tree_util.tree_map(lambda x: np.array(x).squeeze(axis=0), values)
 
 
+def fetch_devicearray(values: types.Nest) -> types.Nest:
+  """Fetches and converts any DeviceArrays in `values`."""
+
+  def _serialize(x):
+    if isinstance(x, jnp.DeviceArray):
+      return np.array(x)
+    return x
+  return tree.map_structure(_serialize, values)
+
+
 def batch_to_sequence(values: types.Nest) -> types.NestedArray:
   return tree_util.tree_map(
       lambda x: jnp.transpose(x, axes=(1, 0, *range(2, len(x.shape)))), values)

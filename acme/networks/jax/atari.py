@@ -13,13 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Common networks for Atari."""
+"""Common networks for Atari.
+
+Glossary of shapes:
+- T: Sequence length.
+- B: Batch size.
+- A: Number of actions.
+- D: Embedding size.
+- X?: X is optional (e.g. optional batch/sequence dimension).
+
+"""
 
 import functools
-from typing import Any, Tuple
 
 from acme.networks.jax import base
 from acme.networks.jax import duelling
+from acme.networks.jax import embedding
 from acme.networks.jax import policy_value
 
 from acme.wrappers import observation_action_reward
@@ -30,9 +39,6 @@ import jax.numpy as jnp
 
 # Useful type aliases.
 Images = jnp.ndarray
-Logits = jnp.ndarray
-Value = jnp.ndarray
-LSTMState = Any
 
 
 class AtariTorso(hk.Module):
@@ -75,23 +81,17 @@ class ResidualBlock(hk.Module):
     self._block = hk.Sequential([
         jax.nn.relu,
         hk.Conv2D(
-            num_channels,
-            kernel_shape=[3, 3],
-            stride=[1, 1],
-            padding='SAME'),
+            num_channels, kernel_shape=[3, 3], stride=[1, 1], padding='SAME'),
         jax.nn.relu,
         hk.Conv2D(
-            num_channels,
-            kernel_shape=[3, 3],
-            stride=[1, 1],
-            padding='SAME'),
+            num_channels, kernel_shape=[3, 3], stride=[1, 1], padding='SAME'),
     ])
 
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
     return self._block(x) + x
 
 
-class DeepAtariTorso(hk.Module):
+class DeepAtariTorso(base.Module):
   """Deep torso for Atari, from the IMPALA paper."""
 
   def __init__(self, name: str = 'deep_atari_torso'):
@@ -132,32 +132,28 @@ class DeepIMPALAAtariNetwork(hk.RNNCore):
 
   def __init__(self, num_actions: int):
     super().__init__(name='impala_atari_network')
-    self._torso = DeepAtariTorso()
+    self._embed = embedding.OAREmbedding(DeepAtariTorso(), num_actions)
     self._core = hk.LSTM(256)
     self._head = policy_value.PolicyValueHead(num_actions)
     self._num_actions = num_actions
 
   def __call__(self, inputs: observation_action_reward.OAR,
-               state: LSTMState) -> Tuple[Tuple[Logits, Value], LSTMState]:
-    reward = jnp.tanh(inputs.reward)  # [B, 1]
-    if not reward.shape:
-      reward = jnp.expand_dims(reward, axis=0)
+               state: hk.LSTMState) -> base.LSTMOutputs:
 
-    action = hk.one_hot(inputs.action, self._num_actions)  # [B, A]
-
-    expand = len(inputs.observation.shape) == 3
-    if expand:
-      inputs = inputs._replace(
-          observation=jnp.expand_dims(inputs.observation, axis=0))
-    embedding = self._torso(inputs.observation)
-    if expand:
-      embedding = jnp.squeeze(embedding, axis=0)
-    embedding = jnp.concatenate([embedding, action, reward], axis=-1)
-
-    embedding, new_state = self._core(embedding, state)
-    logits, value = self._head(embedding)  # [B, A]
+    embeddings = self._embed(inputs)  # [B?, D+A+1]
+    embeddings, new_state = self._core(embeddings, state)
+    logits, value = self._head(embeddings)  # logits: [B?, A], value: [B?, 1]
 
     return (logits, value), new_state
 
-  def initial_state(self, batch_size: int, **unused_kwargs) -> LSTMState:
+  def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
     return self._core.initial_state(batch_size)
+
+  def unroll(self, inputs: observation_action_reward.OAR,
+             state: hk.LSTMState) -> base.LSTMOutputs:
+    """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
+    embeddings = self._embed(inputs)
+    embeddings, new_states = hk.static_unroll(self._core, embeddings, state)
+    logits, values = self._head(embeddings)
+
+    return (logits, values), new_states

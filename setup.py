@@ -38,8 +38,9 @@ tf_requirements = [
 jax_requirements = [
     'jax',
     'jaxlib',
-    'dm-haiku @ git+git://github.com/deepmind/dm-haiku.git#egg=dm-haiku',
+    'dm-haiku',
     'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
+    'dataclasses',  # Back-port for Python 3.6.
 ]
 
 env_requirements = [

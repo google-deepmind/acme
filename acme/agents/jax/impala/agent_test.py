@@ -64,7 +64,7 @@ class IMPALATest(absltest.TestCase):
         episode_length=10)
     spec = specs.make_environment_spec(environment)
 
-    def network(x, s):
+    def forward_fn(x, s):
       model = MyNetwork(spec.actions.num_values)
       return model(x, s)
 
@@ -72,11 +72,16 @@ class IMPALATest(absltest.TestCase):
       model = MyNetwork(spec.actions.num_values)
       return model.initial_state(batch_size)
 
+    def unroll_fn(inputs, state):
+      model = MyNetwork(spec.actions.num_values)
+      return hk.static_unroll(model, inputs, state)
+
     # Construct the agent.
     agent = impala.IMPALA(
         environment_spec=spec,
-        network=network,
+        forward_fn=forward_fn,
         initial_state_fn=initial_state_fn,
+        unroll_fn=unroll_fn,
         sequence_length=3,
         sequence_period=3,
         batch_size=6,
