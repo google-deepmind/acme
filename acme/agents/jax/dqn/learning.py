@@ -19,8 +19,8 @@ from typing import Iterator, List, NamedTuple, Tuple
 
 import acme
 from acme.adders import reverb as adders
+from acme.jax import networks
 from acme.jax import utils
-from acme.networks import jax as networks
 from acme.utils import async_utils
 from acme.utils import counting
 from acme.utils import loggers

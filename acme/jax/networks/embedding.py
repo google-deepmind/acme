@@ -15,7 +15,7 @@
 
 """Modules for computing custom embeddings."""
 
-from acme.networks.jax import base
+from acme.jax.networks import base
 from acme.wrappers import observation_action_reward
 
 import dataclasses

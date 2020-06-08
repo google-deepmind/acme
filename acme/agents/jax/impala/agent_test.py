@@ -22,7 +22,7 @@ from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import impala
-from acme.networks import jax as networks
+from acme.jax import networks
 from acme.testing import fakes
 
 import haiku as hk

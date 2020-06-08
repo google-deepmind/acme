@@ -19,8 +19,8 @@ from typing import Callable, Dict, Iterator, List, NamedTuple, Tuple
 
 import acme
 from acme import specs
+from acme.jax import networks
 from acme.jax import utils
-from acme.networks import jax as networks
 from acme.utils import counting
 from acme.utils import loggers
 import haiku as hk

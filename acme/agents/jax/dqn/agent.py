@@ -21,8 +21,8 @@ from acme.adders import reverb as adders
 from acme.agents import agent
 from acme.agents.jax import actors
 from acme.agents.jax.dqn import learning
+from acme.jax import networks
 from acme.jax import variable_utils
-from acme.networks import jax as networks
 import haiku as hk
 from jax.experimental import optix
 import jax.numpy as jnp

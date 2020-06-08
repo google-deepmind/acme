@@ -24,8 +24,8 @@ from acme.adders import reverb as adders
 from acme.agents.jax.impala import acting
 from acme.agents.jax.impala import learning
 from acme.agents.jax.impala import types
+from acme.jax import networks
 from acme.jax import variable_utils
-from acme.networks import jax as networks
 from acme.utils import counting
 from acme.utils import loggers
 import dm_env

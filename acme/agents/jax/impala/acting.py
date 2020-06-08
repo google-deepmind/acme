@@ -20,8 +20,8 @@ from typing import Callable, Optional
 from acme import adders
 from acme import core
 from acme.agents.jax.impala import types
+from acme.jax import networks
 from acme.jax import variable_utils
-from acme.networks import jax as networks
 import dm_env
 import haiku as hk
 import jax

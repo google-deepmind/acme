@@ -26,10 +26,10 @@ Glossary of shapes:
 
 import functools
 
-from acme.networks.jax import base
-from acme.networks.jax import duelling
-from acme.networks.jax import embedding
-from acme.networks.jax import policy_value
+from acme.jax.networks import base
+from acme.jax.networks import duelling
+from acme.jax.networks import embedding
+from acme.jax.networks import policy_value
 
 from acme.wrappers import observation_action_reward
 
