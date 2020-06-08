@@ -14,8 +14,8 @@
 
 """Various losses for training agent components (policies, critics, etc)."""
 
-from acme.losses.distributional import categorical
-from acme.losses.dpg import dpg
-from acme.losses.huber import huber
-from acme.losses.mpo import MPO
-from acme.losses.r2d2 import transformed_n_step_loss
+from acme.tf.losses.distributional import categorical
+from acme.tf.losses.dpg import dpg
+from acme.tf.losses.huber import huber
+from acme.tf.losses.mpo import MPO
+from acme.tf.losses.r2d2 import transformed_n_step_loss

@@ -89,7 +89,7 @@ class DistributionalMPO(agent.Agent):
         that is made.
       policy_loss_module: configured MPO loss function for the policy
         optimization; defaults to sensible values on the control suite.
-        See `acme/losses/mpo.py` for more details on available configurations.
+        See `acme/tf/losses/mpo.py` for more details.
       policy_optimizer: optimizer to be used on the policy.
       critic_optimizer: optimizer to be used on the critic.
       n_step: number of steps to squash into a single transition.

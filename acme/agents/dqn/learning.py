@@ -19,13 +19,12 @@ import time
 from typing import Dict, List
 
 import acme
-from acme import losses
 from acme.adders import reverb as adders
+from acme.tf import losses
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import tf2_savers
 from acme.utils import tf2_utils
-
 import numpy as np
 import reverb
 import sonnet as snt
