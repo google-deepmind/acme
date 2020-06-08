@@ -1,16 +1,11 @@
-# Acme
+# Overview
+
+[**Components**](components.md) | [**FAQ**](faq.md)
 
 Acme is a library of reinforcement learning (RL) agents and agent building
 blocks. Overall Acme strives to expose simple, efficient, and readable agent
 baselines while still providing enough flexibility to create novel
 implementations.
-
-## Links
-
--   [Components](components.md)
--   [FAQ](faq.md)
-
-## Overview
 
 The design of Acme attempts to provide multiple points of entry to the RL
 problem at differing levels of complexity. The first entry-point &mdash; and
