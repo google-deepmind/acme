@@ -18,8 +18,8 @@
 from acme import datasets
 from acme import specs
 from acme.adders import reverb as adders
-from acme.agents import actors_jax
 from acme.agents import agent
+from acme.agents.jax import actors
 from acme.agents.jax.dqn import learning
 from acme.jax import variable_utils
 from acme.networks import jax as networks
@@ -103,7 +103,7 @@ class DQN(agent.Agent):
 
     variable_client = variable_utils.VariableClient(learner, 'foo')
 
-    actor = actors_jax.FeedForwardActor(
+    actor = actors.FeedForwardActor(
         policy=policy,
         rng=hk.PRNGSequence(1),
         variable_client=variable_client,

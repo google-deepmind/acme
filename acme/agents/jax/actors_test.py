@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for actors_jax."""
+"""Tests for actors."""
 
 from absl.testing import absltest
 from acme import environment_loop
 from acme import specs
-from acme.agents import actors_jax
+from acme.agents.jax import actors
 from acme.jax import utils
 from acme.jax import variable_utils
 from acme.testing import fakes
@@ -62,7 +62,7 @@ class ActorTest(absltest.TestCase):
     variable_source = fakes.VariableSource(params)
     variable_client = variable_utils.VariableClient(variable_source, 'policy')
 
-    actor = actors_jax.FeedForwardActor(
+    actor = actors.FeedForwardActor(
         policy.apply, rng=hk.PRNGSequence(1), variable_client=variable_client)
 
     loop = environment_loop.EnvironmentLoop(environment, actor)
