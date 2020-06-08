@@ -16,9 +16,8 @@
 """Tests for variable utilities."""
 
 from absl.testing import absltest
+from acme.jax import variable_utils
 from acme.testing import fakes
-from acme.utils import jax_variable_utils
-
 import haiku as hk
 import jax
 import jax.numpy as jnp
@@ -36,7 +35,7 @@ class VariableClientTest(absltest.TestCase):
     init_fn, _ = hk.transform(dummy_network)
     params = init_fn(jax.random.PRNGKey(1), jnp.zeros(shape=(1, 32)))
     variable_source = fakes.VariableSource(params)
-    variable_client = jax_variable_utils.VariableClient(
+    variable_client = variable_utils.VariableClient(
         variable_source, key='policy')
     variable_client.update_and_wait()
     tree.map_structure(np.testing.assert_array_equal, variable_client.params,

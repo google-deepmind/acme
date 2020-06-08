@@ -19,12 +19,11 @@ from typing import Iterator, List, NamedTuple, Tuple
 
 import acme
 from acme.adders import reverb as adders
+from acme.jax import utils
 from acme.networks import jax as networks
 from acme.utils import async_utils
 from acme.utils import counting
-from acme.utils import jax_utils
 from acme.utils import loggers
-
 from dm_env import specs
 import haiku as hk
 import jax
@@ -124,7 +123,7 @@ class DQNLearner(acme.Learner, acme.Saveable):
 
     # Internalise agent components (replay buffer, networks, optimizer).
     self._replay_client = replay_client
-    self._iterator = jax_utils.prefetch(iterator)
+    self._iterator = utils.prefetch(iterator)
 
     # Internalise the hyperparameters.
     self._target_update_period = target_update_period
@@ -135,9 +134,9 @@ class DQNLearner(acme.Learner, acme.Saveable):
 
     # Initialise parameters and optimiser state.
     initial_params = network.init(
-        next(rng), jax_utils.add_batch_dim(jax_utils.zeros_like(obs_spec)))
+        next(rng), utils.add_batch_dim(utils.zeros_like(obs_spec)))
     initial_target_params = network.init(
-        next(rng), jax_utils.add_batch_dim(jax_utils.zeros_like(obs_spec)))
+        next(rng), utils.add_batch_dim(utils.zeros_like(obs_spec)))
     initial_opt_state = optimizer.init(initial_params)
 
     self._state = TrainingState(

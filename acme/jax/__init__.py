@@ -1,4 +1,3 @@
-# python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Acme loggers."""
-
-from acme.utils.loggers.aggregators import Dispatcher
-from acme.utils.loggers.asynchronous import AsyncLogger
-from acme.utils.loggers.base import Logger
-from acme.utils.loggers.base import to_numpy
-from acme.utils.loggers.csv import CSVLogger
-from acme.utils.loggers.filters import NoneFilter
-from acme.utils.loggers.filters import TimeFilter
-from acme.utils.loggers.default import make_default_logger  # pylint: disable=g-bad-import-order
-from acme.utils.loggers.terminal import TerminalLogger

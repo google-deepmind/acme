@@ -16,14 +16,12 @@
 """Tests for actors_jax."""
 
 from absl.testing import absltest
-
 from acme import environment_loop
 from acme import specs
 from acme.agents import actors_jax
+from acme.jax import utils
+from acme.jax import variable_utils
 from acme.testing import fakes
-from acme.utils import jax_utils
-from acme.utils import jax_variable_utils
-
 import dm_env
 import haiku as hk
 import jax.numpy as jnp
@@ -58,13 +56,11 @@ class ActorTest(absltest.TestCase):
     policy = hk.transform(policy, apply_rng=True)
 
     rng = hk.PRNGSequence(1)
-    dummy_obs = jax_utils.add_batch_dim(
-        jax_utils.zeros_like(env_spec.observations))
+    dummy_obs = utils.add_batch_dim(utils.zeros_like(env_spec.observations))
     params = policy.init(next(rng), dummy_obs)
 
     variable_source = fakes.VariableSource(params)
-    variable_client = jax_variable_utils.VariableClient(variable_source,
-                                                        'policy')
+    variable_client = variable_utils.VariableClient(variable_source, 'policy')
 
     actor = actors_jax.FeedForwardActor(
         policy.apply, rng=hk.PRNGSequence(1), variable_client=variable_client)

@@ -19,11 +19,10 @@ from typing import Callable, Dict, Iterator, List, NamedTuple, Tuple
 
 import acme
 from acme import specs
+from acme.jax import utils
 from acme.networks import jax as networks
 from acme.utils import counting
-from acme.utils import jax_utils
 from acme.utils import loggers
-
 import haiku as hk
 import jax
 from jax.experimental import optix
@@ -132,8 +131,8 @@ class IMPALALearner(acme.Learner, acme.Saveable):
 
     def make_initial_state(key: jnp.ndarray) -> TrainingState:
       """Initialises the training state (parameters and optimiser state)."""
-      dummy_obs = jax_utils.zeros_like(obs_spec)
-      dummy_obs = jax_utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
+      dummy_obs = utils.zeros_like(obs_spec)
+      dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
       initial_state = initial_state_fn.apply(None)
       initial_params = unroll_fn.init(key, dummy_obs, initial_state)
       initial_opt_state = optimizer.init(initial_params)

@@ -20,8 +20,8 @@ from typing import Callable, Optional
 from acme import adders
 from acme import core
 from acme import types
-from acme.utils import jax_utils
-from acme.utils import jax_variable_utils
+from acme.jax import utils
+from acme.jax import variable_utils
 
 import dm_env
 import haiku as hk
@@ -44,7 +44,7 @@ class FeedForwardActor(core.Actor):
       self,
       policy: FeedForwardPolicy,
       rng: hk.PRNGSequence,
-      variable_client: jax_variable_utils.VariableClient,
+      variable_client: variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
   ):
     self._rng = rng
@@ -55,9 +55,9 @@ class FeedForwardActor(core.Actor):
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     key = next(self._rng)
-    observation = jax_utils.add_batch_dim(observation)
+    observation = utils.add_batch_dim(observation)
     action = self._policy(self._client.params, key, observation)
-    return jax_utils.to_numpy_squeeze(action)
+    return utils.to_numpy_squeeze(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
     if self._adder:

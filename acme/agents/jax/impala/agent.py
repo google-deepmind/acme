@@ -24,11 +24,10 @@ from acme.adders import reverb as adders
 from acme.agents.jax.impala import acting
 from acme.agents.jax.impala import learning
 from acme.agents.jax.impala import types
+from acme.jax import variable_utils
 from acme.networks import jax as networks
 from acme.utils import counting
-from acme.utils import jax_variable_utils
 from acme.utils import loggers
-
 import dm_env
 import haiku as hk
 from jax.experimental import optix
@@ -110,8 +109,7 @@ class IMPALA(acme.Actor):
         max_abs_reward=max_abs_reward,
     )
 
-    variable_client = jax_variable_utils.VariableClient(
-        self._learner, key='policy')
+    variable_client = variable_utils.VariableClient(self._learner, key='policy')
     self._actor = acting.IMPALAActor(
         forward_fn=forward_fn,
         initial_state_fn=initial_state_fn,

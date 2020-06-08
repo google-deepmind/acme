@@ -20,9 +20,8 @@ from typing import Callable, Optional
 from acme import adders
 from acme import core
 from acme.agents.jax.impala import types
+from acme.jax import variable_utils
 from acme.networks import jax as networks
-from acme.utils import jax_variable_utils
-
 import dm_env
 import haiku as hk
 import jax
@@ -41,7 +40,7 @@ class IMPALAActor(core.Actor):
       forward_fn: networks.PolicyValueRNN,
       initial_state_fn: Callable[[], hk.LSTMState],
       rng: hk.PRNGSequence,
-      variable_client: jax_variable_utils.VariableClient,
+      variable_client: variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
   ):
 

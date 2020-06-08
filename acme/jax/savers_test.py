@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for jax_savers."""
+"""Tests for savers."""
 
 from unittest import mock
 
 from absl.testing import absltest
 from acme import core
+from acme.jax import savers
 from acme.testing import test_utils
-from acme.utils import jax_savers
 from acme.utils import paths
 import jax.numpy as jnp
 import numpy as np
@@ -56,8 +56,8 @@ class SaverTest(test_utils.TestCase):
   def test_save_restore(self):
     """Checks that we can save and restore state."""
     directory = self.get_tempdir()
-    jax_savers.save_to_path(directory, self._test_state)
-    result = jax_savers.restore_from_path(directory)
+    savers.save_to_path(directory, self._test_state)
+    result = savers.restore_from_path(directory)
     nest_assert_equal(result, self._test_state)
 
   def test_checkpointer(self):
@@ -71,7 +71,7 @@ class SaverTest(test_utils.TestCase):
       x = DummySaveable(self._test_state)
 
       # If we checkpoint it...
-      checkpointer = jax_savers.Checkpointer(x, directory, time_delta_minutes=0)
+      checkpointer = savers.Checkpointer(x, directory, time_delta_minutes=0)
       checkpointer.save()
 
       # The checkpointer should restore the object's state.
@@ -81,7 +81,7 @@ class SaverTest(test_utils.TestCase):
 
       # Checkpointers should also attempt a restore at construction time.
       x.state = None
-      jax_savers.Checkpointer(x, directory, time_delta_minutes=0)
+      savers.Checkpointer(x, directory, time_delta_minutes=0)
       nest_assert_equal(x.state, self._test_state)
 
 

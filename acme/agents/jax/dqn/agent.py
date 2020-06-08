@@ -21,9 +21,8 @@ from acme.adders import reverb as adders
 from acme.agents import actors_jax
 from acme.agents import agent
 from acme.agents.jax.dqn import learning
+from acme.jax import variable_utils
 from acme.networks import jax as networks
-from acme.utils import jax_variable_utils
-
 import haiku as hk
 from jax.experimental import optix
 import jax.numpy as jnp
@@ -102,7 +101,7 @@ class DQN(agent.Agent):
         replay_client=reverb.Client(address),
     )
 
-    variable_client = jax_variable_utils.VariableClient(learner, 'foo')
+    variable_client = variable_utils.VariableClient(learner, 'foo')
 
     actor = actors_jax.FeedForwardActor(
         policy=policy,

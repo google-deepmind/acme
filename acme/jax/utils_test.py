@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for jax_utils."""
+"""Tests for utils."""
 
 from absl.testing import absltest
-from acme.utils import jax_utils
+from acme.jax import utils
 
 import jax.numpy as jnp
 
@@ -33,7 +33,7 @@ class JaxUtilsTest(absltest.TestCase):
         [jnp.zeros(shape=(batch_size, 1))],
     ]
 
-    output_shape = jax_utils.batch_concat(inputs).shape
+    output_shape = utils.batch_concat(inputs).shape
     expected_shape = [batch_size, 2 + 5 * 3 + 1]
     self.assertSequenceEqual(output_shape, expected_shape)
 
