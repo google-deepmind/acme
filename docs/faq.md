@@ -14,3 +14,9 @@
     there are rare exceptions when using exotic ops with unsupported dtypes.
     Finally, don’t forget to add the decorator back in or you’ll find your
     learner to be a little sluggish!
+
+-   **Do you plan to release the distributed agents?** We've only open-sourced
+    our single-process agents. Internally, our distributed agents run the same
+    code as these open-sourced agents but are tied to Launchpad and other
+    DeepMind infrastructure. We don’t currently have a timetable for releasing
+    these components.
