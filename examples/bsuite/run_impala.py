@@ -17,13 +17,11 @@
 
 from absl import app
 from absl import flags
-
 import acme
-from acme import networks
 from acme import specs
 from acme import wrappers
 from acme.agents import impala
-
+from acme.tf import networks
 import bsuite
 import sonnet as snt
 

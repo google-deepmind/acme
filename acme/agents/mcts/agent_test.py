@@ -16,14 +16,12 @@
 """Tests for the MCTS agent."""
 
 from absl.testing import absltest
-
 import acme
-from acme import networks
 from acme import specs
 from acme.agents import mcts
 from acme.agents.mcts.models import simulator
 from acme.testing import fakes
-
+from acme.tf import networks
 import numpy as np
 import sonnet as snt
 

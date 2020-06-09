@@ -20,10 +20,10 @@ import time
 from typing import Dict, Iterator, List, Mapping, Union
 
 import acme
-from acme import networks
 from acme import specs
 from acme.adders import reverb as adders
 from acme.tf import losses
+from acme.tf import networks
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import tf2_savers

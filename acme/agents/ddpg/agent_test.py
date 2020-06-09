@@ -18,14 +18,12 @@
 from typing import Dict, Sequence
 
 from absl.testing import absltest
-
 import acme
-from acme import networks
 from acme import specs
 from acme import types
 from acme.agents import ddpg
 from acme.testing import fakes
-
+from acme.tf import networks
 import numpy as np
 import sonnet as snt
 import tensorflow as tf

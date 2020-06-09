@@ -16,13 +16,11 @@
 """Tests for IMPALA agent."""
 
 from absl.testing import absltest
-
 import acme
-from acme import networks
 from acme import specs
 from acme.agents import impala
 from acme.testing import fakes
-
+from acme.tf import networks
 import numpy as np
 import sonnet as snt
 

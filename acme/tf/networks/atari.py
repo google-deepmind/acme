@@ -17,11 +17,11 @@
 
 from typing import Tuple
 
-from acme.networks import base
-from acme.networks import duelling
-from acme.networks import embedding
-from acme.networks import policy_value
-from acme.networks import vision
+from acme.tf.networks import base
+from acme.tf.networks import duelling
+from acme.tf.networks import embedding
+from acme.tf.networks import policy_value
+from acme.tf.networks import vision
 from acme.wrappers import observation_action_reward
 
 import sonnet as snt

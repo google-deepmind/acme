@@ -15,7 +15,7 @@
 
 """Losses and projection operators relevant to distributional RL."""
 
-from acme import networks
+from acme.tf import networks
 import tensorflow as tf
 
 

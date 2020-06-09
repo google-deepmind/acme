@@ -19,12 +19,10 @@ import functools
 
 from absl import app
 from absl import flags
-
 import acme
-from acme import networks
 from acme import wrappers
 from acme.agents import dqn
-
+from acme.tf import networks
 import dm_env
 import gym
 

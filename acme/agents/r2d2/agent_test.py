@@ -16,13 +16,11 @@
 """Tests for RDQN agent."""
 
 from absl.testing import absltest
-
 import acme
-from acme import networks
 from acme import specs
 from acme.agents import r2d2
 from acme.testing import fakes
-
+from acme.tf import networks
 import numpy as np
 import sonnet as snt
 

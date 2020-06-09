@@ -15,7 +15,7 @@
 
 """Modules for computing custom embeddings."""
 
-from acme.networks import base
+from acme.tf.networks import base
 from acme.wrappers import observation_action_reward
 
 import sonnet as snt

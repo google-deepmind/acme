@@ -16,14 +16,12 @@
 """Tests for R2D3 agent."""
 
 from absl.testing import absltest
-
 import acme
-from acme import networks
 from acme import specs
 from acme.agents import r2d3
 from acme.agents.dqfd import bsuite_demonstrations
 from acme.testing import fakes
-
+from acme.tf import networks
 import dm_env
 import numpy as np
 import sonnet as snt

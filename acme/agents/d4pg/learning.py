@@ -19,9 +19,9 @@ import time
 from typing import Dict, List
 
 import acme
-from acme import networks as acme_nets
 from acme import types
 from acme.tf import losses
+from acme.tf import networks as acme_nets
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import tf2_savers

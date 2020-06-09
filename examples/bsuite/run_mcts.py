@@ -19,16 +19,14 @@ from typing import Tuple
 
 from absl import app
 from absl import flags
-
 import acme
-from acme import networks
 from acme import specs
 from acme import wrappers
 from acme.agents import mcts
 from acme.agents.mcts import models
 from acme.agents.mcts.models import mlp
 from acme.agents.mcts.models import simulator
-
+from acme.tf import networks
 import bsuite
 from bsuite.logging import csv_logging
 import dm_env

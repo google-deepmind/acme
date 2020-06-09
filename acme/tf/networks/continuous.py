@@ -18,7 +18,7 @@
 from typing import Sequence
 
 from acme import types
-from acme.networks import base
+from acme.tf.networks import base
 from acme.utils import tf2_utils
 
 import sonnet as snt

@@ -20,14 +20,12 @@ import time
 from unittest import mock
 
 from absl.testing import absltest
-
-from acme import networks
 from acme import specs
 from acme.testing import test_utils
+from acme.tf import networks
 from acme.utils import tf2_savers
 from acme.utils import tf2_utils
 from acme.utils import paths
-
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
