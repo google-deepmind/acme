@@ -19,7 +19,7 @@ from absl.testing import absltest
 
 from acme import environment_loop
 from acme import specs
-from acme.agents import actors_tf2
+from acme.agents.tf import actors
 from acme.testing import fakes
 
 import dm_env
@@ -51,7 +51,7 @@ class ActorTest(absltest.TestCase):
         lambda x: tf.argmax(x, axis=-1, output_type=env_spec.actions.dtype),
     ])
 
-    actor = actors_tf2.FeedForwardActor(network)
+    actor = actors.FeedForwardActor(network)
     loop = environment_loop.EnvironmentLoop(environment, actor)
     loop.run(20)
 
@@ -65,7 +65,7 @@ class ActorTest(absltest.TestCase):
         lambda x: tf.argmax(x, axis=-1, output_type=env_spec.actions.dtype),
     ])
 
-    actor = actors_tf2.RecurrentActor(network)
+    actor = actors.RecurrentActor(network)
     loop = environment_loop.EnvironmentLoop(environment, actor)
     loop.run(20)
 

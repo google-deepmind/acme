@@ -20,14 +20,13 @@ import copy
 from acme import datasets
 from acme import specs
 from acme.adders import reverb as adders
-from acme.agents import actors_tf2
 from acme.agents import agent
 from acme.agents.r2d2 import learning
+from acme.agents.tf import actors
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import tf2_savers
 from acme.utils import tf2_utils
-
 import reverb
 import sonnet as snt
 import tensorflow as tf
@@ -137,7 +136,7 @@ class R2D2(agent.Agent):
         lambda qs: trfl.epsilon_greedy(qs, epsilon=epsilon).sample(),
     ])
 
-    actor = actors_tf2.RecurrentActor(policy_network, adder)
+    actor = actors.RecurrentActor(policy_network, adder)
     observations_per_step = (
         float(replay_period * batch_size) / samples_per_insert)
     super().__init__(

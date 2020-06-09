@@ -23,11 +23,10 @@ from acme import datasets
 from acme import specs
 from acme import types as acme_types
 from acme.adders import reverb as adders
-from acme.agents import actors_tf2
 from acme.agents import agent
 from acme.agents import dqn
+from acme.agents.tf import actors
 from acme.utils import tf2_utils
-
 import reverb
 import sonnet as snt
 import tensorflow as tf
@@ -140,7 +139,7 @@ class DQfD(agent.Agent):
     tf2_utils.create_variables(target_network, [environment_spec.observations])
 
     # Create the actor which defines how we take actions.
-    actor = actors_tf2.FeedForwardActor(policy_network, adder)
+    actor = actors.FeedForwardActor(policy_network, adder)
 
     # The learner updates the parameters (and initializes them).
     learner = dqn.DQNLearner(

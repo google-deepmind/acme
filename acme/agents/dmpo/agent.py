@@ -21,9 +21,9 @@ from acme import datasets
 from acme import specs
 from acme import types
 from acme.adders import reverb as adders
-from acme.agents import actors_tf2 as actors
 from acme.agents import agent
 from acme.agents.dmpo import learning
+from acme.agents.tf import actors
 from acme.tf import networks
 from acme.utils import counting
 from acme.utils import loggers

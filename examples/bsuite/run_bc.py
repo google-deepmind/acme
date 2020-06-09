@@ -20,24 +20,20 @@ import operator
 
 from absl import app
 from absl import flags
-
 import acme
 from acme import specs
 from acme import types
-from acme.agents import actors_tf2
 from acme.agents.bc import learning
 from acme.agents.dqfd import bsuite_demonstrations
+from acme.agents.tf import actors
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import tf2_utils
 from acme.wrappers import single_precision
-
 import bsuite
-
 import reverb
 import sonnet as snt
 import tensorflow as tf
-
 import tree
 import trfl
 
@@ -165,7 +161,7 @@ def main(_):
   learner_counter = counting.Counter(counter, prefix='learner')
 
   # Create the actor which defines how we take actions.
-  evaluation_network = actors_tf2.FeedForwardActor(evaluator_network)
+  evaluation_network = actors.FeedForwardActor(evaluator_network)
 
   eval_loop = acme.EnvironmentLoop(
       environment=environment,
