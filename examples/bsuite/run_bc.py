@@ -23,9 +23,9 @@ from absl import flags
 import acme
 from acme import specs
 from acme import types
-from acme.agents.bc import learning
-from acme.agents.dqfd import bsuite_demonstrations
 from acme.agents.tf import actors
+from acme.agents.tf.bc import learning
+from acme.agents.tf.dqfd import bsuite_demonstrations
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import tf2_utils

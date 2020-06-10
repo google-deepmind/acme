@@ -21,7 +21,7 @@ from absl import flags
 import acme
 from acme import specs
 from acme import wrappers
-from acme.agents import dqn
+from acme.agents.tf import dqn
 
 import bsuite
 import sonnet as snt

@@ -22,10 +22,10 @@ from absl import flags
 import acme
 from acme import specs
 from acme import wrappers
-from acme.agents import mcts
-from acme.agents.mcts import models
-from acme.agents.mcts.models import mlp
-from acme.agents.mcts.models import simulator
+from acme.agents.tf import mcts
+from acme.agents.tf.mcts import models
+from acme.agents.tf.mcts.models import mlp
+from acme.agents.tf.mcts.models import simulator
 from acme.tf import networks
 import bsuite
 from bsuite.logging import csv_logging

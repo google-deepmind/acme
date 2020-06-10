@@ -23,8 +23,8 @@ import acme
 from acme import specs
 from acme import types
 from acme import wrappers
-from acme.agents import d4pg
 from acme.agents.tf import actors
+from acme.agents.tf import d4pg
 from acme.tf import networks
 from acme.utils import tf2_utils
 from dm_control import suite
