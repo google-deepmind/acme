@@ -73,7 +73,7 @@ tfd = tfp.distributions
 
 While custom Sonnet modules can be implemented and used directly, Acme also
 provides a number of useful network primitives which are tailored to RL tasks;
-these can be imported from `acme.networks`, see [networks] for more details.
+these can be imported from `acme.tf.networks`, see [networks] for more details.
 These primitives can be combined using `snt.Sequential`, or `snt.DeepRNN` when
 stacking network modules with state.
 
