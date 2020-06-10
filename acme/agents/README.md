@@ -66,17 +66,17 @@ Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![TF](../../docs/logos/t
 
 <!-- TF agents -->
 
-[DQN_TF2]: dqn/
-[IMPALA_TF2]: impala/
-[R2D2_TF2]: r2d2/
-[MCTS_TF2]: mcts/
-[DDPG_TF2]: ddpg/
-[D4PG_TF2]: d4pg/
-[MPO_TF2]: mpo/
-[DMPO_TF2]: dmpo/
-[BC_TF2]: bc/
-[DQFD_TF2]: dqfd/
-[R2D3_TF2]: r2d3/
+[DQN_TF2]: tf/dqn/
+[IMPALA_TF2]: tf/impala/
+[R2D2_TF2]: tf/r2d2/
+[MCTS_TF2]: tf/mcts/
+[DDPG_TF2]: tf/ddpg/
+[D4PG_TF2]: tf/d4pg/
+[MPO_TF2]: tf/mpo/
+[DMPO_TF2]: tf/dmpo/
+[BC_TF2]: tf/bc/
+[DQFD_TF2]: tf/dqfd/
+[R2D3_TF2]: tf/r2d3/
 
 <!-- JAX agents -->
 

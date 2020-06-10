@@ -180,7 +180,7 @@ agent = dmpo.DMPO(
 In this case, the `policy_` and `critic_network` act as heads on top of the
 shared visual torso.
 
-[networks]: ../acme/networks/
+[networks]: ../acme/tf/networks/
 [sonnet]: https://github.com/deepmind/sonnet/
 
 ## Internal components
