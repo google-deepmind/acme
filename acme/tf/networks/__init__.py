@@ -25,10 +25,10 @@ from acme.tf.networks.continuous import LayerNormAndResidualMLP
 from acme.tf.networks.continuous import LayerNormMLP
 from acme.tf.networks.continuous import NearZeroInitializedLinear
 from acme.tf.networks.distributional import ApproximateMode
-from acme.tf.networks.distributional import DiscreteValuedDistribution
 from acme.tf.networks.distributional import DiscreteValuedHead
 from acme.tf.networks.distributional import GaussianMixtureHead
 from acme.tf.networks.distributional import MultivariateNormalDiagHead
+from acme.tf.networks.distributions import DiscreteValuedDistribution
 from acme.tf.networks.duelling import DuellingMLP
 from acme.tf.networks.multiplexers import CriticMultiplexer
 from acme.tf.networks.noise import ClippedGaussian
