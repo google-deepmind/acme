@@ -22,6 +22,7 @@ from typing import Iterable, Generator, TypeVar
 from absl import logging
 from acme import types
 import haiku as hk
+import jax
 from jax import tree_util
 import jax.numpy as jnp
 import numpy as np
@@ -79,7 +80,8 @@ T = TypeVar('T')
 
 
 def prefetch(iterable: Iterable[T],
-             buffer_size: int = 5) -> Generator[T, None, None]:
+             buffer_size: int = 5,
+             device=None) -> Generator[T, None, None]:
   """Performs prefetching of elements from an iterable in a separate thread.
 
   Args:
@@ -87,6 +89,9 @@ def prefetch(iterable: Iterable[T],
       Note that each iterable should only be passed to this function once as
       iterables aren't thread safe
     buffer_size (int): Number of elements to keep in the prefetch buffer.
+    device: The device to prefetch the elements to. If none then the elements
+      are left on the CPU. The device should be of the type returned by
+      `jax.devices()`.
 
   Yields:
     Prefetched elements from the original iterable.
@@ -98,7 +103,6 @@ def prefetch(iterable: Iterable[T],
 
   if buffer_size <= 1:
     raise ValueError('the buffer_size should be > 1')
-
   buffer = queue.Queue(maxsize=(buffer_size - 1))
   producer_error = []
   end = object()
@@ -109,6 +113,8 @@ def prefetch(iterable: Iterable[T],
       # Build a new iterable for each thread. This is crucial if working with
       # tensorflow datasets because tf.Graph objects are thread local.
       for item in iterable:
+        if device:
+          item = jax.device_put(item, device)
         buffer.put(item)
     except Exception as e:  # pylint: disable=broad-except
       logging.exception('Error in producer thread for %s', iterable.__name__)
