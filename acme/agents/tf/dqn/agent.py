@@ -23,6 +23,7 @@ from acme.adders import reverb as adders
 from acme.agents import agent
 from acme.agents.tf import actors
 from acme.agents.tf.dqn import learning
+from acme.utils import loggers
 from acme.utils import tf2_savers
 from acme.utils import tf2_utils
 import reverb
@@ -56,6 +57,8 @@ class DQN(agent.Agent):
       epsilon: tf.Tensor = None,
       learning_rate: float = 1e-3,
       discount: float = 0.99,
+      logger: loggers.Logger = None,
+      checkpoint: bool = True,
   ):
     """Initialize the agent.
 
@@ -80,6 +83,8 @@ class DQN(agent.Agent):
         network is given.
       learning_rate: learning rate for the q-network update.
       discount: discount to use for TD updates.
+      logger: logger object to be used by learner.
+      checkpoint: boolean indicating whether to checkpoint the learner.
     """
 
     # Create a replay server to add data to. This uses no limiter behavior in
@@ -135,12 +140,17 @@ class DQN(agent.Agent):
         learning_rate=learning_rate,
         target_update_period=target_update_period,
         dataset=dataset,
-        replay_client=replay_client)
+        replay_client=replay_client,
+        logger=logger,
+        checkpoint=checkpoint)
 
-    self._checkpointer = tf2_savers.Checkpointer(
-        objects_to_save=learner.state,
-        subdirectory='dqn_learner',
-        time_delta_minutes=60.)
+    if checkpoint:
+      self._checkpointer = tf2_savers.Checkpointer(
+          objects_to_save=learner.state,
+          subdirectory='dqn_learner',
+          time_delta_minutes=60.)
+    else:
+      self._checkpointer = None
 
     super().__init__(
         actor=actor,
@@ -150,4 +160,5 @@ class DQN(agent.Agent):
 
   def update(self):
     super().update()
-    self._checkpointer.save()
+    if self._checkpointer is not None:
+      self._checkpointer.save()

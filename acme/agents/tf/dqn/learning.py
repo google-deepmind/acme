@@ -53,6 +53,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       replay_client: reverb.TFClient = None,
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
+      checkpoint: bool = True,
   ):
     """Initializes the learner.
 
@@ -71,6 +72,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       replay_client: client to replay to allow for updating priorities.
       counter: Counter object for (potentially distributed) counting.
       logger: Logger object for writing logs to.
+      checkpoint: boolean indicating whether to checkpoint the learner.
     """
 
     # Internalise agent components (replay buffer, networks, optimizer).
@@ -95,8 +97,12 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
 
-    self._snapshotter = tf2_savers.Snapshotter(
-        objects_to_save={'network': network}, time_delta_minutes=60.)
+    # Create a snapshotter object.
+    if checkpoint:
+      self._snapshotter = tf2_savers.Snapshotter(
+          objects_to_save={'network': network}, time_delta_minutes=60.)
+    else:
+      self._snapshotter = None
 
     # Do not record timestamps until after the first learning step is done.
     # This is to avoid including the time it takes for actors to come online and
@@ -175,7 +181,8 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     result.update(counts)
 
     # Snapshot and attempt to write logs.
-    self._snapshotter.save()
+    if self._snapshotter is not None:
+      self._snapshotter.save()
     self._logger.write(result)
 
   def get_variables(self, names: List[str]) -> List[np.ndarray]:
