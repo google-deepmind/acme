@@ -3,7 +3,7 @@
 # Acme: A research framework for reinforcement learning
 
 **[Overview](#overview)** | **[Installation](#installation)** |
-**[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]**
+**[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]** | **[Blog post]**
 
 ![PyPI Python Version](https://img.shields.io/pypi/pyversions/dm-acme)
 ![PyPI version](https://badge.fury.io/py/dm-acme.svg)
@@ -127,6 +127,7 @@ If you use Acme in your work, please cite the accompanying
 [Quickstart]: examples/quickstart.ipynb
 [Documentation]: docs/index.md
 [Paper]: https://arxiv.org/abs/2006.00979
+[Blog post]: https://deepmind.com/research/publications/Acme
 [Reverb]: https://github.com/deepmind/reverb
 [JAX]: https://github.com/google/jax
 [TensorFlow]: https://tensorflow.org
