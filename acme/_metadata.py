@@ -19,4 +19,10 @@ This is kept in a separate module so that it can be imported from setup.py, at
 a time when acme's dependencies may not have been installed yet.
 """
 
-__version__ = '0.1.3'  # https://www.python.org/dev/peps/pep-0440/
+# We follow Semantic Versioning (https://semver.org/)
+_MAJOR_VERSION = '0'
+_MINOR_VERSION = '1'
+_PATCH_VERSION = '3'
+
+# Example: '0.4.2'
+__version__ = '.'.join([_MAJOR_VERSION, _MINOR_VERSION, _PATCH_VERSION])

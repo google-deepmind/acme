@@ -15,7 +15,10 @@
 
 """Install script for setuptools."""
 
+import datetime
 from importlib import util as import_util
+import sys
+
 from setuptools import find_packages
 from setuptools import setup
 
@@ -63,9 +66,17 @@ with open('README.md', 'r') as fh:
 long_description += '\n\nFor more information see our '
 long_description += '[github repository](https://github.com/deepmind/acme).'
 
+# Get the version from metadata.
+version = _metadata.__version__
+
+# If we're releasing a nightly/dev version append to the version string.
+if '--nightly' in sys.argv:
+  sys.argv.remove('--nightly')
+  version += '.dev' + datetime.datetime.now().strftime('%Y%m%d')
+
 setup(
     name='dm-acme',
-    version=_metadata.__version__,
+    version=version,
     description='A Python library for Reinforcement Learning.',
     long_description=long_description,
     long_description_content_type='text/markdown',
