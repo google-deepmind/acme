@@ -15,81 +15,100 @@
 
 """Utilities to use within loggers."""
 
-from concurrent import futures
-import sys
+import queue
+import threading
+from typing import Callable, TypeVar, Generic
 
 from absl import logging
-import wrapt
 
 
-def make_async(thread_name_prefix=''):
-  """Returns a decorator that runs any function it wraps in a background thread.
+E = TypeVar("E")
 
-   When called, the decorated function will immediately return a future
-   representing its result.
-   The function being decorated can be an instance method or normal function.
-   Consecutive calls to the decorated function are guaranteed to be in order
-   and non overlapping.
-   An error raised by the decorated function will be raised in the background
-   thread at call-time. Raising the error in the main thread is deferred until
-   the next call, so as to be non-blocking.
-   All subsequent calls to the decorated function after an error has been raised
-   will not run (regardless of whether the arguments have changed); instead
-   they will re-raise the original error in the main thread.
 
-  Args:
-    thread_name_prefix: Str prefix for the background thread, for easier
-    debugging.
+class AsyncExecutor(Generic[E]):
+  """Executes a blocking function asynchronously on a queue of items."""
 
-  Returns:
-    decorator that runs any function it wraps in a background thread, and
-    handles any errors raised.
-  """
-  # We have a single thread pool per wrapped function to ensure that calls to
-  # the function are run in order (but in a background thread).
-  pool = futures.ThreadPoolExecutor(max_workers=1,
-                                    thread_name_prefix=thread_name_prefix)
-  errors = []
-  @wrapt.decorator
-  def decorator(wrapped, instance, args, kwargs):
-    """Runs wrapped in a background thread so result is non-blocking.
+  def __init__(
+      self,
+      fn: Callable[[E], None],
+      queue_size: int = 1,
+      interruptible_interval_secs: float = 1.0,
+  ):
+    """Buffers elements in a queue and runs `fn` asynchronously..
+
+    NOTE: Once closed, `AsyncExecutor` will block until current `fn` finishes
+      but is not guaranteed to dequeue all elements currently stored in
+      the data queue. This is intentional so as to prevent a blocking `fn` call
+      from preventing `AsyncExecutor` from closing.
 
     Args:
-      wrapped: A function to wrap and execute in background thread.
-        Can be instance method or normal function.
-      instance: The object to which the wrapped function was bound when it was
-        called (None if wrapped is a normal function).
-      args: List of position arguments supplied when wrapped function
-        was called.
-      kwargs: Dict of keyword arguments supplied when the wrapped function was
-        called.
-
-    Returns:
-      A future representing the result of calling wrapped.
-    Raises:
-      Exception object caught in background thread, if call to wrapped fails.
-      Exception object with stacktrace in main thread, if the previous call to
-        wrapped failed.
+      fn: A callable to be executed upon dequeuing an element from data
+        queue.
+      queue_size: The maximum size of the synchronized buffer queue.
+      interruptible_interval_secs: Timeout interval in seconds for blocking
+        queue operations after which the background threads check for errors and
+        if background threads should stop.
     """
-    del instance
+    self._data = queue.Queue(maxsize=queue_size)
+    self._should_stop = threading.Event()
+    self._errors = queue.Queue()
+    self._interruptible_interval_secs = interruptible_interval_secs
 
-    def trap_errors(*args, **kwargs):
-      """Wraps wrapped to trap any errors thrown."""
+    def _dequeue() -> None:
+      """Dequeue data from a queue and invoke blocking call."""
+      while not self._should_stop.is_set():
+        try:
+          element = self._data.get(timeout=self._interruptible_interval_secs)
+          # Execute fn upon dequeuing an element from the data queue.
+          fn(element)
+        except queue.Empty:
+          # If queue is Empty for longer than the specified time interval,
+          # check again if should_stop has been requested and retry.
+          continue
+        except Exception as e:
+          logging.error("AsyncExecuter thread terminated with error.")
+          logging.exception(e)
+          self._errors.put(e)
+          self._should_stop.set()
+          raise  # Never caught by anything, just terminates the thread.
 
-      if errors:
-        # Do not execute wrapped if previous call errored.
-        return
+    self._thread = threading.Thread(target=_dequeue, daemon=True)
+    self._thread.start()
+
+  def _raise_on_error(self) -> None:
+    try:
+      # Raise the error on the caller thread if an error has been raised in the
+      # looper thread.
+      raise self._errors.get_nowait()
+    except queue.Empty:
+      pass
+
+  def close(self):
+    self._should_stop.set()
+    # Join all background threads.
+    self._thread.join()
+    # Raise errors produced by background threads.
+    self._raise_on_error()
+
+  def put(self, element: E) -> None:
+    """Puts `element` asynchronuously onto the underlying data queue.
+
+    The write call blocks if the underlying data_queue contains `queue_size`
+      elements for over `self._interruptible_interval_secs` second, in which
+      case we check if stop has been requested or if there has been an error
+      raised on the looper thread. If neither happened, retry enqueue.
+
+    Args:
+      element: an element to be put into the underlying data queue and dequeued
+        asynchronuously for `fn(element)` call.
+    """
+    while not self._should_stop.is_set():
       try:
-        return wrapped(*args, **kwargs)
-      except Exception as e:
-        errors.append(sys.exc_info())
-        logging.exception(
-            'Error in producer thread for {%s}', thread_name_prefix)
-        raise e
-
-    if errors:
-      # Previous call had an error, re-raise in main thread.
-      exc_info = errors[-1]
-      raise exc_info[1].with_traceback(exc_info[2])
-    return pool.submit(trap_errors, *args, **kwargs)
-  return decorator
+        self._data.put(element, timeout=self._interruptible_interval_secs)
+        break
+      except queue.Full:
+        continue
+    else:
+      # If `should_stop` has been set, then raises if any has been raised on
+      # the background thread.
+      self._raise_on_error()

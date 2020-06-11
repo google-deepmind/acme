@@ -121,6 +121,11 @@ class DQNLearner(acme.Learner, acme.Saveable):
 
       return new_state, outputs
 
+    def update_priorities(outputs: LearnerOutputs):
+      for key, priority in zip(outputs.keys, outputs.priorities):
+        replay_client.mutate_priorities(
+            table=adders.DEFAULT_PRIORITY_TABLE, updates={key: priority})
+
     # Internalise agent components (replay buffer, networks, optimizer).
     self._replay_client = replay_client
     self._iterator = utils.prefetch(iterator)
@@ -147,6 +152,7 @@ class DQNLearner(acme.Learner, acme.Saveable):
 
     self._forward = jax.jit(network.apply)
     self._sgd_step = jax.jit(sgd_step)
+    self._async_priority_updater = async_utils.AsyncExecutor(update_priorities)
 
   def step(self):
     samples = next(self._iterator)
@@ -163,16 +169,10 @@ class DQNLearner(acme.Learner, acme.Saveable):
 
     # Update priorities in replay.
     if self._replay_client:
-      self._update_priorities(outputs)
+      self._async_priority_updater.put(outputs)
 
     # Write to logs.
     self._logger.write(result)
-
-  @async_utils.make_async
-  def _update_priorities(self, outputs: LearnerOutputs):
-    for key, priority in zip(outputs.keys, outputs.priorities):
-      self._replay_client.mutate_priorities(
-          table=adders.DEFAULT_PRIORITY_TABLE, updates={key: priority})
 
   def get_variables(self, names: List[str]) -> List[hk.Params]:
     return [self._state.params]

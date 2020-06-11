@@ -32,7 +32,7 @@ class AsyncLogger(base.Logger):
         when `write` is called.
     """
     self._to = to
-    self._write_func = async_utils.make_async(self._to.write)
+    self._async_worker = async_utils.AsyncExecutor(self._to.write, queue_size=5)
 
   def write(self, values: Mapping[str, Any]):
-    self._write_func(values)
+    self._async_worker.put(values)
