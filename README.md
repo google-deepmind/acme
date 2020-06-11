@@ -3,7 +3,8 @@
 # Acme: A research framework for reinforcement learning
 
 **[Overview](#overview)** | **[Installation](#installation)** |
-**[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]** | **[Blog post]**
+**[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]** |
+**[Blog post]**
 
 ![PyPI Python Version](https://img.shields.io/pypi/pyversions/dm-acme)
 ![PyPI version](https://badge.fury.io/py/dm-acme.svg)
@@ -64,6 +65,12 @@ components can be found by referring to the [documentation]. And we also include
 a [tutorial notebook][Tutorial] which describes in more detail the underlying
 components behind a typical Acme agent and how these can be combined to form a
 novel implementation.
+
+> :information_source: Acme is first and foremost a framework for RL research written by
+> researchers, for researchers. We use it for our own work on a daily basis. So
+> with that in mind, while we will make every attempt to keep everything in good
+> working order, things may break occasionally. But if so we will make our best
+> effort to fix them as quickly as possible!
 
 ## Installation
 

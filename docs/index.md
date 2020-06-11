@@ -46,7 +46,7 @@ while True:
     actor.update()
 ```
 
-> NOTE: Currently in Acme the default method for observing data we make use of 
+> :information_source: Currently in Acme the default method for observing data we make use of 
 > utilizes of observe/observe_last methods (reverse of the above). This is
 > being phased out in favor of the above, which will soon be made the
 > default.
