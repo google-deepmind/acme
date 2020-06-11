@@ -22,7 +22,7 @@ from acme.agents import agent
 from acme.agents.tf.mcts import acting
 from acme.agents.tf.mcts import learning
 from acme.agents.tf.mcts import models
-from acme.utils import tf2_utils
+from acme.tf import utils as tf2_utils
 
 import numpy as np
 import reverb

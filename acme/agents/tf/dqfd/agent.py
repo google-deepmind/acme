@@ -26,7 +26,7 @@ from acme.adders import reverb as adders
 from acme.agents import agent
 from acme.agents.tf import actors
 from acme.agents.tf import dqn
-from acme.utils import tf2_utils
+from acme.tf import utils as tf2_utils
 import reverb
 import sonnet as snt
 import tensorflow as tf

@@ -19,7 +19,7 @@ from typing import Dict, Mapping, Sequence
 
 from acme import types
 from acme.adders.reverb import base
-from acme.utils import tf2_utils
+from acme.tf import utils as tf2_utils
 
 import numpy as np
 import tree

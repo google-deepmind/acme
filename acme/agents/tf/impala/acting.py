@@ -18,8 +18,8 @@
 from acme import adders
 from acme import core
 from acme import types
-from acme.utils import tf2_utils
-from acme.utils import tf2_variable_utils
+from acme.tf import utils as tf2_utils
+from acme.tf import variable_utils as tf2_variable_utils
 
 import dm_env
 import sonnet as snt

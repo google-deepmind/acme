@@ -16,7 +16,7 @@
 """Useful sonnet modules to chain after distributional module outputs."""
 
 from acme import types
-from acme.utils import tf2_utils
+from acme.tf import utils as tf2_utils
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp

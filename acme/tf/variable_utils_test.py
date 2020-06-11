@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for tf2_variable_utils."""
+"""Tests for acme.tf.variable_utils."""
 
 from absl.testing import absltest
 from acme.testing import fakes
-from acme.utils import tf2_utils
-from acme.utils import tf2_variable_utils
+from acme.tf import utils as tf2_utils
+from acme.tf import variable_utils as tf2_variable_utils
 import numpy as np
 import sonnet as snt
 import tensorflow as tf

@@ -18,9 +18,8 @@
 from typing import Sequence
 
 from acme import types
+from acme.tf import utils as tf2_utils
 from acme.tf.networks import base
-from acme.utils import tf2_utils
-
 import sonnet as snt
 import tensorflow as tf
 

@@ -24,10 +24,10 @@ from acme.adders import reverb as adders
 from acme.agents import agent
 from acme.agents.tf import actors
 from acme.agents.tf.r2d2 import learning
+from acme.tf import savers as tf2_savers
+from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
-from acme.utils import tf2_savers
-from acme.utils import tf2_utils
 import reverb
 import sonnet as snt
 import tensorflow as tf

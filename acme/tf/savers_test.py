@@ -1,4 +1,3 @@
-# Lint as: python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# Lint as: python3
 """Tests for TF2 savers."""
 
 import os
@@ -23,8 +24,8 @@ from absl.testing import absltest
 from acme import specs
 from acme.testing import test_utils
 from acme.tf import networks
-from acme.utils import tf2_savers
-from acme.utils import tf2_utils
+from acme.tf import savers as tf2_savers
+from acme.tf import utils as tf2_utils
 from acme.utils import paths
 import numpy as np
 import sonnet as snt

@@ -18,7 +18,7 @@
 from typing import Callable, Optional, Union
 
 from acme import types
-from acme.utils import tf2_utils
+from acme.tf import utils as tf2_utils
 
 import sonnet as snt
 import tensorflow as tf

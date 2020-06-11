@@ -26,9 +26,9 @@ from acme import types
 from acme.agents.tf import actors
 from acme.agents.tf.bc import learning
 from acme.agents.tf.dqfd import bsuite_demonstrations
+from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
-from acme.utils import tf2_utils
 from acme.wrappers import single_precision
 import bsuite
 import reverb

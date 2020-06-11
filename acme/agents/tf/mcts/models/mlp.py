@@ -20,7 +20,7 @@ from typing import Tuple
 from acme import specs
 from acme.agents.tf.mcts import types
 from acme.agents.tf.mcts.models import base
-from acme.utils import tf2_utils
+from acme.tf import utils as tf2_utils
 
 from bsuite.baselines.utils import replay
 import dm_env

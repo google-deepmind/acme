@@ -24,10 +24,10 @@ from acme import specs
 from acme.adders import reverb as adders
 from acme.tf import losses
 from acme.tf import networks
+from acme.tf import savers as tf2_savers
+from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
-from acme.utils import tf2_savers
-from acme.utils import tf2_utils
 import numpy as np
 import reverb
 import sonnet as snt

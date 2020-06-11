@@ -26,7 +26,7 @@ from acme import wrappers
 from acme.agents.tf import actors
 from acme.agents.tf import d4pg
 from acme.tf import networks
-from acme.utils import tf2_utils
+from acme.tf import utils as tf2_utils
 from dm_control import suite
 import dm_env
 import numpy as np

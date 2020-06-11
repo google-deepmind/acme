@@ -334,7 +334,7 @@ csv_logger = loggers.CSVLogger(logdir='logged_data', label='my_csv_file')
 csv_logger.write({'step': 0, 'reward': 0.0})
 ```
 
-### [Tensorflow savers](../acme/utils/tf2_savers.py)
+### [Tensorflow savers](../acme/tf/savers.py)
 
 To save trained TensorFlow models, we can *checkpoint* or *snapshot*
 them. <br>

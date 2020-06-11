@@ -23,7 +23,7 @@ from acme import specs
 from acme.agents.tf.mcts import models
 from acme.agents.tf.mcts import search
 from acme.agents.tf.mcts import types
-from acme.utils import tf2_variable_utils
+from acme.tf import variable_utils as tf2_variable_utils
 
 import dm_env
 import numpy as np

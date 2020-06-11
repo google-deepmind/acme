@@ -24,10 +24,9 @@ from acme import types
 from acme.adders import reverb as adders
 from acme.agents.tf.impala import acting
 from acme.agents.tf.impala import learning
+from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
-from acme.utils import tf2_utils
-
 import dm_env
 import numpy as np
 import reverb

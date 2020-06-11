@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for acme.utils.tf2_utils."""
+"""Tests for acme.tf.utils."""
 
 from typing import Sequence, Tuple
 
@@ -21,7 +21,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 
 from acme import specs
-from acme.utils import tf2_utils
+from acme.tf import utils as tf2_utils
 
 import numpy as np
 import sonnet as snt

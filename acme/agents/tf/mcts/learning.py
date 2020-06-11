@@ -18,10 +18,9 @@
 from typing import List
 
 import acme
+from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
-from acme.utils import tf2_utils
-
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
