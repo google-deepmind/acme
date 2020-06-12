@@ -15,7 +15,7 @@
 
 """IMPALA actor implementation."""
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 
 from acme import adders
 from acme import core
@@ -28,6 +28,11 @@ import jax
 import jax.numpy as jnp
 
 
+_LogitsAndValue = Tuple[networks.Logits, networks.Value]
+PolicyValueFn = Callable[[hk.Params, types.Observation, hk.LSTMState],
+                         Tuple[_LogitsAndValue, hk.LSTMState]]
+
+
 class IMPALAActor(core.Actor):
   """A recurrent actor."""
 
@@ -37,7 +42,7 @@ class IMPALAActor(core.Actor):
 
   def __init__(
       self,
-      forward_fn: networks.PolicyValueRNN,
+      forward_fn: PolicyValueFn,
       initial_state_fn: Callable[[], hk.LSTMState],
       rng: hk.PRNGSequence,
       variable_client: variable_utils.VariableClient,
@@ -47,7 +52,7 @@ class IMPALAActor(core.Actor):
     # Store these for later use.
     self._adder = adder
     self._variable_client = variable_client
-    self._forward = jax.jit(hk.transform(forward_fn).apply, backend='cpu')
+    self._forward = forward_fn
     self._rng = rng
 
     self._params = variable_client.update_and_wait()

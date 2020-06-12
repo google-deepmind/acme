@@ -30,6 +30,7 @@ from acme.utils import counting
 from acme.utils import loggers
 import dm_env
 import haiku as hk
+import jax
 from jax.experimental import optix
 import numpy as np
 import reverb
@@ -111,7 +112,7 @@ class IMPALA(acme.Actor):
 
     variable_client = variable_utils.VariableClient(self._learner, key='policy')
     self._actor = acting.IMPALAActor(
-        forward_fn=forward_fn,
+        forward_fn=jax.jit(hk.transform(forward_fn).apply, backend='cpu'),
         initial_state_fn=initial_state_fn,
         rng=rng,
         adder=adder,

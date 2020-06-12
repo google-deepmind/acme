@@ -17,8 +17,10 @@
 
 from acme.jax.networks.atari import DeepIMPALAAtariNetwork
 from acme.jax.networks.atari import dqn_atari_network
+from acme.jax.networks.base import Logits
 from acme.jax.networks.base import PolicyValueRNN
 from acme.jax.networks.base import QNetwork
+from acme.jax.networks.base import Value
 from acme.jax.networks.continuous import LayerNormMLP
 from acme.jax.networks.continuous import NearZeroInitializedLinear
 from acme.jax.networks.policy_value import PolicyValueHead
