@@ -17,7 +17,6 @@
 
 import os
 import os.path
-import sys
 from typing import Optional, Tuple
 import uuid
 
@@ -65,10 +64,15 @@ def process_path(path: str,
 
 def get_unique_id() -> Tuple[str, ...]:
   """Makes a unique identifier for this process; override with FLAGS.acme_id."""
+  # By default we'll use the global id.
+  identifier = str(_ACME_ID)
+
+  # If the --acme_id flag is given prefer that; ignore if flag processing has
+  # been skipped (this happens in colab or in tests).
   try:
-    FLAGS.acme_id
+    identifier = FLAGS.acme_id or identifier
   except flags.UnparsedFlagAccessError:
-    # Parse flags if they haven't been parsed already (e.g. if under pytest).
-    FLAGS(sys.argv)
-  identifier = FLAGS.acme_id or str(_ACME_ID)
+    pass
+
+  # Return as a tuple (for future proofing).
   return (identifier,)
