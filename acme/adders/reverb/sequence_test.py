@@ -124,6 +124,24 @@ TEST_CASES = [
                 (0, 0, 0.0, 0.0, ()),
             ],),
     ),
+    dict(
+        testcase_name='EarlyTerminationNoPadding',
+        sequence_length=4,
+        period=1,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=2.0, observation=2)),
+            (0, dm_env.termination(reward=3.0, observation=3)),
+        ),
+        expected_sequences=(
+            # (observation, action, reward, discount, extra)
+            [
+                (1, 0, 2.0, 1.0, ()),
+                (2, 0, 3.0, 0.0, ()),
+                (3, 0, 0.0, 0.0, ()),
+            ],),
+        pad_end_of_episode=False,
+    ),
 ]
 
 
@@ -131,10 +149,13 @@ class SequenceAdderTest(parameterized.TestCase):
 
   @parameterized.named_parameters(*TEST_CASES)
   def test_adder(self, sequence_length: int, period: int, first, steps,
-                 expected_sequences):
+                 expected_sequences, pad_end_of_episode: bool = True):
     client = test_utils.FakeClient()
     adder = adders.SequenceAdder(
-        client, sequence_length=sequence_length, period=period)
+        client,
+        sequence_length=sequence_length,
+        period=period,
+        pad_end_of_episode=pad_end_of_episode)
 
     # Add all the data up to the final step.
     adder.add_first(first)

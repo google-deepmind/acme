@@ -39,6 +39,7 @@ class SequenceAdder(base.ReverbAdder):
       delta_encoded: bool = False,
       chunk_length: Optional[int] = None,
       priority_fns: Optional[base.PriorityFnMapping] = None,
+      pad_end_of_episode: bool = True,
   ):
     """Makes a SequenceAdder instance.
 
@@ -53,6 +54,10 @@ class SequenceAdder(base.ReverbAdder):
       chunk_length: Number of timesteps grouped together before delta encoding
         and compression. See `Client` for more information.
       priority_fns: See docstring for BaseAdder.
+      pad_end_of_episode: If True (default) then upon end of episode the current
+        sequence will be padded (with observations, actions, etc... whose values
+        are 0) until its length is `sequence_length`. If False then the last
+        sequence in the episode may have length less than `sequence_length`.
     """
     super().__init__(
         client=client,
@@ -64,6 +69,7 @@ class SequenceAdder(base.ReverbAdder):
 
     self._period = period
     self._step = 0
+    self._pad_end_of_episode = pad_end_of_episode
 
   def reset(self):
     self._step = 0
@@ -88,18 +94,19 @@ class SequenceAdder(base.ReverbAdder):
     # NOTE: this always pads to the fixed length. but this is not equivalent to
     # the old Padded sequence adder.
 
-    # Determine how much padding to add. This makes sure that we add (zero) data
-    # until the next time we would write a sequence.
-    if self._step <= self._max_sequence_length:
-      padding = self._max_sequence_length - self._step
-    else:
-      padding = self._period - (self._step - self._max_sequence_length)
+    if self._pad_end_of_episode:
+      # Determine how much padding to add. This makes sure that we add (zero)
+      # data until the next time we would write a sequence.
+      if self._step <= self._max_sequence_length:
+        padding = self._max_sequence_length - self._step
+      else:
+        padding = self._period - (self._step - self._max_sequence_length)
 
-    # Pad with zeros to get a full sequence.
-    for _ in range(padding):
-      self._buffer.append(zero_step)
-      self._writer.append(zero_step)
-      self._step += 1
+      # Pad with zeros to get a full sequence.
+      for _ in range(padding):
+        self._buffer.append(zero_step)
+        self._writer.append(zero_step)
+        self._step += 1
 
     # Write priorities for the sequence.
     self._maybe_add_priorities()
