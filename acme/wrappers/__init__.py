@@ -16,6 +16,7 @@
 
 from acme.wrappers.atari_wrapper import AtariWrapper
 from acme.wrappers.base import wrap_all
+from acme.wrappers.frame_stacking import FrameStackingWrapper
 from acme.wrappers.gym_wrapper import GymAtariAdapter
 from acme.wrappers.gym_wrapper import GymWrapper
 from acme.wrappers.observation_action_reward import ObservationActionRewardWrapper

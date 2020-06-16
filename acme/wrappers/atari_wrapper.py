@@ -18,6 +18,7 @@
 from typing import Tuple, List, Optional, Sequence, Union
 
 from acme import types
+from acme.wrappers import frame_stacking
 import dm_env
 from dm_env import specs
 import numpy as np
@@ -113,8 +114,8 @@ class AtariWrapper(dm_env.Environment):
     if not max_episode_len:
       max_episode_len = np.inf
 
-    self._frame_stacker = FrameStacker(length=num_stacked_frames)
-    self._num_stacked_frames = num_stacked_frames
+    self._frame_stacker = frame_stacking.FrameStacker(
+        num_frames=num_stacked_frames)
     self._action_repeats = action_repeats
     self._pooled_frames = pooled_frames
     self._scale_dims = scale_dims
@@ -157,15 +158,15 @@ class AtariWrapper(dm_env.Environment):
       pixels_dtype = np.uint8
 
     if self._grayscaling:
-      pixels_spec_shape = (self._height, self._width, self._num_stacked_frames)
+      pixels_spec_shape = (self._height, self._width)
       pixels_spec_name = "grayscale"
     else:
-      pixels_spec_shape = (self._height, self._width, NUM_COLOR_CHANNELS,
-                           self._num_stacked_frames)
+      pixels_spec_shape = (self._height, self._width, NUM_COLOR_CHANNELS)
       pixels_spec_name = "RGB"
 
     pixel_spec = specs.Array(
         shape=pixels_spec_shape, dtype=pixels_dtype, name=pixels_spec_name)
+    pixel_spec = self._frame_stacker.update_spec(pixel_spec)
 
     if self._expose_lives_observation:
       return (pixel_spec,) + self._environment.observation_spec()[1:]
@@ -333,28 +334,6 @@ class AtariWrapper(dm_env.Environment):
   def raw_observation(self) -> np.ndarray:
     """Returns the raw observation, after any pooling has been applied."""
     return self._raw_observation
-
-
-class FrameStacker:
-  """Simple class for frame-stacking observations."""
-
-  def __init__(self, length: int):
-    self._stack = None
-    self._length = length
-
-  @property
-  def length(self) -> int:
-    return self._length
-
-  def reset(self):
-    self._stack = None
-
-  def step(self, frame: np.ndarray) -> np.ndarray:
-    if self._stack is None:
-      self._stack = [np.zeros_like(frame) for _ in range(self._length)]
-    self._stack[0][:] = frame
-    self._stack = self._stack[1:] + [self._stack[0]]
-    return np.stack(self._stack, axis=-1)
 
 
 class _ZeroDiscountOnLifeLoss(dm_env.Environment):
