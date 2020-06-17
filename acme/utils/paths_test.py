@@ -36,9 +36,10 @@ class PathTest(test_utils.TestCase):
     self.assertEqual(path, f'{root_directory}/test/foo/bar')
 
   def test_unique_id_with_flag(self):
-    FLAGS.acme_id = 'test_flag'
+    argv = ('./program', '--acme_id=test_flag')
+    FLAGS(argv)
     self.assertEqual(paths.get_unique_id(), ('test_flag',))
-    FLAGS.acme_id = None  # Needed for pytest, which is not hermetic.
+    FLAGS.unparse_flags()
 
   def test_unique_id_without_flag(self):
     self.assertEqual(paths.get_unique_id(), (str(paths._ACME_ID),))
