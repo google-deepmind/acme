@@ -216,6 +216,10 @@ def _sequence_from_episode(observations: acme_types.NestedTensor,
   key = tf.zeros([sequence_length], tf.uint64)
   probability = tf.ones([sequence_length], tf.float64)
   table_size = tf.ones([sequence_length], tf.int64)
+  priority = tf.ones([sequence_length], tf.float64)
   info = reverb.SampleInfo(
-      key=key, probability=probability, table_size=table_size)
+      key=key,
+      probability=probability,
+      table_size=table_size,
+      priority=priority)
   return reverb.ReplaySample(info=info, data=(o_t, a_t, r_t, d_t, e_t))
