@@ -40,7 +40,8 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
                learning_rate: float,
                dataset: tf.data.Dataset,
                counter: counting.Counter = None,
-               logger: loggers.Logger = None):
+               logger: loggers.Logger = None,
+               checkpoint: bool = True):
     """Initializes the learner.
 
     Args:
@@ -49,6 +50,7 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
       dataset: dataset to learn from.
       counter: Counter object for (potentially distributed) counting.
       logger: Logger object for writing logs to.
+      checkpoint: boolean indicating whether to checkpoint the learner.
     """
 
     self._counter = counter or counting.Counter()
@@ -64,8 +66,12 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
     self._variables: List[List[tf.Tensor]] = [network.trainable_variables]
     self._num_steps = tf.Variable(0, dtype=tf.int32)
 
-    self._snapshotter = tf2_savers.Snapshotter(
-        objects_to_save={'network': network}, time_delta_minutes=60.)
+    # Create a snapshotter object.
+    if checkpoint:
+      self._snapshotter = tf2_savers.Snapshotter(
+          objects_to_save={'network': network}, time_delta_minutes=60.)
+    else:
+      self._snapshotter = None
 
   @tf.function
   def _step(self) -> Dict[str, tf.Tensor]:
@@ -102,7 +108,8 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
     result.update(counts)
 
     # Snapshot and attempt to write logs.
-    self._snapshotter.save()
+    if self._snapshotter is not None:
+      self._snapshotter.save()
     self._logger.write(result)
 
   def get_variables(self, names: List[str]) -> List[np.ndarray]:
