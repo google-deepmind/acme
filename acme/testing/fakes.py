@@ -27,6 +27,8 @@ from acme import types
 
 import dm_env
 import numpy as np
+import reverb
+import tensorflow as tf
 import tree
 
 
@@ -220,3 +222,35 @@ def _validate_spec(spec: types.NestedSpec, value: types.NestedArray):
 def _generate_from_spec(spec: types.NestedSpec) -> types.NestedArray:
   """Generate a value from a potentially nested spec."""
   return tree.map_structure(lambda s: s.generate_value(), spec)
+
+
+def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
+  """Fake dataset of Reverb N-step transition samples.
+
+  Args:
+    environment: Used to create a fake transition by looking at the
+      observation, action, discount and reward specs.
+
+  Returns:
+    tf.data.Dataset that produces the same fake N-step transition ReverSample
+    object indefinitely.
+  """
+
+  observation = environment.observation_spec().generate_value()
+  action = environment.action_spec().generate_value()
+  reward = environment.reward_spec().generate_value()
+  discount = environment.discount_spec().generate_value()
+  data = (observation, action, reward, discount, observation)
+
+  key = np.array(0, np.uint64)
+  probability = np.array(1.0, np.float64)
+  table_size = np.array(1, np.int64)
+  priority = np.array(1.0, np.float64)
+  info = reverb.SampleInfo(
+      key=key,
+      probability=probability,
+      table_size=table_size,
+      priority=priority)
+  sample = reverb.ReplaySample(info=info, data=data)
+
+  return tf.data.Dataset.from_tensors(sample).repeat()
