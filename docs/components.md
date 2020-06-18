@@ -225,32 +225,33 @@ Also implemented (and useful within the losses mentioned above) are:
 An `Adder` packs together data to send to the replay buffer, and potentially
 does some reductions/transformations to this data in the process.
 
-All Acme `Adder`s can be interacted through their `add()`, `end_episode()`, or
-`add_async()`, `end_episode_async()`, and `reset()` methods.
+All Acme `Adder`s can be interacted through their `add()`, `add_first()`, and
+`reset()` methods.
 
-The `add()` method takes tuples of the form: `(state_t, action_t, reward_t+1,
-discount_t+1, [extras_t])`
+The `add()` method takes actions, timesteps, and potentially some extras and
+adds the `action`, `observation`, `reward`, `discount`, `extra` fields to the
+buffer.
 
-As a result of the common need in RL algorithms to have data of the form
-`(state,(a, r, d...), *next_state*)`, available for learning, at the end of an
-episode, one needs to add the final `next_state` to the replay buffer without
-adding any new actions, rewards etc. The `end_episode()` method of an `Adder`
-handles this for you, usually by padding the other parts of the tuple
-appropriately and simply adding the final `next_state`.
+The `add_first()` method takes the first timestep of an episode and adds it to
+the buffer, automatically padding the empty `action` `reward` `discount`, and
+`extra` fields that don't exist at the first timestep of an episode.
+
+The `reset` method clears the buffer.
 
 Example usage of an adder:
 
 ```python
+# Reset the environment and add the first observation.
 timestep = env.reset()
+adder.add_first(timestep.observation)
+
 while not timestep.last():
+  # Generate an action from the policy and step the environment.
   action = my_policy(timestep)
-  new_timestep = env.step(action)
-  # Adds a (s, a, r, d) tuple to the adder's internal buffer.
-  adder.add(timestep.observation, action, new_timestep.reward,
-            new_timestep.discount)
-  timestep = new_timestep
-# When the episode ends, tell the adder about the final arrival state.
-adder.end_episode(new_timestep.observation)
+  timestep = env.step(action)
+
+  # Add the action and the resulting timestep.
+  adder.add(action, next_timestep=timestep)
 ```
 
 ### ReverbAdders
