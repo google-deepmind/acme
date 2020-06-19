@@ -16,7 +16,7 @@
 """Utilities for nested data structures involving NumPy and TensorFlow 2.x."""
 
 import functools
-from typing import List, Optional, Sequence, TypeVar
+from typing import List, Optional, TypeVar, Iterable
 
 from acme import types
 
@@ -162,7 +162,7 @@ def fast_map_structure(func, *structure):
   return tree.unflatten_as(structure[-1], [func(*x) for x in entries])
 
 
-def stack_sequence_fields(sequence: Sequence[SequenceType]) -> SequenceType:
+def stack_sequence_fields(sequence: Iterable[SequenceType]) -> SequenceType:
   """Stacks a list of identically nested objects.
 
   This takes a sequence of identically nested objects and returns a single
