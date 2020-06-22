@@ -19,6 +19,7 @@ Minimal implementations of fake Acme components which can be instantiated in
 order to test or interact with other components.
 """
 
+import threading
 from typing import List, Sequence
 
 from acme import core
@@ -63,11 +64,16 @@ class Actor(core.Actor):
 class VariableSource(core.VariableSource):
   """Fake variable source."""
 
-  def __init__(self, variables: types.NestedArray = None):
+  def __init__(self,
+               variables: types.NestedArray = None,
+               barrier: threading.Barrier = None):
     # Add dummy variables so we can expose them in get_variables.
     self._variables = {'policy': [] if not variables else variables}
+    self._barrier = barrier
 
   def get_variables(self, names: List[str]) -> List[types.NestedArray]:
+    if self._barrier is not None:
+      self._barrier.wait()
     return [self._variables[name] for name in names]
 
 
