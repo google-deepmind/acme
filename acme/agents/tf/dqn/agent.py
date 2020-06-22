@@ -59,6 +59,7 @@ class DQN(agent.Agent):
       discount: float = 0.99,
       logger: loggers.Logger = None,
       checkpoint: bool = True,
+      checkpoint_subpath: str = '~/acme/',
   ):
     """Initialize the agent.
 
@@ -85,6 +86,7 @@ class DQN(agent.Agent):
       discount: discount to use for TD updates.
       logger: logger object to be used by learner.
       checkpoint: boolean indicating whether to checkpoint the learner.
+      checkpoint_subpath: directory for the checkpoint.
     """
 
     # Create a replay server to add data to. This uses no limiter behavior in
@@ -146,6 +148,7 @@ class DQN(agent.Agent):
 
     if checkpoint:
       self._checkpointer = tf2_savers.Checkpointer(
+          directory=checkpoint_subpath,
           objects_to_save=learner.state,
           subdirectory='dqn_learner',
           time_delta_minutes=60.)
