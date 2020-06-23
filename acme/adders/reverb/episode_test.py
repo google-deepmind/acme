@@ -18,53 +18,26 @@
 from absl.testing import absltest
 from absl.testing import parameterized
 
-from acme.adders.reverb import base
 from acme.adders.reverb import episode as adders
 from acme.adders.reverb import test_utils
 
 
-class EpisodeAdderTest(parameterized.TestCase):
+class EpisodeAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):
 
   @parameterized.parameters(2, 10, 50)
   def test_adder(self, max_sequence_length):
-    client = test_utils.FakeClient()
-    adder = adders.EpisodeAdder(client, max_sequence_length)
+    adder = adders.EpisodeAdder(self.client, max_sequence_length)
 
     # Create a simple trajectory to add.
     observations = range(max_sequence_length)
     first, steps = test_utils.make_trajectory(observations)
 
-    # Add everything up to the final transition.
-    adder.add_first(first)
-    for action, step in steps[:-1]:
-      adder.add(action, step)
-
-    if max_sequence_length == 2:
-      # Nothing has been written since we only have an initial step and a
-      # final step (corresponding to a single transition).
-      self.assertEmpty(client.writers)
-
-    else:
-      # No priorities should have been written so far but all timesteps (all
-      # but the last one) should have been sent to the writer.
-      self.assertEmpty(client.writers[0].priorities)
-      self.assertLen(client.writers[0].timesteps, max_sequence_length - 2)
-
-    # Adding a terminal timestep should close the writer and insert a
-    # prioritized sample referencing all the timesteps (including the padded
-    # terminating observation).
-    action, step = steps[-1]
-    adder.add(action, step)
-
-    # The writer should be closed and should have max_sequence_length timesteps.
-    self.assertTrue(client.writers[0].closed)
-    self.assertLen(client.writers[0].timesteps, max_sequence_length)
-
-    # Make the sequence of data and the priority table entry we expect.
-    expected_sequence = test_utils.make_sequence(observations)
-    expected_entry = (base.DEFAULT_PRIORITY_TABLE, expected_sequence, 1.0)
-
-    self.assertEqual(client.writers[0].priorities, [expected_entry])
+    expected_episode = test_utils.make_sequence(observations)
+    self.run_test_adder(
+        adder=adder,
+        first=first,
+        steps=steps,
+        expected_items=[expected_episode])
 
   @parameterized.parameters(2, 10, 50)
   def test_max_sequence_length(self, max_sequence_length):

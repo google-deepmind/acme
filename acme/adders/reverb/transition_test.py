@@ -22,8 +22,6 @@ from acme.adders.reverb import test_utils
 from acme.adders.reverb import transition as adders
 
 import dm_env
-import numpy as np
-import tree
 
 # Define the main set of test cases; these are given as parameterized tests to
 # the test_adder method and describe a trajectory to add to replay and the
@@ -116,44 +114,19 @@ TEST_CASES = [
 ]
 
 
-class NStepTransitionAdderTest(parameterized.TestCase):
+class NStepTransitionAdderTest(test_utils.AdderTestMixin,
+                               parameterized.TestCase):
 
   @parameterized.named_parameters(*TEST_CASES)
   def test_adder(self, n_step, additional_discount, first, steps,
                  expected_transitions):
-    # Create a fake client to record our writes and use it in the adder.
-    client = test_utils.FakeClient()
-    adder = adders.NStepTransitionAdder(client, n_step, additional_discount)
-
-    # Add all the data up to the final step.
-    adder.add_first(first)
-    for step in steps[:-1]:
-      adder.add(*step)
-
-    # Make sure the writer has been created but not closed.
-    self.assertLen(client.writers, 1)
-    self.assertFalse(client.writers[0].closed)
-
-    # Add the final step.
-    adder.add(*steps[-1])
-
-    # Ending the episode should close the writer. No new writer should yet have
-    # been created as it is constructed lazily.
-    self.assertLen(client.writers, 1)
-    self.assertTrue(client.writers[0].closed)
-
-    # Make sure our expected and observed transitions match.
-    observed_transitions = list(p[1][0] for p in client.writers[0].priorities)
-    for exp, obs in zip(expected_transitions, observed_transitions):
-      tree.map_structure(np.testing.assert_array_almost_equal, exp, obs)
-
-    # Add the start of a second trajectory.
-    adder.add_first(first)
-    adder.add(*steps[0])
-
-    # Make sure this creates an open writer.
-    self.assertLen(client.writers, 2)
-    self.assertFalse(client.writers[1].closed)
+    adder = adders.NStepTransitionAdder(self.client, n_step,
+                                        additional_discount)
+    super().run_test_adder(
+        adder=adder,
+        first=first,
+        steps=steps,
+        expected_items=expected_transitions)
 
 
 if __name__ == '__main__':
