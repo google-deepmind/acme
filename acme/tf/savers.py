@@ -21,7 +21,7 @@ import os
 import pickle
 import signal
 import time
-from typing import Mapping, Union
+from typing import Mapping, Union, Optional
 
 from absl import logging
 from acme import core
@@ -363,6 +363,10 @@ def make_snapshot(module: snt.Module):
   """Create a thin wrapper around a module to make it snapshottable."""
   # Get the input signature as long as it has been created.
   input_signature = _get_input_signature(module)
+  if input_signature is None:
+    raise ValueError('module instance has no input_signature attribute, which '
+                     'is required for snapshotting; run create_variables to '
+                     'add this annotation.')
 
   # This function will return the object as a composite tensor if it is a
   # distribution and will otherwise return it with no changes.
@@ -397,7 +401,7 @@ def make_snapshot(module: snt.Module):
   return snapshot
 
 
-def _get_input_signature(module: snt.Module):
+def _get_input_signature(module: snt.Module) -> Optional[tf.TensorSpec]:
   """Get module input signature.
 
   Works even if the module with signature is wrapper into snt.Sequentual or
@@ -431,9 +435,7 @@ def _get_input_signature(module: snt.Module):
 
     return input_signature
 
-  # If we get here we can't determine the input signature. So give up.
-  raise ValueError('module instance has no input_signature attribute; run '
-                   'create_variables to add this annotation.')
+  return None
 
 
 class SaveableAdapter(tf.train.experimental.PythonState):
