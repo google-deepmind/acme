@@ -153,12 +153,17 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
       # Compute the transformed n-step loss.
       rewards = tree.map_structure(lambda x: x[:-1], rewards)
       discounts = tree.map_structure(lambda x: x[:-1], discounts)
+
+      # The rewards and discounts have to have the same type as network values.
+      rewards = tf.cast(rewards, q_values.dtype)
+      discounts = tf.cast(discounts, q_values.dtype) * tf.cast(self._discount, q_values.dtype)
+
       loss, extra = losses.transformed_n_step_loss(
           qs=q_values,
           targnet_qs=target_q_values,
           actions=actions,
           rewards=rewards,
-          pcontinues=discounts * self._discount,
+          pcontinues=discounts,
           target_policy_probs=target_policy_probs,
           bootstrap_n=self._n_step,
       )
