@@ -21,14 +21,16 @@ into a single transition, simplifying to a simple transition adder when N=1.
 
 import copy
 import itertools
-
 from typing import Optional
 
+from acme import specs
+from acme import types
 from acme.adders.reverb import base
 from acme.adders.reverb import utils
 
 import numpy as np
 import reverb
+import tree
 
 
 class NStepTransitionAdder(base.ReverbAdder):
@@ -164,3 +166,19 @@ class NStepTransitionAdder(base.ReverbAdder):
     while self._buffer:
       self._write()
       self._buffer.popleft()
+
+  @classmethod
+  def signature(cls,
+                environment_spec: specs.EnvironmentSpec,
+                extras_spec: types.NestedSpec = ()):
+    transition_spec = (
+        environment_spec.observations,
+        environment_spec.actions,
+        environment_spec.rewards,
+        environment_spec.discounts,
+        environment_spec.observations,  # next_observation
+        extras_spec,
+    )
+
+    return tree.map_structure_with_path(base.array_spec_to_tensor_spec,
+                                        transition_spec)

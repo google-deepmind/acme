@@ -15,12 +15,14 @@
 
 """Utilities for testing Reverb adders."""
 
-from typing import Any, Sequence, Tuple
+from typing import Any, Sequence, Tuple, Union
 
 from absl.testing import absltest
+from acme import specs
 from acme.adders.reverb import base
 import dm_env
 import numpy as np
+import tensorflow as tf
 import tree
 
 
@@ -101,6 +103,15 @@ def make_sequence(observations):
   return sequence
 
 
+def _numeric_to_spec(x: Union[float, int, np.ndarray]):
+  if isinstance(x, np.ndarray):
+    return specs.Array(shape=x.shape, dtype=x.dtype)
+  elif isinstance(x, (float, int)):
+    return specs.Array(shape=(), dtype=type(x))
+  else:
+    raise ValueError(f'Unsupported numeric: {type(x)}')
+
+
 class AdderTestMixin(absltest.TestCase):
   """A helper mixin for testing Reverb adders.
 
@@ -108,7 +119,7 @@ class AdderTestMixin(absltest.TestCase):
   that provides the Python unittest assert methods.
   """
 
-  _client: FakeClient
+  client: FakeClient
 
   def setUp(self):
     super().setUp()
@@ -134,6 +145,15 @@ class AdderTestMixin(absltest.TestCase):
     if not steps:
       raise ValueError('At least one step must be given.')
 
+    env_spec = tree.map_structure(
+        _numeric_to_spec,
+        specs.EnvironmentSpec(
+            observations=steps[0][1].observation,
+            actions=steps[0][0],
+            rewards=steps[0][1].reward,
+            discounts=steps[0][1].discount))
+    signature = adder.signature(env_spec)
+
     # Add all the data up to the final step.
     adder.add_first(first)
     for action, ts in steps[:-1]:
@@ -157,9 +177,21 @@ class AdderTestMixin(absltest.TestCase):
 
     # Make sure our expected and observed data match.
     observed_items = [p[1] for p in self.client.writers[0].priorities]
-    for exp, obs in zip(expected_items, observed_items):
+    for expected_item, observed_item in zip(expected_items, observed_items):
+      # Set check_types=False because
       tree.map_structure(
-          np.testing.assert_array_almost_equal, exp, obs, check_types=False)
+          np.testing.assert_array_almost_equal,
+          expected_item,
+          observed_item,
+          check_types=False)
+
+    def _check_signature(spec: tf.TensorSpec, value):
+      # Convert int/float to numpy arrays of dtype np.int64 and np.float64.
+      value = np.asarray(value)
+      self.assertTrue(spec.is_compatible_with(tf.convert_to_tensor(value)))
+
+    for step in self.client.writers[0].timesteps:
+      tree.map_structure(_check_signature, signature, step)
 
     # Add the start of a second trajectory.
     adder.add_first(first)

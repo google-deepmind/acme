@@ -15,14 +15,38 @@
 
 """Utilities for reverb-based adders."""
 
-from typing import Dict, Mapping, Sequence
+from typing import Dict, Mapping, Sequence, Union
 
 from acme import types
 from acme.adders.reverb import base
 from acme.tf import utils as tf2_utils
-
+import jax.numpy as jnp
 import numpy as np
 import tree
+
+
+def zeros_like(x: Union[np.ndarray, int, float, np.number]):
+  """Returns a zero-filled object of the same (d)type and shape as the input.
+
+  The difference between this and `np.zeros_like()` is that this works well
+  with `np.number`, `int`, `float`, and `jax.numpy.DeviceArray` objects without
+  converting them to `np.ndarray`s.
+
+  Args:
+    x: The object to replace with 0s.
+
+  Returns:
+    A zero-filed object of the same (d)type and shape as the input.
+  """
+  if isinstance(x, (int, float, np.number)):
+    return type(x)(0)
+  elif isinstance(x, jnp.DeviceArray):
+    return jnp.zeros_like(x)
+  elif isinstance(x, np.ndarray):
+    return np.zeros_like(x)
+  else:
+    raise ValueError(
+        f'Input ({type(x)}) must be either a numpy array, an int, or a float.')
 
 
 def final_step_like(step: base.Step,
@@ -30,7 +54,7 @@ def final_step_like(step: base.Step,
   """Return a list of steps with the final step zero-filled."""
   # Make zero-filled components so we can fill out the last step.
   zero_action, zero_reward, zero_discount, zero_extras = tree.map_structure(
-      np.zeros_like, (step.action, step.reward, step.discount, step.extras))
+      zeros_like, (step.action, step.reward, step.discount, step.extras))
 
   # Return a final step that only has next_observation.
   return base.Step(

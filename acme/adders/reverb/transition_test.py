@@ -17,10 +17,8 @@
 
 from absl.testing import absltest
 from absl.testing import parameterized
-
 from acme.adders.reverb import test_utils
 from acme.adders.reverb import transition as adders
-
 import dm_env
 
 # Define the main set of test cases; these are given as parameterized tests to

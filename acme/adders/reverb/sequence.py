@@ -23,7 +23,6 @@ from typing import Optional
 from acme.adders.reverb import base
 from acme.adders.reverb import utils
 
-import numpy as np
 import reverb
 import tree
 
@@ -84,7 +83,7 @@ class SequenceAdder(base.ReverbAdder):
   def _write_last(self):
     # Create a final step and a step full of zeros.
     final_step = utils.final_step_like(self._buffer[0], self._next_observation)
-    zero_step = tree.map_structure(np.zeros_like, final_step)
+    zero_step = tree.map_structure(utils.zeros_like, final_step)
 
     # Append the final step.
     self._buffer.append(final_step)

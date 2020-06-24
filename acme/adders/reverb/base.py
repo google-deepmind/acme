@@ -17,13 +17,15 @@
 
 import abc
 import collections
-from typing import Callable, Mapping, NamedTuple, Optional
+from typing import Callable, Iterable, Mapping, NamedTuple, Optional
 
+from acme import specs
 from acme import types
 from acme.adders import base
-
 import dm_env
 import reverb
+import tensorflow as tf
+import tree
 
 DEFAULT_PRIORITY_TABLE = 'priority_table'
 
@@ -49,6 +51,10 @@ class PriorityFnInput(NamedTuple):
 # Define the type of a priority function and the mapping from table to function.
 PriorityFn = Callable[['PriorityFnInput'], float]
 PriorityFnMapping = Mapping[str, PriorityFn]
+
+
+def array_spec_to_tensor_spec(paths: Iterable[str], spec: specs.Array):
+  return tf.TensorSpec.from_spec(spec, name='/'.join(str(p) for p in paths))
 
 
 class ReverbAdder(base.Adder):
@@ -162,6 +168,34 @@ class ReverbAdder(base.Adder):
     if next_timestep.last():
       self._write_last()
       self.reset()
+
+  @classmethod
+  def signature(cls, environment_spec: specs.EnvironmentSpec,
+                extras_spec: types.NestedSpec = ()):
+    """This is a helper method for generating signatures for Reverb tables.
+
+    Signatures are useful for validating data types and shapes, see Reverb's
+    documentation for details on how they are used.
+
+    Args:
+      environment_spec: A `specs.EnvironmentSpec` whose fields are nested
+        structures with leaf nodes that have `.shape` and `.dtype` attributes.
+        This should come from the environment that will be used to generate
+        the data inserted into the Reverb table.
+      extras_spec: A nested structure with leaf nodes that have `.shape` and
+        `.dtype` attributes. The structure (and shapes/dtypes) of this must
+        be the same as the `extras` passed into `ReverbAdder.add`.
+
+    Returns:
+      A `Step` whose leaf nodes are `tf.TensorSpec` objects.
+    """
+    spec_step = Step(
+        observation=environment_spec.observations,
+        action=environment_spec.actions,
+        reward=environment_spec.rewards,
+        discount=environment_spec.discounts,
+        extras=extras_spec)
+    return tree.map_structure_with_path(array_spec_to_tensor_spec, spec_step)
 
   @abc.abstractmethod
   def _write(self):
