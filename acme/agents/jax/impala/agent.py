@@ -62,8 +62,16 @@ class IMPALA(acme.Actor):
 
     num_actions = environment_spec.actions.num_values
     self._logger = logger or loggers.TerminalLogger('agent')
+
+    extra_spec = {
+        'core_state': hk.transform(initial_state_fn).apply(None),
+        'logits': np.ones(shape=(num_actions,), dtype=np.float32)
+    }
+    signature = adders.SequenceAdder.signature(environment_spec, extra_spec)
     queue = reverb.Table.queue(
-        name=adders.DEFAULT_PRIORITY_TABLE, max_size=max_queue_size)
+        name=adders.DEFAULT_PRIORITY_TABLE,
+        max_size=max_queue_size,
+        signature=signature)
     self._server = reverb.Server([queue], port=None)
     self._can_sample = lambda: queue.can_sample(batch_size)
     address = f'localhost:{self._server.port}'
@@ -76,10 +84,6 @@ class IMPALA(acme.Actor):
     )
 
     # The dataset object to learn from.
-    extra_spec = {
-        'core_state': hk.transform(initial_state_fn).apply(None),
-        'logits': np.ones(shape=(num_actions,), dtype=np.float32)
-    }
     # Remove batch dimensions.
     dataset = datasets.make_reverb_dataset(
         client=reverb.TFClient(address),
