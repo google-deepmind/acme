@@ -28,11 +28,14 @@ class EnvironmentWrapper(dm_env.Environment):
   wrapped environment (and hence enabling duck-typing).
   """
 
+  _environment: dm_env.Environment
+
   def __init__(self, environment: dm_env.Environment):
     self._environment = environment
 
-  def __getattr__(self, name):
-    return getattr(self._environment, name)
+  def __getattr__(self, attr: str):
+    # Delegates attribute calls to the wrapped environment.
+    return getattr(self._environment, attr)
 
   @property
   def environment(self) -> dm_env.Environment:
@@ -66,6 +69,7 @@ def wrap_all(
     environment: dm_env.Environment,
     wrappers: Sequence[Callable[[dm_env.Environment], dm_env.Environment]],
 ) -> dm_env.Environment:
+  """Given an environment, wrap it in a list of wrappers."""
   for w in wrappers:
     environment = w(environment)
 

@@ -17,7 +17,7 @@
 
 from typing import Tuple, List, Optional, Sequence, Union
 
-from acme import types
+from acme.wrappers import base
 from acme.wrappers import frame_stacking
 import dm_env
 from dm_env import specs
@@ -29,7 +29,7 @@ LIVES_INDEX = 1  # Observation index holding the lives count.
 NUM_COLOR_CHANNELS = 3  # Number of color channels in RGB data.
 
 
-class AtariWrapper(dm_env.Environment):
+class AtariWrapper(base.EnvironmentWrapper):
   """Standard "Nature Atari" wrapper for Python environments.
 
   This assumes that the input environment is a dm_env.Environment instance in
@@ -107,9 +107,9 @@ class AtariWrapper(dm_env.Environment):
                            pooled_frames, action_repeats))
 
     if zero_discount_on_life_loss:
-      self._environment = _ZeroDiscountOnLifeLoss(environment)
+      super().__init__(_ZeroDiscountOnLifeLoss(environment))
     else:
-      self._environment = environment
+      super().__init__(environment)
 
     if not max_episode_len:
       max_episode_len = np.inf
@@ -336,7 +336,7 @@ class AtariWrapper(dm_env.Environment):
     return self._raw_observation
 
 
-class _ZeroDiscountOnLifeLoss(dm_env.Environment):
+class _ZeroDiscountOnLifeLoss(base.EnvironmentWrapper):
   """Implements soft-termination (zero discount) on life loss."""
 
   def __init__(self, environment: dm_env.Environment):
@@ -348,7 +348,7 @@ class _ZeroDiscountOnLifeLoss(dm_env.Environment):
     Raises:
       ValueError: If the environment does not expose a lives observation.
     """
-    self._env = environment
+    super().__init__(environment)
     self._reset_next_step = True
     self._last_num_lives = None
 
@@ -362,7 +362,7 @@ class _ZeroDiscountOnLifeLoss(dm_env.Environment):
     if self._reset_next_step:
       return self.reset()
 
-    timestep = self._env.step(action)
+    timestep = self._environment.step(action)
     lives = timestep.observation[LIVES_INDEX]
 
     is_life_loss = True
@@ -376,9 +376,3 @@ class _ZeroDiscountOnLifeLoss(dm_env.Environment):
     if is_life_loss:
       return timestep._replace(discount=0.0)
     return timestep
-
-  def observation_spec(self) -> types.NestedSpec:
-    return self._env.observation_spec()
-
-  def action_spec(self) -> specs.DiscreteArray:
-    return self._env.action_spec()

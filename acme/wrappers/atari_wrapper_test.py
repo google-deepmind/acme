@@ -53,6 +53,9 @@ class AtariWrapperTest(absltest.TestCase):
     self.assertEqual(action_spec.num_values, 18)
     self.assertEqual(action_spec.dtype, np.dtype('int32'))
 
+    # Check that the `render` call gets delegated to the underlying Gym env.
+    env.render('rgb_array')
+
     # Test step.
     timestep = env.reset()
     self.assertTrue(timestep.first())
