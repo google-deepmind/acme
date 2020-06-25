@@ -353,7 +353,7 @@ class _ZeroDiscountOnLifeLoss(base.EnvironmentWrapper):
     self._last_num_lives = None
 
   def reset(self) -> dm_env.TimeStep:
-    timestep = self._env.reset()
+    timestep = self._environment.reset()
     self._reset_next_step = False
     self._last_num_lives = timestep.observation[LIVES_INDEX]
     return timestep

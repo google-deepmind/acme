@@ -17,6 +17,7 @@
 
 import unittest
 from absl.testing import absltest
+from absl.testing import parameterized
 from acme.wrappers import atari_wrapper
 from dm_env import specs
 import numpy as np
@@ -33,12 +34,14 @@ except ModuleNotFoundError:
 
 
 @unittest.skipIf(SKIP_GYM_TESTS, SKIP_GYM_MESSAGE)
-class AtariWrapperTest(absltest.TestCase):
+class AtariWrapperTest(parameterized.TestCase):
 
-  def test_pong(self):
+  @parameterized.parameters(True, False)
+  def test_pong(self, zero_discount_on_life_loss: bool):
     env = gym.make('PongNoFrameskip-v4', full_action_space=True)
     env = gym_wrapper.GymAtariAdapter(env)
-    env = atari_wrapper.AtariWrapper(env)
+    env = atari_wrapper.AtariWrapper(
+        env, zero_discount_on_life_loss=zero_discount_on_life_loss)
 
     # Test converted observation spec.
     observation_spec = env.observation_spec()
