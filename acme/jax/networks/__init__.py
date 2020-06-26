@@ -15,6 +15,7 @@
 
 """JAX networks implemented with Haiku."""
 
+from acme.jax.networks.atari import AtariTorso
 from acme.jax.networks.atari import DeepIMPALAAtariNetwork
 from acme.jax.networks.atari import dqn_atari_network
 from acme.jax.networks.base import Logits
