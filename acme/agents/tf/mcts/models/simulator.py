@@ -20,20 +20,33 @@ import copy
 from acme.agents.tf.mcts import types
 from acme.agents.tf.mcts.models import base
 
+import dataclasses
 import dm_env
+
+
+@dataclasses.dataclass
+class Checkpoint:
+  """Holds the checkpoint state for the environment simulator."""
+  needs_reset: bool
+  environment: dm_env.Environment
 
 
 class Simulator(base.Model):
   """A simulator model, which wraps a copy of the true environment.
 
-  Assumes that the environment (including RNG) is fully copyable via `deepcopy`.
+  Assumptions:
+    - The environment (including RNG) is fully copyable via `deepcopy`.
+    - Environment dynamics (modulo episode resets) are deterministic.
   """
+
+  _checkpoint: Checkpoint
+  _env: dm_env.Environment
 
   def __init__(self, env: dm_env.Environment):
     # Make a 'checkpoint' copy env to save/load from when doing rollouts.
     self._env = copy.deepcopy(env)
-    self._checkpoint = copy.deepcopy(env)
     self._needs_reset = True
+    self.save_checkpoint()
 
   def update(
       self,
@@ -45,15 +58,21 @@ class Simulator(base.Model):
     return self.step(action)
 
   def save_checkpoint(self):
-    self._checkpoint = copy.deepcopy(self._env)
+    self._checkpoint = Checkpoint(
+        needs_reset=self._needs_reset,
+        environment=copy.deepcopy(self._env),
+    )
 
   def load_checkpoint(self):
-    self._env = copy.deepcopy(self._checkpoint)
+    self._env = copy.deepcopy(self._checkpoint.environment)
+    self._needs_reset = self._checkpoint.needs_reset
 
   def step(self, action: types.Action) -> dm_env.TimeStep:
     if self._needs_reset:
       raise ValueError('This model needs to be explicitly reset.')
-    return self._env.step(action)
+    timestep = self._env.step(action)
+    self._needs_reset = timestep.last()
+    return timestep
 
   def reset(self, *unused_args, **unused_kwargs):
     self._needs_reset = False

@@ -32,13 +32,20 @@ class SimulatorTest(absltest.TestCase):
 
   def test_simulator_fidelity(self):
     """Tests whether the simulator match the ground truth."""
+
+    # Given an environment.
     env = catch.Catch()
-    num_actions = env.action_spec().num_values
+
+    # If we instantiate a simulator 'model' of this environment.
     model = simulator.Simulator(env)
 
+    # Then the model and environment should always agree as we step them.
+    num_actions = env.action_spec().num_values
     for _ in range(10):
       true_timestep = env.reset()
+      self.assertTrue(model.needs_reset)
       model_timestep = model.reset()
+      self.assertFalse(model.needs_reset)
       self._check_equal(true_timestep, model_timestep)
 
       while not true_timestep.last():
@@ -48,23 +55,35 @@ class SimulatorTest(absltest.TestCase):
         self._check_equal(true_timestep, model_timestep)
 
   def test_checkpointing(self):
-    env = catch.Catch()
-    num_actions = env.action_spec().num_values
-    model = simulator.Simulator(env)
+    """Tests whether checkpointing restores the state correctly."""
+    # Given an environment, and a model based on this environment.
+    model = simulator.Simulator(catch.Catch())
+    num_actions = model.action_spec().num_values
 
-    env.reset()
     model.reset()
 
-    env.step(2)
-    timestep = model.step(2)
+    # Now, we save a checkpoint.
     model.save_checkpoint()
+
+    ts = model.step(1)
+
+    # Step the model once and load the checkpoint.
+    timestep = model.step(np.random.randint(num_actions))
+    model.load_checkpoint()
+    self._check_equal(ts, model.step(1))
+
     while not timestep.last():
       timestep = model.step(np.random.randint(num_actions))
-    model.load_checkpoint()
 
-    true_timestep = env.step(2)
-    model_timestep = model.step(2)
-    self._check_equal(true_timestep, model_timestep)
+    # The model should require a reset.
+    self.assertTrue(model.needs_reset)
+
+    # Once we load checkpoint, the model should no longer require reset.
+    model.load_checkpoint()
+    self.assertFalse(model.needs_reset)
+
+    # Further steps should agree with the original environment state.
+    self._check_equal(ts, model.step(1))
 
 
 if __name__ == '__main__':
