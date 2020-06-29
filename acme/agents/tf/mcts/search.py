@@ -20,29 +20,30 @@ from typing import Callable, Dict
 from acme.agents.tf.mcts import models
 from acme.agents.tf.mcts import types
 
+import dataclasses
 import numpy as np
 
 
+@dataclasses.dataclass
 class Node:
   """A MCTS node."""
 
-  reward: float
-  visit_count: int
-  prior: float
-  total_value: float
-  children: Dict[types.Action, 'Node']
+  reward: float = 0.
+  visit_count: int = 0
+  terminal: bool = False
+  prior: float = 1.
+  total_value: float = 0.
+  children: Dict[types.Action, 'Node'] = dataclasses.field(default_factory=dict)
 
-  def __init__(self, prior: float = 1.):
-    """Initialize node with optional policy prior + value initialization."""
-
-    self.reward = 0.
-    self.visit_count = 0  # N(s, a)
-    self.prior = prior  # P(s, a)
-    self.total_value = 0.  # Q(s, a)
-    self.children = {}
+  def expand(self, prior: np.ndarray):
+    """Expands this node, adding child nodes."""
+    assert prior.ndim == 1  # Prior should be a flat vector.
+    for a, p in enumerate(prior):
+      self.children[a] = Node(prior=p)
 
   @property
   def value(self) -> types.Value:  # Q(s, a)
+    """Returns the value from this node."""
     if self.visit_count:
       return self.total_value / self.visit_count
     return 0.
@@ -76,6 +77,7 @@ def mcts(
 
   # Evaluate the prior policy for this state.
   prior, value = evaluation(observation)
+  assert prior.shape == (num_actions,)
 
   # Add exploration noise to the prior.
   noise = np.random.dirichlet(alpha=[dirichlet_alpha] * num_actions)
@@ -83,10 +85,7 @@ def mcts(
 
   # Create a fresh tree search.
   root = Node()
-
-  # Create the root node of a fresh search tree if required.
-  for a in range(num_actions):
-    root.children[a] = Node(prior=prior[a])
+  root.expand(prior)
 
   # Save the model state so that we can reset it for each simulation.
   model.save_checkpoint()
@@ -106,14 +105,15 @@ def mcts(
 
       # Step the simulator and add this timestep to the node.
       timestep = model.step(action)
-      node.reward = timestep.reward
+      node.reward = timestep.reward or 0.
+      node.terminal = timestep.last()
       trajectory.append(node)
 
     if timestep is None:
       raise ValueError('Generated an empty rollout; this should not happen.')
 
     # Calculate the bootstrap for leaf nodes.
-    if timestep.last():
+    if node.terminal:
       # If terminal, there is no bootstrap value.
       value = 0.
     else:
@@ -121,8 +121,7 @@ def mcts(
       prior, value = evaluation(timestep.observation)
 
       # We also want to expand this node for next time.
-      for a in range(num_actions):
-        node.children[a] = Node(prior=prior[a])
+      node.expand(prior)
 
     # Load the saved model state.
     model.load_checkpoint()
@@ -135,7 +134,7 @@ def mcts(
 
       # Accumulate the discounted return
       ret *= discount
-      ret += node.reward or 0.
+      ret += node.reward
 
       # Update the node.
       node.total_value += ret
@@ -145,6 +144,7 @@ def mcts(
 
 
 def bfs(node: Node) -> types.Action:
+  """Breadth-first search policy."""
   visit_counts = np.array([c.visit_count for c in node.children.values()])
   return argmax(-visit_counts)
 
