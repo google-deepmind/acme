@@ -28,6 +28,7 @@ from acme.core import Actor
 from acme.core import Learner
 from acme.core import Saveable
 from acme.core import VariableSource
+from acme.core import Worker
 
 # Expose the environment loop.
 from acme.environment_loop import EnvironmentLoop
