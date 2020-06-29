@@ -53,7 +53,9 @@ class CriticMultiplexer(snt.Module):
     self._action_network = action_network
     super().__init__(name='critic_multiplexer')
 
-  def __call__(self, observation: tf.Tensor, action: tf.Tensor) -> tf.Tensor:
+  def __call__(self,
+               observation: types.NestedTensor,
+               action: types.NestedTensor) -> tf.Tensor:
 
     # Maybe transform observations and actions before feeding them on.
     if self._observation_network:
