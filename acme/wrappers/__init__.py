@@ -15,6 +15,7 @@
 """Common environment wrapper classes."""
 
 from acme.wrappers.atari_wrapper import AtariWrapper
+from acme.wrappers.base import EnvironmentWrapper
 from acme.wrappers.base import wrap_all
 from acme.wrappers.frame_stacking import FrameStackingWrapper
 from acme.wrappers.gym_wrapper import GymAtariAdapter
