@@ -15,7 +15,7 @@
 
 """Simple JAX actors."""
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple, TypeVar
 
 from acme import adders
 from acme import core
@@ -32,9 +32,12 @@ import jax.numpy as jnp
 RNGKey = jnp.ndarray
 Observation = types.NestedArray
 Action = types.NestedArray
+RecurrentState = TypeVar('RecurrentState')
 
-# Signature for a function that samples from a parameterised stochastic policy.
+# Signatures for functions that sample from parameterised stochastic policies.
 FeedForwardPolicy = Callable[[hk.Params, RNGKey, Observation], Action]
+RecurrentPolicy = Callable[[hk.Params, RNGKey, Observation, RecurrentState],
+                           Tuple[Action, RecurrentState]]
 
 
 class FeedForwardActor(core.Actor):
@@ -66,6 +69,54 @@ class FeedForwardActor(core.Actor):
   def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     if self._adder:
       self._adder.add(action, next_timestep)
+
+  def update(self):
+    self._client.update()
+
+
+class RecurrentActor(core.Actor):
+  """A recurrent actor in JAX.
+
+  An actor based on a recurrent policy which takes observations and outputs
+  actions, and keeps track of the recurrent state inside. It also adds
+  experiences to replay and updates the actor weights from the policy on the
+  learner.
+  """
+
+  def __init__(
+      self,
+      recurrent_policy: RecurrentPolicy,
+      rng: hk.PRNGSequence,
+      initial_core_state: RecurrentState,
+      variable_client: variable_utils.VariableClient,
+      adder: Optional[adders.Adder] = None,
+  ):
+    self._rng = rng
+    self._recurrent_policy = jax.jit(recurrent_policy, backend='cpu')
+    self._initial_state = self._prev_state = self._state = initial_core_state
+    self._adder = adder
+    self._client = variable_client
+
+  def select_action(self, observation: types.NestedArray) -> types.NestedArray:
+    action, new_state = self._recurrent_policy(
+        self._client.params,
+        key=next(self._rng),
+        observation=utils.add_batch_dim(observation),
+        core_state=self._state)
+    self._prev_state = self._state  # Keep previous state to save in replay.
+    self._state = new_state  # Keep new state for next policy call.
+    return utils.to_numpy_squeeze(action)
+
+  def observe_first(self, timestep: dm_env.TimeStep):
+    if self._adder:
+      self._adder.add_first(timestep)
+    # Re-initialize state at beginning of new episode.
+    self._state = self._initial_state
+
+  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
+    if self._adder:
+      numpy_state = utils.to_numpy_squeeze((self._prev_state))
+      self._adder.add(action, next_timestep, extras=(numpy_state,))
 
   def update(self):
     self._client.update()
