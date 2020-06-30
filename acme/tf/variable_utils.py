@@ -16,7 +16,7 @@
 """Variable handling utilities for TensorFlow 2."""
 
 from concurrent import futures
-from typing import Mapping, Sequence
+from typing import Mapping, Optional, Sequence
 
 from acme import core
 
@@ -36,31 +36,55 @@ class VariableClient:
     self._call_counter = 0
     self._update_period = update_period
     self._client = client
-
-    self._executor = futures.ThreadPoolExecutor(max_workers=1)
     self._request = lambda: client.get_variables(self._keys)
-    self._future = futures.Future()
+
+    # Create a single background thread to fetch variables without necessarily
+    # blocking the actor.
+    self._executor = futures.ThreadPoolExecutor(max_workers=1)
     self._async_request = lambda: self._executor.submit(self._request)
 
-  def update(self):
-    """Periodically updates the variables with latest copy from the source."""
+    # Initialize this client's future to None to indicate to the `update()`
+    # method that there is no pending/running request.
+    self._future: Optional[futures.Future] = None
 
-    # Track calls (we only update periodically).
+  def update(self):
+    """Periodically updates the variables with the latest copy from the source.
+
+    Unlike `update_and_wait()`, this method makes an asynchronous request for
+    variables and returns. Unless the request is immediately fulfilled, the
+    variables are only copied _within a subsequent call to_ `update()`, whenever
+    the request is fulfilled by the `VariableSource`.
+
+    This stateful update method keeps track of the number of calls to it and,
+    every `update_period` call, sends an asynchronous request to its server to
+    retrieve the latest variables. It does so as long as there are no existing
+    requests.
+
+    If there is an existing fulfilled request when this method is called,
+    the resulting variables are immediately copied.
+    """
+
+    # Track the number of calls (we only update periodically).
     if self._call_counter < self._update_period:
       self._call_counter += 1
 
-    # Return early if we are still waiting for a previous request to come back.
-    if self._future.running():
-      return
+    period_reached: bool = self._call_counter >= self._update_period
+    has_active_request: bool = self._future is not None
 
-    # Return if it's not time to fetch another update.
-    if self._call_counter < self._update_period:
-      return
+    if period_reached and not has_active_request:
+      # The update period has been reached and no request has been sent yet, so
+      # making an asynchronous request now.
+      self._future = self._async_request()
+      self._call_counter = 0
 
-    # Get a future and add the copy function as a callback.
-    self._call_counter = 0
-    self._future = self._async_request()
-    self._future.add_done_callback(lambda f: self._copy(f.result()))
+    if has_active_request and self._future.done():
+      # The active request is done so copy the result and remove the future.
+      self._copy(self._future.result())
+      self._future: Optional[futures.Future] = None
+    else:
+      # There is either a pending/running request or we're between update
+      # periods, so just carry on.
+      return
 
   def update_and_wait(self):
     """Immediately update and block until we get the result."""
