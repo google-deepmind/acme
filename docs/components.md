@@ -289,9 +289,6 @@ experiences to a Reverb table. The `ReverbAdder`s provided include:
      s_T, a_T, r_T, 0., e_T)
     ```
 
-*   `PaddedEpisodeAdder` which is the same as `EpisodeAdder` with padding to
-    `max_sequence_length`
-
 *   `SequenceAdder` which adds sequences of fixed `sequence_length` n of the
     form:
 

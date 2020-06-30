@@ -90,8 +90,7 @@ class SequenceAdder(base.ReverbAdder):
     self._writer.append(final_step)
     self._step += 1
 
-    # NOTE: this always pads to the fixed length. but this is not equivalent to
-    # the old Padded sequence adder.
+    # NOTE: this always pads to the fixed length.
 
     if self._pad_end_of_episode:
       # Determine how much padding to add. This makes sure that we add (zero)
