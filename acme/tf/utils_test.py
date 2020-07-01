@@ -115,33 +115,6 @@ class Tf2UtilsTest(parameterized.TestCase):
     expected_shape = [batch_size, 2 + 5 * 3 + 1]
     self.assertSequenceEqual(output_shape, expected_shape)
 
-  def test_stack_sequence_fields(self):
-    sequence = [{
-        'action': np.array([1.0]),
-        'observation': (np.array([0.0, 1.0, 2.0]),),
-        'reward': np.array(1.0),
-    }, {
-        'action': np.array([0.5]),
-        'observation': (np.array([1.0, 2.0, 3.0]),),
-        'reward': np.array(0.0),
-    }, {
-        'action': np.array([0.3]),
-        'observation': (np.array([2.0, 3.0, 4.0]),),
-        'reward': np.array(0.5),
-    }]
-
-    stacked = tf2_utils.stack_sequence_fields(sequence)
-
-    self.assertIsInstance(stacked, dict)
-    self.assertLen(stacked.keys(), 3)
-    self.assertLen(stacked['observation'], 1)
-
-    self.assertEqual(stacked['action'].shape, (3, 1))
-    self.assertEqual(stacked['observation'][0].shape, (3, 3))
-    self.assertEqual(stacked['reward'].shape, (3,))
-    self.assertEqual(stacked['observation'][0].tolist(),
-                     [[0., 1., 2.], [1., 2., 3.], [2., 3., 4.]])
-
 
 if __name__ == '__main__':
   absltest.main()

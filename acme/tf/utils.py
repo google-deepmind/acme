@@ -16,16 +16,14 @@
 """Utilities for nested data structures involving NumPy and TensorFlow 2.x."""
 
 import functools
-from typing import List, Optional, TypeVar, Iterable
+from typing import List, Optional
 
 from acme import types
+from acme.utils import tree_utils
 
-import numpy as np
 import sonnet as snt
 import tensorflow as tf
 import tree
-
-SequenceType = TypeVar('SequenceType')
 
 
 def add_batch_dim(nest: types.NestedTensor) -> types.NestedTensor:
@@ -153,64 +151,5 @@ def zeros_like(nest: types.Nest) -> types.NestedTensor:
   return tree.map_structure(lambda x: tf.zeros(x.shape, x.dtype), nest)
 
 
-def fast_map_structure(func, *structure):
-  """Faster map_structure implementation which skips some error checking."""
-  flat_structure = (tree.flatten(s) for s in structure)
-  entries = zip(*flat_structure)
-  # Arbitrarily choose one of the structures of the original sequence (the last)
-  # to match the structure for the flattened sequence.
-  return tree.unflatten_as(structure[-1], [func(*x) for x in entries])
-
-
-def stack_sequence_fields(sequence: Iterable[SequenceType]) -> SequenceType:
-  """Stacks a list of identically nested objects.
-
-  This takes a sequence of identically nested objects and returns a single
-  nested object whose ith leaf is a stacked numpy array of the corresponding
-  ith leaf from each element of the sequence.
-
-  For example, if `sequence` is:
-
-  ```python
-  [{
-        'action': np.array([1.0]),
-        'observation': (np.array([0.0, 1.0, 2.0]),),
-        'reward': 1.0
-   }, {
-        'action': np.array([0.5]),
-        'observation': (np.array([1.0, 2.0, 3.0]),),
-        'reward': 0.0
-   }, {
-        'action': np.array([0.3]),
-        'observation': (np.array([2.0, 3.0, 4.0]),),
-        'reward': 0.5
-   }]
-  ```
-
-  Then this function will return:
-
-  ```python
-  {
-      'action': np.array([....])         # array shape = [3 x 1]
-      'observation': (np.array([...]),)  # array shape = [3 x 3]
-      'reward': np.array([...])          # array shape = [3]
-  }
-  ```
-
-  Note that the 'observation' entry in the above example has two levels of
-  nesting, i.e it is a tuple of arrays.
-
-  Args:
-    sequence: a list of identically nested objects.
-
-  Returns:
-    A nested object with numpy.
-
-  Raises:
-    ValueError: If `sequence` is an empty sequence.
-  """
-  # Handle empty input sequences.
-  if not sequence:
-    raise ValueError('Input sequence must not be empty')
-
-  return fast_map_structure(lambda *values: np.asarray(values), *sequence)
+# TODO(b/160311329): Migrate call-sites and remove.
+stack_sequence_fields = tree_utils.stack_sequence_fields
