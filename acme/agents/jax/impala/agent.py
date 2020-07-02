@@ -92,8 +92,6 @@ class IMPALA(acme.Actor):
         extra_spec=extra_spec,
         sequence_length=sequence_length)
 
-    rng = hk.PRNGSequence(seed)
-
     optimizer = optix.chain(
         optix.clip_by_global_norm(max_gradient_norm),
         optix.adam(learning_rate),
@@ -104,7 +102,7 @@ class IMPALA(acme.Actor):
         unroll_fn=unroll_fn,
         initial_state_fn=initial_state_fn,
         iterator=dataset.as_numpy_iterator(),
-        rng=rng,
+        rng=hk.PRNGSequence(seed),
         counter=counter,
         logger=logger,
         optimizer=optimizer,
@@ -118,7 +116,7 @@ class IMPALA(acme.Actor):
     self._actor = acting.IMPALAActor(
         forward_fn=jax.jit(hk.transform(forward_fn).apply, backend='cpu'),
         initial_state_fn=initial_state_fn,
-        rng=rng,
+        rng=hk.PRNGSequence(seed),
         adder=adder,
         variable_client=variable_client,
     )

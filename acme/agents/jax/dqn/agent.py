@@ -55,6 +55,7 @@ class DQN(agent.Agent):
       epsilon: float = 0.,
       learning_rate: float = 1e-3,
       discount: float = 0.99,
+      seed: int = 1,
   ):
     """Initialize the agent."""
 
@@ -92,7 +93,7 @@ class DQN(agent.Agent):
     learner = learning.DQNLearner(
         network=network,
         obs_spec=environment_spec.observations,
-        rng=hk.PRNGSequence(1),
+        rng=hk.PRNGSequence(seed),
         optimizer=optix.adam(learning_rate),
         discount=discount,
         importance_sampling_exponent=importance_sampling_exponent,
@@ -101,11 +102,11 @@ class DQN(agent.Agent):
         replay_client=reverb.Client(address),
     )
 
-    variable_client = variable_utils.VariableClient(learner, 'foo')
+    variable_client = variable_utils.VariableClient(learner, '')
 
     actor = actors.FeedForwardActor(
         policy=policy,
-        rng=hk.PRNGSequence(1),
+        rng=hk.PRNGSequence(seed),
         variable_client=variable_client,
         adder=adder)
 
