@@ -270,11 +270,15 @@ experiences to a Reverb table. The `ReverbAdder`s provided include:
 
     Where N is 1, the transitions are of the form:
 
-        `(s_t, a_t, r_t, d_t, s_{t+1}, e_t)`
+    ```
+    (s_t, a_t, r_t, d_t, s_{t+1}, e_t)
+    ```
 
     For N greater than 1, transitions are of the form:
 
-        `(s_t, a_t, R_{t:t+n}, D_{t:t+n}, s_{t+n}, e_t)`,
+    ```
+    (s_t, a_t, R_{t:t+n}, D_{t:t+n}, s_{t+n}, e_t),
+    ```
 
     Transitions can be stored as sequences or episodes.
 
@@ -301,8 +305,8 @@ experiences to a Reverb table. The `ReverbAdder`s provided include:
        s_n, a_n, r_n, d_n, e_n)
     ```
 
-    sequences can be overlapping (if the `period` parameter = `sequence_length`
-    n) or non-overlapping (if `period < sequence_length`)
+    sequences can be overlapping (if the `period` parameter < `sequence_length`
+    n) or non-overlapping (if `period <= sequence_length`)
 
 ### [Loggers](../acme/utils/loggers/)
 
