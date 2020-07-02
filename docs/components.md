@@ -243,7 +243,7 @@ Example usage of an adder:
 ```python
 # Reset the environment and add the first observation.
 timestep = env.reset()
-adder.add_first(timestep.observation)
+adder.add_first(timestep)
 
 while not timestep.last():
   # Generate an action from the policy and step the environment.
