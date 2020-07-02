@@ -68,6 +68,7 @@ def fetch_devicearray(values: types.Nest) -> types.Nest:
     if isinstance(x, jnp.DeviceArray):
       return np.array(x)
     return x
+
   return tree.map_structure(_serialize, values)
 
 
@@ -134,3 +135,12 @@ def prefetch(iterable: Iterable[T],
 
   if producer_error:
     raise producer_error[0]
+
+
+def update_periodically(steps: jnp.ndarray, target_update_period: int,
+                        params: types.NestedArray,
+                        target_params: types.NestedArray) -> types.NestedArray:
+  """Checks whether to update the params and returns the correct params."""
+  return jax.lax.cond(
+      jnp.mod(steps, target_update_period) == 0, lambda _: params,
+      lambda _: target_params, None)

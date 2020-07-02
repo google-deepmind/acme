@@ -38,7 +38,7 @@ class TrainingState(NamedTuple):
   params: hk.Params
   target_params: hk.Params
   opt_state: optix.OptState
-  step: int
+  steps: int
 
 
 class LearnerOutputs(NamedTuple):
@@ -111,11 +111,18 @@ class DQNLearner(acme.Learner, acme.Saveable):
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
       new_params = optix.apply_updates(state.params, updates)
 
+      steps = state.steps + 1
+
+      # Periodically update target networks.
+      target_params = utils.update_periodically(steps,
+                                                self._target_update_period,
+                                                new_params, state.target_params)
+
       new_state = TrainingState(
           params=new_params,
-          target_params=state.target_params,
+          target_params=target_params,
           opt_state=new_opt_state,
-          step=state.step + 1)
+          steps=steps)
 
       outputs = LearnerOutputs(keys=keys, priorities=priorities)
 
@@ -148,7 +155,7 @@ class DQNLearner(acme.Learner, acme.Saveable):
         params=initial_params,
         target_params=initial_target_params,
         opt_state=initial_opt_state,
-        step=0)
+        steps=0)
 
     self._forward = jax.jit(network.apply)
     self._sgd_step = jax.jit(sgd_step)
@@ -162,10 +169,6 @@ class DQNLearner(acme.Learner, acme.Saveable):
 
     # Update our counts and record it.
     result = self._counter.increment(steps=1)
-
-    # Periodically update target network parameters.
-    if self._state.step % self._target_update_period == 0:
-      self._state = self._state._replace(target_params=self._state.params)
 
     # Update priorities in replay.
     if self._replay_client:
