@@ -59,8 +59,9 @@ class IMPALALearner(acme.Learner, acme.Saveable):
   ):
 
     # Transform into pure functions.
-    unroll_fn = hk.transform(unroll_fn)
-    initial_state_fn = hk.transform(initial_state_fn)
+    unroll_fn = hk.without_apply_rng(hk.transform(unroll_fn, apply_rng=True))
+    initial_state_fn = hk.without_apply_rng(
+        hk.transform(initial_state_fn, apply_rng=True))
 
     def loss(params: hk.Params, sample: reverb.ReplaySample) -> jnp.ndarray:
       """Entropy-regularised actor-critic loss."""

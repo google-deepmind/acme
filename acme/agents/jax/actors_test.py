@@ -70,6 +70,10 @@ class ActorTest(absltest.TestCase):
     loop.run(20)
 
 
+def _transform_without_rng(f):
+  return hk.without_apply_rng(hk.transform(f, apply_rng=True))
+
+
 class RecurrentActorTest(absltest.TestCase):
 
   def test_recurrent(self):
@@ -79,11 +83,11 @@ class RecurrentActorTest(absltest.TestCase):
     obs = utils.add_batch_dim(utils.zeros_like(env_spec.observations))
     rng = hk.PRNGSequence(1)
 
-    @hk.transform
+    @_transform_without_rng
     def network(inputs: jnp.ndarray, state: hk.LSTMState):
       return hk.DeepRNN([hk.Flatten(), hk.LSTM(output_size)])(inputs, state)
 
-    @hk.transform
+    @_transform_without_rng
     def initial_state(batch_size: int):
       network = hk.DeepRNN([hk.Flatten(), hk.LSTM(output_size)])
       return network.initial_state(batch_size)

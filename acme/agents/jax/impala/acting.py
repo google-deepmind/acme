@@ -56,7 +56,8 @@ class IMPALAActor(core.Actor):
     self._rng = rng
 
     self._params = variable_client.update_and_wait()
-    self._initial_state = hk.transform(initial_state_fn).apply(None)
+    self._initial_state = hk.without_apply_rng(
+        hk.transform(initial_state_fn, apply_rng=True)).apply(None)
 
   def select_action(self, observation: types.Observation) -> types.Action:
 

@@ -86,7 +86,8 @@ class DQN(agent.Agent):
 
     def policy(params: hk.Params, key: jnp.ndarray,
                observation: jnp.ndarray) -> jnp.ndarray:
-      action_values = hk.transform(network).apply(params, observation)
+      action_values = hk.without_apply_rng(
+          hk.transform(network, apply_rng=True)).apply(params, observation)
       return rlax.epsilon_greedy(epsilon).sample(key, action_values)
 
     # The learner updates the parameters (and initializes them).

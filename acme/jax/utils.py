@@ -33,7 +33,11 @@ def add_batch_dim(values: types.Nest) -> types.NestedArray:
   return tree_util.tree_map(lambda x: jnp.expand_dims(x, axis=0), values)
 
 
-@hk.transform
+def _transform_without_rng(f):
+  return hk.without_apply_rng(hk.transform(f, apply_rng=True))
+
+
+@_transform_without_rng
 def _flatten(x, num_batch_dims: int):
   return hk.Flatten(preserve_dims=num_batch_dims)(x)
 

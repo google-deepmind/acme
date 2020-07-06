@@ -64,8 +64,11 @@ class IMPALA(acme.Actor):
     self._logger = logger or loggers.TerminalLogger('agent')
 
     extra_spec = {
-        'core_state': hk.transform(initial_state_fn).apply(None),
-        'logits': np.ones(shape=(num_actions,), dtype=np.float32)
+        'core_state':
+            hk.without_apply_rng(
+                hk.transform(initial_state_fn, apply_rng=True)).apply(None),
+        'logits':
+            np.ones(shape=(num_actions,), dtype=np.float32)
     }
     signature = adders.SequenceAdder.signature(environment_spec, extra_spec)
     queue = reverb.Table.queue(
@@ -114,7 +117,10 @@ class IMPALA(acme.Actor):
 
     variable_client = variable_utils.VariableClient(self._learner, key='policy')
     self._actor = acting.IMPALAActor(
-        forward_fn=jax.jit(hk.transform(forward_fn).apply, backend='cpu'),
+        forward_fn=jax.jit(
+            hk.without_apply_rng(hk.transform(forward_fn,
+                                              apply_rng=True)).apply,
+            backend='cpu'),
         initial_state_fn=initial_state_fn,
         rng=hk.PRNGSequence(seed),
         adder=adder,

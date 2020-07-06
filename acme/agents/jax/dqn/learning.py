@@ -69,7 +69,7 @@ class DQNLearner(acme.Learner, acme.Saveable):
     """Initializes the learner."""
 
     # Transform network into a pure function.
-    network = hk.transform(network)
+    network = hk.without_apply_rng(hk.transform(network, apply_rng=True))
 
     def loss(params: hk.Params, target_params: hk.Params,
              sample: reverb.ReplaySample):
