@@ -36,7 +36,7 @@ class MyNetwork(hk.RNNCore):
   def __init__(self, num_actions: int):
     super().__init__(name='my_network')
     self._torso = hk.Sequential([
-        lambda x: jnp.reshape(x, [jnp.prod(x.shape)]),
+        lambda x: jnp.reshape(x, [np.prod(x.shape)]),
         hk.nets.MLP([50, 50]),
     ])
     self._core = hk.LSTM(20)
