@@ -66,12 +66,19 @@ class R2D3(agent.Agent):
                max_replay_size: int = 1000000,
                samples_per_insert: float = 32.0):
 
+    extra_spec = {
+        'core_state': network.initial_state(1),
+    }
+    # Remove batch dimensions.
+    extra_spec = tf2_utils.squeeze_batch_dim(extra_spec)
     replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
         sampler=reverb.selectors.Uniform(),
         remover=reverb.selectors.Fifo(),
         max_size=max_replay_size,
-        rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1))
+        rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1),
+        signature=adders.SequenceAdder.signature(environment_spec,
+                                                   extra_spec))
     self._server = reverb.Server([replay_table], port=None)
     address = f'localhost:{self._server.port}'
 
@@ -86,11 +93,6 @@ class R2D3(agent.Agent):
 
     # The dataset object to learn from.
     reverb_client = reverb.TFClient(address)
-    extra_spec = {
-        'core_state': network.initial_state(1),
-    }
-    # Remove batch dimensions.
-    extra_spec = tf2_utils.squeeze_batch_dim(extra_spec)
     dataset = datasets.make_reverb_dataset(
         client=reverb_client,
         environment_spec=environment_spec,
@@ -207,6 +209,9 @@ def _sequence_from_episode(observations: acme_types.NestedTensor,
   a_t = tree.map_structure(_slice_and_pad, actions)
   r_t = _slice_and_pad(rewards)
   d_t = _slice_and_pad(discounts)
+  start_of_episode = tf.equal(first, 0)
+  start_of_episode = tf.expand_dims(start_of_episode, axis=0)
+  start_of_episode = tf.tile(start_of_episode, [sequence_length])
 
   def _sequence_zeros(spec):
     return tf.zeros([sequence_length] + spec.shape, spec.dtype)

@@ -107,7 +107,8 @@ class DistributionalMPO(agent.Agent):
         sampler=reverb.selectors.Uniform(),
         remover=reverb.selectors.Fifo(),
         max_size=max_replay_size,
-        rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1))
+        rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1),
+        signature=adders.NStepTransitionAdder.signature(environment_spec))
     self._server = reverb.Server([replay_table], port=None)
 
     # The adder is used to insert observations into replay.
