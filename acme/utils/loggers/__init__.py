@@ -19,6 +19,7 @@ from acme.utils.loggers.aggregators import Dispatcher
 from acme.utils.loggers.asynchronous import AsyncLogger
 from acme.utils.loggers.base import Logger
 from acme.utils.loggers.base import LoggingData
+from acme.utils.loggers.base import NoOpLogger
 from acme.utils.loggers.base import to_numpy
 from acme.utils.loggers.csv import CSVLogger
 from acme.utils.loggers.filters import NoneFilter

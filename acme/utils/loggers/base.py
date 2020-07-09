@@ -32,6 +32,17 @@ class Logger(abc.ABC):
     """Writes `data` to destination (file, terminal, database, etc)."""
 
 
+class NoOpLogger(Logger):
+  """Simple Logger which does nothing and outputs no logs.
+
+  This should be used sparingly, but it can prove useful if we want to quiet an
+  individual component and have it produce no logging whatsoever.
+  """
+
+  def write(self, data: LoggingData):
+    pass
+
+
 def tensor_to_numpy(value: Any):
   if hasattr(value, 'numpy'):
     # Assuming TensorFlow.
@@ -43,7 +54,7 @@ def tensor_to_numpy(value: Any):
 def to_numpy(values: Any):
   """Converts tensors in a nested structure to numpy.
 
-  Converts tensors from Tensorflow to Numpy if needed without importing TF
+  Converts tensors from TensorFlow to Numpy if needed without importing TF
   dependency.
 
   Args:
