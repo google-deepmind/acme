@@ -62,6 +62,7 @@ def final_step_like(step: base.Step,
       action=zero_action,
       reward=zero_reward,
       discount=zero_discount,
+      start_of_episode=False,
       extras=zero_extras)
 
 

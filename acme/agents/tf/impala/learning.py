@@ -101,7 +101,11 @@ class IMPALALearner(acme.Learner, tf2_savers.TFSaveable):
     # Retrieve a batch of data from replay.
     inputs: reverb.ReplaySample = next(self._iterator)
     data = tf2_utils.batch_to_sequence(inputs.data)
-    observations, actions, rewards, discounts, extra = data
+    observations, actions, rewards, discounts, extra = (data.observation,
+                                                        data.action,
+                                                        data.reward,
+                                                        data.discount,
+                                                        data.extras)
     core_state = tree.map_structure(lambda s: s[0], extra['core_state'])
 
     #

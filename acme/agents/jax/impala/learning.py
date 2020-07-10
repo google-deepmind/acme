@@ -67,7 +67,12 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       """Entropy-regularised actor-critic loss."""
 
       # Extract the data.
-      observations, actions, rewards, discounts, extra = sample.data
+      data = sample.data
+      observations, actions, rewards, discounts, extra = (data.observation,
+                                                          data.action,
+                                                          data.reward,
+                                                          data.discount,
+                                                          data.extras)
       initial_state = tree.map_structure(lambda s: s[0], extra['core_state'])
       behaviour_logits = extra['logits']
 

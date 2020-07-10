@@ -116,7 +116,11 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
     sample: reverb.ReplaySample = next(self._iterator)
 
     data = tf2_utils.batch_to_sequence(sample.data)
-    observations, actions, rewards, discounts, extra = data
+    observations, actions, rewards, discounts, extra = (data.observation,
+                                                        data.action,
+                                                        data.reward,
+                                                        data.discount,
+                                                        data.extras)
     unused_sequence_length, batch_size = actions.shape
 
     # Get initial state for the LSTM, either from replay or simply use zeros.

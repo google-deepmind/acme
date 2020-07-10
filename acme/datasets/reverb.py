@@ -25,6 +25,13 @@ import reverb
 import tensorflow as tf
 import tree
 
+# pylint: disable=g-import-not-at-top
+try:
+  from acme.adders.reverb.deprecated import base as deprecated_base  # pytype: disable=import-error
+except ImportError:
+  deprecated_base = None
+# pylint: enable=g-import-not-at-top
+
 
 def make_reverb_dataset(
     client: reverb.TFClient,
@@ -37,6 +44,7 @@ def make_reverb_dataset(
     table: str = adders.DEFAULT_PRIORITY_TABLE,
     parallel_batch_optimization: bool = True,
     convert_zero_size_to_none: bool = False,
+    using_deprecated_adder: bool = False,
 ) -> tf.data.Dataset:
   """Makes a TensorFlow dataset.
 
@@ -72,6 +80,8 @@ def make_reverb_dataset(
       shapes for example `GraphsTuple` from the graph_net library. For example,
       `specs.Array((0, 5), tf.float32)` will correspond to a examples with shape
       `tf.TensorShape([None, 5])`.
+    using_deprecated_adder: True if the adder used to generate the data is
+      from acme/adders/reverb/deprecated.
 
   Returns:
     A tf.data.Dataset that streams data from the replay server.
@@ -79,16 +89,28 @@ def make_reverb_dataset(
 
   assert isinstance(client, reverb.TFClient)
 
-  # Use the environment spec but convert it to a plain tuple.
-  adder_spec = tuple(environment_spec)
-
   # The *transition* adder is special in that it also adds an arrival state.
   if transition_adder:
-    adder_spec += (environment_spec.observations,)
-
-  # Any 'extra' data that is passed to the adder is put on the end.
-  if extra_spec:
-    adder_spec += (extra_spec,)
+    # Use the environment spec but convert it to a plain tuple.
+    adder_spec = tuple(environment_spec) + (environment_spec.observations,)
+    # Any 'extra' data that is passed to the adder is put on the end.
+    if extra_spec:
+      adder_spec += (extra_spec,)
+  elif using_deprecated_adder and deprecated_base is not None:
+    adder_spec = deprecated_base.Step(
+        observation=environment_spec.observations,
+        action=environment_spec.actions,
+        reward=environment_spec.rewards,
+        discount=environment_spec.discounts,
+        extras=() if not extra_spec else extra_spec)
+  else:
+    adder_spec = adders.Step(
+        observation=environment_spec.observations,
+        action=environment_spec.actions,
+        reward=environment_spec.rewards,
+        discount=environment_spec.discounts,
+        start_of_episode=specs.Array(shape=(), dtype=bool),
+        extras=() if not extra_spec else extra_spec)
 
   # Extract the shapes and dtypes from these specs.
   get_dtype = lambda x: tf.as_dtype(x.dtype)

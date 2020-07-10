@@ -227,4 +227,12 @@ def _sequence_from_episode(observations: acme_types.NestedTensor,
       probability=probability,
       table_size=table_size,
       priority=priority)
-  return reverb.ReplaySample(info=info, data=(o_t, a_t, r_t, d_t, e_t))
+  return reverb.ReplaySample(
+      info=info,
+      data=adders.Step(
+          observation=o_t,
+          action=a_t,
+          reward=r_t,
+          discount=d_t,
+          start_of_episode=start_of_episode,
+          extras=e_t))

@@ -17,7 +17,7 @@
 
 import abc
 import collections
-from typing import Callable, Iterable, Mapping, NamedTuple, Optional
+from typing import Callable, Iterable, Mapping, NamedTuple, Optional, Union
 
 from acme import specs
 from acme import types
@@ -36,6 +36,7 @@ class Step(NamedTuple):
   action: types.NestedArray
   reward: types.NestedArray
   discount: types.NestedArray
+  start_of_episode: Union[bool, specs.Array, tf.Tensor]
   extras: types.NestedArray
 
 
@@ -45,6 +46,7 @@ class PriorityFnInput(NamedTuple):
   actions: types.NestedArray
   rewards: types.NestedArray
   discounts: types.NestedArray
+  start_of_episode: types.NestedArray
   extras: types.NestedArray
 
 
@@ -53,7 +55,7 @@ PriorityFn = Callable[['PriorityFnInput'], float]
 PriorityFnMapping = Mapping[str, PriorityFn]
 
 
-def array_spec_to_tensor_spec(paths: Iterable[str], spec: specs.Array):
+def spec_like_to_tensor_spec(paths: Iterable[str], spec: specs.Array):
   return tf.TensorSpec.from_spec(spec, name='/'.join(str(p) for p in paths))
 
 
@@ -104,6 +106,7 @@ class ReverbAdder(base.Adder):
     # (generally SAR tuples) and one additional dangling observation.
     self._buffer = collections.deque(maxlen=buffer_size)
     self._next_observation = None
+    self._start_of_episode = False
 
   @property
   def _writer(self) -> reverb.Writer:
@@ -141,6 +144,7 @@ class ReverbAdder(base.Adder):
 
     # Record the next observation.
     self._next_observation = timestep.observation
+    self._start_of_episode = True
 
   def add(self,
           action: types.NestedArray,
@@ -157,11 +161,13 @@ class ReverbAdder(base.Adder):
             action=action,
             reward=next_timestep.reward,
             discount=next_timestep.discount,
+            start_of_episode=self._start_of_episode,
             extras=extras,
         ))
 
     # Record the next observation and write.
     self._next_observation = next_timestep.observation
+    self._start_of_episode = False
     self._write()
 
     # Write the last "dangling" observation.
@@ -194,8 +200,9 @@ class ReverbAdder(base.Adder):
         action=environment_spec.actions,
         reward=environment_spec.rewards,
         discount=environment_spec.discounts,
+        start_of_episode=specs.Array(shape=(), dtype=bool),
         extras=extras_spec)
-    return tree.map_structure_with_path(array_spec_to_tensor_spec, spec_step)
+    return tree.map_structure_with_path(spec_like_to_tensor_spec, spec_step)
 
   @abc.abstractmethod
   def _write(self):

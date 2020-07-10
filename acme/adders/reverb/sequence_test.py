@@ -37,9 +37,21 @@ TEST_CASES = [
         ),
         expected_sequences=(
             # (observation, action, reward, discount, extra)
-            [(1, 0, 2.0, 1.0, ()), (2, 0, 3.0, 1.0, ()), (3, 0, 5.0, 1.0, ())],
-            [(2, 0, 3.0, 1.0, ()), (3, 0, 5.0, 1.0, ()), (4, 0, 7.0, 0.0, ())],
-            [(3, 0, 5.0, 1.0, ()), (4, 0, 7.0, 0.0, ()), (5, 0, 0.0, 0.0, ())],
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 0.0, False, ()),
+            ],
+            [
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 0.0, False, ()),
+                (5, 0, 0.0, 0.0, False, ()),
+            ],
         ),
     ),
     dict(
@@ -55,8 +67,16 @@ TEST_CASES = [
         ),
         expected_sequences=(
             # (observation, action, reward, discount, extra)
-            [(1, 0, 2.0, 1.0, ()), (2, 0, 3.0, 1.0, ()), (3, 0, 5.0, 1.0, ())],
-            [(3, 0, 5.0, 1.0, ()), (4, 0, 7.0, 0.0, ()), (5, 0, 0.0, 0.0, ())],
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 0.0, False, ()),
+                (5, 0, 0.0, 0.0, False, ()),
+            ],
         ),
     ),
     dict(
@@ -70,8 +90,11 @@ TEST_CASES = [
         ),
         expected_sequences=(
             # (observation, action, reward, discount, extra)
-            [(1, 0, 2.0, 1.0, ()), (2, 0, 3.0, 0.0, ()),
-             (3, 0, 0.0, 0.0, ())],),
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 0.0, False, ()),
+                (3, 0, 0.0, 0.0, False, ()),
+            ],),
     ),
     dict(
         testcase_name='EarlyTerminationPeriodTwo',
@@ -84,8 +107,11 @@ TEST_CASES = [
         ),
         expected_sequences=(
             # (observation, action, reward, discount, extra)
-            [(1, 0, 2.0, 1.0, ()), (2, 0, 3.0, 0.0, ()),
-             (3, 0, 0.0, 0.0, ())],),
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 0.0, False, ()),
+                (3, 0, 0.0, 0.0, False, ()),
+            ],),
     ),
     dict(
         testcase_name='EarlyTerminationPaddingPeriodOne',
@@ -99,10 +125,10 @@ TEST_CASES = [
         expected_sequences=(
             # (observation, action, reward, discount, extra)
             [
-                (1, 0, 2.0, 1.0, ()),
-                (2, 0, 3.0, 0.0, ()),
-                (3, 0, 0.0, 0.0, ()),
-                (0, 0, 0.0, 0.0, ()),
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 0.0, False, ()),
+                (3, 0, 0.0, 0.0, False, ()),
+                (0, 0, 0.0, 0.0, False, ()),
             ],),
     ),
     dict(
@@ -117,10 +143,10 @@ TEST_CASES = [
         expected_sequences=(
             # (observation, action, reward, discount, extra)
             [
-                (1, 0, 2.0, 1.0, ()),
-                (2, 0, 3.0, 0.0, ()),
-                (3, 0, 0.0, 0.0, ()),
-                (0, 0, 0.0, 0.0, ()),
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 0.0, False, ()),
+                (3, 0, 0.0, 0.0, False, ()),
+                (0, 0, 0.0, 0.0, False, ()),
             ],),
     ),
     dict(
@@ -135,9 +161,9 @@ TEST_CASES = [
         expected_sequences=(
             # (observation, action, reward, discount, extra)
             [
-                (1, 0, 2.0, 1.0, ()),
-                (2, 0, 3.0, 0.0, ()),
-                (3, 0, 0.0, 0.0, ()),
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 0.0, False, ()),
+                (3, 0, 0.0, 0.0, False, ()),
             ],),
         pad_end_of_episode=False,
     ),

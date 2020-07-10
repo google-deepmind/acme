@@ -180,5 +180,5 @@ class NStepTransitionAdder(base.ReverbAdder):
         extras_spec,
     )
 
-    return tree.map_structure_with_path(base.array_spec_to_tensor_spec,
+    return tree.map_structure_with_path(base.spec_like_to_tensor_spec,
                                         transition_spec)

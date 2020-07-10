@@ -94,12 +94,14 @@ def make_sequence(observations):
   first, steps = make_trajectory(observations)
   observation = first.observation
   sequence = []
+  start_of_episode = True
   for action, timestep in steps:
     extras = ()
-    sequence.append(
-        (observation, action, timestep.reward, timestep.discount, extras))
+    sequence.append((observation, action, timestep.reward, timestep.discount,
+                     start_of_episode, extras))
     observation = timestep.observation
-  sequence.append((observation, 0, 0.0, 0.0, ()))
+    start_of_episode = False
+  sequence.append((observation, 0, 0.0, 0.0, False, ()))
   return sequence
 
 
