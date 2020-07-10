@@ -96,7 +96,7 @@ def main(_):
       environment_spec=environment_spec,
       policy_network=agent_networks['policy'],
       critic_network=agent_networks['critic'],
-      observation_network=agent_networks['observation'],
+      observation_network=agent_networks['observation'],  # pytype: disable=wrong-arg-types
   )
 
   # Run the environment loop.

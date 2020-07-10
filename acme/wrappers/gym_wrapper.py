@@ -179,4 +179,4 @@ class GymAtariAdapter(GymWrapper):
             specs.Array(shape=(), dtype=np.dtype('float64'), name='lives'))
 
   def action_spec(self) -> List[specs.BoundedArray]:
-    return [self._action_spec]
+    return [self._action_spec]  # pytype: disable=bad-return-type

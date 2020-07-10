@@ -109,7 +109,7 @@ def main(_):
       policy_network=agent_networks['policy'],
       critic_network=agent_networks['critic'],
       observation_network=agent_networks['observation'],
-      sigma=1.0,
+      sigma=1.0,  # pytype: disable=wrong-arg-types
   )
 
   # Create the environment loop used for training.
