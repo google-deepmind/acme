@@ -15,14 +15,22 @@
 """Networks useful for building recurrent agents.
 """
 
-from typing import Optional, Sequence, Tuple
+from typing import NamedTuple, Optional, Sequence, Tuple
 from acme import types
 from acme.tf import savers
+from acme.tf import utils
 import sonnet as snt
 import tensorflow as tf
+import tensorflow_probability as tfp
 import tree
 
 RNNState = types.NestedTensor
+
+
+class PolicyCriticRNNState(NamedTuple):
+  """Consists of two RRNStates called 'policy' and 'critic'."""
+  policy: RNNState
+  critic: RNNState
 
 
 class UnpackWrapper(snt.Module):
@@ -165,3 +173,74 @@ class CriticDeepRNN(snt.DeepRNN):
   @_input_signature.setter
   def _input_signature(self, new_spec: tf.TensorSpec):
     self.__input_signature = new_spec
+
+
+class RecurrentExpQWeightedPolicy(snt.RNNCore):
+  """Recurrent exponentially Q-weighted policy."""
+
+  def __init__(self,
+               policy_network: snt.Module,
+               critic_network: snt.Module,
+               temperature_beta: float = 1.0,
+               num_action_samples: int = 16):
+    super().__init__(name='RecurrentExpQWeightedPolicy')
+    self._policy_network = policy_network
+    self._critic_network = critic_network
+    self._num_action_samples = num_action_samples
+    self._temperature_beta = temperature_beta
+
+  def __call__(self,
+               observation: types.NestedTensor,
+               prev_state: PolicyCriticRNNState
+               ) -> Tuple[types.NestedTensor, PolicyCriticRNNState]:
+
+    return tf.vectorized_map(self._call, (observation, prev_state))
+
+  def _call(
+      self, observation_and_state: Tuple[types.NestedTensor,
+                                         PolicyCriticRNNState]
+  ) -> Tuple[types.NestedTensor, PolicyCriticRNNState]:
+    """Computes a forward step for a single element.
+
+    The observation and state are packed together in order to use
+    `tf.vectorized_map` to handle batches of observations.
+    See this module's __call__() function.
+
+    Args:
+      observation_and_state: the observation and state packed in a tuple.
+
+    Returns:
+      The selected action and the corresponding state.
+    """
+    observation, prev_state = observation_and_state
+
+    # Tile input observations and states to allow multiple policy predictions.
+    tiled_observation, tiled_prev_state = utils.tile_nested(
+        (observation, prev_state), self._num_action_samples)
+    actions, policy_states = self._policy_network(
+        tiled_observation, tiled_prev_state.policy)
+
+    # Evaluate multiple critic predictions with the sampled actions.
+    value_distribution, critic_states = self._critic_network(
+        tiled_observation, actions, tiled_prev_state.critic)
+    value_estimate = value_distribution.mean()
+
+    # Resample a single action of the sampled actions according to logits given
+    # by the tempered Q-values.
+    selected_action_idx = tfp.distributions.Categorical(
+        probs=tf.nn.softmax(value_estimate / self._temperature_beta)).sample()
+    selected_action = actions[selected_action_idx]
+
+    # Select and return the RNN state that corresponds to the selected action.
+    states = PolicyCriticRNNState(
+        policy=policy_states, critic=critic_states)
+    selected_state = tree.map_structure(
+        lambda x: x[selected_action_idx], states)
+
+    return selected_action, selected_state
+
+  def initial_state(self, batch_size: int) -> PolicyCriticRNNState:
+    return PolicyCriticRNNState(
+        policy=self._policy_network.initial_state(batch_size),
+        critic=self._critic_network.initial_state(batch_size)
+        )
