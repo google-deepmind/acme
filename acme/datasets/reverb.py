@@ -35,7 +35,7 @@ except ImportError:
 
 def make_reverb_dataset(
     client: reverb.TFClient,
-    environment_spec: specs.EnvironmentSpec,
+    environment_spec: Optional[specs.EnvironmentSpec] = None,
     batch_size: Optional[int] = None,
     prefetch_size: Optional[int] = None,
     sequence_length: Optional[int] = None,
@@ -87,8 +87,89 @@ def make_reverb_dataset(
     A tf.data.Dataset that streams data from the replay server.
   """
 
-  assert isinstance(client, reverb.TFClient)
+  server_address: str = client._server_address  # pylint: disable=protected-access
 
+  # This is the default that used to be set by reverb.TFClient.dataset().
+  max_in_flight_samples_per_worker = 2 * batch_size if batch_size else 100
+
+  def _make_dataset(unused_idx: tf.Tensor) -> tf.data.Dataset:
+    if environment_spec is not None:
+      shapes, dtypes = _spec_to_shapes_and_dtypes(
+          transition_adder,
+          environment_spec,
+          extra_spec=extra_spec,
+          sequence_length=sequence_length,
+          convert_zero_size_to_none=convert_zero_size_to_none,
+          using_deprecated_adder=using_deprecated_adder)
+      dataset = reverb.ReplayDataset(
+          server_address=server_address,
+          table=table,
+          dtypes=dtypes,
+          shapes=shapes,
+          max_in_flight_samples_per_worker=max_in_flight_samples_per_worker,
+          sequence_length=sequence_length,
+          emit_timesteps=sequence_length is None)
+    else:
+      dataset = reverb.ReplayDataset.from_table_signature(
+          server_address=server_address,
+          table=table,
+          max_in_flight_samples_per_worker=max_in_flight_samples_per_worker,
+          sequence_length=sequence_length,
+          emit_timesteps=sequence_length is None)
+    return dataset
+
+  # Create the dataset.
+  dataset = tf.data.Dataset.range(1).repeat()
+  dataset = dataset.interleave(
+      map_func=_make_dataset,
+      cycle_length=batch_size or tf.data.experimental.AUTOTUNE,
+      num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+  # Optimization options.
+  options = tf.data.Options()
+  options.experimental_deterministic = False
+  options.experimental_optimization.parallel_batch = parallel_batch_optimization
+  dataset = dataset.with_options(options)
+
+  # Finish the pipeline: batch and prefetch.
+  if batch_size:
+    dataset = dataset.batch(batch_size, drop_remainder=True)
+
+  if prefetch_size:
+    dataset = dataset.prefetch(prefetch_size)
+
+  return dataset
+
+
+def _spec_to_shapes_and_dtypes(transition_adder: bool,
+                               environment_spec: specs.EnvironmentSpec,
+                               extra_spec: Optional[types.NestedSpec],
+                               sequence_length: Optional[int],
+                               convert_zero_size_to_none: bool,
+                               using_deprecated_adder: bool):
+  """Creates the shapes and dtypes needed to describe the Reverb dataset.
+
+  This takes a `environment_spec`, `extra_spec`, and additional information and
+  returns a tuple (shapes, dtypes) that describe the data contained in Reverb.
+
+  Args:
+    transition_adder: A boolean, describing if a `TransitionAdder` was used to
+      add data.
+    environment_spec: A `specs.EnvironmentSpec`, describing the shapes and
+      dtypes of the data produced by the environment (and the action).
+    extra_spec: A nested structure of objects with a `.shape` and `.dtype`
+      property. This describes any additional data the Actor adds into Reverb.
+    sequence_length: An optional integer for how long the added sequences are,
+      only used with `SequenceAdder`.
+    convert_zero_size_to_none: If True, then all shape dimensions that are 0 are
+      converted to None. A None dimension is only set at runtime.
+    using_deprecated_adder: True if the adder used to generate the data is
+      from acme/adders/reverb/deprecated.
+
+  Returns:
+    A tuple (dtypes, shapes) that describes the data that has been added into
+    Reverb.
+  """
   # The *transition* adder is special in that it also adds an arrival state.
   if transition_adder:
     # Use the environment spec but convert it to a plain tuple.
@@ -123,38 +204,7 @@ def make_reverb_dataset(
     get_shape = lambda x: tf.TensorShape([s if s else None for s in x.shape])
   shapes = tree.map_structure(get_shape, adder_spec)
   dtypes = tree.map_structure(get_dtype, adder_spec)
-
-  def _make_dataset(unused_idx: tf.Tensor) -> tf.data.Dataset:
-    dataset = client.dataset(
-        table=table,
-        dtypes=dtypes,
-        shapes=shapes,
-        capacity=2 * batch_size if batch_size else 100,
-        sequence_length=sequence_length,
-        emit_timesteps=sequence_length is None,
-    )
-    return dataset
-
-  # Create the dataset.
-  dataset = tf.data.Dataset.range(1).repeat()
-  dataset = dataset.interleave(
-      map_func=_make_dataset,
-      cycle_length=batch_size or tf.data.experimental.AUTOTUNE,
-      num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-  # Optimization options.
-  options = tf.data.Options()
-  options.experimental_deterministic = False
-  options.experimental_optimization.parallel_batch = parallel_batch_optimization
-  dataset = dataset.with_options(options)
-
-  # Finish the pipeline: batch and prefetch.
-  if batch_size:
-    dataset = dataset.batch(batch_size, drop_remainder=True)
-  if prefetch_size:
-    dataset = dataset.prefetch(prefetch_size)
-
-  return dataset
+  return shapes, dtypes
 
 
 # TODO(b/152732834): remove this and prefer datasets.make_reverb_dataset.
