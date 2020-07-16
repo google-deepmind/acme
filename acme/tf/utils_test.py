@@ -70,7 +70,7 @@ class CreateVariableTest(parameterized.TestCase):
     output_spec = tf2_utils.create_variables(model, [input_spec])
     self.assertEqual(output_spec, expected_spec)
 
-  def test_multiple_ouputs(self):
+  def test_multiple_outputs(self):
     model = PolicyValueHead(42)
     input_spec = specs.Array(shape=(10,), dtype=np.float32)
     expected_spec = (tf.TensorSpec(shape=(42,), dtype=tf.float32),
@@ -96,6 +96,22 @@ class CreateVariableTest(parameterized.TestCase):
     output_spec = tf2_utils.create_variables(model, [input_spec])
     self.assertEqual(model.variables, ())
     self.assertEqual(output_spec, expected_spec)
+
+  def test_multiple_inputs_and_outputs(self):
+    def transformation(aa, bb, cc):
+      return (tf.concat([aa, bb, cc], axis=-1),
+              tf.concat([bb, cc], axis=-1))
+
+    model = tf2_utils.to_sonnet_module(transformation)
+    dtype = np.float32
+    input_spec = [specs.Array(shape=(2,), dtype=dtype),
+                  specs.Array(shape=(3,), dtype=dtype),
+                  specs.Array(shape=(4,), dtype=dtype)]
+    expected_output_spec = (tf.TensorSpec(shape=(9,), dtype=dtype),
+                            tf.TensorSpec(shape=(7,), dtype=dtype))
+    output_spec = tf2_utils.create_variables(model, input_spec)
+    self.assertEqual(model.variables, ())
+    self.assertEqual(output_spec, expected_output_spec)
 
 
 class Tf2UtilsTest(parameterized.TestCase):

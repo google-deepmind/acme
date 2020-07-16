@@ -33,3 +33,4 @@ NestedSpec = Union[
 Nest = Union[NestedArray, NestedTensor, NestedSpec]
 
 TensorTransformation = Callable[[NestedTensor], NestedTensor]
+TensorValuedCallable = Callable[..., NestedTensor]

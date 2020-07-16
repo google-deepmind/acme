@@ -123,14 +123,44 @@ def create_variables(
   return tree.map_structure(spec, dummy_output)
 
 
-def to_sonnet_module(transformation: types.TensorTransformation) -> snt.Module:
-  """Convert a tensor transformation to a Sonnet Module."""
+class TransformationWrapper(snt.Module):
+  """Helper class for to_sonnet_module.
+
+  This wraps arbitrary Tensor-valued callables as a Sonnet module.
+  A use case for this is in agent code that could take either a trainable
+  sonnet module or a hard-coded function as its policy. By wrapping a hard-coded
+  policy with this class, the agent can then treat it as if it were a Sonnet
+  module. This removes the need for "if is_hard_coded:..." branches, which you'd
+  otherwise need if e.g. calling get_variables() on the policy.
+  """
+
+  def __init__(self,
+               transformation: types.TensorValuedCallable,
+               name: Optional[str] = None):
+    super().__init__(name=name)
+    self._transformation = transformation
+
+  def __call__(self, *args, **kwargs):
+    return self._transformation(*args, **kwargs)
+
+
+def to_sonnet_module(
+    transformation: types.TensorValuedCallable
+    ) -> snt.Module:
+  """Convert a tensor transformation to a Sonnet Module.
+
+  Args:
+    transformation: A Callable that takes one or more (nested) Tensors, and
+      returns one or more (nested) Tensors.
+
+  Returns:
+    A Sonnet Module that wraps the transformation.
+  """
 
   if isinstance(transformation, snt.Module):
     return transformation
 
-  # Use snt.Sequential to convert any tensor transformation to a snt.Module.
-  module = snt.Sequential([transformation])
+  module = TransformationWrapper(transformation)
 
   # Wrap the module to allow it to return an empty variable tuple.
   return snt.allow_empty_variables(module)

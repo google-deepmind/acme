@@ -364,9 +364,10 @@ def make_snapshot(module: snt.Module):
   # Get the input signature as long as it has been created.
   input_signature = _get_input_signature(module)
   if input_signature is None:
-    raise ValueError('module instance has no input_signature attribute, which '
-                     'is required for snapshotting; run create_variables to '
-                     'add this annotation.')
+    raise ValueError(
+        ('module instance "{}" has no input_signature attribute, '
+         'which is required for snapshotting; run '
+         'create_variables to add this annotation.').format(module.name))
 
   # This function will return the object as a composite tensor if it is a
   # distribution and will otherwise return it with no changes.
