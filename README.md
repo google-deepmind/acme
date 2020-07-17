@@ -1,6 +1,6 @@
 <img src="docs/logos/acme.png" width="50%">
 
-# Acme: A research framework for reinforcement learning
+# Acme: a research framework for reinforcement learning
 
 **[Overview](#overview)** | **[Installation](#installation)** |
 **[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]** |
