@@ -28,12 +28,12 @@ spec.loader.exec_module(_metadata)
 
 reverb_requirements = [
     'dm-reverb-nightly==0.1.0.dev20200708',
-    'tf-nightly==2.4.0.dev20200708'
+    'tf-nightly==2.4.0.dev20200708',
 ]
 
 tf_requirements = [
-    'tf-nightly==2.3.0.dev20200616',
-    'tfp-nightly',
+    'tf-nightly==2.4.0.dev20200708',
+    'tfp-nightly==0.12.0.dev20200717',
     'dm-sonnet',
     'trfl',
 ]
