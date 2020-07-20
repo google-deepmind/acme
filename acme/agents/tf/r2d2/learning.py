@@ -65,7 +65,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
       n_step: int = 5,
   ):
 
-    if isinstance(network, snt.RNNCore):
+    if not isinstance(network, networks.RNNCore):
       network.unroll = functools.partial(snt.static_unroll, network)
       target_network.unroll = functools.partial(snt.static_unroll,
                                                 target_network)
