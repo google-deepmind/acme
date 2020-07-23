@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """Tests for actors."""
-from typing import Tuple
+from typing import Optional, Tuple
 
 from absl.testing import absltest
 from acme import environment_loop
@@ -85,14 +85,16 @@ class RecurrentActorTest(absltest.TestCase):
 
     @_transform_without_rng
     def network(inputs: jnp.ndarray, state: hk.LSTMState):
-      return hk.DeepRNN([hk.Flatten(), hk.LSTM(output_size)])(inputs, state)
+      return hk.DeepRNN([lambda x: jnp.reshape(x, [-1]),
+                         hk.LSTM(output_size)])(inputs, state)
 
     @_transform_without_rng
-    def initial_state(batch_size: int):
-      network = hk.DeepRNN([hk.Flatten(), hk.LSTM(output_size)])
+    def initial_state(batch_size: Optional[int] = None):
+      network = hk.DeepRNN([lambda x: jnp.reshape(x, [-1]),
+                            hk.LSTM(output_size)])
       return network.initial_state(batch_size)
 
-    initial_state = initial_state.apply(initial_state.init(next(rng), 1), 1)
+    initial_state = initial_state.apply(initial_state.init(next(rng)))
     params = network.init(next(rng), obs, initial_state)
 
     def policy(

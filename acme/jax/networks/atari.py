@@ -52,12 +52,20 @@ class AtariTorso(base.Module):
         hk.Conv2D(64, [4, 4], 2),
         jax.nn.relu,
         hk.Conv2D(64, [3, 3], 1),
-        jax.nn.relu,
-        hk.Flatten(),
+        jax.nn.relu
     ])
 
   def __call__(self, inputs: Images) -> jnp.ndarray:
-    return self._network(inputs)
+    inputs_rank = jnp.ndim(inputs)
+    batched_inputs = inputs_rank == 4
+    if inputs_rank < 3 or inputs_rank > 4:
+      raise ValueError('Expected input BHWC or HWC. Got rank %d' % inputs_rank)
+
+    outputs = self._network(inputs)
+
+    if batched_inputs:
+      return jnp.reshape(outputs, [outputs.shape[0], -1])  # [B, D]
+    return jnp.reshape(outputs, [-1])  # [D]
 
 
 def dqn_atari_network(num_actions: int) -> base.QNetwork:

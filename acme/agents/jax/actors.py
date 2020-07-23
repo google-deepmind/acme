@@ -58,6 +58,7 @@ class FeedForwardActor(core.Actor):
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     key = next(self._rng)
+    # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
     observation = utils.add_batch_dim(observation)
     action = self._policy(self._client.params, key, observation)
     return utils.to_numpy_squeeze(action)
@@ -101,11 +102,11 @@ class RecurrentActor(core.Actor):
     action, new_state = self._recurrent_policy(
         self._client.params,
         key=next(self._rng),
-        observation=utils.add_batch_dim(observation),
+        observation=observation,
         core_state=self._state)
     self._prev_state = self._state  # Keep previous state to save in replay.
     self._state = new_state  # Keep new state for next policy call.
-    return utils.to_numpy_squeeze(action)
+    return utils.to_numpy(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
     if self._adder:
@@ -115,7 +116,7 @@ class RecurrentActor(core.Actor):
 
   def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     if self._adder:
-      numpy_state = utils.to_numpy_squeeze((self._prev_state))
+      numpy_state = utils.to_numpy(self._prev_state)
       self._adder.add(action, next_timestep, extras=(numpy_state,))
 
   def update(self):
