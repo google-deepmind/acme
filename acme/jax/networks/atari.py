@@ -23,8 +23,8 @@ Glossary of shapes:
 - X?: X is optional (e.g. optional batch/sequence dimension).
 
 """
-
 import functools
+from typing import Tuple
 
 from acme.jax.networks import base
 from acme.jax.networks import duelling
@@ -41,7 +41,7 @@ import jax.numpy as jnp
 Images = jnp.ndarray
 
 
-class AtariTorso(hk.Module):
+class AtariTorso(base.Module):
   """Simple convolutional stack commonly used for Atari."""
 
   def __init__(self):
@@ -157,3 +157,43 @@ class DeepIMPALAAtariNetwork(hk.RNNCore):
     logits, values = self._head(embeddings)
 
     return (logits, values), new_states
+
+
+class R2D2AtariNetwork(hk.RNNCore):
+  """A duelling recurrent network for use with Atari observations as seen in R2D2.
+
+  See https://openreview.net/forum?id=r1lyTjAqYX for more information.
+  """
+
+  def __init__(self, num_actions: int):
+    super().__init__(name='r2d2_atari_network')
+    self._embed = embedding.OAREmbedding(AtariTorso(), num_actions)
+    self._core = hk.LSTM(512)
+    self._duelling_head = duelling.DuellingMLP(num_actions, hidden_sizes=[512])
+    self._num_actions = num_actions
+
+  def __call__(
+      self,
+      inputs: observation_action_reward.OAR,
+      state: hk.LSTMState
+  ) -> Tuple[base.QValues, hk.LSTMState]:
+    embeddings = self._embed(inputs)  # [B?, D+A+1]
+    core_outputs, new_state = self._core(embeddings, state)
+    q_values = self._duelling_head(core_outputs)
+    return q_values, new_state
+
+  def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
+    return self._core.initial_state(batch_size)
+
+  def unroll(
+      self,
+      inputs: observation_action_reward.OAR,
+      state: hk.LSTMState
+  ) -> Tuple[base.QValues, hk.LSTMState]:
+    """Efficient unroll that applies torso, core, and duelling mlp in one pass."""
+    embeddings = self._embed(inputs)  # [B?, T, D+A+1]
+    core_outputs, new_states = hk.static_unroll(self._core, embeddings, state)
+    q_values = self._duelling_head(core_outputs)  # [B?, T, A]
+    return q_values, new_states
+
+

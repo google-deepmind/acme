@@ -31,6 +31,8 @@ Value = jnp.ndarray
 QNetwork = Callable[[types.NestedArray], QValues]
 LSTMOutputs = Tuple[Tuple[Logits, Value], hk.LSTMState]
 PolicyValueRNN = Callable[[types.NestedArray, hk.LSTMState], LSTMOutputs]
+RecurrentQNetwork = Callable[[types.NestedArray, hk.LSTMState],
+                             Tuple[QValues, hk.LSTMState]]
 
 
 class Module(hk.Module, abc.ABC):
