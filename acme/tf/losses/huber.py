@@ -40,10 +40,10 @@ def huber(inputs: tf.Tensor, quadratic_linear_boundary: float) -> tf.Tensor:
     in the manner described above.
 
   Raises:
-    ValueError: if quadratic_linear_boundary <= 0.
+    ValueError: if quadratic_linear_boundary < 0.
   """
   if quadratic_linear_boundary < 0:
-    raise ValueError("quadratic_linear_boundary must be > 0.")
+    raise ValueError("quadratic_linear_boundary must be >= 0.")
 
   abs_x = tf.abs(inputs)
   delta = tf.constant(quadratic_linear_boundary)
