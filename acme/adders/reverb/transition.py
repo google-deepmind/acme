@@ -144,8 +144,12 @@ class NStepTransitionAdder(base.ReverbAdder):
       n_step_return += step.reward * total_discount
       total_discount *= step.discount
 
-    transition = (observation, action, n_step_return, total_discount,
-                  next_observation, extras)
+    if extras:
+      transition = (observation, action, n_step_return, total_discount,
+                    next_observation, extras)
+    else:
+      transition = (observation, action, n_step_return, total_discount,
+                    next_observation)
 
     # Create a list of steps.
     final_step = utils.final_step_like(self._buffer[0], next_observation)
@@ -171,14 +175,16 @@ class NStepTransitionAdder(base.ReverbAdder):
   def signature(cls,
                 environment_spec: specs.EnvironmentSpec,
                 extras_spec: types.NestedSpec = ()):
-    transition_spec = (
+    transition_spec = [
         environment_spec.observations,
         environment_spec.actions,
         environment_spec.rewards,
         environment_spec.discounts,
         environment_spec.observations,  # next_observation
-        extras_spec,
-    )
+    ]
+
+    if extras_spec:
+      transition_spec.append(extras_spec)
 
     return tree.map_structure_with_path(base.spec_like_to_tensor_spec,
-                                        transition_spec)
+                                        tuple(transition_spec))

@@ -25,6 +25,9 @@ import numpy as np
 import tensorflow as tf
 import tree
 
+Step = Union[Tuple[Any, dm_env.TimeStep],  # Without extras
+             Tuple[Any, dm_env.TimeStep, Any]]  # With extras
+
 
 class FakeWriter:
   """Fake writer for testing."""
@@ -130,7 +133,7 @@ class AdderTestMixin(absltest.TestCase):
   def run_test_adder(self,
                      adder: base.ReverbAdder,
                      first: dm_env.TimeStep,
-                     steps: Sequence[Tuple[Any, dm_env.TimeStep]],
+                     steps: Sequence[Step],
                      expected_items: Sequence[Any]):
     """Runs a unit test case for the adder.
 
@@ -147,6 +150,7 @@ class AdderTestMixin(absltest.TestCase):
     if not steps:
       raise ValueError('At least one step must be given.')
 
+    has_extras = len(steps[0]) == 3
     env_spec = tree.map_structure(
         _numeric_to_spec,
         specs.EnvironmentSpec(
@@ -154,12 +158,23 @@ class AdderTestMixin(absltest.TestCase):
             actions=steps[0][0],
             rewards=steps[0][1].reward,
             discounts=steps[0][1].discount))
-    signature = adder.signature(env_spec)
+    if has_extras:
+      extras_spec = tree.map_structure(_numeric_to_spec, steps[0][2])
+    else:
+      extras_spec = ()
+    signature = adder.signature(env_spec, extras_spec=extras_spec)
 
     # Add all the data up to the final step.
     adder.add_first(first)
-    for action, ts in steps[:-1]:
-      adder.add(action, next_timestep=ts)
+    for step in steps[:-1]:
+      action, ts = step[0], step[1]
+
+      if has_extras:
+        extras = step[2]
+      else:
+        extras = ()
+
+      adder.add(action, next_timestep=ts, extras=extras)
 
     if len(steps) == 1:
       # adder.add() has not been called yet, so no writers have been created.

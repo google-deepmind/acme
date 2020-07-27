@@ -89,7 +89,7 @@ class IMPALA(acme.Actor):
     # The dataset object to learn from.
     # Remove batch dimensions.
     dataset = datasets.make_reverb_dataset(
-        client=reverb.TFClient(address),
+        server_address=address,
         environment_spec=environment_spec,
         batch_size=batch_size,
         extra_spec=extra_spec,

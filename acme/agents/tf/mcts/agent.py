@@ -69,13 +69,7 @@ class MCTS(agent.Agent):
         discount=discount)
 
     # The dataset provides an interface to sample from replay.
-    replay_client = reverb.TFClient(address)
-    dataset = datasets.make_reverb_dataset(
-        client=replay_client,
-        environment_spec=environment_spec,
-        extra_spec=extra_spec,
-        transition_adder=True)
-
+    dataset = datasets.make_reverb_dataset(server_address=address)
     dataset = dataset.batch(batch_size, drop_remainder=True)
 
     tf2_utils.create_variables(network, [environment_spec.observations])

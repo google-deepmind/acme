@@ -92,13 +92,10 @@ class R2D2(agent.Agent):
     )
 
     # The dataset object to learn from.
-    reverb_client = reverb.TFClient(address)
     dataset = datasets.make_reverb_dataset(
-        client=reverb_client,
-        environment_spec=environment_spec,
+        server_address=address,
         batch_size=batch_size,
         prefetch_size=prefetch_size,
-        extra_spec=extra_spec,
         sequence_length=sequence_length)
 
     target_network = copy.deepcopy(network)
@@ -112,7 +109,7 @@ class R2D2(agent.Agent):
         burn_in_length=burn_in_length,
         sequence_length=sequence_length,
         dataset=dataset,
-        reverb_client=reverb_client,
+        reverb_client=reverb.TFClient(address),
         counter=counter,
         logger=logger,
         discount=discount,

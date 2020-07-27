@@ -78,7 +78,7 @@ class DQN(agent.Agent):
 
     # The dataset provides an interface to sample from replay.
     dataset = datasets.make_reverb_dataset(
-        client=reverb.TFClient(address),
+        server_address=address,
         environment_spec=environment_spec,
         batch_size=batch_size,
         prefetch_size=prefetch_size,

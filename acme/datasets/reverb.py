@@ -34,7 +34,7 @@ except ImportError:
 
 
 def make_reverb_dataset(
-    client: reverb.TFClient,
+    server_address: str,
     environment_spec: Optional[specs.EnvironmentSpec] = None,
     batch_size: Optional[int] = None,
     prefetch_size: Optional[int] = None,
@@ -57,7 +57,7 @@ def make_reverb_dataset(
   which specifies "extra data".
 
   Args:
-    client: A TFClient (or list of TFClients) for talking to a replay server.
+    server_address: The Reverb server's address.
     environment_spec: The environment's spec.
     batch_size: Optional. If specified the dataset returned will combine
       consecutive elements into batches. This argument is also used to determine
@@ -86,8 +86,6 @@ def make_reverb_dataset(
   Returns:
     A tf.data.Dataset that streams data from the replay server.
   """
-
-  server_address: str = client._server_address  # pylint: disable=protected-access
 
   # This is the default that used to be set by reverb.TFClient.dataset().
   max_in_flight_samples_per_worker = 2 * batch_size if batch_size else 100

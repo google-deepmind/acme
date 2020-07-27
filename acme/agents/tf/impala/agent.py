@@ -83,10 +83,8 @@ class IMPALA(acme.Actor):
 
     # The dataset object to learn from.
     dataset = datasets.make_reverb_dataset(
-        client=reverb.TFClient(address),
-        environment_spec=environment_spec,
+        server_address=address,
         batch_size=batch_size,
-        extra_spec=extra_spec,
         sequence_length=sequence_length)
 
     tf2_utils.create_variables(network, [environment_spec.observations])

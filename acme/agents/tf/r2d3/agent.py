@@ -92,11 +92,8 @@ class R2D3(agent.Agent):
                                    **sequence_kwargs)
 
     # The dataset object to learn from.
-    reverb_client = reverb.TFClient(address)
     dataset = datasets.make_reverb_dataset(
-        client=reverb_client,
-        environment_spec=environment_spec,
-        extra_spec=extra_spec,
+        server_address=address,
         sequence_length=sequence_length)
 
     # Combine with demonstration dataset.
@@ -121,7 +118,7 @@ class R2D3(agent.Agent):
         target_network=target_network,
         burn_in_length=burn_in_length,
         dataset=dataset,
-        reverb_client=reverb_client,
+        reverb_client=reverb.TFClient(address),
         counter=counter,
         logger=logger,
         sequence_length=sequence_length,

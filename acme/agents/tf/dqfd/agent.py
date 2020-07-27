@@ -106,10 +106,7 @@ class DQfD(agent.Agent):
 
     # The dataset provides an interface to sample from replay.
     replay_client = reverb.TFClient(address)
-    dataset = datasets.make_reverb_dataset(
-        client=replay_client,
-        environment_spec=environment_spec,
-        transition_adder=True)
+    dataset = datasets.make_reverb_dataset(server_address=address)
 
     # Combine with demonstration dataset.
     transition = functools.partial(_n_step_transition_from_episode,

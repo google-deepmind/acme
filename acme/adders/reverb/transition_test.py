@@ -38,9 +38,9 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation=4)),
         ),
         expected_transitions=(
-            (1, 0, 0.0, 1.0, 2, ()),
-            (2, 0, 0.0, 1.0, 3, ()),
-            (3, 0, 1.0, 0.0, 4, ()),
+            (1, 0, 0.0, 1.0, 2),
+            (2, 0, 0.0, 1.0, 3),
+            (3, 0, 1.0, 0.0, 4),
         )),
     dict(
         testcase_name='OneStepDict',
@@ -53,9 +53,39 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation={'foo': 4})),
         ),
         expected_transitions=(
-            ({'foo': 1}, 0, 0.0, 1.0, {'foo': 2}, ()),
-            ({'foo': 2}, 0, 0.0, 1.0, {'foo': 3}, ()),
-            ({'foo': 3}, 0, 1.0, 0.0, {'foo': 4}, ()),
+            ({'foo': 1}, 0, 0.0, 1.0, {'foo': 2}),
+            ({'foo': 2}, 0, 0.0, 1.0, {'foo': 3}),
+            ({'foo': 3}, 0, 1.0, 0.0, {'foo': 4}),
+        )),
+    dict(
+        testcase_name='OneStepExtras',
+        n_step=1,
+        additional_discount=1.0,
+        first=dm_env.restart(1),
+        steps=(
+            (
+                0,
+                dm_env.transition(reward=0.0, observation=2),
+                {'state': 0},
+
+            ),
+            (
+                0,
+                dm_env.transition(reward=0.0, observation=3),
+                {'state': 1},
+
+            ),
+            (
+                0,
+                dm_env.termination(reward=1.0, observation=4),
+                {'state': 2},
+
+            ),
+        ),
+        expected_transitions=(
+            (1, 0, 0.0, 1.0, 2, {'state': 0}),
+            (2, 0, 0.0, 1.0, 3, {'state': 1}),
+            (3, 0, 1.0, 0.0, 4, {'state': 2}),
         )),
     dict(
         testcase_name='TwoStep',
@@ -68,10 +98,38 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation=4)),
         ),
         expected_transitions=(
-            (1, 0, 1.0, 0.50, 2, ()),
-            (1, 0, 1.5, 0.25, 3, ()),
-            (2, 0, 1.5, 0.00, 4, ()),
-            (3, 0, 1.0, 0.00, 4, ()),
+            (1, 0, 1.0, 0.50, 2),
+            (1, 0, 1.5, 0.25, 3),
+            (2, 0, 1.5, 0.00, 4),
+            (3, 0, 1.0, 0.00, 4),
+        )),
+    dict(
+        testcase_name='TwoStepWithExtras',
+        n_step=2,
+        additional_discount=1.0,
+        first=dm_env.restart(1),
+        steps=(
+            (
+                0,
+                dm_env.transition(reward=1.0, observation=2, discount=0.5),
+                {'state': 0},
+            ),
+            (
+                0,
+                dm_env.transition(reward=1.0, observation=3, discount=0.5),
+                {'state': 1},
+            ),
+            (
+                0,
+                dm_env.termination(reward=1.0, observation=4),
+                {'state': 2},
+            ),
+        ),
+        expected_transitions=(
+            (1, 0, 1.0, 0.50, 2, {'state': 0}),
+            (1, 0, 1.5, 0.25, 3, {'state': 0}),
+            (2, 0, 1.5, 0.00, 4, {'state': 1}),
+            (3, 0, 1.0, 0.00, 4, {'state': 2}),
         )),
     dict(
         testcase_name='ThreeStepDiscounted',
@@ -84,11 +142,11 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation=4)),
         ),
         expected_transitions=(
-            (1, 0, 1.00, 0.5, 2, ()),
-            (1, 0, 1.20, 0.1, 3, ()),
-            (1, 0, 1.24, 0.0, 4, ()),
-            (2, 0, 1.20, 0.0, 4, ()),
-            (3, 0, 1.00, 0.0, 4, ()),
+            (1, 0, 1.00, 0.5, 2),
+            (1, 0, 1.20, 0.1, 3),
+            (1, 0, 1.24, 0.0, 4),
+            (2, 0, 1.20, 0.0, 4),
+            (3, 0, 1.00, 0.0, 4),
         )),
     dict(
         testcase_name='ThreeStepVaryingReward',
@@ -102,12 +160,12 @@ TEST_CASES = [
             (0, dm_env.termination(reward=7.0, observation=5)),
         ),
         expected_transitions=(
-            (1, 0, 2, 1.00, 2, ()),
-            (1, 0, 2 + 0.5 * 3, 0.50, 3, ()),
-            (1, 0, 2 + 0.5 * 3 + 0.25 * 5, 0.25, 4, ()),
-            (2, 0, 3 + 0.5 * 5 + 0.25 * 7, 0.00, 5, ()),
-            (3, 0, 5 + 0.5 * 7, 0.00, 5, ()),
-            (4, 0, 7, 0.00, 5, ()),
+            (1, 0, 2, 1.00, 2),
+            (1, 0, 2 + 0.5 * 3, 0.50, 3),
+            (1, 0, 2 + 0.5 * 3 + 0.25 * 5, 0.25, 4),
+            (2, 0, 3 + 0.5 * 5 + 0.25 * 7, 0.00, 5),
+            (3, 0, 5 + 0.5 * 7, 0.00, 5),
+            (4, 0, 7, 0.00, 5),
         ))
 ]
 

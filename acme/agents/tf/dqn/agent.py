@@ -110,11 +110,9 @@ class DQN(agent.Agent):
     # The dataset provides an interface to sample from replay.
     replay_client = reverb.TFClient(address)
     dataset = datasets.make_reverb_dataset(
-        client=replay_client,
-        environment_spec=environment_spec,
+        server_address=address,
         batch_size=batch_size,
-        prefetch_size=prefetch_size,
-        transition_adder=True)
+        prefetch_size=prefetch_size)
 
     # Use constant 0.05 epsilon greedy policy by default.
     if epsilon is None:

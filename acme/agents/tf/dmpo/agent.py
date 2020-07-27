@@ -121,11 +121,9 @@ class DistributionalMPO(agent.Agent):
     # The dataset object to learn from.
     dataset = datasets.make_reverb_dataset(
         table=replay_table_name,
-        client=reverb.TFClient(address),
+        server_address=address,
         batch_size=batch_size,
-        prefetch_size=prefetch_size,
-        environment_spec=environment_spec,
-        transition_adder=True)
+        prefetch_size=prefetch_size)
 
     # Make sure observation network is a Sonnet Module.
     observation_network = tf2_utils.to_sonnet_module(observation_network)

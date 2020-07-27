@@ -108,11 +108,9 @@ class DDPG(agent.Agent):
     # The dataset provides an interface to sample from replay.
     dataset = datasets.make_reverb_dataset(
         table=replay_table_name,
-        client=reverb.TFClient(address),
-        environment_spec=environment_spec,
+        server_address=address,
         batch_size=batch_size,
-        prefetch_size=prefetch_size,
-        transition_adder=True)
+        prefetch_size=prefetch_size)
 
     # Get observation and action specs.
     act_spec = environment_spec.actions
