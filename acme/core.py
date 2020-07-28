@@ -42,7 +42,7 @@ class Actor(abc.ABC):
     # Take a step and observe.
     action = actor.select_action(timestep.observation)
     next_timestep = env.step(action)
-    actor.observe(action, timestep)
+    actor.observe(next_timestep, timestep)
 
     # Update the actor policy/parameters.
     actor.update()
@@ -124,7 +124,7 @@ class Learner(VariableSource, Worker):
 
   All objects implementing this interface should also be able to take in an
   external dataset (see acme.datasets) and run updates using data from this
-  dataset. This can be accomplished by explicitly running `learner.update()`
+  dataset. This can be accomplished by explicitly running `learner.step()`
   inside a for/while loop or by using the `learner.run()` convenience function.
   Data will be read from this dataset asynchronously and this is primarily
   useful when the dataset is filled by an external process.
