@@ -16,6 +16,7 @@
 """DQN agent implementation."""
 
 import copy
+from typing import Optional
 
 from acme import datasets
 from acme import specs
@@ -54,7 +55,7 @@ class DQN(agent.Agent):
       importance_sampling_exponent: float = 0.2,
       priority_exponent: float = 0.6,
       n_step: int = 5,
-      epsilon: tf.Tensor = None,
+      epsilon: Optional[tf.Tensor] = None,
       learning_rate: float = 1e-3,
       discount: float = 0.99,
       logger: loggers.Logger = None,
