@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Generic actor implementation, using TensorFlow and Sonnet."""
+from typing import Optional
 
 from acme import adders
 from acme import core
@@ -42,8 +43,8 @@ class FeedForwardActor(core.Actor):
   def __init__(
       self,
       policy_network: snt.Module,
-      adder: adders.Adder = None,
-      variable_client: tf2_variable_utils.VariableClient = None,
+      adder: Optional[adders.Adder] = None,
+      variable_client: Optional[tf2_variable_utils.VariableClient] = None,
   ):
     """Initializes the actor.
 
@@ -84,11 +85,7 @@ class FeedForwardActor(core.Actor):
     if self._adder:
       self._adder.add_first(timestep)
 
-  def observe(
-      self,
-      action: types.NestedArray,
-      next_timestep: dm_env.TimeStep,
-  ):
+  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     if self._adder:
       self._adder.add(action, next_timestep)
 
@@ -109,8 +106,8 @@ class RecurrentActor(core.Actor):
   def __init__(
       self,
       policy_network: snt.RNNCore,
-      adder: adders.Adder = None,
-      variable_client: tf2_variable_utils.VariableClient = None,
+      adder: Optional[adders.Adder] = None,
+      variable_client: Optional[tf2_variable_utils.VariableClient] = None,
   ):
     """Initializes the actor.
 
@@ -166,11 +163,7 @@ class RecurrentActor(core.Actor):
     # Set the state to None so that we re-initialize at the next policy call.
     self._state = None
 
-  def observe(
-      self,
-      action: types.NestedArray,
-      next_timestep: dm_env.TimeStep,
-  ):
+  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     if not self._adder:
       return
 
