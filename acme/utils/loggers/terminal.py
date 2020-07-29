@@ -38,8 +38,8 @@ def _format_value(value: Any) -> str:
 def serialize(values: base.LoggingData) -> str:
   """Converts `values` to a pretty-printed string.
 
-  This takes a dictionary `values` whose keys are strings and returns a
-  a formatted string such that each key, value pair is separated by ' = ' and
+  This takes a dictionary `values` whose keys are strings and returns
+  a formatted string such that each [key, value] pair is separated by ' = ' and
   each entry is separated by ' | '. The keys are sorted alphabetically to ensure
   a consistent order, and snake case is split into words.
 

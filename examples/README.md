@@ -44,5 +44,12 @@ as well as a model-based example:
 -   [`run_mcts`](bsuite/run_mcts.py): the MCTS agent running on the task suite using either a
     simulator of the environment or a learned model.
 
+## OpenAI Gym examples
+
+Last but not least - there is also a baseline example for [OpenAI GYM]:
+
+-   [`run_d4pg`](gym/run_d4pg.py): a distributional deterministic policy gradient (D4PG) agent running on the Gym's MountainCarContinous.
+
 [bsuite]: https://github.com/deepmind/bsuite
 [dm_control]: https://github.com/deepmind/dm_control
+[OpenAI GYM]: https://github.com/openai/gym

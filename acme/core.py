@@ -42,7 +42,7 @@ class Actor(abc.ABC):
     # Take a step and observe.
     action = actor.select_action(timestep.observation)
     next_timestep = env.step(action)
-    actor.observe(next_timestep, timestep)
+    actor.observe(action, next_timestep)
 
     # Update the actor policy/parameters.
     actor.update()

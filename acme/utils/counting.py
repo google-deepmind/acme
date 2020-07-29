@@ -50,7 +50,7 @@ class Counter(core.Saveable):
 
     # We'll sync the first time get_counts is called.
     self._cache = {}
-    self._time = 0.0
+    self._last_sync_time = 0.0
 
   def increment(self, **counts: Number) -> Dict[str, Number]:
     """Increment a set of counters.
@@ -71,12 +71,12 @@ class Counter(core.Saveable):
     """Return all counts tracked by this counter."""
     now = time.time()
     # TODO(b/144421838): use futures instead of blocking.
-    if self._parent and (now - self._time) > self._time_delta:
+    if self._parent and (now - self._last_sync_time) > self._time_delta:
       with self._lock:
         counts = _prefix_keys(self._counts, self._prefix)
         self._counts = {}
       self._cache = self._parent.increment(**counts)
-      self._time = now
+      self._last_sync_time = now
 
     # Potentially prefix the keys in the counts dictionary.
     counts = _prefix_keys(self._counts, self._prefix)
@@ -97,7 +97,7 @@ class Counter(core.Saveable):
 
   def restore(self, state: Mapping[str, Mapping[str, Number]]):
     # Force a sync, if necessary, on the next get_counts call.
-    self._time = 0.
+    self._last_sync_time = 0.
     self._counts = state['counts']
     self._cache = state['cache']
 

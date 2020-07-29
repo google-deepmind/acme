@@ -17,7 +17,7 @@
 
 This module exposes the same spec classes as `dm_env` as well as providing an
 additional `EnvironmentSpec` class which collects all of the specs for a given
-environment. An `EnvironmentClass` instance can be created directly or by using
+environment. An `EnvironmentSpec` instance can be created directly or by using
 the `make_environment_spec` helper given a `dm_env.Environment` instance.
 """
 
