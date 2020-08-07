@@ -15,7 +15,6 @@
 
 """A simple agent-environment training loop."""
 
-import itertools
 import time
 from typing import Optional
 
@@ -61,24 +60,39 @@ class EnvironmentLoop(core.Worker):
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.make_default_logger(label)
 
-  def run(self, num_episodes: Optional[int] = None):
+  def run(self,
+          num_episodes: Optional[int] = None,
+          num_steps: Optional[int] = None):
     """Perform the run loop.
 
-    Run the environment loop for `num_episodes` episodes. Each episode is itself
-    a loop which interacts first with the environment to get an observation and
-    then give that observation to the agent in order to retrieve an action. Upon
-    termination of an episode a new episode will be started. If the number of
-    episodes is not given then this will interact with the environment
-    infinitely.
+    Run the environment loop either for `num_episodes` episodes or for at
+    least `num_steps` steps (the last episode is always run until completion,
+    so the total number of steps may be slightly more than `num_steps`).
+    At least one of these two arguments has to be None.
+    Each episode is itself a loop which interacts first with the environment to
+    get an observation and then give that observation to the agent in order to
+    retrieve an action. Upon termination of an episode a new episode will be
+    started. If the number of episodes and the number of steps are not given
+    then this will interact with the environment infinitely.
+    If both num_episodes and num_steps are `None` (default), runs without limit.
 
     Args:
-      num_episodes: number of episodes to run the loop for. If `None` (default),
-        runs without limit.
+      num_episodes: number of episodes to run the loop for.
+      num_steps: minimal number of steps to run the loop for.
+
+    Raises:
+      ValueError: If both 'num_episodes' and 'num_steps' are not None.
     """
 
-    iterator = range(num_episodes) if num_episodes else itertools.count()
+    if not (num_episodes is None or num_steps is None):
+      raise ValueError('Either "num_episodes" or "num_steps" should be None.')
 
-    for _ in iterator:
+    def should_terminate(episode_count: int, step_count: int) -> bool:
+      return ((num_episodes is not None and episode_count >= num_episodes) or
+              (num_steps is not None and step_count >= num_steps))
+
+    episode_count, step_count = 0, 0
+    while not should_terminate(episode_count, step_count):
       # Reset any counts and start the environment.
       start_time = time.time()
       episode_steps = 0
@@ -113,6 +127,8 @@ class EnvironmentLoop(core.Worker):
           'steps_per_second': steps_per_second,
       }
       result.update(counts)
+      episode_count += 1
+      step_count += episode_steps
 
       # Log the given results.
       self._logger.write(result)
