@@ -305,13 +305,13 @@ experiences to a Reverb table. The `ReverbAdder`s provided include:
        s_n, a_n, r_n, d_n, e_n)
     ```
 
-    sequences can be overlapping (if the `period` parameter < `sequence_length`
-    n) or non-overlapping (if `period <= sequence_length`)
+    sequences can be overlapping (if `period < sequence_length`) or
+    non-overlapping (if `period >= sequence_length`)
 
 ### [Loggers](../acme/utils/loggers/)
 
 Acme contains several loggers for writing out data to common places,
-based on the absract `Logger` class, all with `write()` methods.<br><br>
+based on the abstract `Logger` class, all with `write()` methods.<br><br>
 NOTE: By default, loggers will immediately output all data passed through `write()` unless given a nonzero value for the `time_delta` argument when constructing a logger representing the number of seconds between logger outputs. <br>
 
 #### [Terminal Logger](../acme/utils/loggers/terminal.py)
@@ -347,7 +347,7 @@ Both *checkpointing* and *snapshotting* are ways to save and restore model state
 With checkpoints, you have to first re-build the exact graph, then restore the
   checkpoint. They are useful to have while running experiments, in case the
   experiment gets interrupted/preempted and has to be restored to continue the
-  \experiment run without losing the experiment state.<br>
+  experiment run without losing the experiment state.<br>
 
 Snapshots re-build the graph internally, so all you have to do is restore the
   snapshot.<br>
