@@ -26,8 +26,9 @@ from acme.tf.networks.continuous import LayerNormMLP
 from acme.tf.networks.continuous import NearZeroInitializedLinear
 from acme.tf.networks.distributional import ApproximateMode
 from acme.tf.networks.distributional import DiscreteValuedHead
-from acme.tf.networks.distributional import GaussianMixtureHead
+from acme.tf.networks.distributional import MultivariateGaussianMixture
 from acme.tf.networks.distributional import MultivariateNormalDiagHead
+from acme.tf.networks.distributional import UnivariateGaussianMixture
 from acme.tf.networks.distributions import DiscreteValuedDistribution
 from acme.tf.networks.duelling import DuellingMLP
 from acme.tf.networks.multiplexers import CriticMultiplexer
@@ -43,3 +44,6 @@ from acme.tf.networks.stochastic import StochasticMeanHead
 from acme.tf.networks.stochastic import StochasticModeHead
 from acme.tf.networks.stochastic import StochasticSamplingHead
 from acme.tf.networks.vision import ResNetTorso
+
+# For backwards compatibility.
+GaussianMixtureHead = UnivariateGaussianMixture

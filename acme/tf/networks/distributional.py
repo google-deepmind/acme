@@ -20,6 +20,8 @@ take the mean of these distributions.
 """
 
 import types
+from typing import Optional
+from absl import logging
 from acme.tf.networks import distributions as ad
 import sonnet as snt
 import tensorflow as tf
@@ -27,6 +29,8 @@ import tensorflow_probability as tfp
 
 tfd = tfp.distributions
 snt_init = snt.initializers
+
+_MIN_SCALE = 0.01
 
 
 class DiscreteValuedHead(snt.Module):
@@ -125,62 +129,138 @@ class MultivariateNormalDiagHead(snt.Module):
     return dist
 
 
-class GaussianMixtureHead(snt.Module):
+class GaussianMixture(snt.Module):
+  """Module that outputs a Gaussian Mixture Distribution."""
+
+  def __init__(self,
+               num_dimensions: int,
+               num_components: int,
+               multivariate: bool,
+               name: str = 'GaussianMixture'):
+    """Initialization.
+
+    Args:
+      num_dimensions: dimensionality of the output distribution
+      num_components: number of mixture components.
+      multivariate: whether the resulting distribution is multivariate or not.
+      name: name of the module passed to snt.Module parent class.
+    """
+    super().__init__(name=name)
+
+    self._num_dimensions = num_dimensions
+    self._num_components = num_components
+    self._multivariate = multivariate
+
+    initializer = tf.initializers.VarianceScaling(
+        distribution='uniform', mode='fan_out', scale=0.333)
+
+    # Create a layer that outputs the unnormalized log-weights.
+    if self._multivariate:
+      logits_size = self._num_components
+    else:
+      logits_size = self._num_dimensions * self._num_components
+    self._logit_layer = snt.Linear(logits_size, w_init=initializer)
+
+    # Create two layers that outputs a location and a scale, respectively, for
+    # each dimension and each component.
+    self._loc_layer = snt.Linear(
+        self._num_dimensions * self._num_components, w_init=initializer)
+    self._scale_layer = snt.Linear(
+        self._num_dimensions * self._num_components, w_init=initializer)
+
+  def __call__(self,
+               inputs: tf.Tensor,
+               low_noise_policy: bool = False) -> tfd.Distribution:
+    """Run the networks through inputs.
+
+    Args:
+      inputs: hidden activations of the policy network body.
+      low_noise_policy: whether to set vanishingly small scales for each
+        component. If this flag is set to True, the policy is effectively run
+        without Gaussian noise.
+
+    Returns:
+      Mixture Gaussian distribution.
+    """
+
+    logits = self._logit_layer(inputs)
+    locs = self._loc_layer(inputs)
+    scales = self._scale_layer(inputs)
+
+    if self._multivariate:
+      shape = [-1, self._num_components, self._num_dimensions]
+      locs = tf.reshape(locs, shape)
+      scales = tf.reshape(scales, shape)
+    else:
+      shape = [-1, self._num_dimensions, self._num_components]
+      locs = tf.reshape(locs, shape)
+      scales = tf.reshape(scales, shape)
+      logits = tf.reshape(logits, shape)
+
+    if low_noise_policy:
+      scales = tf.ones_like(scales) * 1e-4
+    else:
+      scales = tf.nn.softplus(scales) + _MIN_SCALE
+
+    if self._multivariate:
+      components_distribution = tfd.MultivariateNormalDiag(
+          loc=locs, scale_diag=scales)
+    else:
+      components_distribution = tfd.Normal(loc=locs, scale=scales)
+
+    distribution = tfd.MixtureSameFamily(
+        mixture_distribution=tfd.Categorical(logits=logits),
+        components_distribution=components_distribution)
+
+    if not self._multivariate:
+      distribution = tfd.Independent(distribution)
+
+    return distribution
+
+
+class UnivariateGaussianMixture(GaussianMixture):
   """Head which outputs a Mixture of Gaussians Distribution."""
 
   def __init__(self,
                num_dimensions: int,
-               num_mixtures: int = 5):
+               num_components: int = 5,
+               num_mixtures: Optional[int] = None):
     """Create an mixture of Gaussian actor head.
 
     Args:
       num_dimensions: dimensionality of the output distribution. Each dimension
         is going to be an independent 1d GMM model.
-      num_mixtures: number of mixture components.
+      num_components: number of mixture components.
+      num_mixtures: deprecated argument which overwrites num_components.
     """
-    super().__init__(name='GaussianMixtureHead')
+    if num_mixtures is not None:
+      logging.warning("""the num_mixtures parameter has been deprecated; use
+                    num_components instead; the value of num_components is being
+                    ignored""")
+      num_components = num_mixtures
+    super().__init__(num_dimensions=num_dimensions,
+                     num_components=num_components,
+                     multivariate=False,
+                     name='UnivariateGaussianMixture')
 
-    self._num_dimensions = num_dimensions
-    self._num_mixtures = num_mixtures
 
-    initializer = tf.initializers.VarianceScaling(
-        distribution='uniform', mode='fan_out', scale=0.333)
-    # For every dimension (self._num_dimensions) and every component
-    # (self._num_mixtures), the network should output a location, a scale, and
-    # a log mixture probability (3 scalars).
-    output_sizes = [self._num_dimensions * self._num_mixtures * 3]
-    self._mlp = snt.nets.MLP(
-        output_sizes=output_sizes,
-        w_init=initializer,
-        activation=tf.nn.relu,
-        activate_final=False)
+class MultivariateGaussianMixture(GaussianMixture):
+  """Head which outputs a mixture of multivariate Gaussians distribution."""
 
-  def __call__(self, inputs: tf.Tensor) -> tfd.Distribution:
-    """Run the networks through inputs.
+  def __init__(self,
+               num_dimensions: int,
+               num_components: int = 5):
+    """Initialization.
 
     Args:
-      inputs: hidden activations of the policy network body.
-
-    Returns:
-      Gaussian Mixture Model distribution.
+      num_dimensions: dimensionality of the output distribution
+        (also the dimensionality of the multivariate Gaussian model).
+      num_components: number of mixture components.
     """
-
-    # Multiplied by 3 because we need location, scale, and mixture logits.
-    action_output = tf.reshape(
-        self._mlp(inputs), [-1, self._num_dimensions, self._num_mixtures * 3])
-
-    locs, scales, logits = tf.split(action_output, 3, -1)
-
-    scales = tf.nn.softplus(scales) + 0.01
-
-    components_distribution = tfd.Normal(loc=locs, scale=scales)
-    distribution = tfd.MixtureSameFamily(
-        mixture_distribution=tfd.Categorical(logits=logits),
-        components_distribution=components_distribution)
-
-    distribution = tfd.Independent(distribution)
-
-    return distribution
+    super().__init__(num_dimensions=num_dimensions,
+                     num_components=num_components,
+                     multivariate=True,
+                     name='MultivariateGaussianMixture')
 
 
 class ApproximateMode(snt.Module):
