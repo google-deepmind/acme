@@ -81,9 +81,8 @@ class SequenceAdder(base.ReverbAdder):
     self._maybe_add_priorities()
 
   def _write_last(self):
-    # Create a final step and a step full of zeros.
+    # Create a final step.
     final_step = utils.final_step_like(self._buffer[0], self._next_observation)
-    zero_step = tree.map_structure(utils.zeros_like, final_step)
 
     # Append the final step.
     self._buffer.append(final_step)
@@ -91,8 +90,8 @@ class SequenceAdder(base.ReverbAdder):
     self._step += 1
 
     # NOTE: this always pads to the fixed length.
-
     if self._pad_end_of_episode:
+      zero_step = tree.map_structure(utils.zeros_like, final_step)
       # Determine how much padding to add. This makes sure that we add (zero)
       # data until the next time we would write a sequence.
       if self._step <= self._max_sequence_length:
