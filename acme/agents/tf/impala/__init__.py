@@ -15,5 +15,6 @@
 
 """Importance-weighted actor-learner architecture (IMPALA) agent."""
 
+from acme.agents.tf.impala.acting import IMPALAActor
 from acme.agents.tf.impala.agent import IMPALA
 from acme.agents.tf.impala.learning import IMPALALearner
