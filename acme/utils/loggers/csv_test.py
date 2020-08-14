@@ -16,6 +16,7 @@
 """Tests for csv logging."""
 
 import csv
+import gc
 
 from absl.testing import absltest
 from acme.testing import test_utils
@@ -39,11 +40,18 @@ class CSVLoggingTest(test_utils.TestCase):
     logger = csv_logger.CSVLogger(directory=directory, label=label)
     for inp in inputs:
       logger.write(inp)
-    with open(logger.file_path) as f:
+    outputs = []
+    file_path = logger.file_path
+
+    # Make sure logger flushed all pending writes to disk.
+    del logger
+    gc.collect()
+
+    with open(file_path) as f:
       csv_reader = csv.DictReader(f)
-      for idx, row in enumerate(csv_reader):
-        row = dict(row)
-        self.assertEqual(row, inputs[idx])
+      for row in csv_reader:
+        outputs.append(dict(row))
+    self.assertEqual(outputs, inputs)
 
 
 if __name__ == '__main__':
