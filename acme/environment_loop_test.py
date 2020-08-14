@@ -21,18 +21,34 @@ from acme import environment_loop
 from acme import specs
 from acme.testing import fakes
 
+EPISODE_LENGTH = 10
+
 
 class EnvironmentLoopTest(absltest.TestCase):
 
-  def test_environment_loop(self):
+  def setUp(self):
+    super().setUp()
     # Create the actor/environment and stick them in a loop.
-    environment = fakes.DiscreteEnvironment(episode_length=10)
-    actor = fakes.Actor(specs.make_environment_spec(environment))
-    loop = environment_loop.EnvironmentLoop(environment, actor)
+    environment = fakes.DiscreteEnvironment(episode_length=EPISODE_LENGTH)
+    self.actor = fakes.Actor(specs.make_environment_spec(environment))
+    self.loop = environment_loop.EnvironmentLoop(environment, self.actor)
 
-    # Run the loop. There should be episode_length+1 update calls per episode.
-    loop.run(num_episodes=10)
-    self.assertEqual(actor.num_updates, 100)
+  def test_one_episode(self):
+    result = self.loop.run_episode()
+    self.assertDictContainsSubset({'episode_length': EPISODE_LENGTH}, result)
+    self.assertIn('episode_return', result)
+    self.assertIn('steps_per_second', result)
+
+  def test_run_episodes(self):
+    # Run the loop. There should be EPISODE_LENGTH update calls per episode.
+    self.loop.run(num_episodes=10)
+    self.assertEqual(self.actor.num_updates, 10 * EPISODE_LENGTH)
+
+  def test_run_steps(self):
+    # Run the loop. This will run 2 episodes so that total number of steps is
+    # at least 15.
+    self.loop.run(num_steps=EPISODE_LENGTH + 5)
+    self.assertEqual(self.actor.num_updates, 2 * EPISODE_LENGTH)
 
 
 if __name__ == '__main__':
