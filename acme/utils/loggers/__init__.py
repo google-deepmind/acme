@@ -21,6 +21,7 @@ from acme.utils.loggers.base import Logger
 from acme.utils.loggers.base import LoggingData
 from acme.utils.loggers.base import NoOpLogger
 from acme.utils.loggers.base import to_numpy
+from acme.utils.loggers.constant import ConstantLogger
 from acme.utils.loggers.csv import CSVLogger
 from acme.utils.loggers.filters import NoneFilter
 from acme.utils.loggers.filters import TimeFilter
