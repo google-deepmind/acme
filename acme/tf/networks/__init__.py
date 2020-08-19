@@ -31,6 +31,7 @@ from acme.tf.networks.distributional import MultivariateNormalDiagHead
 from acme.tf.networks.distributional import UnivariateGaussianMixture
 from acme.tf.networks.distributions import DiscreteValuedDistribution
 from acme.tf.networks.duelling import DuellingMLP
+from acme.tf.networks.multihead import Multihead
 from acme.tf.networks.multiplexers import CriticMultiplexer
 from acme.tf.networks.noise import ClippedGaussian
 from acme.tf.networks.policy_value import PolicyValueHead

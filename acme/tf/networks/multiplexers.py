@@ -22,7 +22,9 @@ from acme.tf import utils as tf2_utils
 
 import sonnet as snt
 import tensorflow as tf
+import tensorflow_probability as tfp
 
+tfd = tfp.distributions
 TensorTransformation = Union[snt.Module, Callable[[types.NestedTensor],
                                                   tf.Tensor]]
 
@@ -62,6 +64,11 @@ class CriticMultiplexer(snt.Module):
       observation = self._observation_network(observation)
     if self._action_network:
       action = self._action_network(action)
+
+    if hasattr(observation, 'dtype') and hasattr(action, 'dtype'):
+      if observation.dtype != action.dtype:
+        # Observation and action must be the same type for concat to work
+        action = tf.cast(action, observation.dtype)
 
     # Concat observations and actions, with one batch dimension.
     outputs = tf2_utils.batch_concat([observation, action])
