@@ -14,6 +14,7 @@
 
 """Common environment wrapper classes."""
 
+from acme.wrappers.action_repeat import ActionRepeatWrapper
 from acme.wrappers.atari_wrapper import AtariWrapper
 from acme.wrappers.base import EnvironmentWrapper
 from acme.wrappers.base import wrap_all
