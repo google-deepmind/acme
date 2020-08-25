@@ -34,7 +34,7 @@ class TestSearch(parameterized.TestCase):
       'bfs',
   ])
   def test_catch(self, policy_type: Text):
-    env = catch.Catch(rows=2)
+    env = catch.Catch(rows=2, seed=1)
     num_actions = env.action_spec().num_values
     model = simulator.Simulator(env)
     eval_fn = lambda _: (np.ones(num_actions) / num_actions, 0.)
