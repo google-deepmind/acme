@@ -30,7 +30,7 @@ class EnvironmentLoop(core.Worker):
   """A simple RL environment loop.
 
   This takes `Environment` and `Actor` instances and coordinates their
-  interaction. This can be used as:
+  interaction. Agent is updated if `should_update=True`. This can be used as:
 
     loop = EnvironmentLoop(environment, actor)
     loop.run(num_episodes)
@@ -52,6 +52,7 @@ class EnvironmentLoop(core.Worker):
       actor: core.Actor,
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
+      should_update: bool = True,
       label: str = 'environment_loop',
   ):
     # Internalize agent and environment.
@@ -59,6 +60,7 @@ class EnvironmentLoop(core.Worker):
     self._actor = actor
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.make_default_logger(label)
+    self._should_update = should_update
 
   def run_episode(self) -> loggers.LoggingData:
     """Run one episode.
@@ -87,7 +89,8 @@ class EnvironmentLoop(core.Worker):
 
       # Have the agent observe the timestep and let the actor update itself.
       self._actor.observe(action, next_timestep=timestep)
-      self._actor.update()
+      if self._should_update:
+        self._actor.update()
 
       # Book-keeping.
       episode_steps += 1
