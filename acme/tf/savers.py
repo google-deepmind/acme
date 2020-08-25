@@ -162,7 +162,7 @@ class Checkpointer:
   def restore(self):
     # Restore from the most recent checkpoint (if it exists).
     checkpoint_to_restore = self._checkpoint_manager.latest_checkpoint
-    logging.info('Attempting to restoring checkpoint: %s',
+    logging.info('Attempting to restore checkpoint: %s',
                  checkpoint_to_restore)
     self._checkpoint.restore(checkpoint_to_restore)
 
