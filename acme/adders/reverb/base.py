@@ -23,6 +23,7 @@ from acme import specs
 from acme import types
 from acme.adders import base
 import dm_env
+import numpy as np
 import reverb
 import tensorflow as tf
 import tree
@@ -154,13 +155,25 @@ class ReverbAdder(base.Adder):
     if self._next_observation is None:
       raise ValueError('adder.add_first must be called before adder.add.')
 
+    discount = next_timestep.discount
+    if next_timestep.last():
+      # Terminal timesteps created by dm_env.termination() will have a scalar
+      # discount of 0.0. This may not match the array shape / nested structure
+      # of the previous timesteps' discounts. The below will match
+      # next_timestep.discount's shape/structure to that of
+      # self._buffer[-1].discount.
+      if self._buffer and not tree.is_nested(next_timestep.discount):
+        discount = tree.map_structure(
+            lambda d: np.broadcast_to(next_timestep.discount, np.shape(d)),
+            self._buffer[-1].discount)
+
     # Add the timestep to the buffer.
     self._buffer.append(
         Step(
             observation=self._next_observation,
             action=action,
             reward=next_timestep.reward,
-            discount=next_timestep.discount,
+            discount=discount,
             start_of_episode=self._start_of_episode,
             extras=extras,
         ))

@@ -21,6 +21,7 @@ into a single transition, simplifying to a simple transition adder when N=1.
 
 import copy
 import itertools
+import operator
 from typing import Optional
 
 from acme import specs
@@ -108,7 +109,7 @@ class NStepTransitionAdder(base.ReverbAdder):
     """
     # Makes the additional discount a float32, which means that it will be
     # upcast if rewards/discounts are float64 and left alone otherwise.
-    self._discount = np.float32(discount)
+    self._discount = tree.map_structure(np.float32, discount)
 
     super().__init__(
         client=client,
@@ -129,20 +130,47 @@ class NStepTransitionAdder(base.ReverbAdder):
     extras = self._buffer[0].extras
     next_observation = self._next_observation
 
-    # Initialize the n-step return and the discount accumulators. We make a
-    # copy of the first reward/discount so that when we add/multiply in place
-    # it won't change the actual reward or discount.
-    n_step_return = copy.deepcopy(self._buffer[0].reward)
-    total_discount = copy.deepcopy(self._buffer[0].discount)
+    # Give the same tree structure to the n-step return accumulator,
+    # n-step discount accumulator, and self.discount, so that they can be
+    # iterated in parallel using tree.map_structure.
+    n_step_return, total_discount, self_discount = _unify_structure(
+        self._buffer[0].reward,
+        self._buffer[0].discount,
+        self._discount)
+
+    # Copy total_discount, so that accumulating into it doesn't affect
+    # _buffer[0].discount.
+    total_discount = tree.map_structure(np.copy, total_discount)
+
+    # Broadcast n_step_return to have the broadcasted shape of
+    # reward * discount. Also copy, to avoid accumulating into
+    # _buffer[0].reward.
+    n_step_return = tree.map_structure(
+        lambda r, d: np.copy(np.broadcast_to(r, np.broadcast(r, d).shape)),
+        n_step_return,
+        total_discount)
 
     # NOTE: total discount will have one less discount than it does
     # step.discounts. This is so that when the learner/update uses an additional
     # discount we don't apply it twice. Inside the following loop we will
     # apply this right before summing up the n_step_return.
     for step in itertools.islice(self._buffer, 1, None):
-      total_discount *= self._discount
-      n_step_return += step.reward * total_discount
-      total_discount *= step.discount
+      step_discount, step_reward, total_discount = _unify_structure(
+          step.discount,
+          step.reward,
+          total_discount)
+
+      # Equivalent to: `total_discount *= self._discount`.
+      tree.map_structure(operator.imul, total_discount, self_discount)
+
+      # Equivalent to: `n_step_return += step.reward * total_discount`.
+      tree.map_structure(lambda nsr, sr, td: operator.iadd(nsr, sr * td),
+                         n_step_return,
+                         step_reward,
+                         total_discount)
+
+      # Equivalent to: `total_discount *= step.discount`.
+      tree.map_structure(operator.imul, total_discount, step_discount)
 
     if extras:
       transition = (observation, action, n_step_return, total_discount,
@@ -175,11 +203,30 @@ class NStepTransitionAdder(base.ReverbAdder):
   def signature(cls,
                 environment_spec: specs.EnvironmentSpec,
                 extras_spec: types.NestedSpec = ()):
+
+    # This function currently assumes that self._discount is a scalar.
+    # If it ever becomes a nested structure and/or a np.ndarray, this method
+    # will need to know its structure / shape. This is because the signature
+    # discount shape is the environment's discount shape and this adder's
+    # discount shape broadcasted together. Also, the reward shape is this
+    # signature discount shape broadcasted together with the environment
+    # reward shape. As long as self._discount is a scalar, it will not affect
+    # either the signature discount shape nor the signature reward shape, so we
+    # can ignore it.
+
+    rewards_spec, step_discounts_spec = _unify_structure(
+        environment_spec.rewards,
+        environment_spec.discounts)
+    rewards_spec = tree.map_structure(_broadcast_specs,
+                                      rewards_spec,
+                                      step_discounts_spec)
+    step_discounts_spec = tree.map_structure(copy.deepcopy, step_discounts_spec)
+
     transition_spec = [
         environment_spec.observations,
         environment_spec.actions,
-        environment_spec.rewards,
-        environment_spec.discounts,
+        rewards_spec,
+        step_discounts_spec,
         environment_spec.observations,  # next_observation
     ]
 
@@ -188,3 +235,72 @@ class NStepTransitionAdder(base.ReverbAdder):
 
     return tree.map_structure_with_path(base.spec_like_to_tensor_spec,
                                         tuple(transition_spec))
+
+
+def _unify_structure(*args):
+  """Returns versions of the arguments that give them the same nested structure.
+
+  Any nested items in *args must have the same structure.
+
+  Any non-nested item will be replaced with a nested version that shares that
+  structure. The leaves will all be references to the same original non-nested
+  item.
+
+  If all *args are nested, or all *args are non-nested, this function will
+  return *args unchanged.
+
+  Example:
+  ```
+  a = ('a', 'b')
+  b = 'c'
+  tree_a, tree_b = _unify_structure(a, b)
+  tree_a
+  > ('a', 'b')
+  tree_b
+  > ('c', 'c')
+  ```
+
+  Args:
+    *args: A Sequence of nested or non-nested items.
+
+  Returns:
+    `*args`, except with all items sharing the same nest structure.
+  """
+  if not args:
+    return
+
+  reference_tree = None
+  for arg in args:
+    if tree.is_nested(arg):
+      reference_tree = arg
+      break
+
+  if reference_tree is None:
+    reference_tree = args[0]
+
+  def mirror_structure(value, reference_tree):
+    if tree.is_nested(value):
+      # Use check_types=True so that the types of the trees we construct aren't
+      # dependent on our arbitrary choice of which nested arg to use as the
+      # reference_tree.
+      tree.assert_same_structure(value, reference_tree, check_types=True)
+      return value
+    else:
+      return tree.map_structure(lambda _: value, reference_tree)
+
+  return tuple(mirror_structure(arg, reference_tree) for arg in args)
+
+
+def _broadcast_specs(*args):
+  """Like np.broadcast, but for specs.Array.
+
+  Args:
+    *args: one or more specs.Array instances.
+
+  Returns:
+    A specs.Array with the broadcasted shape and dtype of the specs in *args.
+  """
+  bc_info = np.broadcast(*tuple(a.generate_value() for a in args))
+  dtype = np.result_type(*tuple(a.dtype for a in args))
+  return specs.Array(shape=bc_info.shape, dtype=dtype)
+
