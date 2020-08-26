@@ -120,7 +120,7 @@ def make_reverb_dataset(
   dataset = tf.data.Dataset.range(1).repeat()
   dataset = dataset.interleave(
       map_func=_make_dataset,
-      cycle_length=batch_size or tf.data.experimental.AUTOTUNE,
+      cycle_length=tf.data.experimental.AUTOTUNE,
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
   # Optimization options.
