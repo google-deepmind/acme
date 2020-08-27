@@ -155,7 +155,7 @@ class MPO(snt.Module):
 
     Args:
       online_action_distribution: online distribution returned by the online
-        policy network; expects batch_dims of [N, B] and event_dims of [D].
+        policy network; expects batch_dims of [B] and event_dims of [D].
       target_action_distribution: target distribution returned by the target
         policy network; expects same shapes as online distribution.
       actions: actions sampled from the target policy; expects shape [N, B, D].
