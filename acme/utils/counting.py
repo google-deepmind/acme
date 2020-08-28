@@ -59,7 +59,8 @@ class Counter(core.Saveable):
       **counts: keyword arguments specifying count increments.
 
     Returns:
-      The updated counts.
+      The [name, value] mapping of all counters stored, i.e. this will also
+      include counts that were not updated by this call to increment.
     """
     with self._lock:
       for key, value in counts.items():
