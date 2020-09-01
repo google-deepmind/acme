@@ -20,7 +20,7 @@ order to test or interact with other components.
 """
 
 import threading
-from typing import List, Sequence
+from typing import List, Sequence, Optional
 
 from acme import core
 from acme import specs
@@ -87,10 +87,18 @@ class Environment(dm_env.Environment):
       episode_length: int = 25,
   ):
     # Assert that the discount spec is a BoundedArray with range [0, 1].
-    if (not isinstance(spec.discounts, specs.BoundedArray) or
-        not np.isclose(spec.discounts.minimum, 0) or
-        not np.isclose(spec.discounts.maximum, 1)):
-      raise ValueError('discount_spec must be a BoundedArray in [0, 1].')
+    def check_discount_spec(path, discount_spec):
+      if (not isinstance(discount_spec, specs.BoundedArray) or
+          not np.isclose(discount_spec.minimum, 0) or
+          not np.isclose(discount_spec.maximum, 1)):
+        if path:
+          path_str = ' ' + '/'.join(str(p) for p in path)
+        else:
+          path_str = ''
+        raise ValueError(
+            'discount_spec {}isn\'t a BoundedArray in [0, 1].'.format(path_str))
+
+    tree.map_structure_with_path(check_discount_spec, spec.discounts)
 
     self._spec = spec
     self._episode_length = episode_length
@@ -154,25 +162,30 @@ class DiscreteEnvironment(Environment):
                num_observations: int = 1,
                action_dtype=np.int32,
                obs_dtype=np.int32,
-               reward_dtype=np.float32,
                obs_shape: Sequence[int] = (),
+               discount_spec: Optional[types.NestedSpec] = None,
+               reward_spec: Optional[types.NestedSpec] = None,
                **kwargs):
     """Initialize the environment."""
+    if reward_spec is None:
+      reward_spec = specs.Array((), np.float32)
+
+    if discount_spec is None:
+      discount_spec = specs.BoundedArray((), np.float32, 0.0, 1.0)
+
     actions = specs.DiscreteArray(num_actions, dtype=action_dtype)
     observations = specs.BoundedArray(
         shape=obs_shape,
         dtype=obs_dtype,
         minimum=obs_dtype(0),
         maximum=obs_dtype(num_observations - 1))
-    rewards = specs.Array((), reward_dtype)
-    discounts = specs.BoundedArray((), reward_dtype, 0.0, 1.0)
 
     super().__init__(
         spec=specs.EnvironmentSpec(
             observations=observations,
             actions=actions,
-            rewards=rewards,
-            discounts=discounts),
+            rewards=reward_spec,
+            discounts=discount_spec),
         **kwargs)
 
 

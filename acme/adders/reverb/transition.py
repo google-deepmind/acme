@@ -28,6 +28,7 @@ from acme import specs
 from acme import types
 from acme.adders.reverb import base
 from acme.adders.reverb import utils
+from acme.utils import tree_utils
 
 import numpy as np
 import reverb
@@ -133,10 +134,12 @@ class NStepTransitionAdder(base.ReverbAdder):
     # Give the same tree structure to the n-step return accumulator,
     # n-step discount accumulator, and self.discount, so that they can be
     # iterated in parallel using tree.map_structure.
-    n_step_return, total_discount, self_discount = _unify_structure(
-        self._buffer[0].reward,
-        self._buffer[0].discount,
-        self._discount)
+    (n_step_return,
+     total_discount,
+     self_discount) = tree_utils.broadcast_structures(
+         self._buffer[0].reward,
+         self._buffer[0].discount,
+         self._discount)
 
     # Copy total_discount, so that accumulating into it doesn't affect
     # _buffer[0].discount.
@@ -155,10 +158,12 @@ class NStepTransitionAdder(base.ReverbAdder):
     # discount we don't apply it twice. Inside the following loop we will
     # apply this right before summing up the n_step_return.
     for step in itertools.islice(self._buffer, 1, None):
-      step_discount, step_reward, total_discount = _unify_structure(
-          step.discount,
-          step.reward,
-          total_discount)
+      (step_discount,
+       step_reward,
+       total_discount) = tree_utils.broadcast_structures(
+           step.discount,
+           step.reward,
+           total_discount)
 
       # Equivalent to: `total_discount *= self._discount`.
       tree.map_structure(operator.imul, total_discount, self_discount)
@@ -214,7 +219,7 @@ class NStepTransitionAdder(base.ReverbAdder):
     # either the signature discount shape nor the signature reward shape, so we
     # can ignore it.
 
-    rewards_spec, step_discounts_spec = _unify_structure(
+    rewards_spec, step_discounts_spec = tree_utils.broadcast_structures(
         environment_spec.rewards,
         environment_spec.discounts)
     rewards_spec = tree.map_structure(_broadcast_specs,
@@ -237,61 +242,7 @@ class NStepTransitionAdder(base.ReverbAdder):
                                         tuple(transition_spec))
 
 
-def _unify_structure(*args):
-  """Returns versions of the arguments that give them the same nested structure.
-
-  Any nested items in *args must have the same structure.
-
-  Any non-nested item will be replaced with a nested version that shares that
-  structure. The leaves will all be references to the same original non-nested
-  item.
-
-  If all *args are nested, or all *args are non-nested, this function will
-  return *args unchanged.
-
-  Example:
-  ```
-  a = ('a', 'b')
-  b = 'c'
-  tree_a, tree_b = _unify_structure(a, b)
-  tree_a
-  > ('a', 'b')
-  tree_b
-  > ('c', 'c')
-  ```
-
-  Args:
-    *args: A Sequence of nested or non-nested items.
-
-  Returns:
-    `*args`, except with all items sharing the same nest structure.
-  """
-  if not args:
-    return
-
-  reference_tree = None
-  for arg in args:
-    if tree.is_nested(arg):
-      reference_tree = arg
-      break
-
-  if reference_tree is None:
-    reference_tree = args[0]
-
-  def mirror_structure(value, reference_tree):
-    if tree.is_nested(value):
-      # Use check_types=True so that the types of the trees we construct aren't
-      # dependent on our arbitrary choice of which nested arg to use as the
-      # reference_tree.
-      tree.assert_same_structure(value, reference_tree, check_types=True)
-      return value
-    else:
-      return tree.map_structure(lambda _: value, reference_tree)
-
-  return tuple(mirror_structure(arg, reference_tree) for arg in args)
-
-
-def _broadcast_specs(*args):
+def _broadcast_specs(*args: specs.Array) -> specs.Array:
   """Like np.broadcast, but for specs.Array.
 
   Args:

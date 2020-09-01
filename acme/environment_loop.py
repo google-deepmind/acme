@@ -15,6 +15,7 @@
 
 """A simple agent-environment training loop."""
 
+import operator
 import time
 from typing import Optional
 
@@ -24,6 +25,9 @@ from acme.utils import counting
 from acme.utils import loggers
 
 import dm_env
+from dm_env import specs
+import numpy as np
+import tree
 
 
 class EnvironmentLoop(core.Worker):
@@ -75,7 +79,11 @@ class EnvironmentLoop(core.Worker):
     # Reset any counts and start the environment.
     start_time = time.time()
     episode_steps = 0
-    episode_return = 0
+
+    # For evaluation, this keeps track of the total undiscounted reward
+    # accumulated during the episode.
+    episode_return = tree.map_structure(_generate_zeros_from_spec,
+                                        self._environment.reward_spec())
     timestep = self._environment.reset()
 
     # Make the first observation.
@@ -94,7 +102,9 @@ class EnvironmentLoop(core.Worker):
 
       # Book-keeping.
       episode_steps += 1
-      episode_return += timestep.reward
+
+      # Equivalent to: episode_return += timestep.reward
+      tree.map_structure(operator.iadd, episode_return, timestep.reward)
 
     # Record counts.
     counts = self._counter.increment(episodes=1, steps=episode_steps)
@@ -145,6 +155,10 @@ class EnvironmentLoop(core.Worker):
       step_count += result['episode_length']
       # Log the given results.
       self._logger.write(result)
+
+
+def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
+  return np.zeros(spec.shape, spec.dtype)
 
 
 # Internal class.
