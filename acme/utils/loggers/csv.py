@@ -21,6 +21,7 @@ Warning: Does not support preemption.
 import csv
 import os
 import time
+from typing import TextIO, Union
 
 from absl import logging
 
@@ -34,15 +35,32 @@ class CSVLogger(base.Logger):
   _open = open
 
   def __init__(self,
-               directory: str = '~/acme',
+               directory_or_file: Union[str, TextIO] = '~/acme',
                label: str = '',
                time_delta: float = 0.):
-    directory = paths.process_path(directory, 'logs', label, add_uid=True)
-    self._file_path = os.path.join(directory, 'logs.csv')
-    logging.info('Logging to %s', self._file_path)
     self._last_log_time = time.time() - time_delta
     self._time_delta = time_delta
     self._writer = None
+    self._file = self._create_file(directory_or_file, label)
+    logging.info('Logging to %s', self.file_path)
+
+  def _create_file(self, directory_or_file: Union[str, TextIO],
+                   label: str) -> TextIO:
+    """Opens a file if input is a directory or use existing file."""
+    if isinstance(directory_or_file, str):
+      directory = paths.process_path(
+          directory_or_file, 'logs', label, add_uid=True)
+      file_path = os.path.join(directory, 'logs.csv')
+      file = self._open(file_path, mode='a')
+    else:
+      file = directory_or_file
+      if label:
+        logging.info('File, not directory, passed to CSVLogger; label not '
+                     'used.')
+      if not file.mode.startswith('a'):
+        raise ValueError('File must be open in append mode; instead got '
+                         f'{file.mode}.')
+    return file
 
   def write(self, data: base.LoggingData):
     """Writes a `data` into a row of comma-separated values."""
@@ -56,12 +74,11 @@ class CSVLogger(base.Logger):
     # Append row to CSV.
     data = base.to_numpy(data)
     if not self._writer:
-      file = self._open(self._file_path, mode='a')
       keys = sorted(data.keys())
-      self._writer = csv.DictWriter(file, fieldnames=keys)
+      self._writer = csv.DictWriter(self._file, fieldnames=keys)
       self._writer.writeheader()
     self._writer.writerow(data)
 
   @property
   def file_path(self) -> str:
-    return self._file_path
+    return self._file.name
