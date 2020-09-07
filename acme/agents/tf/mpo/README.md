@@ -10,10 +10,11 @@ This implementation includes a few important options such as:
 
 - per-dimension KL constraint satisfaction, and
 - action penalization via the multi-objective MPO work of
-  [Abdolmaleki et al., 2020].
-  
+  [Abdolmaleki, Huang et al., 2020].
+
 See the DMPO agent directory for a similar agent that uses a distributional
-critic.
+critic. See the MO-MPO agent directory for an agent that optimizes for multiple
+objectives.
 
 Detailed notes:
 
@@ -23,4 +24,4 @@ Detailed notes:
 
 [Abdolmaleki et al., 2018a]: https://arxiv.org/pdf/1806.06920.pdf
 [2018b]: https://arxiv.org/pdf/1812.02256.pdf
-[Abdolmaleki et al., 2020]: https://arxiv.org/pdf/2005.07513.pdf
+[Abdolmaleki, Huang et al., 2020]: https://arxiv.org/pdf/2005.07513.pdf
