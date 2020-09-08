@@ -25,9 +25,9 @@ from acme.utils import counting
 from acme.utils import loggers
 import haiku as hk
 import jax
-from jax.experimental import optix
 import jax.numpy as jnp
 import numpy as np
+import optax
 import reverb
 import rlax
 import tree
@@ -36,7 +36,7 @@ import tree
 class TrainingState(NamedTuple):
   """Training state consists of network parameters and optimiser state."""
   params: hk.Params
-  opt_state: optix.OptState
+  opt_state: optax.OptState
 
 
 class IMPALALearner(acme.Learner, acme.Saveable):
@@ -48,7 +48,7 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       unroll_fn: networks.PolicyValueRNN,
       initial_state_fn: Callable[[], hk.LSTMState],
       iterator: Iterator[reverb.ReplaySample],
-      optimizer: optix.InitUpdate,
+      optimizer: optax.GradientTransformation,
       rng: hk.PRNGSequence,
       discount: float = 0.99,
       entropy_cost: float = 0.,
@@ -125,7 +125,7 @@ class IMPALALearner(acme.Learner, acme.Saveable):
 
       # Apply updates
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
-      new_params = optix.apply_updates(state.params, updates)
+      new_params = optax.apply_updates(state.params, updates)
 
       metrics = {
           'loss': loss_value,

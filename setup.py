@@ -42,6 +42,7 @@ jax_requirements = [
     'jax',
     'jaxlib',
     'dm-haiku',
+    'optax',
     'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
     'dataclasses',  # Back-port for Python 3.6.
 ]

@@ -31,8 +31,8 @@ from acme.utils import loggers
 import dm_env
 import haiku as hk
 import jax
-from jax.experimental import optix
 import numpy as np
+import optax
 import reverb
 
 
@@ -95,9 +95,9 @@ class IMPALA(acme.Actor):
         extra_spec=extra_spec,
         sequence_length=sequence_length)
 
-    optimizer = optix.chain(
-        optix.clip_by_global_norm(max_gradient_norm),
-        optix.adam(learning_rate),
+    optimizer = optax.chain(
+        optax.clip_by_global_norm(max_gradient_norm),
+        optax.adam(learning_rate),
     )
 
     self._learner = learning.IMPALALearner(

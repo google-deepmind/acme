@@ -27,8 +27,8 @@ from acme.utils import loggers
 from dm_env import specs
 import haiku as hk
 import jax
-from jax.experimental import optix
 import jax.numpy as jnp
+import optax
 import reverb
 import rlax
 
@@ -37,7 +37,7 @@ class TrainingState(NamedTuple):
   """Holds the agent's training state."""
   params: hk.Params
   target_params: hk.Params
-  opt_state: optix.OptState
+  opt_state: optax.OptState
   steps: int
 
 
@@ -59,7 +59,7 @@ class DQNLearner(acme.Learner, acme.Saveable):
                importance_sampling_exponent: float,
                target_update_period: int,
                iterator: Iterator[reverb.ReplaySample],
-               optimizer: optix.InitUpdate,
+               optimizer: optax.GradientTransformation,
                rng: hk.PRNGSequence,
                max_abs_reward: float = 1.,
                huber_loss_parameter: float = 1.,
@@ -109,7 +109,7 @@ class DQNLearner(acme.Learner, acme.Saveable):
       gradients, (keys, priorities) = grad_fn(state.params, state.target_params,
                                               samples)
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
-      new_params = optix.apply_updates(state.params, updates)
+      new_params = optax.apply_updates(state.params, updates)
 
       steps = state.steps + 1
 

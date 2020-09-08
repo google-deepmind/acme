@@ -24,8 +24,8 @@ from acme.agents.jax.dqn import learning
 from acme.jax import networks
 from acme.jax import variable_utils
 import haiku as hk
-from jax.experimental import optix
 import jax.numpy as jnp
+import optax
 import reverb
 import rlax
 
@@ -97,7 +97,7 @@ class DQN(agent.Agent):
         network=network,
         obs_spec=environment_spec.observations,
         rng=hk.PRNGSequence(seed),
-        optimizer=optix.adam(learning_rate),
+        optimizer=optax.adam(learning_rate),
         discount=discount,
         importance_sampling_exponent=importance_sampling_exponent,
         target_update_period=target_update_period,
