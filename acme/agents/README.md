@@ -21,7 +21,7 @@ Deep Deterministic Policy Gradient (DDPG)                      | Lillicrap et al
 Distributed Distributional Deep Determinist (D4PG)             | Barth-Maron et al., 2018 | [![TF](../../docs/logos/tf-small.png)][D4PG_TF2]
 Maximum a posteriori Policy Optimisation (MPO)                 | Abdolmaleki et al., 2018 | [![TF](../../docs/logos/tf-small.png)][MPO_TF2]
 Distributional Maximum a posteriori Policy Optimisation (DMPO) | -                        | [![TF](../../docs/logos/tf-small.png)][DMPO_TF2]
-Multi-Objective Maximum a posteriori Policy Optimisation (MO-MPO) | Abdolmaleki, Huang et al., 2020 | [![TF](../../docs/logos/tf-small.png)][MOMPO_TF2]
+<!-- Multi-Objective Maximum a posteriori Policy Optimisation (MO-MPO) | Abdolmaleki, Huang et al., 2020 | [![TF](../../docs/logos/tf-small.png)][MOMPO_TF2] -->
 
 ### Discrete control
 
@@ -75,7 +75,7 @@ Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![TF](../../docs/logos/t
 [D4PG_TF2]: tf/d4pg/
 [MPO_TF2]: tf/mpo/
 [DMPO_TF2]: tf/dmpo/
-[MOMPO_TF2]: tf/mompo/
+<!-- [MOMPO_TF2]: tf/mompo/ -->
 [BC_TF2]: tf/bc/
 [DQFD_TF2]: tf/dqfd/
 [R2D3_TF2]: tf/r2d3/
