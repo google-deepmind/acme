@@ -14,7 +14,8 @@
 # limitations under the License.
 
 """Generic actor implementation, using TensorFlow and Sonnet."""
-from typing import Optional
+
+from typing import Optional, Tuple
 
 from acme import adders
 from acme import core
@@ -27,7 +28,6 @@ import dm_env
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
-import tree
 
 tfd = tfp.distributions
 
@@ -59,25 +59,28 @@ class FeedForwardActor(core.Actor):
     # Store these for later use.
     self._adder = adder
     self._variable_client = variable_client
-    self._policy_network = tf.function(policy_network)
+    self._policy_network = policy_network
+
+  @tf.function
+  def _policy(self, observation: types.NestedTensor) -> types.NestedTensor:
+
+    # Compute the policy, conditioned on the observation.
+    policy = self._policy_network(observation)
+
+    # Sample from the policy if it is stochastic.
+    action = policy.sample() if isinstance(policy, tfd.Distribution) else policy
+
+    return action
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     # Add a dummy batch dimension and as a side effect convert numpy to TF.
     batched_obs = tf2_utils.add_batch_dim(observation)
 
     # Forward the policy network.
-    policy_output = self._policy_network(batched_obs)
-
-    # If the policy network parameterises a distribution, sample from it.
-    def maybe_sample(output):
-      if isinstance(output, tfd.Distribution):
-        output = output.sample()
-      return output
-
-    policy_output = tree.map_structure(maybe_sample, policy_output)
+    action = self._policy(batched_obs)
 
     # Convert to numpy and squeeze out the batch dimension.
-    action = tf2_utils.to_numpy_squeeze(policy_output)
+    action = tf2_utils.to_numpy_squeeze(action)
 
     return action
 
@@ -125,9 +128,20 @@ class RecurrentActor(core.Actor):
     self._state = None
     self._prev_state = None
 
-    # TODO(b/152382420): Ideally we would call tf.function(network) instead but
-    # this results in an error when using acme RNN snapshots.
-    self._policy = tf.function(policy_network.__call__)
+  @tf.function
+  def _policy(
+      self,
+      observation: types.NestedTensor,
+      state: types.NestedTensor,
+  ) -> Tuple[types.NestedTensor, types.NestedTensor]:
+
+    # Compute the policy, conditioned on the observation.
+    policy, new_state = self._network(observation, state)
+
+    # Sample from the policy if it is stochastic.
+    action = policy.sample() if isinstance(policy, tfd.Distribution) else policy
+
+    return action, new_state
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     # Add a dummy batch dimension and as a side effect convert numpy to TF.
@@ -139,14 +153,6 @@ class RecurrentActor(core.Actor):
 
     # Forward.
     policy_output, new_state = self._policy(batched_obs, self._state)
-
-    # If the policy network parameterises a distribution, sample from it.
-    def maybe_sample(output):
-      if isinstance(output, tfd.Distribution):
-        output = output.sample()
-      return output
-
-    policy_output = tree.map_structure(maybe_sample, policy_output)
 
     self._prev_state = self._state
     self._state = new_state
