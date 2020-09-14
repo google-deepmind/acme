@@ -34,30 +34,27 @@ class OAR(NamedTuple):
 class ObservationActionRewardWrapper(base.EnvironmentWrapper):
   """A wrapper that puts the previous action and reward into the observation."""
 
-  _prev_action: types.NestedArray
-  _prev_reward: types.NestedArray
-
   def reset(self) -> dm_env.TimeStep:
     # Initialize with zeros of the appropriate shape/dtype.
-    self._prev_action = tree.map_structure(
+    action = tree.map_structure(
         lambda x: x.generate_value(), self._environment.action_spec())
-    self._prev_reward = tree.map_structure(
+    reward = tree.map_structure(
         lambda x: x.generate_value(), self._environment.reward_spec())
     timestep = self._environment.reset()
-    new_timestep = self._augment_observation(timestep)
+    new_timestep = self._augment_observation(action, reward, timestep)
     return new_timestep
 
-  def step(self, action) -> dm_env.TimeStep:
+  def step(self, action: types.NestedArray) -> dm_env.TimeStep:
     timestep = self._environment.step(action)
-    new_timestep = self._augment_observation(timestep)
-    self._prev_action = action
-    self._prev_reward = timestep.reward
+    new_timestep = self._augment_observation(action, timestep.reward, timestep)
     return new_timestep
 
-  def _augment_observation(self, timestep: dm_env.TimeStep) -> dm_env.TimeStep:
+  def _augment_observation(self, action: types.NestedArray,
+                           reward: types.NestedArray,
+                           timestep: dm_env.TimeStep) -> dm_env.TimeStep:
     oar = OAR(observation=timestep.observation,
-              action=self._prev_action,
-              reward=self._prev_reward)
+              action=action,
+              reward=reward)
     return timestep._replace(observation=oar)
 
   def observation_spec(self):
