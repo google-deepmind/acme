@@ -42,8 +42,8 @@ def make_reverb_dataset(
     extra_spec: Optional[types.NestedSpec] = None,
     transition_adder: bool = False,
     table: str = adders.DEFAULT_PRIORITY_TABLE,
-    parallel_batch_optimization: bool = True,
     convert_zero_size_to_none: bool = False,
+    num_parallel_calls: int = 16,
     using_deprecated_adder: bool = False,
 ) -> tf.data.Dataset:
   """Makes a TensorFlow dataset.
@@ -72,14 +72,13 @@ def make_reverb_dataset(
       this dataset adds transitions.
     table: The name of the table to sample from replay (defaults to
       `adders.DEFAULT_PRIORITY_TABLE`).
-    parallel_batch_optimization: Whether to enable the parallel_batch
-      optimization. In some cases this optimization may slow down sampling from
-      the dataset, in which case turning this to False may speed up performance.
     convert_zero_size_to_none: When True this will convert specs with shapes 0
       to None. This is useful for datasets that contain elements with different
       shapes for example `GraphsTuple` from the graph_net library. For example,
       `specs.Array((0, 5), tf.float32)` will correspond to a examples with shape
       `tf.TensorShape([None, 5])`.
+    num_parallel_calls: Number of parallel threads creating ReplayDatasets to
+      interleave.
     using_deprecated_adder: True if the adder used to generate the data is
       from acme/adders/reverb/deprecated.
 
@@ -114,24 +113,20 @@ def make_reverb_dataset(
           max_in_flight_samples_per_worker=max_in_flight_samples_per_worker,
           sequence_length=sequence_length,
           emit_timesteps=sequence_length is None)
+
+    # Finish the pipeline: batch and prefetch.
+    if batch_size:
+      dataset = dataset.batch(batch_size, drop_remainder=True)
+
     return dataset
 
   # Create the dataset.
-  dataset = tf.data.Dataset.range(1).repeat()
+  dataset = tf.data.Dataset.range(num_parallel_calls)
   dataset = dataset.interleave(
       map_func=_make_dataset,
-      cycle_length=tf.data.experimental.AUTOTUNE,
-      num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-  # Optimization options.
-  options = tf.data.Options()
-  options.experimental_deterministic = False
-  options.experimental_optimization.parallel_batch = parallel_batch_optimization
-  dataset = dataset.with_options(options)
-
-  # Finish the pipeline: batch and prefetch.
-  if batch_size:
-    dataset = dataset.batch(batch_size, drop_remainder=True)
+      cycle_length=num_parallel_calls,
+      num_parallel_calls=num_parallel_calls,
+      deterministic=False)
 
   if prefetch_size:
     dataset = dataset.prefetch(prefetch_size)
