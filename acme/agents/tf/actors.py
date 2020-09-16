@@ -63,9 +63,11 @@ class FeedForwardActor(core.Actor):
 
   @tf.function
   def _policy(self, observation: types.NestedTensor) -> types.NestedTensor:
+    # Add a dummy batch dimension and as a side effect convert numpy to TF.
+    batched_observation = tf2_utils.add_batch_dim(observation)
 
     # Compute the policy, conditioned on the observation.
-    policy = self._policy_network(observation)
+    policy = self._policy_network(batched_observation)
 
     # Sample from the policy if it is stochastic.
     action = policy.sample() if isinstance(policy, tfd.Distribution) else policy
@@ -73,16 +75,11 @@ class FeedForwardActor(core.Actor):
     return action
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
-    # Add a dummy batch dimension and as a side effect convert numpy to TF.
-    batched_obs = tf2_utils.add_batch_dim(observation)
+    # Pass the observation through the policy network.
+    action = self._policy(observation)
 
-    # Forward the policy network.
-    action = self._policy(batched_obs)
-
-    # Convert to numpy and squeeze out the batch dimension.
-    action = tf2_utils.to_numpy_squeeze(action)
-
-    return action
+    # Return a numpy array with squeezed out batch dimension.
+    return tf2_utils.to_numpy_squeeze(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
     if self._adder:
@@ -135,8 +132,11 @@ class RecurrentActor(core.Actor):
       state: types.NestedTensor,
   ) -> Tuple[types.NestedTensor, types.NestedTensor]:
 
+    # Add a dummy batch dimension and as a side effect convert numpy to TF.
+    batched_observation = tf2_utils.add_batch_dim(observation)
+
     # Compute the policy, conditioned on the observation.
-    policy, new_state = self._network(observation, state)
+    policy, new_state = self._network(batched_observation, state)
 
     # Sample from the policy if it is stochastic.
     action = policy.sample() if isinstance(policy, tfd.Distribution) else policy
@@ -144,23 +144,19 @@ class RecurrentActor(core.Actor):
     return action, new_state
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
-    # Add a dummy batch dimension and as a side effect convert numpy to TF.
-    batched_obs = tf2_utils.add_batch_dim(observation)
-
     # Initialize the RNN state if necessary.
     if self._state is None:
       self._state = self._network.initial_state(1)
 
-    # Forward.
-    policy_output, new_state = self._policy(batched_obs, self._state)
+    # Step the recurrent policy forward given the current observation and state.
+    policy_output, new_state = self._policy(observation, self._state)
 
+    # Bookkeeping of recurrent states for the observe method.
     self._prev_state = self._state
     self._state = new_state
 
-    # Convert to numpy and squeeze out the batch dimension.
-    action = tf2_utils.to_numpy_squeeze(policy_output)
-
-    return action
+    # Return a numpy array with squeezed out batch dimension.
+    return tf2_utils.to_numpy_squeeze(policy_output)
 
   def observe_first(self, timestep: dm_env.TimeStep):
     if self._adder:
