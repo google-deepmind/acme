@@ -83,13 +83,14 @@ class ExpQWeightedPolicy(snt.Module):
 
     # Compute Q-values and the resulting tempered probabilities.
     q = self._critic_network(tiled_inputs, tiled_actions)
-    boltzmann_probs = tf.nn.softmax(q / self._beta)
+    boltzmann_logits = q / self._beta
 
-    boltzmann_probs = snt.split_leading_dim(boltzmann_probs, dummy_zeros_n_b, 2)
+    boltzmann_logits = snt.split_leading_dim(boltzmann_logits, dummy_zeros_n_b,
+                                             2)
     # [B, N]
-    boltzmann_probs = tf.transpose(boltzmann_probs, perm=(1, 0))
+    boltzmann_logits = tf.transpose(boltzmann_logits, perm=(1, 0))
     # Resample one action per batch according to the Boltzmann distribution.
-    action_idx = tfp.distributions.Categorical(probs=boltzmann_probs).sample()
+    action_idx = tfp.distributions.Categorical(logits=boltzmann_logits).sample()
     # [B, 2], where the first column is 0, 1, 2,... corresponding to indices to
     # the batch dimension.
     action_idx = tf.stack((tf.range(b), action_idx), axis=1)
