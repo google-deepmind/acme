@@ -51,15 +51,19 @@ class FeedForwardActor(core.Actor):
       adder: Optional[adders.Adder] = None,
   ):
     self._rng = rng
-    self._policy = jax.jit(policy, backend='cpu')
+
+    # Adding batch dimension inside jit is much more efficient than outside.
+    def batched_policy(params, key, observation):
+      # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
+      observation = utils.add_batch_dim(observation)
+      return policy(params, key, observation)
+    self._policy = jax.jit(batched_policy, backend='cpu')
 
     self._adder = adder
     self._client = variable_client
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     key = next(self._rng)
-    # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
-    observation = utils.add_batch_dim(observation)
     action = self._policy(self._client.params, key, observation)
     return utils.to_numpy_squeeze(action)
 
