@@ -77,6 +77,19 @@ class VariableSource(core.VariableSource):
     return [self._variables[name] for name in names]
 
 
+class Learner(core.Learner, VariableSource):
+  """Fake Learner."""
+
+  def __init__(self,
+               variables: types.NestedArray = None,
+               barrier: threading.Barrier = None):
+    super().__init__(variables=variables, barrier=barrier)
+    self.step_counter = 0
+
+  def step(self):
+    self.step_counter += 1
+
+
 class Environment(dm_env.Environment):
   """A fake environment with a given spec."""
 
