@@ -16,7 +16,7 @@
 """Utilities for nested data structures involving NumPy and TensorFlow 2.x."""
 
 import functools
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from acme import types
 from acme.utils import tree_utils
@@ -77,7 +77,7 @@ def tile_nested(inputs: types.NestedTensor,
 
 def create_variables(
     network: snt.Module,
-    input_spec: List[types.NestedSpec],
+    input_spec: List[Union[types.NestedSpec, tf.TensorSpec]],
 ) -> Optional[tf.TensorSpec]:
   """Builds the network with dummy inputs to create the necessary variables.
 
