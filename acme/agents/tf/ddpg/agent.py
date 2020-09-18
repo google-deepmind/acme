@@ -112,13 +112,13 @@ class DDPG(agent.Agent):
         batch_size=batch_size,
         prefetch_size=prefetch_size)
 
+    # Make sure observation network is a Sonnet Module.
+    observation_network = tf2_utils.to_sonnet_module(observation_network)
+
     # Get observation and action specs.
     act_spec = environment_spec.actions
     obs_spec = environment_spec.observations
-    emb_spec = tf2_utils.create_variables(observation_network, [obs_spec])  # pytype: disable=wrong-arg-types
-
-    # Make sure observation network is a Sonnet Module.
-    observation_network = tf2_utils.to_sonnet_module(observation_network)
+    emb_spec = tf2_utils.create_variables(observation_network, [obs_spec])
 
     # Create target networks.
     target_policy_network = copy.deepcopy(policy_network)

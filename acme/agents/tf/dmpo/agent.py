@@ -146,9 +146,9 @@ class DistributionalMPO(agent.Agent):
     ])
 
     # Create variables.
-    tf2_utils.create_variables(policy_network, [emb_spec])  # pytype: disable=wrong-arg-types
+    tf2_utils.create_variables(policy_network, [emb_spec])
     tf2_utils.create_variables(critic_network, [emb_spec, act_spec])
-    tf2_utils.create_variables(target_policy_network, [emb_spec])  # pytype: disable=wrong-arg-types
+    tf2_utils.create_variables(target_policy_network, [emb_spec])
     tf2_utils.create_variables(target_critic_network, [emb_spec, act_spec])
     tf2_utils.create_variables(target_observation_network, [obs_spec])
 
