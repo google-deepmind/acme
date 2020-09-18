@@ -21,6 +21,7 @@ import tensorflow_probability as tfp
 tfd = tfp.distributions
 
 
+@tfp.experimental.register_composite
 class DiscreteValuedDistribution(tfd.Categorical):
   """This is a generalization of a categorical distribution.
 
@@ -52,6 +53,7 @@ class DiscreteValuedDistribution(tfd.Categorical):
     super().__init__(
         logits=logits, probs=probs, name='DiscreteValuedDistribution')
     self._values = values
+    self._parameters = dict(values=values, logits=logits, probs=probs)
 
   @property
   def values(self) -> tf.Tensor:
@@ -69,3 +71,11 @@ class DiscreteValuedDistribution(tfd.Categorical):
     """Overrides the Categorical variance by incorporating category values."""
     dist_squared = tf.square(tf.expand_dims(self.mean(), -1) - self.values)
     return tf.reduce_sum(self.probs_parameter() * dist_squared, axis=-1)
+
+  # This function tells the TFP how many trailing dimensions of each named
+  # parameter are event dims, the rest are considered to be batch dims.
+  def _params_event_ndims(self):
+    return dict(logits=1, probs=1, values=1)
+
+  # This is required to create composite tensors from this distribution.
+  _composite_tensor_nonshape_params = ('values', 'logits', 'probs')
