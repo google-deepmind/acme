@@ -28,7 +28,7 @@ import tree
 
 
 class SequenceAdder(base.ReverbAdder):
-  """An which adds sequences of fixed length."""
+  """An adder which adds sequences of fixed length."""
 
   def __init__(
       self,
