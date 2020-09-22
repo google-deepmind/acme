@@ -154,7 +154,7 @@ class IMPALALearner(acme.Learner, acme.Saveable):
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()
-    self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
+    self._logger = logger or loggers.make_default_logger('learner')
 
   def step(self):
     """Does a step of SGD and logs the results."""
