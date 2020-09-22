@@ -68,7 +68,7 @@ class VariableSource(core.VariableSource):
                variables: types.NestedArray = None,
                barrier: threading.Barrier = None):
     # Add dummy variables so we can expose them in get_variables.
-    self._variables = {'policy': [] if not variables else variables}
+    self._variables = {'policy': [] if variables is None else variables}
     self._barrier = barrier
 
   def get_variables(self, names: List[str]) -> List[types.NestedArray]:
