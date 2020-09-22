@@ -18,7 +18,6 @@
 from typing import Callable
 
 import acme
-from acme import datasets
 from acme import specs
 from acme.adders import reverb as adders
 from acme.agents.jax.impala import acting
@@ -87,13 +86,15 @@ class IMPALA(acme.Actor):
     )
 
     # The dataset object to learn from.
-    # Remove batch dimensions.
-    dataset = datasets.make_reverb_dataset(
+    # We don't use datasets.make_reverb_dataset() here to avoid interleaving
+    # and prefetching, that doesn't work well with can_sample() check on update.
+    dataset = reverb.ReplayDataset.from_table_signature(
         server_address=address,
-        environment_spec=environment_spec,
-        batch_size=batch_size,
-        extra_spec=extra_spec,
-        sequence_length=sequence_length)
+        table=adders.DEFAULT_PRIORITY_TABLE,
+        max_in_flight_samples_per_worker=1,
+        sequence_length=sequence_length,
+        emit_timesteps=False)
+    dataset = dataset.batch(batch_size, drop_remainder=True)
 
     optimizer = optax.chain(
         optax.clip_by_global_norm(max_gradient_norm),
