@@ -83,7 +83,13 @@ def stack_sequence_fields(sequence: Iterable[ElementType]) -> ElementType:
   if not sequence:
     raise ValueError('Input sequence must not be empty')
 
-  return fast_map_structure(lambda *values: np.asarray(values), *sequence)
+  # Default to asarray when arrays don't have the same shape to be compatible
+  # with old behaviour.
+  # TODO(b/169306678) make this more elegant.
+  try:
+    return fast_map_structure(lambda *values: np.stack(values), *sequence)
+  except ValueError:
+    return fast_map_structure(lambda *values: np.asarray(values), *sequence)
 
 
 def unstack_sequence_fields(struct: ElementType,
