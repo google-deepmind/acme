@@ -17,7 +17,7 @@
 
 import abc
 import collections
-from typing import Callable, Iterable, Mapping, NamedTuple, Optional, Union
+from typing import Callable, Iterable, Mapping, NamedTuple, Optional, Union, Tuple
 
 from acme import specs
 from acme import types
@@ -37,7 +37,7 @@ class Step(NamedTuple):
   action: types.NestedArray
   reward: types.NestedArray
   discount: types.NestedArray
-  start_of_episode: Union[bool, specs.Array, tf.Tensor]
+  start_of_episode: Union[bool, specs.Array, tf.Tensor, Tuple[()]]
   extras: types.NestedArray
 
 
