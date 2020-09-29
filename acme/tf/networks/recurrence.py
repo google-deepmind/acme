@@ -28,7 +28,7 @@ RNNState = types.NestedTensor
 
 
 class PolicyCriticRNNState(NamedTuple):
-  """Consists of two RRNStates called 'policy' and 'critic'."""
+  """Consists of two RNNStates called 'policy' and 'critic'."""
   policy: RNNState
   critic: RNNState
 
