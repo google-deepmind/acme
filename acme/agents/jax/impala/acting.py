@@ -45,7 +45,7 @@ class IMPALAActor(core.Actor):
       forward_fn: PolicyValueFn,
       initial_state_fn: Callable[[], hk.LSTMState],
       rng: hk.PRNGSequence,
-      variable_client: variable_utils.VariableClient,
+      variable_client: Optional[variable_utils.VariableClient] = None,
       adder: Optional[adders.Adder] = None,
   ):
 
@@ -55,7 +55,11 @@ class IMPALAActor(core.Actor):
     self._forward = forward_fn
     self._rng = rng
 
-    self._params = variable_client.update_and_wait()
+    # Make sure not to use a random policy after checkpoint restoration by
+    # assigning variables before running the environment loop.
+    if self._variable_client is not None:
+      self._variable_client.update_and_wait()
+
     self._initial_state = hk.without_apply_rng(
         hk.transform(initial_state_fn, apply_rng=True)).apply(None)
 
@@ -65,8 +69,8 @@ class IMPALAActor(core.Actor):
       self._state = self._initial_state
 
     # Forward.
-    (logits, _), new_state = self._forward(self._variable_client.params,
-                                           observation, self._state)
+    (logits, _), new_state = self._forward(self._params, observation,
+                                           self._state)
 
     self._prev_logits = logits
     self._prev_state = self._state
@@ -95,5 +99,13 @@ class IMPALAActor(core.Actor):
     self._adder.add(action, next_timestep, extras)
 
   def update(self):
-    if self._variable_client:
+    if self._variable_client is not None:
       self._variable_client.update()
+
+  @property
+  def _params(self) -> Optional[hk.Params]:
+    if self._variable_client is None:
+      # If self._variable_client is None then we assume self._forward  does not
+      # use the parameters it is passed and just return None.
+      return None
+    return self._variable_client.params
