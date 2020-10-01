@@ -15,6 +15,7 @@
 """Various losses for training agent components (policies, critics, etc)."""
 
 from acme.tf.losses.distributional import categorical
+from acme.tf.losses.distributional import multiaxis_categorical
 from acme.tf.losses.dpg import dpg
 from acme.tf.losses.huber import huber
 # from acme.tf.losses.mompo import KLConstraint
