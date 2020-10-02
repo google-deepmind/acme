@@ -26,6 +26,7 @@ from acme.tf.networks.base import RNNCore
 from acme.tf.networks.continuous import LayerNormAndResidualMLP
 from acme.tf.networks.continuous import LayerNormMLP
 from acme.tf.networks.continuous import NearZeroInitializedLinear
+from acme.tf.networks.discrete import DiscreteFilteredQNetwork
 from acme.tf.networks.distributional import ApproximateMode
 from acme.tf.networks.distributional import DiscreteValuedHead
 from acme.tf.networks.distributional import MultivariateGaussianMixture
