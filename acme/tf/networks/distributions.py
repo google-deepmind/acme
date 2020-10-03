@@ -34,7 +34,8 @@ class DiscreteValuedDistribution(tfd.Categorical):
   def __init__(self,
                values: tf.Tensor,
                logits: tf.Tensor = None,
-               probs: tf.Tensor = None):
+               probs: tf.Tensor = None,
+               name: str = 'DiscreteValuedDistribution'):
     """Initialization.
 
     Args:
@@ -49,11 +50,25 @@ class DiscreteValuedDistribution(tfd.Categorical):
         of independent distributions and the last dimension represents a vector
         of probabilities for each class. Only one of logits or probs should be
         passed in.
+      name: Name of the distribution object.
     """
-    super().__init__(
-        logits=logits, probs=probs, name='DiscreteValuedDistribution')
-    self._values = values
-    self._parameters = dict(values=values, logits=logits, probs=probs)
+    self._values = tf.convert_to_tensor(values)
+
+    if logits is not None:
+      logits = tf.convert_to_tensor(logits)
+      tf.debugging.assert_equal(tf.shape(values),
+                                tf.shape(logits)[-tf.rank(values):])
+    if probs is not None:
+      probs = tf.convert_to_tensor(probs)
+      tf.debugging.assert_equal(tf.shape(values),
+                                tf.shape(probs)[-tf.rank(probs):])
+
+    super().__init__(logits=logits, probs=probs, name=name)
+
+    self._parameters = dict(values=values,
+                            logits=logits,
+                            probs=probs,
+                            name=name)
 
   @property
   def values(self) -> tf.Tensor:
@@ -75,7 +90,27 @@ class DiscreteValuedDistribution(tfd.Categorical):
   # This function tells the TFP how many trailing dimensions of each named
   # parameter are event dims, the rest are considered to be batch dims.
   def _params_event_ndims(self):
-    return dict(logits=1, probs=1, values=1)
+    values_rank = self._values.shape.rank
+    return dict(logits=values_rank, probs=values_rank)
+
+  def _batch_shape(self):
+    params = self._probs if self._logits is None else self._logits
+    return params.shape[:-self._values.shape.rank]
+
+  def _batch_shape_tensor(self, x=None):
+    if x is None:
+      params = self._probs if self._logits is None else self._logits
+      x = tf.convert_to_tensor(params)
+
+    return tf.shape(x)[:-tf.rank(self._values)]
+
+  def _event_shape(self):
+    # Omit the atoms axis, to return just the shape of a single (i.e. unbatched)
+    # sample value.
+    return self._values.shape[:-1]
+
+  def _event_shape_tensor(self):
+    return tf.shape(self._values)[:-1]
 
   # This is required to create composite tensors from this distribution.
   _composite_tensor_nonshape_params = ('values', 'logits', 'probs')
