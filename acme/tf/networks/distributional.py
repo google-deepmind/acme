@@ -20,9 +20,10 @@ take the mean of these distributions.
 """
 
 import types
-from typing import Optional
+from typing import Optional, Union
 from absl import logging
 from acme.tf.networks import distributions as ad
+import numpy as np
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -41,12 +42,15 @@ class DiscreteValuedHead(snt.Module):
   """
 
   def __init__(self,
-               vmin: float,
-               vmax: float,
+               vmin: Union[float, np.ndarray, tf.Tensor],
+               vmax: Union[float, np.ndarray, tf.Tensor],
                num_atoms: int,
                w_init: snt.initializers.Initializer = None,
                b_init: snt.initializers.Initializer = None):
     """Initialization.
+
+    If vmin and vmax have shape S, this will store the category values as a
+    Tensor of shape (S*, num_atoms).
 
     Args:
       vmin: Minimum of the value range
@@ -56,12 +60,19 @@ class DiscreteValuedHead(snt.Module):
       b_init: Initialization for linear layer biases.
     """
     super().__init__(name='DiscreteValuedHead')
-    self._distributional_layer = snt.Linear(
-        num_atoms, w_init=w_init, b_init=b_init)
-    self._values = tf.linspace(vmin, vmax, num_atoms)
+    vmin = tf.convert_to_tensor(vmin)
+    vmax = tf.convert_to_tensor(vmax)
+    self._values = tf.linspace(vmin, vmax, num_atoms, axis=-1)
+    self._distributional_layer = snt.Linear(tf.size(self._values),
+                                            w_init=w_init,
+                                            b_init=b_init)
 
   def __call__(self, inputs: tf.Tensor) -> tfd.Distribution:
     logits = self._distributional_layer(inputs)
+    logits = tf.reshape(logits,
+                        tf.concat([tf.shape(logits)[:1],  # batch size
+                                   tf.shape(self._values)],
+                                  axis=0))
     values = tf.cast(self._values, logits.dtype)
 
     return ad.DiscreteValuedDistribution(values=values, logits=logits)
