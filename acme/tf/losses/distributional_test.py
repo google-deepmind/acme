@@ -85,7 +85,7 @@ def _reference_l2_project(src_support, src_probs, dst_support):
 
 class L2ProjectTest(parameterized.TestCase):
 
-  @parameterized.parameters([
+  @parameterized.parameters(
       [(2, 11), (11,)],  # C = (), D = (), matching num_atoms (11 and 11)
       [(2, 11), (5,)],  # C = (), D = (), differing num_atoms (11 and 5).
       [(2, 3, 11), (3, 5)],  # C = (3,), D = (3,)
@@ -94,7 +94,7 @@ class L2ProjectTest(parameterized.TestCase):
       [(2, 3, 4, 11), (3, 4, 5)],  # C = (3, 4), D = (3, 4)
       [(2, 3, 4, 11), (4, 5)],  # C = (3, 4), D = (4,)
       [(2, 4, 11), (3, 4, 5)],  # C = (4,), D = (3, 4)
-  ])
+  )
   def test_multiaxis(self, src_shape, dst_shape):
     """Tests consistency between multi-axis and single-axis l2_project.
 
@@ -134,6 +134,40 @@ class L2ProjectTest(parameterized.TestCase):
         tf.convert_to_tensor(src_probs),
         tf.convert_to_tensor(dst_support)).numpy()
 
+    npt.assert_allclose(dst_probs, expected_dst_probs)
+
+  @parameterized.parameters(
+      # Same src and dst support shape, dst support is shifted by +.25
+      ([[0., 1, 2, 3]],
+       [[0., 1, 0, 0]],
+       [.25, 1.25, 2.25, 3.25],
+       [[.25, .75, 0, 0]]),
+      # Similar to above, but with batched src.
+      ([[0., 1, 2, 3],
+        [0., 1, 2, 3]],
+       [[0., 1, 0, 0],
+        [0., 0, 1, 0]],
+       [.25, 1.25, 2.25, 3.25],
+       [[.25, .75, 0, 0],
+        [0., .25, .75, 0]]),
+      # Similar to above, but src_probs has two 0.5's, instead of being one-hot.
+      ([[0., 1, 2, 3]],
+       [[0., .5, .5, 0]],
+       [.25, 1.25, 2.25, 3.25],
+       0.5 * (np.array([[.25, .75, 0, 0]]) + np.array([[0., .25, .75, 0]]))),
+      # src and dst support have differing sizes
+      ([[0., 1, 2, 3]],
+       [[0., 1, 0, 0]],
+       [0.00, 0.25, 0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25, 2.50],
+       [[0.00, 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00]]),
+      )
+  def test_l2_projection(
+      self, src_support, src_probs, dst_support, expected_dst_probs):
+
+    dst_probs = distributional.multiaxis_l2_project(
+        tf.convert_to_tensor(src_support),
+        tf.convert_to_tensor(src_probs),
+        tf.convert_to_tensor(dst_support)).numpy()
     npt.assert_allclose(dst_probs, expected_dst_probs)
 
 
