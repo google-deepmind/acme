@@ -30,7 +30,8 @@ class Counter(core.Saveable):
   def __init__(self,
                parent: Optional['Counter'] = None,
                prefix: str = '',
-               time_delta: float = 1.0):
+               time_delta: float = 1.0,
+               return_only_prefixed: bool = False):
     """Initialize the counter.
 
     Args:
@@ -38,6 +39,9 @@ class Counter(core.Saveable):
       prefix: string prefix to use for all local counts.
       time_delta: time difference in seconds between syncing with the parent
         counter.
+      return_only_prefixed: if True, and if `prefix` isn't empty, return counts
+        restricted to the given `prefix` on each call to `increment` and
+        `get_counts`.
     """
 
     self._parent = parent
@@ -51,6 +55,8 @@ class Counter(core.Saveable):
     # We'll sync the first time get_counts is called.
     self._cache = {}
     self._last_sync_time = 0.0
+
+    self._return_only_prefixed = return_only_prefixed
 
   def increment(self, **counts: Number) -> Dict[str, Number]:
     """Increment a set of counters.
@@ -91,6 +97,10 @@ class Counter(core.Saveable):
     for key, value in self._cache.items():
       counts[key] = counts.get(key, 0) + value
 
+    if self._prefix and self._return_only_prefixed:
+      counts = dict([(key[len(self._prefix) + 1:], value)
+                     for key, value in counts.items()
+                     if key.startswith(f'{self._prefix}_')])
     return counts
 
   def save(self) -> Mapping[str, Mapping[str, Number]]:
