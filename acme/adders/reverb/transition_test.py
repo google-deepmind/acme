@@ -323,7 +323,8 @@ class NStepTransitionAdderTest(test_utils.AdderTestMixin,
         adder=adder,
         first=first,
         steps=steps,
-        expected_items=expected_transitions)
+        expected_items=expected_transitions,
+        pack_expected_items=True)
 
 
 if __name__ == '__main__':

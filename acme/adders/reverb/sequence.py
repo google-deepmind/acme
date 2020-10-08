@@ -89,21 +89,30 @@ class SequenceAdder(base.ReverbAdder):
     self._writer.append(final_step)
     self._step += 1
 
-    # NOTE: this always pads to the fixed length.
+    # Determine the delta to the next time we would write a sequence.
+    first_write = self._step <= self._max_sequence_length
+    if first_write:
+      delta = self._max_sequence_length - self._step
+    else:
+      delta = (self._period -
+               (self._step - self._max_sequence_length)) % self._period
+
+    # Bump up to the position where we will write a sequence.
+    self._step += delta
+
     if self._pad_end_of_episode:
       zero_step = tree.map_structure(utils.zeros_like, final_step)
-      # Determine how much padding to add. This makes sure that we add (zero)
-      # data until the next time we would write a sequence.
-      if self._step <= self._max_sequence_length:
-        padding = self._max_sequence_length - self._step
-      else:
-        padding = self._period - (self._step - self._max_sequence_length)
 
       # Pad with zeros to get a full sequence.
-      for _ in range(padding):
+      for _ in range(delta):
         self._buffer.append(zero_step)
         self._writer.append(zero_step)
-        self._step += 1
+    elif not first_write:
+      # Pop items from the buffer to get a truncated sequence.
+      # Note: this is consistent with the padding loop above, since adding zero
+      # steps pops the left-most elements. Here we just pop without padding.
+      for _ in range(delta):
+        self._buffer.popleft()
 
     # Write priorities for the sequence.
     self._maybe_add_priorities()

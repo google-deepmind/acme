@@ -53,8 +53,6 @@ class FakeWriter:
     assert num_timesteps <= len(self.timesteps)
     assert num_timesteps <= self.max_sequence_length
     item = self.timesteps[-num_timesteps:]
-    if num_timesteps == 1:
-      item = item[0]
     self.priorities.append((table, item, priority))
 
   def close(self):
@@ -134,7 +132,8 @@ class AdderTestMixin(absltest.TestCase):
                      adder: base.ReverbAdder,
                      first: dm_env.TimeStep,
                      steps: Sequence[Step],
-                     expected_items: Sequence[Any]):
+                     expected_items: Sequence[Any],
+                     pack_expected_items: bool = False):
     """Runs a unit test case for the adder.
 
     Args:
@@ -146,6 +145,8 @@ class AdderTestMixin(absltest.TestCase):
       expected_items: The sequence of items that are expected to be created
         by calling the adder's `add_first()` method on `first` and `add()` on
         all of the elements in `steps`.
+      pack_expected_items: If true the expected items are given unpacked and
+        need to be packed in a list before comparison.
     """
     if not steps:
       raise ValueError('At least one step must be given.')
@@ -194,7 +195,10 @@ class AdderTestMixin(absltest.TestCase):
 
     # Make sure our expected and observed data match.
     observed_items = [p[1] for p in self.client.writers[0].priorities]
+    self.assertEqual(len(expected_items), len(observed_items))
     for expected_item, observed_item in zip(expected_items, observed_items):
+      if pack_expected_items:
+        expected_item = [expected_item]
       # Set check_types=False because
       tree.map_structure(
           np.testing.assert_array_almost_equal,

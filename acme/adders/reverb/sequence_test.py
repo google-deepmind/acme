@@ -167,6 +167,72 @@ TEST_CASES = [
             ],),
         pad_end_of_episode=False,
     ),
+    dict(
+        testcase_name='LongEpisodePadding',
+        sequence_length=3,
+        period=3,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=2.0, observation=2)),
+            (0, dm_env.transition(reward=3.0, observation=3)),
+            (0, dm_env.transition(reward=5.0, observation=4)),
+            (0, dm_env.transition(reward=7.0, observation=5)),
+            (0, dm_env.transition(reward=9.0, observation=6)),
+            (0, dm_env.transition(reward=11.0, observation=7)),
+            (0, dm_env.termination(reward=13.0, observation=8)),
+        ),
+        expected_sequences=(
+            # (observation, action, reward, discount, extra)
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 11.0, 1.0, False, ()),
+            ],
+            [
+                (7, 0, 13.0, 0.0, False, ()),
+                (8, 0, 0.0, 0.0, False, ()),
+                (0, 0, 0.0, 0.0, False, ()),
+            ],
+        ),
+    ),
+    dict(
+        testcase_name='LongEpisodeNoPadding',
+        sequence_length=3,
+        period=3,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=2.0, observation=2)),
+            (0, dm_env.transition(reward=3.0, observation=3)),
+            (0, dm_env.transition(reward=5.0, observation=4)),
+            (0, dm_env.transition(reward=7.0, observation=5)),
+            (0, dm_env.transition(reward=9.0, observation=6)),
+            (0, dm_env.transition(reward=11.0, observation=7)),
+            (0, dm_env.termination(reward=13.0, observation=8)),
+        ),
+        expected_sequences=(
+            # (observation, action, reward, discount, extra)
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 11.0, 1.0, False, ()),
+            ],
+            [
+                (7, 0, 13.0, 0.0, False, ()),
+                (8, 0, 0.0, 0.0, False, ()),
+            ],
+        ),
+        pad_end_of_episode=False,
+    ),
 ]
 
 
