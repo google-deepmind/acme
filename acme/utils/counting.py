@@ -49,10 +49,12 @@ class Counter(core.Saveable):
     self._time_delta = time_delta
 
     # Hold local counts and we'll lock around that.
+    # These are counts to be synced to the parent and the cache.
     self._counts = {}
     self._lock = threading.Lock()
 
-    # We'll sync the first time get_counts is called.
+    # We'll sync periodically (when the last sync was more than self._time_delta
+    # seconds ago.)
     self._cache = {}
     self._last_sync_time = 0.0
 
@@ -81,6 +83,8 @@ class Counter(core.Saveable):
     if self._parent and (now - self._last_sync_time) > self._time_delta:
       with self._lock:
         counts = _prefix_keys(self._counts, self._prefix)
+        # Reset the local counts, as they will be merged into the parent and the
+        # cache.
         self._counts = {}
       self._cache = self._parent.increment(**counts)
       self._last_sync_time = now
