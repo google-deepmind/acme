@@ -24,3 +24,5 @@ from acme.wrappers.gym_wrapper import GymAtariAdapter
 from acme.wrappers.gym_wrapper import GymWrapper
 from acme.wrappers.observation_action_reward import ObservationActionRewardWrapper
 from acme.wrappers.single_precision import SinglePrecisionWrapper
+from acme.wrappers.video import MujocoVideoWrapper
+from acme.wrappers.video import VideoWrapper
