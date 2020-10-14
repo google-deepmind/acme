@@ -60,6 +60,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
       importance_sampling_exponent: float = 0.2,
       max_replay_size: int = 1_000_000,
       learning_rate: float = 1e-3,
+      # TODO(sergomez): rename to use_core_state for consistency with JAX agent.
       store_lstm_state: bool = True,
       max_priority_weight: float = 0.9,
       n_step: int = 5,
