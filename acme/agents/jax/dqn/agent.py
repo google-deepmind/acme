@@ -21,7 +21,6 @@ from acme.adders import reverb as adders
 from acme.agents import agent
 from acme.agents.jax import actors
 from acme.agents.jax.dqn import learning
-from acme.jax import networks
 from acme.jax import variable_utils
 import haiku as hk
 import jax.numpy as jnp
@@ -42,7 +41,7 @@ class DQN(agent.Agent):
   def __init__(
       self,
       environment_spec: specs.EnvironmentSpec,
-      network: networks.QNetwork,
+      network: hk.Transformed,
       batch_size: int = 256,
       prefetch_size: int = 4,
       target_update_period: int = 100,
@@ -88,8 +87,7 @@ class DQN(agent.Agent):
 
     def policy(params: hk.Params, key: jnp.ndarray,
                observation: jnp.ndarray) -> jnp.ndarray:
-      action_values = hk.without_apply_rng(
-          hk.transform(network, apply_rng=True)).apply(params, observation)
+      action_values = network.apply(params, observation)
       return rlax.epsilon_greedy(epsilon).sample(key, action_values)
 
     # The learner updates the parameters (and initializes them).

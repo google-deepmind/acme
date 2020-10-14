@@ -45,6 +45,9 @@ class DQNTest(absltest.TestCase):
       ])
       return model(x)
 
+    # Make network purely functional
+    network = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+
     # Construct the agent.
     agent = dqn.DQN(
         environment_spec=spec,

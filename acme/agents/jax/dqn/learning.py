@@ -19,7 +19,6 @@ from typing import Iterator, List, NamedTuple, Tuple
 
 import acme
 from acme.adders import reverb as adders
-from acme.jax import networks
 from acme.jax import utils
 from acme.utils import async_utils
 from acme.utils import counting
@@ -53,7 +52,7 @@ class DQNLearner(acme.Learner, acme.Saveable):
   _state: TrainingState
 
   def __init__(self,
-               network: networks.QNetwork,
+               network: hk.Transformed,
                obs_spec: specs.Array,
                discount: float,
                importance_sampling_exponent: float,
@@ -67,9 +66,6 @@ class DQNLearner(acme.Learner, acme.Saveable):
                counter: counting.Counter = None,
                logger: loggers.Logger = None):
     """Initializes the learner."""
-
-    # Transform network into a pure function.
-    network = hk.without_apply_rng(hk.transform(network, apply_rng=True))
 
     def loss(params: hk.Params, target_params: hk.Params,
              sample: reverb.ReplaySample):
