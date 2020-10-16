@@ -39,6 +39,8 @@ from acme.tf.networks.multiplexers import CriticMultiplexer
 from acme.tf.networks.noise import ClippedGaussian
 from acme.tf.networks.policy_value import PolicyValueHead
 from acme.tf.networks.recurrence import CriticDeepRNN
+from acme.tf.networks.recurrence import DeepRNN
+from acme.tf.networks.recurrence import LSTM
 from acme.tf.networks.recurrence import RecurrentExpQWeightedPolicy
 from acme.tf.networks.rescaling import ClipToSpec
 from acme.tf.networks.rescaling import RescaleToSpec

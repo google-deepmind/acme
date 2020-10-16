@@ -15,10 +15,13 @@
 """Networks useful for building recurrent agents.
 """
 
+import functools
 from typing import NamedTuple, Optional, Sequence, Tuple
+from absl import logging
 from acme import types
 from acme.tf import savers
 from acme.tf import utils
+from acme.tf.networks import base
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -244,3 +247,129 @@ class RecurrentExpQWeightedPolicy(snt.RNNCore):
         policy=self._policy_network.initial_state(batch_size),
         critic=self._critic_network.initial_state(batch_size)
         )
+
+
+class DeepRNN(snt.DeepRNN, base.RNNCore):
+  """Unroll-aware deep RNN module.
+
+  Sonnet's DeepRNN steps through RNNCores sequentially which can result in a
+  performance hit, in particular when using Transformers. This module adds an
+  unroll() method which unrolls each module in the DeepRNN individually,
+  allowing efficient implementation of the unroll operation. For example, a
+  Transformer can 'unroll' by evaluating the whole sequence at once (this being
+  one of the advantages of Transformers over e.g. LSTMs).
+
+  Any RNNCore passed to this module should implement unroll(). Failure to so
+  may cause the RNNCore not to be called properly. For example, passing a
+  partial function application of a snt.RNNCore to this module will fail (this
+  is also true for snt.DeepRNN). However, the special case of passing in a
+  RNNCore object that does not implement unroll() is supported and will be
+  dynamically unrolled. Implement unroll() to override this behavior with
+  static unrolling.
+
+  Stateless modules (i.e. anything other than an RNNCore) which do not
+  implement unroll() are batch applied over the time and batch axes
+  simultaneously. Effectively, this means that such modules may be applied to
+  fairly large batches, potentially leading to out-of-memory issues.
+  """
+
+  def __init__(self, layers, name: Optional[str] = None):
+    """Initializes the module."""
+    super().__init__(layers, name=name)
+
+    self.__input_signature = None
+    self._num_unrollable = 0
+
+    # As a convenience, check for snt.RNNCore modules and dynamically unroll
+    # them if they don't already support unrolling. This check can fail, e.g.
+    # if a partially applied RNNCore is passed in. Sonnet's implementation of
+    # DeepRNN suffers from the same problem.
+    for layer in self._layers:
+      if hasattr(layer, 'unroll'):
+        self._num_unrollable += 1
+      elif isinstance(layer, snt.RNNCore):
+        self._num_unrollable += 1
+        layer.unroll = functools.partial(snt.dynamic_unroll, layer)
+        logging.warning(
+            'Acme DeepRNN detected a Sonnet RNNCore. '
+            'This will be dynamically unrolled. Please implement unroll() '
+            'to suppress this warning.')
+
+  def unroll(self,
+             inputs: types.NestedTensor,
+             state: base.State,
+             sequence_length: int,
+             ) -> Tuple[types.NestedTensor, base.State]:
+    """Unroll each layer individually.
+
+    Calls unroll() on layers which support it, all other layers are
+    batch-applied over the first two axes (assumed to be the time and batch
+    axes).
+
+    Args:
+      inputs: A nest of `tf.Tensor` in time-major format.
+      state: The RNN core state.
+      sequence_length: How long the static_unroll should go for.
+
+    Returns:
+      Nested sequence output of RNN, and final state.
+
+    Raises:
+      ValueError if the length of `state` does not match the number of
+      unrollable layers.
+    """
+    if len(state) != self._num_unrollable:
+      raise ValueError(
+          'DeepRNN was called with the wrong number of states. The length of '
+          '`state` does not match the number of unrollable layers.')
+
+    states = iter(state)
+    outputs = inputs
+    next_states = []
+    for layer in self._layers:
+      if hasattr(layer, 'unroll'):
+        # The length of the `states` list was checked above.
+        outputs, next_state = layer.unroll(outputs, next(states),
+                                           sequence_length)
+        next_states.append(next_state)
+      else:
+        # Couldn't unroll(); assume that this is a stateless module.
+        outputs = snt.BatchApply(layer, num_dims=2)(outputs)
+
+    return outputs, tuple(next_states)
+
+  @property
+  def _input_signature(self) -> Optional[tf.TensorSpec]:
+    """Return input signature for Acme snapshotting, see CriticDeepRNN."""
+
+    if self.__input_signature is not None:
+      return self.__input_signature
+
+    input_signature = savers._get_input_signature(self._layers[0])  # pylint: disable=protected-access
+    if input_signature is None:
+      return None
+
+    state = self.initial_state(1)
+    input_signature[-1] = tree.map_structure(
+        lambda t: tf.TensorSpec((None,) + t.shape[1:], t.dtype), state)
+    self.__input_signature = input_signature
+    return input_signature
+
+  @_input_signature.setter
+  def _input_signature(self, new_spec: tf.TensorSpec):
+    self.__input_signature = new_spec
+
+
+class LSTM(snt.LSTM, base.RNNCore):
+  """Unrollable interface to LSTM.
+
+  This module is supposed to be used with the DeepRNN class above, and more
+  generally in networks which support unroll().
+  """
+
+  def unroll(self,
+             inputs: types.NestedTensor,
+             state: base.State,
+             sequence_length: int,
+             ) -> Tuple[types.NestedTensor, base.State]:
+    return snt.static_unroll(self, inputs, state, sequence_length)
