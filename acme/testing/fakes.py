@@ -20,7 +20,7 @@ order to test or interact with other components.
 """
 
 import threading
-from typing import List, Sequence, Optional
+from typing import List, Mapping, Sequence, Optional
 
 from acme import core
 from acme import specs
@@ -166,7 +166,36 @@ class Environment(dm_env.Environment):
     return self._spec.discounts
 
 
-class DiscreteEnvironment(Environment):
+class _BaseDiscreteEnvironment(Environment):
+  """Discrete action fake environment."""
+
+  def __init__(self,
+               *,
+               num_actions: int = 1,
+               action_dtype=np.int32,
+               observation_spec: types.NestedSpec,
+               discount_spec: Optional[types.NestedSpec] = None,
+               reward_spec: Optional[types.NestedSpec] = None,
+               **kwargs):
+    """Initialize the environment."""
+    if reward_spec is None:
+      reward_spec = specs.Array((), np.float32)
+
+    if discount_spec is None:
+      discount_spec = specs.BoundedArray((), np.float32, 0.0, 1.0)
+
+    actions = specs.DiscreteArray(num_actions, dtype=action_dtype)
+
+    super().__init__(
+        spec=specs.EnvironmentSpec(
+            observations=observation_spec,
+            actions=actions,
+            rewards=reward_spec,
+            discounts=discount_spec),
+        **kwargs)
+
+
+class DiscreteEnvironment(_BaseDiscreteEnvironment):
   """Discrete state and action fake environment."""
 
   def __init__(self,
@@ -180,25 +209,50 @@ class DiscreteEnvironment(Environment):
                reward_spec: Optional[types.NestedSpec] = None,
                **kwargs):
     """Initialize the environment."""
-    if reward_spec is None:
-      reward_spec = specs.Array((), np.float32)
-
-    if discount_spec is None:
-      discount_spec = specs.BoundedArray((), np.float32, 0.0, 1.0)
-
-    actions = specs.DiscreteArray(num_actions, dtype=action_dtype)
-    observations = specs.BoundedArray(
+    observations_spec = specs.BoundedArray(
         shape=obs_shape,
         dtype=obs_dtype,
         minimum=obs_dtype(0),
         maximum=obs_dtype(num_observations - 1))
 
     super().__init__(
-        spec=specs.EnvironmentSpec(
-            observations=observations,
-            actions=actions,
-            rewards=reward_spec,
-            discounts=discount_spec),
+        num_actions=num_actions,
+        action_dtype=action_dtype,
+        observation_spec=observations_spec,
+        discount_spec=discount_spec,
+        reward_spec=reward_spec,
+        **kwargs)
+
+
+class NestedDiscreteEnvironment(_BaseDiscreteEnvironment):
+  """Discrete action fake environment with nested discrete state."""
+
+  def __init__(self,
+               *,
+               num_observations: Mapping[str, int],
+               num_actions: int = 1,
+               action_dtype=np.int32,
+               obs_dtype=np.int32,
+               obs_shape: Sequence[int] = (),
+               discount_spec: Optional[types.NestedSpec] = None,
+               reward_spec: Optional[types.NestedSpec] = None,
+               **kwargs):
+    """Initialize the environment."""
+
+    observations_spec = {}
+    for key in num_observations:
+      observations_spec[key] = specs.BoundedArray(
+          shape=obs_shape,
+          dtype=obs_dtype,
+          minimum=obs_dtype(0),
+          maximum=obs_dtype(num_observations[key] - 1))
+
+    super().__init__(
+        num_actions=num_actions,
+        action_dtype=action_dtype,
+        observation_spec=observations_spec,
+        discount_spec=discount_spec,
+        reward_spec=reward_spec,
         **kwargs)
 
 
