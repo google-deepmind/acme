@@ -15,7 +15,7 @@
 
 """Commonly-used networks for running on Atari."""
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 from acme.tf.networks import base
 from acme.tf.networks import duelling
@@ -76,18 +76,18 @@ class R2D2AtariNetwork(base.RNNCore):
   See https://openreview.net/forum?id=r1lyTjAqYX for more information.
   """
 
-  def __init__(self, num_actions: int):
+  def __init__(self, num_actions: int, core: Optional[base.RNNCore] = None):
     super().__init__(name='r2d2_atari_network')
     self._embed = embedding.OAREmbedding(
         torso=AtariTorso(), num_actions=num_actions)
-    self._core = recurrence.LSTM(512)
+    self._core = core if core is not None else recurrence.LSTM(512)
     self._head = duelling.DuellingMLP(num_actions, hidden_sizes=[512])
 
   def __call__(
       self,
       inputs: observation_action_reward.OAR,
-      state: snt.LSTMState,
-  ) -> Tuple[QValues, snt.LSTMState]:
+      state: base.State,
+  ) -> Tuple[QValues, base.State]:
 
     embeddings = self._embed(inputs)
     embeddings, new_state = self._core(embeddings, state)
@@ -95,15 +95,16 @@ class R2D2AtariNetwork(base.RNNCore):
 
     return action_values, new_state
 
-  def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:
+  # TODO(b/171287329): Figure out why return type annotation causes error.
+  def initial_state(self, batch_size: int, **unused_kwargs) -> base.State:  # pytype: disable=invalid-annotation
     return self._core.initial_state(batch_size)
 
   def unroll(
       self,
       inputs: observation_action_reward.OAR,
-      state: snt.LSTMState,
+      state: base.State,
       sequence_length: int,
-  ) -> Tuple[QValues, snt.LSTMState]:
+  ) -> Tuple[QValues, base.State]:
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
     embeddings = snt.BatchApply(self._embed)(inputs)  # [T, B, D+A+1]
     embeddings, new_state = self._core.unroll(embeddings, state,
