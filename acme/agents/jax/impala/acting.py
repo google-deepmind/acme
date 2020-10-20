@@ -98,9 +98,9 @@ class IMPALAActor(core.Actor):
     extras = {'logits': self._prev_logits, 'core_state': self._prev_state}
     self._adder.add(action, next_timestep, extras)
 
-  def update(self):
+  def update(self, wait: bool = False):
     if self._variable_client is not None:
-      self._variable_client.update()
+      self._variable_client.update(wait)
 
   @property
   def _params(self) -> Optional[hk.Params]:

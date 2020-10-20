@@ -47,37 +47,45 @@ class VariableClient:
     # method that there is no pending/running request.
     self._future: Optional[futures.Future] = None
 
-  def update(self):
+  def update(self, wait: bool = False):
     """Periodically updates the variables with the latest copy from the source.
 
-    Unlike `update_and_wait()`, this method makes an asynchronous request for
-    variables and returns. Unless the request is immediately fulfilled, the
-    variables are only copied _within a subsequent call to_ `update()`, whenever
-    the request is fulfilled by the `VariableSource`.
-
     This stateful update method keeps track of the number of calls to it and,
-    every `update_period` call, sends an asynchronous request to its server to
-    retrieve the latest variables. It does so as long as there are no existing
-    requests.
+    every `update_period` call, sends a request to its server to retrieve the
+    latest variables.
 
-    If there is an existing fulfilled request when this method is called,
-    the resulting variables are immediately copied.
+    If wait is True, a blocking request is executed. Any active request will be
+    cancelled.
+    If wait is False, this method makes an asynchronous request for variables
+    and returns. Unless the request is immediately fulfilled, the variables are
+    only copied _within a subsequent call to_ `update()`, whenever the request
+    is fulfilled by the `VariableSource`. If there is an existing fulfilled
+    request when this method is called, the resulting variables are immediately
+    copied.
+
+    Args:
+      wait: if True, executes blocking update.
     """
-
     # Track the number of calls (we only update periodically).
     if self._call_counter < self._update_period:
       self._call_counter += 1
 
     period_reached: bool = self._call_counter >= self._update_period
-    has_active_request: bool = self._future is not None
 
-    if period_reached and not has_active_request:
+    if period_reached and wait:
+      # Cancel any active request.
+      self._future: Optional[futures.Future] = None
+      self.update_and_wait()
+      self._call_counter = 0
+      return
+
+    if period_reached and self._future is None:
       # The update period has been reached and no request has been sent yet, so
       # making an asynchronous request now.
       self._future = self._async_request()
       self._call_counter = 0
 
-    if has_active_request and self._future.done():
+    if self._future is not None and self._future.done():
       # The active request is done so copy the result and remove the future.
       self._copy(self._future.result())
       self._future: Optional[futures.Future] = None

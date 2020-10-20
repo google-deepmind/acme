@@ -16,7 +16,7 @@
 """Variable utilities for JAX."""
 
 from concurrent import futures
-from typing import List
+from typing import List, Optional
 
 from acme import core
 
@@ -38,22 +38,36 @@ class VariableClient:
 
     self._executor = futures.ThreadPoolExecutor(max_workers=1)
     self._request = lambda: client.get_variables([self._key])
-    self._future = futures.Future()
+    self._future: Optional[futures.Future] = None
     self._async_request = lambda: self._executor.submit(self._request)
 
-  def update(self):
-    """Periodically updates the variables with latest copy from the source."""
+  def update(self, wait: bool = False):
+    """Periodically updates the variables with the latest copy from the source.
 
+    If wait is True, a blocking request is executed. Any active request will be
+    cancelled.
+    If wait is False, this method makes an asynchronous request for variables.
+
+    Args:
+      wait: if True, executes blocking update.
+    """
     # Track calls (we only update periodically).
     if self._call_counter < self._update_period:
       self._call_counter += 1
 
-    # Return early if we are still waiting for a previous request to come back.
-    if self._future.running():
-      return
-
     # Return if it's not time to fetch another update.
     if self._call_counter < self._update_period:
+      return
+
+    if wait:
+      # Cancel any already running request.
+      self._future = None
+      self._call_counter = 0
+      self.update_and_wait()
+      return
+
+    # Return early if we are still waiting for a previous request to come back.
+    if self._future and self._future.running():
       return
 
     # Get a future and add the copy function as a callback.

@@ -114,7 +114,7 @@ class IMPALA(acme.Actor):
   ):
     self._actor.observe(action, next_timestep)
 
-  def update(self):
+  def update(self, wait: bool = False):
     # Run a number of learner steps (usually gradient steps).
     while self._can_sample():
       self._learner.step()

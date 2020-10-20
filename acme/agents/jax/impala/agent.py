@@ -138,7 +138,7 @@ class IMPALA(acme.Actor):
   ):
     self._actor.observe(action, next_timestep)
 
-  def update(self):
+  def update(self, wait: bool = False):
     should_update_actor = False
     # Run a number of learner steps (usually gradient steps).
     while self._can_sample():
@@ -146,7 +146,7 @@ class IMPALA(acme.Actor):
       should_update_actor = True
     if should_update_actor:
       # Update actor weights after learner.
-      self._actor.update()
+      self._actor.update(wait)
 
   def select_action(self, observation: np.ndarray) -> int:
     return self._actor.select_action(observation)

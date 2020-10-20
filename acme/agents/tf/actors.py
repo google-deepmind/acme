@@ -89,9 +89,9 @@ class FeedForwardActor(core.Actor):
     if self._adder:
       self._adder.add(action, next_timestep)
 
-  def update(self):
+  def update(self, wait: bool = False):
     if self._variable_client:
-      self._variable_client.update()
+      self._variable_client.update(wait)
 
 
 class RecurrentActor(core.Actor):
@@ -172,9 +172,9 @@ class RecurrentActor(core.Actor):
     numpy_state = tf2_utils.to_numpy_squeeze(self._prev_state)
     self._adder.add(action, next_timestep, extras=(numpy_state,))
 
-  def update(self):
+  def update(self, wait: bool = False):
     if self._variable_client:
-      self._variable_client.update()
+      self._variable_client.update(wait)
 
 
 # Internal class 1.

@@ -101,10 +101,10 @@ class MCTSActor(acme.Actor):
 
     return action
 
-  def update(self):
+  def update(self, wait: bool = False):
     """Fetches the latest variables from the variable source, if needed."""
     if self._variable_client:
-      self._variable_client.update()
+      self._variable_client.update(wait)
 
   def observe_first(self, timestep: dm_env.TimeStep):
     self._prev_timestep = timestep

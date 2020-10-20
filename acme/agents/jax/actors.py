@@ -75,8 +75,8 @@ class FeedForwardActor(core.Actor):
     if self._adder:
       self._adder.add(action, next_timestep)
 
-  def update(self):
-    self._client.update()
+  def update(self, wait: bool = False):
+    self._client.update(wait)
 
 
 class RecurrentActor(core.Actor):
@@ -123,5 +123,5 @@ class RecurrentActor(core.Actor):
       numpy_state = utils.to_numpy(self._prev_state)
       self._adder.add(action, next_timestep, extras=(numpy_state,))
 
-  def update(self):
-    self._client.update()
+  def update(self, wait: bool = False):
+    self._client.update(wait)

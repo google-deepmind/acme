@@ -57,7 +57,7 @@ class Actor(core.Actor):
     _validate_spec(self._spec.discounts, next_timestep.discount)
     _validate_spec(self._spec.observations, next_timestep.observation)
 
-  def update(self):
+  def update(self, wait: bool = False):
     self.num_updates += 1
 
 

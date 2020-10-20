@@ -77,8 +77,12 @@ class Actor(abc.ABC):
     """
 
   @abc.abstractmethod
-  def update(self):
-    """Perform an update of the actor parameters from past observations."""
+  def update(self, wait: bool = False):
+    """Perform an update of the actor parameters from past observations.
+
+    Args:
+      wait: if True, the update will be blocking.
+    """
 
 
 # Internal class.

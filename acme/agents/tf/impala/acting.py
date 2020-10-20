@@ -90,6 +90,6 @@ class IMPALAActor(core.Actor):
     extras = tf2_utils.to_numpy_squeeze(extras)
     self._adder.add(action, next_timestep, extras)
 
-  def update(self):
+  def update(self, wait: bool = False):
     if self._variable_client:
-      self._variable_client.update()
+      self._variable_client.update(wait)
