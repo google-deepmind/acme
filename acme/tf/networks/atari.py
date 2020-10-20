@@ -21,6 +21,7 @@ from acme.tf.networks import base
 from acme.tf.networks import duelling
 from acme.tf.networks import embedding
 from acme.tf.networks import policy_value
+from acme.tf.networks import recurrence
 from acme.tf.networks import vision
 from acme.wrappers import observation_action_reward
 
@@ -79,7 +80,7 @@ class R2D2AtariNetwork(base.RNNCore):
     super().__init__(name='r2d2_atari_network')
     self._embed = embedding.OAREmbedding(
         torso=AtariTorso(), num_actions=num_actions)
-    self._core = snt.LSTM(512)
+    self._core = recurrence.LSTM(512)
     self._head = duelling.DuellingMLP(num_actions, hidden_sizes=[512])
 
   def __call__(
@@ -105,7 +106,7 @@ class R2D2AtariNetwork(base.RNNCore):
   ) -> Tuple[QValues, snt.LSTMState]:
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
     embeddings = snt.BatchApply(self._embed)(inputs)  # [T, B, D+A+1]
-    embeddings, new_state = snt.static_unroll(self._core, embeddings, state,
+    embeddings, new_state = self._core.unroll(embeddings, state,
                                               sequence_length)
     action_values = snt.BatchApply(self._head)(embeddings)
 
