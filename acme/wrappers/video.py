@@ -20,7 +20,7 @@ the `dm_control/tutorial.ipynb` file.
 """
 
 import os.path
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence, Tuple, Union
 from acme.utils import paths
 from acme.wrappers import base
 import dm_env
@@ -34,12 +34,22 @@ import numpy as np
 # Internal imports.
 # Make sure you have FFMpeg configured.
 
-def _make_animation(frames: Sequence[np.ndarray],
-                    frame_rate: float) -> anim.Animation:
+def _make_animation(frames: Sequence[np.ndarray], frame_rate: float,
+                    figsize: Union[float, Tuple[int, int]]) -> anim.Animation:
   """Generates an animation from a stack of frames."""
 
   # Set animation characteristics.
-  height, width, _ = frames[0].shape
+  if figsize is None:
+    height, width, _ = frames[0].shape
+  elif isinstance(figsize, tuple):
+    height, width = figsize
+  else:
+    diagonal = figsize
+    height, width, _ = frames[0].shape
+    scale_factor = diagonal / np.sqrt(height**2 + width**2)
+    width *= scale_factor
+    height *= scale_factor
+
   dpi = 70
   interval = int(round(1e3 / frame_rate))  # Time (in ms) between frames.
 
@@ -71,7 +81,9 @@ class VideoWrapper(base.EnvironmentWrapper):
 
   This will limit itself to recording once every `record_every` episodes and
   videos will be recorded to the directory `path` + '/<unique id>/videos' where
-  `path` defaults to '~/acme'.
+  `path` defaults to '~/acme'. Users can specify the size of the screen by
+  passing either a tuple giving height and width or a float giving the size
+  of the diagonal.
   """
 
   def __init__(self,
@@ -81,7 +93,8 @@ class VideoWrapper(base.EnvironmentWrapper):
                filename: str = '',
                process_path: Callable[[str, str], str] = paths.process_path,
                record_every: int = 100,
-               frame_rate: int = 30):
+               frame_rate: int = 30,
+               figsize: Union[float, Tuple[int, int]] = None):
     super(VideoWrapper, self).__init__(environment)
     self._path = process_path(path, 'videos')
     self._filename = filename
@@ -89,6 +102,7 @@ class VideoWrapper(base.EnvironmentWrapper):
     self._frame_rate = frame_rate
     self._frames = []
     self._counter = 0
+    self._figsize = figsize
 
   def _render_frame(self, observation):
     """Renders a frame from the given environment observation."""
@@ -99,7 +113,8 @@ class VideoWrapper(base.EnvironmentWrapper):
     if self._counter % self._record_every == 0:
       path = os.path.join(self._path,
                           f'{self._filename}_{self._counter:04d}.html')
-      video = _make_animation(self._frames, self._frame_rate).to_html5_video()
+      video = _make_animation(self._frames, self._frame_rate,
+                              self._figsize).to_html5_video()
 
       with open(path, 'w') as f:
         f.write(video)
