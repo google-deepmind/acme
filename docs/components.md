@@ -124,7 +124,7 @@ stochastic_policy_network = snt.Sequential([
 
 This stochastic policy is used internally by the MPO algorithm to compute log
 probabilities and Kullback-Leibler (KL) divergences. We can also stack an
-additional head that will select the mean of the stochastic policy as a greedy
+additional head that will select the mode of the stochastic policy as a greedy
 action:
 
 ```python
