@@ -53,15 +53,16 @@ class DiscreteValuedDistribution(tfd.Categorical):
       name: Name of the distribution object.
     """
     self._values = tf.convert_to_tensor(values)
+    shape_strings = [f'D{i}' for i, _ in enumerate(values.shape)]
 
     if logits is not None:
       logits = tf.convert_to_tensor(logits)
-      tf.debugging.assert_equal(tf.shape(values),
-                                tf.shape(logits)[-tf.rank(values):])
+      tf.debugging.assert_shapes([(values, shape_strings),
+                                  (logits, [..., *shape_strings])])
     if probs is not None:
       probs = tf.convert_to_tensor(probs)
-      tf.debugging.assert_equal(tf.shape(values),
-                                tf.shape(probs)[-tf.rank(probs):])
+      tf.debugging.assert_shapes([(values, shape_strings),
+                                  (probs, [..., *shape_strings])])
 
     super().__init__(logits=logits, probs=probs, name=name)
 
