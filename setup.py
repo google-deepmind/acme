@@ -27,13 +27,13 @@ _metadata = import_util.module_from_spec(spec)
 spec.loader.exec_module(_metadata)
 
 reverb_requirements = [
-    'dm-reverb-nightly==0.1.0.dev20200708',
-    'tf-nightly==2.4.0.dev20200708',
+    'dm-reverb',
+    'tensorflow>=2.3.0',
 ]
 
 tf_requirements = [
-    'tf-nightly==2.4.0.dev20200708',
-    'tfp-nightly==0.12.0.dev20200717',
+    'tensorflow>=2.3.0',
+    'tensorflow_probability',
     'dm-sonnet',
     'trfl',
 ]
