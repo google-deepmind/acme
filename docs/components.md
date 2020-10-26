@@ -352,17 +352,16 @@ With checkpoints, you have to first re-build the exact graph, then restore the
 Snapshots re-build the graph internally, so all you have to do is restore the
   snapshot.<br>
 
-Acme’s Checkpointer class provides functionality to *both* checkpoint (with the
-  `objects_to_save` argument) and snapshot (with the `objects_to_snapshot`
-  argument) different parts of the model state as desired. <br>
+Acme provides Checkpointer and Snapshotter classes to checkpoint and snapshot
+  respectively parts of the model state as desired.<br>
 
 ```python
  model = snt.Linear(10)
- checkpointer = utils.tf2_utils.Checkpointer(
-     objects_to_save={'model': model},
-     objects_to_snapshot={'model': model})
+ checkpointer = tf2_savers.Checkpointer(objects_to_save={'model': model})
+ snapshotter = tf2_savers.Snapshotter(objects_to_save={'model': model})
  for _ in range(100):
    # ...
    checkpointer.save()
+   snapshotter.save()
 ```
 
