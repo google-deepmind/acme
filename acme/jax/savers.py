@@ -18,23 +18,18 @@
 import datetime
 import os
 import pickle
-import signal
-import threading
-import time
-from typing import Any, TypeVar, Union
+from typing import Any
 
 from absl import logging
 from acme import core
-from acme.utils import paths
+from acme.tf import savers as tf_savers
 import jax.numpy as jnp
 import numpy as np
 import tree
 
 # Internal imports.
 
-Number = Union[int, float]
 CheckpointState = Any
-T = TypeVar('T')
 
 _DEFAULT_CHECKPOINT_TTL = int(datetime.timedelta(days=5).total_seconds())
 _ARRAY_NAME = 'array_nest'
@@ -84,139 +79,18 @@ def save_to_path(ckpt_dir: str, state: CheckpointState):
     pickle.dump(nest_exemplar, f)
 
 
-class Checkpointer:
-  """Convenience class for periodically checkpointing.
-
-  This can be used to checkpoint any numpy arrays or any object which is
-  pickelable.
-  """
+# Use TF checkpointer.
+class Checkpointer(tf_savers.Checkpointer):
 
   def __init__(
       self,
       object_to_save: core.Saveable,
       directory: str = '~/acme/',
       subdirectory: str = 'default',
-      time_delta_minutes: float = 10.,
-      add_uid: bool = True,
-      checkpoint_ttl_seconds: int = _DEFAULT_CHECKPOINT_TTL,
-  ):
-    """Builds the saver object.
-
-    Args:
-      object_to_save: The object to save in this checkpoint, this must have a
-        save and restore method.
-      directory: Which directory to put the checkpoint in.
-      subdirectory: Sub-directory to use (e.g. if multiple checkpoints are being
-        saved).
-      time_delta_minutes: How often to save the checkpoint, in minutes.
-      add_uid: If True adds a UID to the checkpoint path, see
-        `paths.get_unique_id()` for how this UID is generated.
-      checkpoint_ttl_seconds: TTL (time to live) in seconds for checkpoints.
-    """
-    # TODO(tamaranorman) accept a Union[Saveable, Mapping[str, Saveable]] here
-    self._object_to_save = object_to_save
-    self._time_delta_minutes = time_delta_minutes
-
-    self._last_saved = 0.
-    self._lock = threading.Lock()
-
-    self._checkpoint_dir = paths.process_path(
-        directory,
-        'checkpoints',
-        subdirectory,
-        ttl_seconds=checkpoint_ttl_seconds,
-        backups=False,
-        add_uid=add_uid)
-
-    # Restore from the most recent checkpoint (if it exists).
-    self.restore()
-
-  def restore(self):
-    """Restores from the saved checkpoint if it exists."""
-    if os.path.exists(os.path.join(self._checkpoint_dir, _EXEMPLAR_NAME)):
-      logging.info('Restoring checkpoint: %s', self._checkpoint_dir)
-      with self._lock:
-        state = restore_from_path(self._checkpoint_dir)
-        self._object_to_save.restore(state)
-
-  def save(self, force: bool = False) -> bool:
-    """Save the checkpoint if it's the appropriate time, otherwise no-ops.
-
-    Args:
-      force: Whether to force a save regardless of time elapsed since last save.
-
-    Returns:
-      A boolean indicating if a save event happened.
-    """
-
-    if (not force and
-        time.time() - self._last_saved < 60 * self._time_delta_minutes):
-      return False
-
-    logging.info('Saving checkpoint: %s', self._checkpoint_dir)
-    with self._lock:
-      state = self._object_to_save.save()
-      save_to_path(self._checkpoint_dir, state)
-
-    self._last_saved = time.time()
-    return True
+      **tf_checkpointer_kwargs):
+    super().__init__(dict(saveable=object_to_save),
+                     directory=directory,
+                     **tf_checkpointer_kwargs)
 
 
-class CheckpointingRunner(core.Worker):
-  """Wrap an object and checkpoints periodically.
-
-  This is either uses the run method if one doesn't exist or performs it in a
-  thread.
-
-  This internally creates a Checkpointer around `wrapped` object and exposes
-  all of the methods of `wrapped`. Additionally, any `**kwargs` passed to the
-  runner are forwarded to the internal Checkpointer.
-  """
-
-  def __init__(
-      self,
-      wrapped: Union[core.Saveable, core.Worker],
-      *,
-      time_delta_minutes: float = 10.,
-      **kwargs,
-  ):
-    self._wrapped = wrapped
-    self._time_delta_minutes = time_delta_minutes
-    self._checkpointer = Checkpointer(
-        object_to_save=wrapped, time_delta_minutes=1, **kwargs)
-
-  def run(self):
-    """Periodically checkpoints the given object."""
-
-    # Handle preemption signal. Note that this must happen in the main thread.
-    def _signal_handler(signum: signal.Signals, frame):
-      del signum, frame
-      logging.info('Caught SIGTERM: forcing a checkpoint save.')
-      self._checkpointer.save(force=True)
-
-    try:
-      signal.signal(signal.SIGTERM, _signal_handler)
-    except ValueError:
-      logging.warning(
-          'Caught ValueError when registering signal handler. '
-          'This probably means we are not running in the main thread. '
-          'Proceeding without checkpointing-on-preemption.')
-
-    if isinstance(self._wrapped, core.Worker):
-      # Do checkpointing in a separate thread and defer to worker's run().
-      threading.Thread(target=self.checkpoint).start()
-      self._wrapped.run()
-    else:
-      # Wrapped object doesn't have a run method; set our run method to ckpt.
-      self.checkpoint()
-
-  def __dir__(self):
-    return dir(self._wrapped)
-
-  def __getattr__(self, name):
-    return getattr(self._wrapped, name)
-
-  def checkpoint(self):
-    while True:
-      self._checkpointer.save()
-      time.sleep(self._time_delta_minutes * 60)
+CheckpointingRunner = tf_savers.CheckpointingRunner
