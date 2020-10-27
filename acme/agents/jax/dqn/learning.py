@@ -124,9 +124,9 @@ class DQNLearner(acme.Learner, acme.Saveable):
       return new_state, outputs
 
     def update_priorities(outputs: LearnerOutputs):
-      for key, priority in zip(outputs.keys, outputs.priorities):
-        replay_client.mutate_priorities(
-            table=adders.DEFAULT_PRIORITY_TABLE, updates={key: priority})
+      replay_client.mutate_priorities(
+          table=adders.DEFAULT_PRIORITY_TABLE,
+          updates=dict(zip(outputs.keys, outputs.priorities)))
 
     # Internalise agent components (replay buffer, networks, optimizer).
     self._replay_client = replay_client
