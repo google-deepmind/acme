@@ -45,7 +45,7 @@ class DQN(agent.Agent):
       batch_size: int = 256,
       prefetch_size: int = 4,
       target_update_period: int = 100,
-      samples_per_insert: float = 32.0,
+      samples_per_insert: float = 0.5,
       min_replay_size: int = 1000,
       max_replay_size: int = 1000000,
       importance_sampling_exponent: float = 0.2,
