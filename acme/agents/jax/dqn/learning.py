@@ -167,6 +167,10 @@ class DQNLearner(acme.Learner, acme.Saveable):
 
     # Update priorities in replay.
     if self._replay_client:
+      # Use samples.info.key instead of outputs.keys because JAX casts uint64
+      # to int32, which loses information.
+      outputs = LearnerOutputs(
+          keys=samples.info.key, priorities=outputs.priorities)
       self._async_priority_updater.put(outputs)
 
     # Write to logs.
