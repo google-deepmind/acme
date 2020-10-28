@@ -17,7 +17,7 @@
 
 import functools
 import time
-from typing import Dict, Iterator, List, Mapping, Union
+from typing import Dict, Iterator, List, Mapping, Union, Optional
 
 import acme
 from acme import specs
@@ -52,7 +52,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
       burn_in_length: int,
       sequence_length: int,
       dataset: tf.data.Dataset,
-      reverb_client: reverb.TFClient,
+      reverb_client: Optional[reverb.TFClient] = None,
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
       discount: float = 0.99,
@@ -64,6 +64,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
       store_lstm_state: bool = True,
       max_priority_weight: float = 0.9,
       n_step: int = 5,
+      clip_grad_norm: float = None,
   ):
 
     if not isinstance(network, networks.RNNCore):
@@ -90,6 +91,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
     self._num_actions = environment_spec.actions.num_values
     self._sequence_length = sequence_length
     self._n_step = n_step
+    self._clip_grad_norm = clip_grad_norm
 
     if burn_in_length:
       self._burn_in = lambda o, s: self._network.unroll(o, s, burn_in_length)
@@ -180,6 +182,10 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
 
     # Apply gradients via optimizer.
     gradients = tape.gradient(loss, self._network.trainable_variables)
+    # Clip and apply gradients.
+    if self._clip_grad_norm is not None:
+      gradients, _ = tf.clip_by_global_norm(gradients, self._clip_grad_norm)
+
     self._optimizer.apply(gradients, self._network.trainable_variables)
 
     # Periodically update the target network.
@@ -189,14 +195,14 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
         dest.assign(src)
     self._num_steps.assign_add(1)
 
-    # Compute updated priorities.
-    priorities = compute_priority(extra.errors, self._max_priority_weight)
-
-    # Compute priorities and add an op to update them on the reverb side.
-    self._reverb_client.update_priorities(
-        table=adders.DEFAULT_PRIORITY_TABLE,
-        keys=keys[:, 0],
-        priorities=tf.cast(priorities, tf.float64))
+    if self._reverb_client:
+      # Compute updated priorities.
+      priorities = compute_priority(extra.errors, self._max_priority_weight)
+      # Compute priorities and add an op to update them on the reverb side.
+      self._reverb_client.update_priorities(
+          table=adders.DEFAULT_PRIORITY_TABLE,
+          keys=keys[:, 0],
+          priorities=tf.cast(priorities, tf.float64))
 
     return {'loss': loss}
 
