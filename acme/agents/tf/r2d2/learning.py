@@ -81,7 +81,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
     self._reverb_client = reverb_client
 
     # Internalise the hyperparameters.
-    self._store_lstm_state = tf.constant(store_lstm_state)
+    self._store_lstm_state = store_lstm_state
     self._burn_in_length = burn_in_length
     self._discount = discount
     self._max_replay_size = max_replay_size

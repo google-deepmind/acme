@@ -67,11 +67,13 @@ class R2D2(agent.Agent):
       checkpoint: bool = True,
   ):
 
-    extra_spec = {
-        'core_state': network.initial_state(1),
-    }
-    # Remove batch dimensions.
-    extra_spec = tf2_utils.squeeze_batch_dim(extra_spec)
+    if store_lstm_state:
+      extra_spec = {
+          'core_state': tf2_utils.squeeze_batch_dim(network.initial_state(1)),
+      }
+    else:
+      extra_spec = ()
+
     replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
         sampler=reverb.selectors.Prioritized(priority_exponent),
@@ -135,7 +137,8 @@ class R2D2(agent.Agent):
         lambda qs: trfl.epsilon_greedy(qs, epsilon=epsilon).sample(),
     ])
 
-    actor = actors.RecurrentActor(policy_network, adder)
+    actor = actors.RecurrentActor(
+        policy_network, adder, store_recurrent_state=store_lstm_state)
     observations_per_step = (
         float(replay_period * batch_size) / samples_per_insert)
     super().__init__(

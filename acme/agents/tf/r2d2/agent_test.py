@@ -16,6 +16,7 @@
 """Tests for RDQN agent."""
 
 from absl.testing import absltest
+from absl.testing import parameterized
 import acme
 from acme import specs
 from acme.agents.tf import r2d2
@@ -45,9 +46,10 @@ class SimpleNetwork(networks.RNNCore):
     return snt.static_unroll(self._net, inputs, state, sequence_length)
 
 
-class R2D2Test(absltest.TestCase):
+class R2D2Test(parameterized.TestCase):
 
-  def test_r2d2(self):
+  @parameterized.parameters(True, False)
+  def test_r2d2(self, store_lstm_state: bool):
     # Create a fake environment to test with.
     # TODO(b/152596848): Allow R2D2 to deal with integer observations.
     environment = fakes.DiscreteEnvironment(
@@ -65,6 +67,7 @@ class R2D2Test(absltest.TestCase):
         batch_size=10,
         samples_per_insert=2,
         min_replay_size=10,
+        store_lstm_state=store_lstm_state,
         burn_in_length=2,
         trace_length=6,
         replay_period=4,

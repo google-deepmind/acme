@@ -108,6 +108,7 @@ class RecurrentActor(core.Actor):
       policy_network: snt.RNNCore,
       adder: Optional[adders.Adder] = None,
       variable_client: Optional[tf2_variable_utils.VariableClient] = None,
+      store_recurrent_state: bool = True,
   ):
     """Initializes the actor.
 
@@ -117,6 +118,7 @@ class RecurrentActor(core.Actor):
         dataset/replay buffer.
       variable_client: object which allows to copy weights from the learner copy
         of the policy to the actor copy (in case they are separate).
+      store_recurrent_state: Whether to pass the recurrent state to the adder.
     """
     # Store these for later use.
     self._adder = adder
@@ -124,6 +126,7 @@ class RecurrentActor(core.Actor):
     self._network = policy_network
     self._state = None
     self._prev_state = None
+    self._store_recurrent_state = store_recurrent_state
 
   @tf.function
   def _policy(
@@ -167,6 +170,10 @@ class RecurrentActor(core.Actor):
 
   def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     if not self._adder:
+      return
+
+    if not self._store_recurrent_state:
+      self._adder.add(action, next_timestep)
       return
 
     numpy_state = tf2_utils.to_numpy_squeeze(self._prev_state)
