@@ -90,6 +90,7 @@ class Checkpointer(tf_savers.Checkpointer):
       **tf_checkpointer_kwargs):
     super().__init__(dict(saveable=object_to_save),
                      directory=directory,
+                     subdirectory=subdirectory,
                      **tf_checkpointer_kwargs)
 
 
