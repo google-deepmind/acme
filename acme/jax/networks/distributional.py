@@ -21,6 +21,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import tensorflow_probability
+hk_init = hk.initializers
 tfd = tensorflow_probability.experimental.substrates.jax.distributions
 
 
@@ -43,17 +44,23 @@ class CategoricalHead(hk.Module):
 class MultivariateNormalDiagHead(hk.Module):
   """Module that produces a tfd.MultivariateNormalDiag distribution."""
 
-  def __init__(self, num_dimensions: int, min_scale: float = 1e-6):
+  def __init__(self,
+               num_dimensions: int,
+               min_scale: float = 1e-6,
+               w_init: hk_init.Initializer = hk_init.VarianceScaling(1e-4),
+               b_init: hk_init.Initializer = hk_init.Constant(0.)):
     """Initialization.
 
     Args:
       num_dimensions: Number of dimensions of MVN distribution.
       min_scale: Minimum standard deviation.
+      w_init: Initialization for linear layer weights.
+      b_init: Initialization for linear layer biases.
     """
     super().__init__(name='MultivariateNormalDiagHead')
     self._min_scale = min_scale
-    self._loc_layer = hk.Linear(num_dimensions)
-    self._scale_layer = hk.Linear(num_dimensions)
+    self._loc_layer = hk.Linear(num_dimensions, w_init=w_init, b_init=b_init)
+    self._scale_layer = hk.Linear(num_dimensions, w_init=w_init, b_init=b_init)
 
   def __call__(self, inputs: jnp.ndarray) -> tfd.Distribution:
     loc = self._loc_layer(inputs)
