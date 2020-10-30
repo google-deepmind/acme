@@ -141,6 +141,14 @@ class VideoWrapper(base.EnvironmentWrapper):
     self._append_frame(timestep.observation)
     return timestep
 
+  def make_html_animation(self):
+    if self._frames:
+      return _make_animation(self._frames, self._frame_rate,
+                             self._figsize).to_html5_video()
+    else:
+      raise ValueError('make_html_animation should be called after running a '
+                       'trajectory and before calling reset().')
+
 
 class MujocoVideoWrapper(VideoWrapper):
   """VideoWrapper which generates videos from a mujoco physics object.
@@ -163,14 +171,23 @@ class MujocoVideoWrapper(VideoWrapper):
                **kwargs):
 
     # Check that we have a mujoco environment (or a wrapper thereof).
-    if not hasattr(environment, '_physics'):
-      raise ValueError('MujocoVideoWrapper expects an environment which '
-                       'exposes a _physics attribute corresponding to a MuJoCo '
-                       'physics engine')
+    try:
+      self.physics = getattr(environment, 'physics')
+    except AttributeError:
+      raise AttributeError('MujocoVideoWrapper expects an environment which '
+                           'exposes a physics attribute corresponding to a '
+                           'MuJoCo physics engine.')
 
     # Compute frame rate if not set.
     if frame_rate is None:
-      frame_rate = int(round(playback_speed / environment.control_timestep()))
+      try:
+        control_timestep = getattr(environment, 'control_timestep')()
+      except AttributeError:
+        raise AttributeError('MujocoVideoWrapper expects an environment which '
+                             'exposes a control_timestep method, like '
+                             'dm_control environments, or frame_rate '
+                             'to be specified.')
+      frame_rate = int(round(playback_speed / control_timestep))
 
     super().__init__(environment, frame_rate=frame_rate, **kwargs)
     self._camera_id = camera_id
@@ -179,18 +196,17 @@ class MujocoVideoWrapper(VideoWrapper):
 
   def _render_frame(self, unused_observation):
     # We've checked above that this attribute should exist. Pytype won't like
-    # it if we just try and do self.environment._physics, so we use the slightly
+    # it if we just try and do self.environment.physics, so we use the slightly
     # grosser version below.
-    physics = getattr(self.environment, '_physics')
     del unused_observation
 
     if self._camera_id is not None:
-      frame = physics.render(
+      frame = self.physics.render(
           camera_id=self._camera_id, height=self._height, width=self._width)
     else:
       # If camera_id is None, we create a minimal canvas that will accommodate
       # physics.model.ncam frames, and render all of them on a grid.
-      num_cameras = physics.model.ncam
+      num_cameras = self.physics.model.ncam
       num_columns = int(np.ceil(np.sqrt(num_cameras)))
       num_rows = int(np.ceil(float(num_cameras)/num_columns))
       height = self._height
@@ -207,7 +223,7 @@ class MujocoVideoWrapper(VideoWrapper):
           if camera_id >= num_cameras:
             break
 
-          subframe = physics.render(
+          subframe = self.physics.render(
               camera_id=camera_id, height=height, width=width)
 
           # Place the frame in the appropriate rectangle on the pixel canvas.
