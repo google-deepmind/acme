@@ -171,12 +171,10 @@ class MujocoVideoWrapper(VideoWrapper):
                **kwargs):
 
     # Check that we have a mujoco environment (or a wrapper thereof).
-    try:
-      self.physics = getattr(environment, 'physics')
-    except AttributeError:
-      raise AttributeError('MujocoVideoWrapper expects an environment which '
-                           'exposes a physics attribute corresponding to a '
-                           'MuJoCo physics engine.')
+    if not hasattr(environment, 'physics'):
+      raise ValueError('MujocoVideoWrapper expects an environment which '
+                       'exposes a physics attribute corresponding to a MuJoCo '
+                       'physics engine')
 
     # Compute frame rate if not set.
     if frame_rate is None:
@@ -195,18 +193,20 @@ class MujocoVideoWrapper(VideoWrapper):
     self._width = width
 
   def _render_frame(self, unused_observation):
+    del unused_observation
+
     # We've checked above that this attribute should exist. Pytype won't like
     # it if we just try and do self.environment.physics, so we use the slightly
     # grosser version below.
-    del unused_observation
+    physics = getattr(self.environment, 'physics')
 
     if self._camera_id is not None:
-      frame = self.physics.render(
+      frame = physics.render(
           camera_id=self._camera_id, height=self._height, width=self._width)
     else:
       # If camera_id is None, we create a minimal canvas that will accommodate
       # physics.model.ncam frames, and render all of them on a grid.
-      num_cameras = self.physics.model.ncam
+      num_cameras = physics.model.ncam
       num_columns = int(np.ceil(np.sqrt(num_cameras)))
       num_rows = int(np.ceil(float(num_cameras)/num_columns))
       height = self._height
@@ -223,7 +223,7 @@ class MujocoVideoWrapper(VideoWrapper):
           if camera_id >= num_cameras:
             break
 
-          subframe = self.physics.render(
+          subframe = physics.render(
               camera_id=camera_id, height=height, width=width)
 
           # Place the frame in the appropriate rectangle on the pixel canvas.
