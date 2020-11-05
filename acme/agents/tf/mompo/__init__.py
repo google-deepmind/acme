@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Various losses for training agent components (policies, critics, etc)."""
+"""Implementations of a distributional MPO agent."""
 
-from acme.tf.losses.distributional import categorical
-from acme.tf.losses.distributional import multiaxis_categorical
-from acme.tf.losses.dpg import dpg
-from acme.tf.losses.huber import huber
-from acme.tf.losses.mompo import KLConstraint
-from acme.tf.losses.mompo import MultiObjectiveMPO
-from acme.tf.losses.mpo import MPO
-from acme.tf.losses.r2d2 import transformed_n_step_loss
-
-# Internal imports.
+from acme.agents.tf.mompo.agent import MultiObjectiveMPO
+from acme.agents.tf.mompo.learning import MultiObjectiveMPOLearner
+from acme.agents.tf.mompo.learning import QValueObjective
+from acme.agents.tf.mompo.learning import RewardObjective
