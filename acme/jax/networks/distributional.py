@@ -67,3 +67,21 @@ class MultivariateNormalDiagHead(hk.Module):
     scale = self._scale_layer(inputs)
     scale = jax.nn.softplus(scale) + self._min_scale
     return tfd.MultivariateNormalDiag(loc=loc, scale_diag=scale)
+
+
+class CategoricalValueHead(hk.Module):
+  """Network head that produces a categorical distribution and value."""
+
+  def __init__(
+      self,
+      num_values: int,
+      name: Optional[str] = None,
+  ):
+    super().__init__(name=name)
+    self._logit_layer = hk.Linear(num_values)
+    self._value_layer = hk.Linear(1)
+
+  def __call__(self, inputs: jnp.ndarray):
+    logits = self._logit_layer(inputs)
+    value = jnp.squeeze(self._value_layer(inputs), axis=-1)
+    return (tfd.Categorical(logits=logits), value)
