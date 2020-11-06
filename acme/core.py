@@ -19,7 +19,8 @@ This file specifies and documents the notions of `Actor` and `Learner`.
 """
 
 import abc
-from typing import Generic, List, NoReturn, TypeVar
+import itertools
+from typing import Generic, List, Optional, TypeVar
 
 from acme import types
 # Internal imports.
@@ -138,9 +139,12 @@ class Learner(VariableSource, Worker):
   def step(self):
     """Perform an update step of the learner's parameters."""
 
-  def run(self) -> NoReturn:
+  def run(self, num_steps: Optional[int] = None) -> None:
     """Run the update loop; typically an infinite loop which calls step."""
-    while True:
+
+    iterator = range(num_steps) if num_steps is not None else itertools.count()
+
+    for _ in iterator:
       self.step()
 
 
