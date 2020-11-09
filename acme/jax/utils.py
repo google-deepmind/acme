@@ -15,6 +15,7 @@
 
 """Utilities for JAX."""
 
+import functools
 import queue
 import threading
 from typing import Iterable, Generator, TypeVar
@@ -83,6 +84,17 @@ def fetch_devicearray(values: types.Nest) -> types.Nest:
 def batch_to_sequence(values: types.Nest) -> types.NestedArray:
   return tree_util.tree_map(
       lambda x: jnp.transpose(x, axes=(1, 0, *range(2, len(x.shape)))), values)
+
+
+def tile_array(array: jnp.ndarray, multiple: int) -> jnp.ndarray:
+  """Tiles `multiple` copies of `array` along a new leading axis."""
+  return jnp.stack([array] * multiple)
+
+
+def tile_nested(inputs: types.Nest, multiple: int) -> types.Nest:
+  """Tiles tensors in a nested structure along a new leading axis."""
+  tile = functools.partial(tile_array, multiple=multiple)
+  return jax.tree_map(tile, inputs)
 
 
 T = TypeVar('T')

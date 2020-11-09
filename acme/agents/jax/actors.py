@@ -97,7 +97,15 @@ class RecurrentActor(core.Actor):
       adder: Optional[adders.Adder] = None,
   ):
     self._rng = rng
-    self._recurrent_policy = jax.jit(recurrent_policy, backend='cpu')
+
+    # Adding batch dimension inside jit is much more efficient than outside.
+    def batched_recurrent_policy(params, key, observation, core_state):
+      # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
+      observation = utils.add_batch_dim(observation)
+      output, new_state = recurrent_policy(params, key, observation, core_state)
+      return output, new_state
+    self._recurrent_policy = jax.jit(batched_recurrent_policy, backend='cpu')
+
     self._initial_state = self._prev_state = self._state = initial_core_state
     self._adder = adder
     self._client = variable_client
@@ -110,7 +118,7 @@ class RecurrentActor(core.Actor):
         core_state=self._state)
     self._prev_state = self._state  # Keep previous state to save in replay.
     self._state = new_state  # Keep new state for next policy call.
-    return utils.to_numpy(action)
+    return utils.to_numpy_squeeze(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
     if self._adder:
@@ -120,7 +128,7 @@ class RecurrentActor(core.Actor):
 
   def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     if self._adder:
-      numpy_state = utils.to_numpy(self._prev_state)
+      numpy_state = utils.to_numpy_squeeze(self._prev_state)
       self._adder.add(action, next_timestep, extras=(numpy_state,))
 
   def update(self, wait: bool = False):

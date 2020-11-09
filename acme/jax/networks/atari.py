@@ -182,10 +182,10 @@ class R2D2AtariNetwork(hk.RNNCore):
 
   def __call__(
       self,
-      inputs: observation_action_reward.OAR,
-      state: hk.LSTMState
+      inputs: observation_action_reward.OAR,  # [B, ...]
+      state: hk.LSTMState  # [B, ...]
   ) -> Tuple[base.QValues, hk.LSTMState]:
-    embeddings = self._embed(inputs)  # [B?, D+A+1]
+    embeddings = self._embed(inputs)  # [B, D+A+1]
     core_outputs, new_state = self._core(embeddings, state)
     q_values = self._duelling_head(core_outputs)
     return q_values, new_state
@@ -195,13 +195,13 @@ class R2D2AtariNetwork(hk.RNNCore):
 
   def unroll(
       self,
-      inputs: observation_action_reward.OAR,
-      state: hk.LSTMState
+      inputs: observation_action_reward.OAR,  # [T, B, ...]
+      state: hk.LSTMState  # [T, ...]
   ) -> Tuple[base.QValues, hk.LSTMState]:
     """Efficient unroll that applies torso, core, and duelling mlp in one pass."""
-    embeddings = self._embed(inputs)  # [B?, T, D+A+1]
+    embeddings = hk.BatchApply(self._embed)(inputs)  # [T, B, D+A+1]
     core_outputs, new_states = hk.static_unroll(self._core, embeddings, state)
-    q_values = self._duelling_head(core_outputs)  # [B?, T, A]
+    q_values = hk.BatchApply(self._duelling_head)(core_outputs)  # [T, B, A]
     return q_values, new_states
 
 

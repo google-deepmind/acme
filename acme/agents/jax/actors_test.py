@@ -85,16 +85,16 @@ class RecurrentActorTest(absltest.TestCase):
 
     @_transform_without_rng
     def network(inputs: jnp.ndarray, state: hk.LSTMState):
-      return hk.DeepRNN([lambda x: jnp.reshape(x, [-1]),
+      return hk.DeepRNN([hk.Reshape([-1], preserve_dims=1),
                          hk.LSTM(output_size)])(inputs, state)
 
     @_transform_without_rng
     def initial_state(batch_size: Optional[int] = None):
-      network = hk.DeepRNN([lambda x: jnp.reshape(x, [-1]),
+      network = hk.DeepRNN([hk.Reshape([-1], preserve_dims=1),
                             hk.LSTM(output_size)])
       return network.initial_state(batch_size)
 
-    initial_state = initial_state.apply(initial_state.init(next(rng)))
+    initial_state = initial_state.apply(initial_state.init(next(rng)), 1)
     params = network.init(next(rng), obs, initial_state)
 
     def policy(
