@@ -21,6 +21,7 @@ from typing import List, Optional
 from acme import core
 
 import haiku as hk
+import jax
 
 
 class VariableClient:
@@ -29,12 +30,24 @@ class VariableClient:
   def __init__(self,
                client: core.VariableSource,
                key: str,
-               update_period: int = 1):
+               update_period: int = 1,
+               device: str = None):
+    """Initializes the object.
+
+    Args:
+      client: a variable source
+      key: what variables to request
+      update_period: update period
+      device: if not None, defines to which device variables should be put to
+    """
     self._key = key
     self._update_period = update_period
     self._call_counter = 0
     self._client = client
     self._params = None
+    self._device = None
+    if device:
+      self._device = jax.devices(device)[0]
 
     self._executor = futures.ThreadPoolExecutor(max_workers=1)
     self._request = lambda: client.get_variables([self._key])
@@ -81,7 +94,11 @@ class VariableClient:
 
   def _callback(self, params_list: List[hk.Params]):
     assert len(params_list) == 1
-    self._params = params_list[0]
+    if self._device:
+      # Move variables to a proper device.
+      self._params = jax.device_put(params_list[0], self._device)
+    else:
+      self._params = params_list[0]
 
   @property
   def params(self) -> hk.Params:
