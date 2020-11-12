@@ -30,7 +30,11 @@ from acme.utils.loggers import base
 
 
 class CSVLogger(base.Logger):
-  """Standard CSV logger."""
+  """Standard CSV logger.
+
+  The fields are inferred from the first call to write() and any additional
+  fields afterwards are ignored.
+  """
 
   _open = open
 
@@ -64,7 +68,6 @@ class CSVLogger(base.Logger):
 
   def write(self, data: base.LoggingData):
     """Writes a `data` into a row of comma-separated values."""
-
     # Only log if `time_delta` seconds have passed since last logging event.
     now = time.time()
     if now - self._last_log_time < self._time_delta:
@@ -73,9 +76,12 @@ class CSVLogger(base.Logger):
 
     # Append row to CSV.
     data = base.to_numpy(data)
+    # Use fields from initial `data` to create the header. If extra fields are
+    # present in subsequent `data`, we ignore them.
     if not self._writer:
-      keys = sorted(data.keys())
-      self._writer = csv.DictWriter(self._file, fieldnames=keys)
+      fields = sorted(data.keys())
+      self._writer = csv.DictWriter(self._file, fieldnames=fields,
+                                    extrasaction='ignore')
       self._writer.writeheader()
     self._writer.writerow(data)
 
