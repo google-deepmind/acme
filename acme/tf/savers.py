@@ -197,9 +197,6 @@ class CheckpointingRunner(core.Worker):
         time_delta_minutes=time_delta_minutes,
         **kwargs)
 
-  def run(self):
-    """Runs the checkpointer."""
-
     # Handle preemption signal. Note that this must happen in the main thread.
     def _signal_handler(signum: signal.Signals, frame):
       del signum, frame
@@ -214,14 +211,19 @@ class CheckpointingRunner(core.Worker):
           'This probably means we are not running in the main thread. '
           'Proceeding without checkpointing-on-preemption.')
 
+  def step(self):
     if isinstance(self._wrapped, core.Learner):
       # Learners have a step() method, so alternate between that and ckpt call.
-      while True:
-        self._wrapped.step()
-        self._checkpointer.save()
+      self._wrapped.step()
+      self._checkpointer.save()
     else:
       # Wrapped object doesn't have a run method; set our run method to ckpt.
       self.checkpoint()
+
+  def run(self):
+    """Runs the checkpointer."""
+    while True:
+      self.step()
 
   def __dir__(self):
     return dir(self._wrapped)
@@ -230,9 +232,8 @@ class CheckpointingRunner(core.Worker):
     return getattr(self._wrapped, name)
 
   def checkpoint(self):
-    while True:
-      self._checkpointer.save()
-      time.sleep(self._time_delta_minutes * 60)
+    self._checkpointer.save()
+    time.sleep(self._time_delta_minutes * 60)
 
 
 class Snapshotter:
