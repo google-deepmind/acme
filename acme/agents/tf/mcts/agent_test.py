@@ -28,7 +28,8 @@ import sonnet as snt
 
 class MCTSTest(absltest.TestCase):
 
-  def test_mcts(self):
+  @staticmethod
+  def test_mcts():
     # Create a fake environment to test with.
     num_actions = 5
     environment = fakes.DiscreteEnvironment(

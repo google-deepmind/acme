@@ -42,7 +42,8 @@ def _make_fake_env() -> dm_env.Environment:
 
 class ActorTest(absltest.TestCase):
 
-  def test_feedforward(self):
+  @staticmethod
+  def test_feedforward():
     environment = _make_fake_env()
     env_spec = specs.make_environment_spec(environment)
 
@@ -76,7 +77,8 @@ def _transform_without_rng(f):
 
 class RecurrentActorTest(absltest.TestCase):
 
-  def test_recurrent(self):
+  @staticmethod
+  def test_recurrent():
     environment = _make_fake_env()
     env_spec = specs.make_environment_spec(environment)
     output_size = env_spec.actions.num_values

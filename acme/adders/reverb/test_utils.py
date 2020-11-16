@@ -108,11 +108,10 @@ def make_sequence(observations):
 
 def _numeric_to_spec(x: Union[float, int, np.ndarray]):
   if isinstance(x, np.ndarray):
-    return specs.Array(shape=x.shape, dtype=x.dtype)
-  elif isinstance(x, (float, int)):
-    return specs.Array(shape=(), dtype=type(x))
-  else:
-    raise ValueError(f'Unsupported numeric: {type(x)}')
+      return specs.Array(shape=x.shape, dtype=x.dtype)
+  if isinstance(x, (float, int)):
+      return specs.Array(shape=(), dtype=type(x))
+  raise ValueError(f'Unsupported numeric: {type(x)}')
 
 
 class AdderTestMixin(absltest.TestCase):

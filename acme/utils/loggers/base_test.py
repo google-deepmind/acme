@@ -23,13 +23,15 @@ import tensorflow as tf
 
 class BaseTest(absltest.TestCase):
 
-  def test_tensor_serialisation(self):
+  @staticmethod
+  def test_tensor_serialisation():
     data = {'x': tf.zeros(shape=(32,))}
     output = base.to_numpy(data)
     expected = {'x': np.zeros(shape=(32,))}
     np.testing.assert_array_equal(output['x'], expected['x'])
 
-  def test_device_array_serialisation(self):
+  @staticmethod
+  def test_device_array_serialisation():
     data = {'x': jnp.zeros(shape=(32,))}
     output = base.to_numpy(data)
     expected = {'x': np.zeros(shape=(32,))}

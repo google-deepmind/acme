@@ -64,7 +64,8 @@ class SequenceStackTest(absltest.TestCase):
     self.assertEqual(stacked['action'].tolist(), [[1.], [0.5], [0.3]])
     self.assertEqual(stacked['reward'].tolist(), [1., 0., 0.5])
 
-  def test_unstack_sequence_fields(self):
+  @staticmethod
+  def test_unstack_sequence_fields():
     """Tests that `unstack_sequence_fields(stack_sequence_fields(x)) == x`."""
     stacked = tree_utils.stack_sequence_fields(TEST_SEQUENCE)
     batch_size = len(TEST_SEQUENCE)

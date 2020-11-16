@@ -56,7 +56,8 @@ def make_networks(
 
 class DMPOTest(absltest.TestCase):
 
-  def test_dmpo(self):
+  @staticmethod
+  def test_dmpo():
     # Create a fake environment to test with.
     environment = fakes.ContinuousEnvironment(episode_length=10)
     spec = specs.make_environment_spec(environment)

@@ -50,7 +50,8 @@ def make_networks(
 
 class MPOTest(absltest.TestCase):
 
-  def test_mpo(self):
+  @staticmethod
+  def test_mpo():
     # Create a fake environment to test with.
     environment = fakes.ContinuousEnvironment(episode_length=10, bounded=False)
     spec = specs.make_environment_spec(environment)

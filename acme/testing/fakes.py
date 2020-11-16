@@ -143,15 +143,14 @@ class Environment(dm_env.Environment):
     discount = self._generate_fake_discount()
 
     if self._episode_length and (self._step == self._episode_length):
-      self._step = 0
-      # We can't use dm_env.termination directly because then the discount
-      # wouldn't necessarily conform to the spec (if eg. we want float32).
-      return dm_env.TimeStep(dm_env.StepType.LAST, reward, discount,
-                             observation)
-    else:
-      self._step += 1
-      return dm_env.transition(
-          reward=reward, observation=observation, discount=discount)
+        self._step = 0
+        # We can't use dm_env.termination directly because then the discount
+        # wouldn't necessarily conform to the spec (if eg. we want float32).
+        return dm_env.TimeStep(dm_env.StepType.LAST, reward, discount,
+                               observation)
+    self._step += 1
+    return dm_env.transition(
+        reward=reward, observation=observation, discount=discount)
 
   def action_spec(self):
     return self._spec.actions

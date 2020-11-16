@@ -41,13 +41,15 @@ class RNNCritic(snt.RNNCore):
   def __call__(self, o, a, prev_state):
     return o * a, prev_state
 
-  def initial_state(self, batch_size):
+  @staticmethod
+  def initial_state(batch_size):
     return ()
 
 
 class NetsTest(tf.test.TestCase):
 
-  def test_criticdeeprnn_snapshot(self):
+  @staticmethod
+  def test_criticdeeprnn_snapshot():
     """Test that CriticDeepRNN works correctly with snapshotting."""
     # Create a test network.
     critic = Critic()

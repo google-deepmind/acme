@@ -49,7 +49,8 @@ class SimpleNetwork(networks.RNNCore):
 class R2D2Test(parameterized.TestCase):
 
   @parameterized.parameters(True, False)
-  def test_r2d2(self, store_lstm_state: bool):
+  @staticmethod
+  def test_r2d2(store_lstm_state: bool):
     # Create a fake environment to test with.
     # TODO(b/152596848): Allow R2D2 to deal with integer observations.
     environment = fakes.DiscreteEnvironment(

@@ -114,7 +114,8 @@ class MOMPOTest(parameterized.TestCase):
   @parameterized.named_parameters(
       ('distributional_critic', True),
       ('vanilla_critic', False))
-  def test_mompo(self, distributional_critic):
+  @staticmethod
+  def test_mompo(distributional_critic):
     # Create a fake environment to test with.
     environment = fakes.ContinuousEnvironment(episode_length=10)
     spec = specs.make_environment_spec(environment)

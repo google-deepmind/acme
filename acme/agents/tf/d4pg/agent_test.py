@@ -59,7 +59,8 @@ def make_networks(
 
 class D4PGTest(absltest.TestCase):
 
-  def test_d4pg(self):
+  @staticmethod
+  def test_d4pg():
     # Create a fake environment to test with.
     environment = fakes.ContinuousEnvironment(episode_length=10, bounded=True)
     spec = specs.make_environment_spec(environment)

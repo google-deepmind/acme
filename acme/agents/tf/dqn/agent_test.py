@@ -35,7 +35,8 @@ def _make_network(action_spec: specs.DiscreteArray) -> snt.Module:
 
 class DQNTest(absltest.TestCase):
 
-  def test_dqn(self):
+  @staticmethod
+  def test_dqn():
     # Create a fake environment to test with.
     environment = fakes.DiscreteEnvironment(
         num_actions=5,

@@ -37,7 +37,8 @@ def _make_network(action_spec: specs.DiscreteArray) -> snt.Module:
 
 class DQfDTest(absltest.TestCase):
 
-  def test_dqfd(self):
+  @staticmethod
+  def test_dqfd():
     # Create a fake environment to test with.
     # TODO(b/152596848): Allow DQN to deal with integer observations.
     environment = fakes.DiscreteEnvironment(

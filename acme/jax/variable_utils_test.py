@@ -31,7 +31,8 @@ def dummy_network(x):
 
 class VariableClientTest(absltest.TestCase):
 
-  def test_update(self):
+  @staticmethod
+  def test_update():
     init_fn, _ = hk.without_apply_rng(
         hk.transform(dummy_network, apply_rng=True))
     params = init_fn(jax.random.PRNGKey(1), jnp.zeros(shape=(1, 32)))

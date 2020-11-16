@@ -15,7 +15,7 @@
 
 """Simple JAX actors."""
 
-from typing import Callable, Optional, Tuple, TypeVar
+from typing import Callable, Optional, Tuple, TypeVar, Union
 
 from acme import adders
 from acme import core
@@ -35,7 +35,8 @@ Action = types.NestedArray
 RecurrentState = TypeVar('RecurrentState')
 
 # Signatures for functions that sample from parameterised stochastic policies.
-FeedForwardPolicy = Callable[[hk.Params, RNGKey, Observation], Action]
+FeedForwardPolicy = Callable[[hk.Params, RNGKey, Observation],
+                             Union[Action, Tuple[Action, types.NestedArray]]]
 RecurrentPolicy = Callable[[hk.Params, RNGKey, Observation, RecurrentState],
                            Tuple[Action, RecurrentState]]
 
@@ -43,20 +44,27 @@ RecurrentPolicy = Callable[[hk.Params, RNGKey, Observation, RecurrentState],
 class FeedForwardActor(core.Actor):
   """A simple feed-forward actor implemented in JAX."""
 
+  _extras: types.NestedArray = ()
+
   def __init__(
       self,
       policy: FeedForwardPolicy,
       rng: hk.PRNGSequence,
       variable_client: variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
+      has_extras: bool = False,
   ):
     self._rng = rng
+    self._has_extras = has_extras
 
     # Adding batch dimension inside jit is much more efficient than outside.
-    def batched_policy(params, key, observation):
+    def batched_policy(params: hk.Params, key: RNGKey,
+                       observation: Observation
+                       ) ->Union[Action, Tuple[Action, types.NestedArray]]:
       # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
       observation = utils.add_batch_dim(observation)
-      return policy(params, key, observation)
+      output = policy(params, key, observation)
+      return utils.squeeze_batch_dim(output)
     self._policy = jax.jit(batched_policy, backend='cpu')
 
     self._adder = adder
@@ -64,8 +72,12 @@ class FeedForwardActor(core.Actor):
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     key = next(self._rng)
-    action = self._policy(self._client.params, key, observation)
-    return utils.to_numpy_squeeze(action)
+    result = self._policy(self._client.params, key, observation)
+    if self._has_extras:
+      action, self._extras = result
+    else:
+      action = result
+    return utils.to_numpy(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
     if self._adder:
@@ -73,7 +85,7 @@ class FeedForwardActor(core.Actor):
 
   def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     if self._adder:
-      self._adder.add(action, next_timestep)
+      self._adder.add(action, next_timestep, extras=self._extras)
 
   def update(self, wait: bool = False):
     self._client.update(wait)

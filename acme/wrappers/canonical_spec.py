@@ -61,10 +61,9 @@ def _convert_spec(nested_spec: types.NestedSpec) -> types.NestedSpec:
   def _convert_single_spec(spec: specs.Array) -> specs.Array:
     """Converts a single spec to canonical if bounded."""
     if isinstance(spec, specs.BoundedArray):
-      return spec.replace(
-          minimum=-np.ones(spec.shape), maximum=np.ones(spec.shape))
-    else:
-      return spec
+        return spec.replace(
+            minimum=-np.ones(spec.shape), maximum=np.ones(spec.shape))
+    return spec
 
   return tree.map_structure(_convert_single_spec, nested_spec)
 

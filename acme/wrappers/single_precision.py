@@ -27,7 +27,8 @@ import tree
 class SinglePrecisionWrapper(base.EnvironmentWrapper):
   """Wrapper which converts environments from double- to single-precision."""
 
-  def _convert_timestep(self, timestep: dm_env.TimeStep) -> dm_env.TimeStep:
+  @staticmethod
+  def _convert_timestep(timestep: dm_env.TimeStep) -> dm_env.TimeStep:
     return timestep._replace(
         reward=_convert_value(timestep.reward),
         discount=_convert_value(timestep.discount),

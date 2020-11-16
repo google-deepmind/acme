@@ -104,7 +104,8 @@ class VideoWrapper(base.EnvironmentWrapper):
     self._counter = 0
     self._figsize = figsize
 
-  def _render_frame(self, observation):
+  @staticmethod
+  def _render_frame(observation):
     """Renders a frame from the given environment observation."""
     return observation
 
@@ -143,11 +144,10 @@ class VideoWrapper(base.EnvironmentWrapper):
 
   def make_html_animation(self):
     if self._frames:
-      return _make_animation(self._frames, self._frame_rate,
-                             self._figsize).to_html5_video()
-    else:
-      raise ValueError('make_html_animation should be called after running a '
-                       'trajectory and before calling reset().')
+        return _make_animation(self._frames, self._frame_rate,
+                               self._figsize).to_html5_video()
+    raise ValueError('make_html_animation should be called after running a '
+                     'trajectory and before calling reset().')
 
 
 class MujocoVideoWrapper(VideoWrapper):
@@ -179,7 +179,7 @@ class MujocoVideoWrapper(VideoWrapper):
     # Compute frame rate if not set.
     if frame_rate is None:
       try:
-        control_timestep = getattr(environment, 'control_timestep')()
+        control_timestep = environment.control_timestep()
       except AttributeError:
         raise AttributeError('MujocoVideoWrapper expects an environment which '
                              'exposes a control_timestep method, like '
@@ -198,7 +198,7 @@ class MujocoVideoWrapper(VideoWrapper):
     # We've checked above that this attribute should exist. Pytype won't like
     # it if we just try and do self.environment.physics, so we use the slightly
     # grosser version below.
-    physics = getattr(self.environment, 'physics')
+    physics = self.environment.physics
 
     if self._camera_id is not None:
       frame = physics.render(

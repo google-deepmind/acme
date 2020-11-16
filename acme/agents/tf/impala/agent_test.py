@@ -36,7 +36,8 @@ def _make_network(action_spec: specs.DiscreteArray) -> snt.RNNCore:
 
 class IMPALATest(absltest.TestCase):
 
-  def test_impala(self):
+  @staticmethod
+  def test_impala():
     # Create a fake environment to test with.
     environment = fakes.DiscreteEnvironment(
         num_actions=5,

@@ -49,7 +49,8 @@ class SimpleNetwork(networks.RNNCore):
 
 class R2D3Test(absltest.TestCase):
 
-  def test_r2d3(self):
+  @staticmethod
+  def test_r2d3():
     # Create a fake environment to test with.
     environment = fakes.DiscreteEnvironment(
         num_actions=5,

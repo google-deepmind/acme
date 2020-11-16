@@ -49,7 +49,8 @@ class ObservationActionRewardWrapper(base.EnvironmentWrapper):
     new_timestep = self._augment_observation(action, timestep.reward, timestep)
     return new_timestep
 
-  def _augment_observation(self, action: types.NestedArray,
+  @staticmethod
+  def _augment_observation(action: types.NestedArray,
                            reward: types.NestedArray,
                            timestep: dm_env.TimeStep) -> dm_env.TimeStep:
     oar = OAR(observation=timestep.observation,

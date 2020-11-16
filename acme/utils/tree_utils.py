@@ -156,12 +156,11 @@ def broadcast_structures(*args: Any) -> Any:
 
   def mirror_structure(value, reference_tree):
     if tree.is_nested(value):
-      # Use check_types=True so that the types of the trees we construct aren't
-      # dependent on our arbitrary choice of which nested arg to use as the
-      # reference_tree.
-      tree.assert_same_structure(value, reference_tree, check_types=True)
-      return value
-    else:
-      return tree.map_structure(lambda _: value, reference_tree)
+        # Use check_types=True so that the types of the trees we construct aren't
+        # dependent on our arbitrary choice of which nested arg to use as the
+        # reference_tree.
+        tree.assert_same_structure(value, reference_tree, check_types=True)
+        return value
+    return tree.map_structure(lambda _: value, reference_tree)
 
   return tuple(mirror_structure(arg, reference_tree) for arg in args)

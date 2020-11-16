@@ -129,11 +129,10 @@ def make_dataset(environment: dm_env.Environment):
   """Make bsuite demos for the current task."""
 
   if FLAGS.bsuite_id.startswith('deep_sea/'):
-    assert isinstance(environment, deep_sea.DeepSea)
-    return _make_deep_sea_dataset(environment)
-  elif FLAGS.bsuite_id.startswith('deep_sea_stochastic/'):
-    assert isinstance(environment, deep_sea.DeepSea)
-    return _make_deep_sea_stochastic_dataset(environment)
-  else:
-    raise ValueError('Could not produce demonstrations for {}'
-                     .format(FLAGS.bsuite_id))
+      assert isinstance(environment, deep_sea.DeepSea)
+      return _make_deep_sea_dataset(environment)
+  if FLAGS.bsuite_id.startswith('deep_sea_stochastic/'):
+      assert isinstance(environment, deep_sea.DeepSea)
+      return _make_deep_sea_stochastic_dataset(environment)
+  raise ValueError('Could not produce demonstrations for {}'
+                   .format(FLAGS.bsuite_id))
