@@ -41,7 +41,7 @@ def make_default_logger(
 
   loggers = [terminal_logger]
   if save_data:
-    loggers.append(csv.CSVLogger(label))
+    loggers.append(csv.CSVLogger(label=label))
 
   logger = aggregators.Dispatcher(loggers)
   logger = filters.NoneFilter(logger)
