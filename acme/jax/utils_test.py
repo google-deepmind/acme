@@ -31,10 +31,11 @@ class JaxUtilsTest(absltest.TestCase):
             'foo': jnp.zeros(shape=(batch_size, 5, 3))
         },
         [jnp.zeros(shape=(batch_size, 1))],
+        jnp.zeros(shape=(batch_size,)),
     ]
 
     output_shape = utils.batch_concat(inputs).shape
-    expected_shape = [batch_size, 2 + 5 * 3 + 1]
+    expected_shape = [batch_size, 2 + 5 * 3 + 1 + 1]
     self.assertSequenceEqual(output_shape, expected_shape)
 
 
