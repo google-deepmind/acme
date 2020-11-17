@@ -143,11 +143,10 @@ class VideoWrapper(base.EnvironmentWrapper):
 
   def make_html_animation(self):
     if self._frames:
-      return _make_animation(self._frames, self._frame_rate,
-                             self._figsize).to_html5_video()
-    else:
-      raise ValueError('make_html_animation should be called after running a '
-                       'trajectory and before calling reset().')
+        return _make_animation(self._frames, self._frame_rate,
+                               self._figsize).to_html5_video()
+    raise ValueError('make_html_animation should be called after running a '
+                     'trajectory and before calling reset().')
 
 
 class MujocoVideoWrapper(VideoWrapper):

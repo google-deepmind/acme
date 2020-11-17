@@ -39,14 +39,13 @@ def zeros_like(x: Union[np.ndarray, int, float, np.number]):
     A zero-filed object of the same (d)type and shape as the input.
   """
   if isinstance(x, (int, float, np.number)):
-    return type(x)(0)
-  elif isinstance(x, jnp.DeviceArray):
-    return jnp.zeros_like(x)
-  elif isinstance(x, np.ndarray):
-    return np.zeros_like(x)
-  else:
-    raise ValueError(
-        f'Input ({type(x)}) must be either a numpy array, an int, or a float.')
+      return type(x)(0)
+  if isinstance(x, jnp.DeviceArray):
+      return jnp.zeros_like(x)
+  if isinstance(x, np.ndarray):
+      return np.zeros_like(x)
+  raise ValueError(
+      f'Input ({type(x)}) must be either a numpy array, an int, or a float.')
 
 
 def final_step_like(step: base.Step,

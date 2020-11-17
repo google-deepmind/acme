@@ -249,7 +249,7 @@ class DiscreteBCQLearner(core.Learner, tf2_savers.TFSaveable):
     bc_state = self._bc_learner.state
     bc_state.pop('network')  # No need to checkpoint the BC network.
     bcq_state = self._bcq_learner.state
-    state = dict()
+    state = {}
     state.update({f'bc_{k}': v for k, v in bc_state.items()})
     state.update({f'bcq_{k}': v for k, v in bcq_state.items()})
     return state

@@ -33,7 +33,8 @@ class ClippedGaussian(snt.Module):
 
   def __call__(self, inputs: types.NestedTensor) -> types.NestedTensor:
     def add_noise(tensor: tf.Tensor):
-      output = tensor + self._noise.sample(tensor.shape)
+      output = tensor + tf.cast(self._noise.sample(tensor.shape),
+                                dtype=tensor.dtype)
       output = tf.clip_by_value(output, -1.0, 1.0)
       return output
 

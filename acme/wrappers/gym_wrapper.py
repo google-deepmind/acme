@@ -99,43 +99,41 @@ def _convert_to_spec(space: gym.Space, name: str = None) -> types.NestedSpec:
     space.
   """
   if isinstance(space, spaces.Discrete):
-    return specs.DiscreteArray(num_values=space.n, dtype=space.dtype, name=name)
+      return specs.DiscreteArray(num_values=space.n, dtype=space.dtype, name=name)
 
-  elif isinstance(space, spaces.Box):
-    return specs.BoundedArray(
-        shape=space.shape,
-        dtype=space.dtype,
-        minimum=space.low,
-        maximum=space.high,
-        name=name)
+  if isinstance(space, spaces.Box):
+      return specs.BoundedArray(
+          shape=space.shape,
+          dtype=space.dtype,
+          minimum=space.low,
+          maximum=space.high,
+          name=name)
 
-  elif isinstance(space, spaces.MultiBinary):
-    return specs.BoundedArray(
-        shape=space.shape,
-        dtype=space.dtype,
-        minimum=0.0,
-        maximum=1.0,
-        name=name)
+  if isinstance(space, spaces.MultiBinary):
+      return specs.BoundedArray(
+          shape=space.shape,
+          dtype=space.dtype,
+          minimum=0.0,
+          maximum=1.0,
+          name=name)
 
-  elif isinstance(space, spaces.MultiDiscrete):
-    return specs.BoundedArray(
-        shape=space.shape,
-        dtype=space.dtype,
-        minimum=np.zeros(space.shape),
-        maximum=space.nvec,
-        name=name)
+  if isinstance(space, spaces.MultiDiscrete):
+      return specs.BoundedArray(
+          shape=space.shape,
+          dtype=space.dtype,
+          minimum=np.zeros(space.shape),
+          maximum=space.nvec,
+          name=name)
 
-  elif isinstance(space, spaces.Tuple):
-    return tuple(_convert_to_spec(s, name) for s in space.spaces)
+  if isinstance(space, spaces.Tuple):
+      return tuple(_convert_to_spec(s, name) for s in space.spaces)
 
-  elif isinstance(space, spaces.Dict):
-    return {
-        key: _convert_to_spec(value, name)
-        for key, value in space.spaces.items()
-    }
-
-  else:
-    raise ValueError('Unexpected gym space: {}'.format(space))
+  if isinstance(space, spaces.Dict):
+      return {
+          key: _convert_to_spec(value, name)
+          for key, value in space.spaces.items()
+      }
+  raise ValueError('Unexpected gym space: {}'.format(space))
 
 
 class GymAtariAdapter(GymWrapper):

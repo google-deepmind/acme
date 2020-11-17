@@ -34,11 +34,10 @@ def _calculate_num_learner_steps(num_observations: int,
     # Do not do any learner steps until you have seen min_observations.
     return 0
   if observations_per_step > 1:
-    # One batch every 1/obs_per_step observations, otherwise zero.
-    return int(n % int(observations_per_step) == 0)
-  else:
-    # Always return 1/obs_per_step batches every observation.
-    return int(1 / observations_per_step)
+      # One batch every 1/obs_per_step observations, otherwise zero.
+      return int(n % int(observations_per_step) == 0)
+  # Always return 1/obs_per_step batches every observation.
+  return int(1 / observations_per_step)
 
 
 class Agent(core.Actor, core.VariableSource):
