@@ -22,7 +22,6 @@ from typing import Iterable, Generator, TypeVar
 
 from absl import logging
 from acme import types
-import haiku as hk
 import jax
 from jax import tree_util
 import jax.numpy as jnp
@@ -34,13 +33,25 @@ def add_batch_dim(values: types.Nest) -> types.NestedArray:
   return tree_util.tree_map(lambda x: jnp.expand_dims(x, axis=0), values)
 
 
-def _transform_without_rng(f):
-  return hk.without_apply_rng(hk.transform(f, apply_rng=True))
+def _flatten(x: jnp.ndarray, num_batch_dims: int) -> jnp.ndarray:
+  """Flattens the input, preserving the first ``num_batch_dims`` dimensions.
 
+  If the input has fewer than ``num_batch_dims`` dimensions, it is returned
+  unchanged.
+  If the input has exactly ``num_batch_dims`` dimensions, an extra dimension
+  is added. This is needed to handle batched scalars.
 
-@_transform_without_rng
-def _flatten(x, num_batch_dims: int):
-  return hk.Flatten(preserve_dims=num_batch_dims)(x)
+  Arguments:
+    x: the input array to flatten.
+    num_batch_dims: number of dimensions to preserve.
+
+  Returns:
+    flattened input.
+  """
+  # TODO(b/173492429): consider throwing an error instead.
+  if x.ndim < num_batch_dims:
+    return x
+  return jnp.reshape(x, list(x.shape[:num_batch_dims]) + [-1])
 
 
 def batch_concat(
@@ -48,7 +59,7 @@ def batch_concat(
     num_batch_dims: int = 1,
 ) -> jnp.ndarray:
   """Flatten and concatenate nested array structure, keeping batch dims."""
-  flatten_fn = lambda x: _flatten.apply(None, x, num_batch_dims)
+  flatten_fn = lambda x: _flatten(x, num_batch_dims)
   flat_leaves = tree.map_structure(flatten_fn, values)
   return jnp.concatenate(tree.flatten(flat_leaves), axis=-1)
 
