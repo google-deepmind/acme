@@ -31,7 +31,7 @@ import tensorflow_probability as tfp
 tfd = tfp.distributions
 snt_init = snt.initializers
 
-_MIN_SCALE = 0.01
+_MIN_SCALE = 1e-4
 
 
 class DiscreteValuedHead(snt.Module):
@@ -147,6 +147,7 @@ class GaussianMixture(snt.Module):
                num_dimensions: int,
                num_components: int,
                multivariate: bool,
+               init_scale: Optional[float] = None,
                name: str = 'GaussianMixture'):
     """Initialization.
 
@@ -154,6 +155,7 @@ class GaussianMixture(snt.Module):
       num_dimensions: dimensionality of the output distribution
       num_components: number of mixture components.
       multivariate: whether the resulting distribution is multivariate or not.
+      init_scale: the initial scale for the Gaussian mixture components.
       name: name of the module passed to snt.Module parent class.
     """
     super().__init__(name=name)
@@ -162,22 +164,27 @@ class GaussianMixture(snt.Module):
     self._num_components = num_components
     self._multivariate = multivariate
 
-    initializer = tf.initializers.VarianceScaling(
-        distribution='uniform', mode='fan_out', scale=0.333)
+    if init_scale is not None:
+      self._scale_factor = init_scale / tf.nn.softplus(0.)
+    else:
+      self._scale_factor = 1.0  # Corresponds to init_scale = softplus(0).
+
+    # Define the weight initializer.
+    w_init = tf.initializers.VarianceScaling(1e-5)
 
     # Create a layer that outputs the unnormalized log-weights.
     if self._multivariate:
       logits_size = self._num_components
     else:
       logits_size = self._num_dimensions * self._num_components
-    self._logit_layer = snt.Linear(logits_size, w_init=initializer)
+    self._logit_layer = snt.Linear(logits_size, w_init=w_init)
 
     # Create two layers that outputs a location and a scale, respectively, for
     # each dimension and each component.
     self._loc_layer = snt.Linear(
-        self._num_dimensions * self._num_components, w_init=initializer)
+        self._num_dimensions * self._num_components, w_init=w_init)
     self._scale_layer = snt.Linear(
-        self._num_dimensions * self._num_components, w_init=initializer)
+        self._num_dimensions * self._num_components, w_init=w_init)
 
   def __call__(self,
                inputs: tf.Tensor,
@@ -194,34 +201,35 @@ class GaussianMixture(snt.Module):
       Mixture Gaussian distribution.
     """
 
+    # Compute logits, locs, and scales if necessary.
     logits = self._logit_layer(inputs)
     locs = self._loc_layer(inputs)
-    scales = self._scale_layer(inputs)
+
+    # When a low_noise_policy is requested, set the scales to its minimum value.
+    if low_noise_policy:
+      scales = tf.fill(locs.shape, _MIN_SCALE)
+    else:
+      scales = self._scale_layer(inputs)
+      scales = self._scale_factor * tf.nn.softplus(scales) + _MIN_SCALE
 
     if self._multivariate:
+      components_class = tfd.MultivariateNormalDiag
       shape = [-1, self._num_components, self._num_dimensions]
-      locs = tf.reshape(locs, shape)
-      scales = tf.reshape(scales, shape)
+      # In this case, no need to reshape logits as they are in the correct shape
+      # already, namely [batch_size, num_components].
     else:
+      components_class = tfd.Normal
       shape = [-1, self._num_dimensions, self._num_components]
-      locs = tf.reshape(locs, shape)
-      scales = tf.reshape(scales, shape)
       logits = tf.reshape(logits, shape)
 
-    if low_noise_policy:
-      scales = tf.ones_like(scales) * 1e-4
-    else:
-      scales = tf.nn.softplus(scales) + _MIN_SCALE
+    # Reshape the mixture's location and scale parameters appropriately.
+    locs = tf.reshape(locs, shape)
+    scales = tf.reshape(scales, shape)
 
-    if self._multivariate:
-      components_distribution = tfd.MultivariateNormalDiag(
-          loc=locs, scale_diag=scales)
-    else:
-      components_distribution = tfd.Normal(loc=locs, scale=scales)
-
+    # Create the mixture distribution.
     distribution = tfd.MixtureSameFamily(
         mixture_distribution=tfd.Categorical(logits=logits),
-        components_distribution=components_distribution)
+        components_distribution=components_class(loc=locs, scale=scales))
 
     if not self._multivariate:
       distribution = tfd.Independent(distribution)
@@ -235,6 +243,7 @@ class UnivariateGaussianMixture(GaussianMixture):
   def __init__(self,
                num_dimensions: int,
                num_components: int = 5,
+               init_scale: Optional[float] = None,
                num_mixtures: Optional[int] = None):
     """Create an mixture of Gaussian actor head.
 
@@ -242,6 +251,7 @@ class UnivariateGaussianMixture(GaussianMixture):
       num_dimensions: dimensionality of the output distribution. Each dimension
         is going to be an independent 1d GMM model.
       num_components: number of mixture components.
+      init_scale: the initial scale for the Gaussian mixture components.
       num_mixtures: deprecated argument which overwrites num_components.
     """
     if num_mixtures is not None:
@@ -252,6 +262,7 @@ class UnivariateGaussianMixture(GaussianMixture):
     super().__init__(num_dimensions=num_dimensions,
                      num_components=num_components,
                      multivariate=False,
+                     init_scale=init_scale,
                      name='UnivariateGaussianMixture')
 
 
@@ -260,17 +271,20 @@ class MultivariateGaussianMixture(GaussianMixture):
 
   def __init__(self,
                num_dimensions: int,
-               num_components: int = 5):
+               num_components: int = 5,
+               init_scale: Optional[float] = None):
     """Initialization.
 
     Args:
       num_dimensions: dimensionality of the output distribution
         (also the dimensionality of the multivariate Gaussian model).
       num_components: number of mixture components.
+      init_scale: the initial scale for the Gaussian mixture components.
     """
     super().__init__(num_dimensions=num_dimensions,
                      num_components=num_components,
                      multivariate=True,
+                     init_scale=init_scale,
                      name='MultivariateGaussianMixture')
 
 
