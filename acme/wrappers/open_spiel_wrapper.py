@@ -15,7 +15,7 @@
 
 """Wraps an OpenSpiel RL environment to be used as a dm_env environment."""
 
-from typing import List
+from typing import List, NamedTuple
 
 from acme import specs
 from acme import types
@@ -23,6 +23,13 @@ import dm_env
 import numpy as np
 from open_spiel.python import rl_environment
 import pyspiel
+
+
+class OLT(NamedTuple):
+  """Container for (observation, legal_actions, terminal) tuples."""
+  observation: types.Nest
+  legal_actions: types.Nest
+  terminal: types.Nest
 
 
 # TODO Wrap the underlying OpenSpiel game directly instead of OpenSpiel's
@@ -44,9 +51,9 @@ class OpenSpielWrapper(dm_env.Environment):
     """Resets the episode."""
     self._reset_next_step = False
     open_spiel_timestep = self._environment.reset()
-    observation = self._convert_observation(open_spiel_timestep.observations)
     assert open_spiel_timestep.step_type == rl_environment.StepType.FIRST
-    return dm_env.restart(observation)
+    observations = self._convert_observation(open_spiel_timestep)
+    return dm_env.restart(observations)
 
   def step(self, action: types.NestedArray) -> dm_env.TimeStep:
     """Steps the environment."""
@@ -58,9 +65,9 @@ class OpenSpielWrapper(dm_env.Environment):
     if open_spiel_timestep.step_type == rl_environment.StepType.LAST:
       self._reset_next_step = True
 
-    observation = self._convert_observation(open_spiel_timestep.observations)
-    reward = np.asarray(open_spiel_timestep.rewards)
-    discount = np.asarray(open_spiel_timestep.discounts)
+    observations = self._convert_observation(open_spiel_timestep)
+    rewards = np.asarray(open_spiel_timestep.rewards)
+    discounts = np.asarray(open_spiel_timestep.discounts)
     step_type = open_spiel_timestep.step_type
 
     if step_type == rl_environment.StepType.FIRST:
@@ -72,42 +79,45 @@ class OpenSpielWrapper(dm_env.Environment):
     else:
       raise ValueError("Did not recognize OpenSpiel StepType")
 
-    return dm_env.TimeStep(observation=observation,
-                           reward=reward,
-                           discount=discount,
+    return dm_env.TimeStep(observation=observations,
+                           reward=rewards,
+                           discount=discounts,
                            step_type=step_type)
 
-  # TODO Convert OpenSpiel observation so it's dm_env compatible. Dm_env
-  # timesteps allow for dicts and nesting, but they require the leaf elements
-  # be numpy arrays, whereas OpenSpiel timestep leaf elements are python lists.
-  # Also, the list of legal actions must be converted to a legal actions mask.
+  # Convert OpenSpiel observation so it's dm_env compatible. Also, the list
+  # of legal actions must be converted to a legal actions mask.
   def _convert_observation(
-      self, open_spiel_observation: types.NestedArray) -> types.NestedArray:
-    observation = {"info_state": [], "legal_actions": [], "current_player": []}
-    info_state = []
-    for player_info_state in open_spiel_observation["info_state"]:
-      info_state.append(np.asarray(player_info_state))
-    observation["info_state"] = info_state
-    legal_actions = []
-    for indicies in open_spiel_observation["legal_actions"]:
+      self, open_spiel_timestep: NamedTuple) -> types.NestedArray:
+    observations = []
+    for pid in range(self._environment.num_players):
       legals = np.zeros(self._environment._game.num_distinct_actions())
-      legals[indicies] = 1
-      legal_actions.append(legals)
-    observation["legal_actions"] = legal_actions
-    observation["current_player"] = self._environment._state.current_player()
-    return observation
+      legals[open_spiel_timestep.observations["legal_actions"][pid]] = 1
+      player_observation = OLT(observation=np.asarray(
+          open_spiel_timestep.observations["info_state"][pid]),
+                               legal_actions=legals,
+                               terminal=np.asarray(
+                                   [float(open_spiel_timestep.last())]))
+      observations.append(player_observation)
+    return observations
 
-  # TODO These specs describe the timestep that the actor and learner ultimately
-  # receive, not the timestep that gets passed to the OpenSpiel agent. See
-  # acme/open_spiel/agents/agent.py for more details.
   def observation_spec(self) -> types.NestedSpec:
+    # Observation spec depends on whether the OpenSpiel environment is using
+    # observation/information_state tensors
     if self._environment._use_observation:
-      return specs.Array((self._environment._game.observation_tensor_size(),),
-                         np.float32)
+      return OLT(observation=specs.Array(
+          (self._environment._game.observation_tensor_size(),), np.float32),
+                 legal_actions=specs.Array(
+                     (self._environment._game.num_distinct_actions(),),
+                     np.float32),
+                 terminal=specs.Array((1,), np.float32))
     else:
-      return specs.Array(
+      return OLT(observation=specs.Array(
           (self._environment._game.information_state_tensor_size(),),
-          np.float32)
+          np.float32),
+                 legal_actions=specs.Array(
+                     (self._environment._game.num_distinct_actions(),),
+                     np.float32),
+                 terminal=specs.Array((1,), np.float32))
 
   def action_spec(self) -> types.NestedSpec:
     return specs.DiscreteArray(self._environment._game.num_distinct_actions())
@@ -121,20 +131,15 @@ class OpenSpielWrapper(dm_env.Environment):
   def discount_spec(self) -> types.NestedSpec:
     return specs.BoundedArray((), np.float32, minimum=0, maximum=1.0)
 
-  def legal_actions_spec(self) -> types.NestedSpec:
-    return specs.BoundedArray((self._environment._game.num_distinct_actions(),),
-                              np.float32,
-                              minimum=0,
-                              maximum=1.0)
-
-  def terminals_spec(self) -> types.NestedSpec:
-    return specs.BoundedArray((), np.float32, minimum=0, maximum=1.0)
-
   @property
-  def environment(self):
+  def environment(self) -> rl_environment.Environment:
     """Returns the wrapped environment."""
     return self._environment
 
+  @property
+  def current_player(self) -> int:
+    return self._environment._state.current_player()
+
   def __getattr__(self, name: str):
-    # Expose any other attributes of the underlying environment.
+    """Expose any other attributes of the underlying environment."""
     return getattr(self._environment, name)

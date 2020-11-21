@@ -13,19 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example running DQN on OpenSpiel in a single process."""
+"""Example running DQN on OpenSpiel game in a single process."""
 
 from absl import app
 from absl import flags
 
 import acme
-from acme import specs
 from acme import wrappers
-from acme.open_spiel import open_spiel_environment_loop
-from acme.open_spiel import open_spiel_specs
-from acme.open_spiel import open_spiel_wrapper
-from acme.open_spiel.agents.tf import dqn
-from acme.tf import networks
+from acme.agents.tf import dqn
+from acme.environment_loops import open_spiel_environment_loop
+from acme.tf.networks import legal_actions
+from acme.wrappers import open_spiel_wrapper
 from open_spiel.python import rl_environment
 import sonnet as snt
 
@@ -42,28 +40,27 @@ def main(_):
 
   environment = open_spiel_wrapper.OpenSpielWrapper(raw_environment)
   environment = wrappers.SinglePrecisionWrapper(environment)
-  environment_spec = specs.make_environment_spec(environment)
-  extras_spec = open_spiel_specs.make_extras_spec(environment)
+  environment_spec = acme.make_environment_spec(environment)
 
-  network = snt.Sequential([
+  network = legal_actions.MaskedSequential([
       snt.Flatten(),
       snt.nets.MLP([50, 50, environment_spec.actions.num_values])
   ])
 
-  # Construct the agent.
+  policy_network = snt.Sequential(
+      [network, legal_actions.EpsilonGreedy(epsilon=0.1, threshold=-1e8)])
+
+  # Construct the agents.
   agents = []
 
   for i in range(environment.num_players):
     agents.append(
         dqn.DQN(
             environment_spec=environment_spec,
-            extras_spec=extras_spec,
-            priority_exponent=0.0,  # TODO Test priority_exponent.
             discount=1.0,
-            n_step=1,  # TODO Appear to be convergence issues when n > 1.
-            epsilon=0.1,
+            n_step=1,  # Note: does indeed converge for n > 1
             network=network,
-            player_id=i))
+            policy_network=policy_network))
 
   # Run the environment loop.
   loop = open_spiel_environment_loop.OpenSpielEnvironmentLoop(

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""An OpenSpiel agent-environment training loop."""
+"""An OpenSpiel multi-agent/environment training loop."""
 
 import operator
 import time
@@ -21,22 +21,24 @@ from typing import List, Optional
 
 from acme import core
 # Internal imports.
+from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
-
 import dm_env
 from dm_env import specs
 import numpy as np
+import pyspiel
+import tensorflow as tf
 import tree
 
 
 class OpenSpielEnvironmentLoop(core.Worker):
-  """A simple RL environment loop.
+  """An OpenSpiel RL environment loop.
 
-  This takes `Environment` and `Actor` instances and coordinates their
-  interaction. This can be used as:
+  This takes `Environment` and list of `Actor` instances and coordinates their
+  interaction. Agents are updated if `should_update=True`. This can be used as:
 
-    loop = EnvironmentLoop(environment, actor)
+    loop = EnvironmentLoop(environment, actors)
     loop.run(num_episodes)
 
   A `Counter` instance can optionally be given in order to maintain counts
@@ -56,6 +58,7 @@ class OpenSpielEnvironmentLoop(core.Worker):
       actors: List[core.Actor],
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
+      should_update: bool = True,
       label: str = 'open_spiel_environment_loop',
   ):
     # Internalize agent and environment.
@@ -63,8 +66,65 @@ class OpenSpielEnvironmentLoop(core.Worker):
     self._actors = actors
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.make_default_logger(label)
+    self._should_update = should_update
 
-  def run_episode(self, verbose=False) -> loggers.LoggingData:
+    # Track information necessary to coordinate updates among multiple actors.
+    self._observed_first = [False] * len(self._actors)
+    self._prev_actions = [None] * len(self._actors)
+
+  def _send_observation(self, timestep: dm_env.TimeStep, player: int):
+    # If terminal all actors must update
+    if player == pyspiel.PlayerId.TERMINAL:
+      for player_id in range(len(self._actors)):
+        # Note: we must account for situations where the first observation
+        # is a terminal state, e.g. if an opponent folds in poker before we get
+        # to act.
+        if self._observed_first[player_id]:
+          player_timestep = self._get_player_timestep(timestep, player_id)
+          self._actors[player_id].observe(self._prev_actions[player_id],
+                                          player_timestep)
+          if self._should_update:
+            self._actors[player_id].update()
+      self._observed_first = [False] * len(self._actors)
+      self._prev_actions = [None] * len(self._actors)
+    else:
+      if not self._observed_first[player]:
+        player_timestep = dm_env.TimeStep(
+            observation=timestep.observation[player],
+            reward=None,
+            discount=None,
+            step_type=dm_env.StepType.FIRST)
+        self._actors[player].observe_first(player_timestep)
+        self._observed_first[player] = True
+      else:
+        player_timestep = self._get_player_timestep(timestep, player)
+        self._actors[player].observe(self._prev_actions[player],
+                                     player_timestep)
+        if self._should_update:
+          self._actors[player].update()
+
+  def _get_action(self, timestep: dm_env.TimeStep, player: int) -> int:
+    self._prev_actions[player] = self._actors[player].select_action(
+        timestep.observation[player])
+    return self._prev_actions[player]
+
+  def _get_player_timestep(self, timestep: dm_env.TimeStep,
+                           player: int) -> dm_env.TimeStep:
+    return dm_env.TimeStep(observation=timestep.observation[player],
+                           reward=timestep.reward[player],
+                           discount=timestep.discount[player],
+                           step_type=timestep.step_type)
+
+  # TODO Remove? Currently used for debugging.
+  def _print_policy(self, timestep: dm_env.TimeStep, player: int):
+    batched_observation = tf2_utils.add_batch_dim(timestep.observation[player])
+    policy = tf.squeeze(
+        self._actors[player]._learner._network(batched_observation))
+    tf.print(policy, summarize=-1)
+    tf.print("Greedy action: ", tf.math.argmax(policy))
+
+  # TODO Remove verbose or add to logger?
+  def run_episode(self, verbose: bool = False) -> loggers.LoggingData:
     """Run one episode.
 
     Each episode is a loop which interacts first with the environment to get an
@@ -91,39 +151,31 @@ class OpenSpielEnvironmentLoop(core.Worker):
     timestep = self._environment.reset()
 
     # Make the first observation.
-    # TODO Note: OpenSpiel agents handle observe_first() internally.
-    for actor in self._actors:
-      actor.observe(None, next_timestep=timestep)
+    self._send_observation(timestep, self._environment.current_player)
 
     # Run an episode.
     while not timestep.last():
       # Generate an action from the agent's policy and step the environment.
-      pid = timestep.observation["current_player"]
-
       if self._environment.is_turn_based:
-        action_list = [self._actors[pid].select_action(timestep.observation)]
-      else:
-        # TODO Test this on simultaneous move games.
-        agents_output = [agent.step(time_step) for agent in agents]
         action_list = [
-            actor.select_action(timestep.observation) for actor in self._actors
+            self._get_action(timestep, self._environment.current_player)
         ]
+      else:
+        # TODO Support simultaneous move games.
+        raise ValueError("Currently only supports sequential games.")
 
-      # TODO Delete or move to logger?
       if verbose:
-        self._actors[pid].print_policy(timestep.observation)
-        print("Action: ", action_list[0])
+        self._print_policy(timestep, self._environment.current_player)
+        print("Selected action: ", action_list[0])
 
       timestep = self._environment.step(action_list)
 
-      # TODO Delete or move to logger?
       if verbose:
         print("State:")
         print(str(self._environment._state))
 
       # Have the agent observe the timestep and let the actor update itself.
-      for actor in self._actors:
-        actor.observe(action_list, next_timestep=timestep)
+      self._send_observation(timestep, self._environment.current_player)
 
       # Book-keeping.
       episode_steps += 1
@@ -131,7 +183,6 @@ class OpenSpielEnvironmentLoop(core.Worker):
       # Equivalent to: episode_return += timestep.reward
       tree.map_structure(operator.iadd, episode_return, timestep.reward)
 
-      # TODO Delete or move to logger?
       if verbose:
         print("Reward: ", timestep.reward)
 
@@ -179,7 +230,6 @@ class OpenSpielEnvironmentLoop(core.Worker):
 
     episode_count, step_count = 0, 0
     while not should_terminate(episode_count, step_count):
-      # TODO Remove verbose?
       if episode_count % 1000 == 0:
         result = self.run_episode(verbose=True)
       else:

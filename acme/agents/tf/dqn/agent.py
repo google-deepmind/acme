@@ -46,6 +46,7 @@ class DQN(agent.Agent):
       self,
       environment_spec: specs.EnvironmentSpec,
       network: snt.Module,
+      policy_network: Optional[snt.Module] = None,
       batch_size: int = 256,
       prefetch_size: int = 4,
       target_update_period: int = 100,
@@ -118,10 +119,11 @@ class DQN(agent.Agent):
     # Use constant 0.05 epsilon greedy policy by default.
     if epsilon is None:
       epsilon = tf.Variable(0.05, trainable=False)
-    policy_network = snt.Sequential([
-        network,
-        lambda q: trfl.epsilon_greedy(q, epsilon=epsilon).sample(),
-    ])
+    if policy_network is None:
+      policy_network = snt.Sequential([
+          network,
+          lambda q: trfl.epsilon_greedy(q, epsilon=epsilon).sample(),
+      ])
 
     # Create a target network.
     target_network = copy.deepcopy(network)

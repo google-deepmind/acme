@@ -1,4 +1,3 @@
-# python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Expose specs and types modules.
-from acme.open_spiel import open_spiel_specs
+"""Specialized environment loops."""
 
-# Expose the environment loop.
-from acme.open_spiel import open_spiel_environment_loop
-
-# Acme loves OpenSpiel.
+from acme.environment_loops.open_spiel_environment_loop import OpenSpielEnvironmentLoop
