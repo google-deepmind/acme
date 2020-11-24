@@ -39,6 +39,7 @@ class SequenceAdder(base.ReverbAdder):
       chunk_length: Optional[int] = None,
       priority_fns: Optional[base.PriorityFnMapping] = None,
       pad_end_of_episode: bool = True,
+      break_end_of_episode: bool = True,
   ):
     """Makes a SequenceAdder instance.
 
@@ -57,6 +58,8 @@ class SequenceAdder(base.ReverbAdder):
         sequence will be padded (with observations, actions, etc... whose values
         are 0) until its length is `sequence_length`. If False then the last
         sequence in the episode may have length less than `sequence_length`.
+      break_end_of_episode: If 'False' (True by default) does not break
+        sequences on env reset. In this case 'pad_end_of_episode' is not used.
     """
     super().__init__(
         client=client,
@@ -66,13 +69,22 @@ class SequenceAdder(base.ReverbAdder):
         chunk_length=chunk_length,
         priority_fns=priority_fns)
 
+    if pad_end_of_episode and not break_end_of_episode:
+      raise ValueError(
+          'Can\'t set pad_end_of_episode=True and break_end_of_episode=False at'
+          ' the same time, since those behaviors are incompatible.')
+
     self._period = period
     self._step = 0
     self._pad_end_of_episode = pad_end_of_episode
+    self._break_end_of_episode = break_end_of_episode
 
   def reset(self):
-    self._step = 0
-    super().reset()
+    # If we do not break on end of episode, we should not reset the _step
+    # counter, neither clear the buffer/writer.
+    if self._break_end_of_episode:
+      self._step = 0
+      super().reset()
 
   def _write(self):
     # Append the previous step and increment number of steps written.
@@ -88,6 +100,15 @@ class SequenceAdder(base.ReverbAdder):
     self._buffer.append(final_step)
     self._writer.append(final_step)
     self._step += 1
+
+    if not self._break_end_of_episode:
+      # Write priorities for the sequence.
+      self._maybe_add_priorities()
+
+      # base.py has a check that on add_first self._next_observation should be
+      # None, thus we need to clear it at the end of each episode.
+      self._next_observation = None
+      return
 
     # Determine the delta to the next time we would write a sequence.
     first_write = self._step <= self._max_sequence_length

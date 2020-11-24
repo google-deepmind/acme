@@ -36,7 +36,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=7.0, observation=5)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 1.0, False, ()),
@@ -66,7 +66,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=7.0, observation=5)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 1.0, False, ()),
@@ -89,7 +89,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=3.0, observation=3)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 0.0, False, ()),
@@ -106,7 +106,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=3.0, observation=3)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 0.0, False, ()),
@@ -123,7 +123,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=3.0, observation=3)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 0.0, False, ()),
@@ -141,7 +141,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=3.0, observation=3)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 0.0, False, ()),
@@ -159,7 +159,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=3.0, observation=3)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 0.0, False, ()),
@@ -182,7 +182,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=13.0, observation=8)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 1.0, False, ()),
@@ -215,7 +215,7 @@ TEST_CASES = [
             (0, dm_env.termination(reward=13.0, observation=8)),
         ),
         expected_sequences=(
-            # (observation, action, reward, discount, extra)
+            # (observation, action, reward, discount, start_of_episode, extra)
             [
                 (1, 0, 2.0, 1.0, True, ()),
                 (2, 0, 3.0, 1.0, False, ()),
@@ -233,6 +233,182 @@ TEST_CASES = [
         ),
         pad_end_of_episode=False,
     ),
+    dict(
+        testcase_name='NonBreakingSequenceOnEpisodeReset',
+        sequence_length=3,
+        period=2,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=2.0, observation=2)),
+            (0, dm_env.transition(reward=3.0, observation=3)),
+            (0, dm_env.transition(reward=5.0, observation=4)),
+            (0, dm_env.transition(reward=7.0, observation=5)),
+            (0, dm_env.transition(reward=9.0, observation=6)),
+            (0, dm_env.transition(reward=11.0, observation=7)),
+            (0, dm_env.termination(reward=13.0, observation=8)),
+        ),
+        expected_sequences=(
+            # (observation, action, reward, discount, start_of_episode, extra)
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+            ],
+            [
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 11.0, 1.0, False, ()),
+                (7, 0, 13.0, 0.0, False, ()),
+            ],
+        ),
+        pad_end_of_episode=False,
+        break_end_of_episode=False,
+        repeat_episode_times=1
+    ),
+    dict(
+        testcase_name='NonBreakingSequenceMultipleTerminatedEpisodes',
+        sequence_length=3,
+        period=2,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=2.0, observation=2)),
+            (0, dm_env.transition(reward=3.0, observation=3)),
+            (0, dm_env.transition(reward=5.0, observation=4)),
+            (0, dm_env.transition(reward=7.0, observation=5)),
+            (0, dm_env.transition(reward=9.0, observation=6)),
+            (0, dm_env.termination(reward=13.0, observation=7)),
+        ),
+        expected_sequences=(
+            # (observation, action, reward, discount, start_of_episode, extra)
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+            ],
+            [
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 13.0, 0.0, False, ()),
+                (7, 0, 0.0, 0.0, False, ()),
+            ],
+            [
+                (7, 0, 0.0, 0.0, False, ()),
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+            ],
+            [
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 1.0, False, ()),
+            ],
+            [
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 13.0, 0.0, False, ()),
+            ],
+            [
+                (6, 0, 13.0, 0.0, False, ()),
+                (7, 0, 0.0, 0.0, False, ()),
+                (1, 0, 2.0, 1.0, True, ()),
+            ],
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+            ],
+            [
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 13.0, 0.0, False, ()),
+                (7, 0, 0.0, 0.0, False, ()),
+            ],
+        ),
+        pad_end_of_episode=False,
+        break_end_of_episode=False,
+        repeat_episode_times=3
+    ),
+    dict(
+        testcase_name='NonBreakingSequenceMultipleTruncatedEpisodes',
+        sequence_length=3,
+        period=2,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=2.0, observation=2)),
+            (0, dm_env.transition(reward=3.0, observation=3)),
+            (0, dm_env.transition(reward=5.0, observation=4)),
+            (0, dm_env.transition(reward=7.0, observation=5)),
+            (0, dm_env.transition(reward=9.0, observation=6)),
+            (0, dm_env.truncation(reward=13.0, observation=7)),
+        ),
+        expected_sequences=(
+            # (observation, action, reward, discount, start_of_episode, extra)
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+            ],
+            [
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 13.0, 1.0, False, ()),
+                (7, 0, 0.0, 0.0, False, ()),
+            ],
+            [
+                (7, 0, 0.0, 0.0, False, ()),
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+            ],
+            [
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 1.0, False, ()),
+            ],
+            [
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 13.0, 1.0, False, ()),
+            ],
+            [
+                (6, 0, 13.0, 1.0, False, ()),
+                (7, 0, 0.0, 0.0, False, ()),
+                (1, 0, 2.0, 1.0, True, ()),
+            ],
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 9.0, 1.0, False, ()),
+            ],
+            [
+                (5, 0, 9.0, 1.0, False, ()),
+                (6, 0, 13.0, 1.0, False, ()),
+                (7, 0, 0.0, 0.0, False, (),)
+            ],
+        ),
+        pad_end_of_episode=False,
+        break_end_of_episode=False,
+        repeat_episode_times=3
+    ),
 ]
 
 
@@ -240,17 +416,22 @@ class SequenceAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):
 
   @parameterized.named_parameters(*TEST_CASES)
   def test_adder(self, sequence_length: int, period: int, first, steps,
-                 expected_sequences, pad_end_of_episode: bool = True):
+                 expected_sequences, pad_end_of_episode: bool = True,
+                 break_end_of_episode: bool = True,
+                 repeat_episode_times: int = 1):
     adder = adders.SequenceAdder(
         self.client,
         sequence_length=sequence_length,
         period=period,
-        pad_end_of_episode=pad_end_of_episode)
+        pad_end_of_episode=pad_end_of_episode,
+        break_end_of_episode=break_end_of_episode)
     super().run_test_adder(
         adder=adder,
         first=first,
         steps=steps,
-        expected_items=expected_sequences)
+        expected_items=expected_sequences,
+        repeat_episode_times=repeat_episode_times,
+        break_end_of_episode=break_end_of_episode)
 
 
 if __name__ == '__main__':

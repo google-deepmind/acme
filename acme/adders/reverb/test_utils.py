@@ -133,7 +133,9 @@ class AdderTestMixin(absltest.TestCase):
                      first: dm_env.TimeStep,
                      steps: Sequence[Step],
                      expected_items: Sequence[Any],
-                     pack_expected_items: bool = False):
+                     pack_expected_items: bool = False,
+                     repeat_episode_times: int = 1,
+                     break_end_of_episode: bool = True):
     """Runs a unit test case for the adder.
 
     Args:
@@ -147,6 +149,9 @@ class AdderTestMixin(absltest.TestCase):
         all of the elements in `steps`.
       pack_expected_items: If true the expected items are given unpacked and
         need to be packed in a list before comparison.
+      repeat_episode_times: How many times to run an episode.
+      break_end_of_episode: If False, an end of an episode does not break the
+        sequence.
     """
     if not steps:
       raise ValueError('At least one step must be given.')
@@ -165,33 +170,38 @@ class AdderTestMixin(absltest.TestCase):
       extras_spec = ()
     signature = adder.signature(env_spec, extras_spec=extras_spec)
 
-    # Add all the data up to the final step.
-    adder.add_first(first)
-    for step in steps[:-1]:
-      action, ts = step[0], step[1]
+    for episode_id in range(repeat_episode_times):
+      # Add all the data up to the final step.
+      adder.add_first(first)
+      for step in steps[:-1]:
+        action, ts = step[0], step[1]
 
-      if has_extras:
-        extras = step[2]
-      else:
-        extras = ()
+        if has_extras:
+          extras = step[2]
+        else:
+          extras = ()
 
-      adder.add(action, next_timestep=ts, extras=extras)
+        adder.add(action, next_timestep=ts, extras=extras)
 
-    if len(steps) == 1:
-      # adder.add() has not been called yet, so no writers have been created.
-      self.assertEmpty(self.client.writers)
-    else:
-      # Make sure the writer has been created but not closed.
-      self.assertLen(self.client.writers, 1)
-      self.assertFalse(self.client.writers[0].closed)
+      # Only check for the first episode.
+      if episode_id == 0:
+        if len(steps) == 1:
+          # adder.add() has not been called yet, so no writers have been
+          # created.
+          self.assertEmpty(self.client.writers)
+        else:
+          # Make sure the writer has been created but not closed.
+          self.assertLen(self.client.writers, 1)
+          self.assertFalse(self.client.writers[0].closed)
 
-    # Add the final step.
-    adder.add(*steps[-1])
+      # Add the final step.
+      adder.add(*steps[-1])
 
     # Ending the episode should close the writer. No new writer should yet have
     # been created as it is constructed lazily.
     self.assertLen(self.client.writers, 1)
-    self.assertTrue(self.client.writers[0].closed)
+    if break_end_of_episode:
+      self.assertTrue(self.client.writers[0].closed)
 
     # Make sure our expected and observed data match.
     observed_items = [p[1] for p in self.client.writers[0].priorities]
@@ -214,15 +224,16 @@ class AdderTestMixin(absltest.TestCase):
     for step in self.client.writers[0].timesteps:
       tree.map_structure(_check_signature, signature, step)
 
-    # Add the start of a second trajectory.
-    adder.add_first(first)
-    adder.add(*steps[0])
+    if break_end_of_episode:
+      # Add the start of a second trajectory.
+      adder.add_first(first)
+      adder.add(*steps[0])
 
-    # Make sure this creates an new writer.
-    self.assertLen(self.client.writers, 2)
-    # The writer is closed if the recently added `dm_env.TimeStep`'s' step_type
-    # is `dm_env.StepType.LAST`.
-    if steps[0][1].last():
-      self.assertTrue(self.client.writers[1].closed)
-    else:
-      self.assertFalse(self.client.writers[1].closed)
+      # Make sure this creates an new writer.
+      self.assertLen(self.client.writers, 2)
+      # The writer is closed if the recently added `dm_env.TimeStep`'s'
+      # step_type is `dm_env.StepType.LAST`.
+      if steps[0][1].last():
+        self.assertTrue(self.client.writers[1].closed)
+      else:
+        self.assertFalse(self.client.writers[1].closed)
