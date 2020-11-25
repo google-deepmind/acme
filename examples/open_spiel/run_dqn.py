@@ -42,25 +42,28 @@ def main(_):
   environment = wrappers.SinglePrecisionWrapper(environment)
   environment_spec = acme.make_environment_spec(environment)
 
-  network = legal_actions.MaskedSequential([
-      snt.Flatten(),
-      snt.nets.MLP([50, 50, environment_spec.actions.num_values])
-  ])
-
-  policy_network = snt.Sequential(
-      [network, legal_actions.EpsilonGreedy(epsilon=0.1, threshold=-1e8)])
+  # Build the networks.
+  networks = []
+  policy_networks = []
+  for i in range(environment.num_players):
+    network = legal_actions.MaskedSequential([
+        snt.Flatten(),
+        snt.nets.MLP([50, 50, environment_spec.actions.num_values])
+    ])
+    policy_network = snt.Sequential(
+        [network,
+         legal_actions.EpsilonGreedy(epsilon=0.1, threshold=-1e8)])
+    networks.append(network)
+    policy_networks.append(policy_network)
 
   # Construct the agents.
   agents = []
 
   for i in range(environment.num_players):
     agents.append(
-        dqn.DQN(
-            environment_spec=environment_spec,
-            discount=1.0,
-            n_step=1,  # Note: does indeed converge for n > 1
-            network=network,
-            policy_network=policy_network))
+        dqn.DQN(environment_spec=environment_spec,
+                network=networks[i],
+                policy_network=policy_networks[i]))
 
   # Run the environment loop.
   loop = open_spiel_environment_loop.OpenSpielEnvironmentLoop(
