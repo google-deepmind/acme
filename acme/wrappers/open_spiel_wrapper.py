@@ -15,7 +15,7 @@
 
 """Wraps an OpenSpiel RL environment to be used as a dm_env environment."""
 
-from typing import List, NamedTuple
+from typing import NamedTuple
 
 from acme import specs
 from acme import types
@@ -43,15 +43,14 @@ class OpenSpielWrapper(dm_env.Environment):
   def __init__(self, environment: rl_environment.Environment):
     self._environment = environment
     self._reset_next_step = True
-    assert environment._game.get_type(
-    ).dynamics == pyspiel.GameType.Dynamics.SEQUENTIAL, (
-        "Currently only supports sequential games.")
+    if environment._game.get_type(
+    ).dynamics != pyspiel.GameType.Dynamics.SEQUENTIAL:
+      raise ValueError("Currently only supports sequential games.")
 
   def reset(self) -> dm_env.TimeStep:
     """Resets the episode."""
     self._reset_next_step = False
     open_spiel_timestep = self._environment.reset()
-    assert open_spiel_timestep.step_type == rl_environment.StepType.FIRST
     observations = self._convert_observation(open_spiel_timestep)
     return dm_env.restart(observations)
 
@@ -77,7 +76,8 @@ class OpenSpielWrapper(dm_env.Environment):
     elif step_type == rl_environment.StepType.LAST:
       step_type = dm_env.StepType.LAST
     else:
-      raise ValueError("Did not recognize OpenSpiel StepType")
+      raise ValueError(
+          "Did not recognize OpenSpiel StepType: {}".format(step_type))
 
     return dm_env.TimeStep(observation=observations,
                            reward=rewards,
@@ -87,7 +87,7 @@ class OpenSpielWrapper(dm_env.Environment):
   # Convert OpenSpiel observation so it's dm_env compatible. Also, the list
   # of legal actions must be converted to a legal actions mask.
   def _convert_observation(
-      self, open_spiel_timestep: NamedTuple) -> types.NestedArray:
+      self, open_spiel_timestep: rl_environment.TimeStep) -> types.NestedArray:
     observations = []
     for pid in range(self._environment.num_players):
       legals = np.zeros(self._environment._game.num_distinct_actions())

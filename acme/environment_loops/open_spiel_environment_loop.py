@@ -17,13 +17,13 @@
 
 import operator
 import time
-from typing import List, Optional
+from typing import Optional, Sequence
 
 from acme import core
-# Internal imports.
 from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
+from acme.wrappers import open_spiel_wrapper
 import dm_env
 from dm_env import specs
 import numpy as np
@@ -54,8 +54,8 @@ class OpenSpielEnvironmentLoop(core.Worker):
 
   def __init__(
       self,
-      environment: dm_env.Environment,
-      actors: List[core.Actor],
+      environment: open_spiel_wrapper.OpenSpielWrapper,
+      actors: Sequence[core.Actor],
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
       should_update: bool = True,
@@ -120,7 +120,7 @@ class OpenSpielEnvironmentLoop(core.Worker):
     batched_observation = tf2_utils.add_batch_dim(timestep.observation[player])
     policy = tf.squeeze(
         self._actors[player]._learner._network(batched_observation))
-    tf.print(policy, summarize=-1)
+    tf.print("Policy: ", policy, summarize=-1)
     tf.print("Greedy action: ", tf.math.argmax(policy))
 
   # TODO Remove verbose or add to logger?
@@ -242,6 +242,3 @@ class OpenSpielEnvironmentLoop(core.Worker):
 
 def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
   return np.zeros(spec.shape, spec.dtype)
-
-
-# Internal class.
