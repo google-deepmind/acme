@@ -31,14 +31,15 @@ class VariableClient:
                client: core.VariableSource,
                key: str,
                update_period: int = 1,
-               device: str = None):
-    """Initializes the object.
+               device: Optional[str] = None):
+    """Initializes the variable client.
 
     Args:
-      client: a variable source
-      key: what variables to request
-      update_period: update period
-      device: if not None, defines to which device variables should be put to
+      client: A variable source from which we fetch variables.
+      key: Which variables to request.
+      update_period: Interval between fetches.
+      device: The name of a JAX device to put variables on. If None (default),
+        don't put to device.
     """
     self._key = key
     self._update_period = update_period
@@ -54,7 +55,7 @@ class VariableClient:
     self._future: Optional[futures.Future] = None
     self._async_request = lambda: self._executor.submit(self._request)
 
-  def update(self, wait: bool = False):
+  def update(self, wait: bool = False) -> None:
     """Periodically updates the variables with the latest copy from the source.
 
     If wait is True, a blocking request is executed. Any active request will be
@@ -62,7 +63,8 @@ class VariableClient:
     If wait is False, this method makes an asynchronous request for variables.
 
     Args:
-      wait: if True, executes blocking update.
+      wait: Whether to execute asynchronous (False) or blocking updates (True).
+        Defaults to False.
     """
     # Track calls (we only update periodically).
     if self._call_counter < self._update_period:
@@ -73,8 +75,9 @@ class VariableClient:
       return
 
     if wait:
-      # Cancel any already running request.
-      self._future = None
+      if self._future is not None:
+        if self._future.running(): self._future.cancel()
+        self._future = None
       self._call_counter = 0
       self.update_and_wait()
       return
@@ -94,11 +97,12 @@ class VariableClient:
 
   def _callback(self, params_list: List[hk.Params]):
     assert len(params_list) == 1
+    params = params_list.pop()
     if self._device:
       # Move variables to a proper device.
-      self._params = jax.device_put(params_list[0], self._device)
+      self._params = jax.device_put(params, self._device)
     else:
-      self._params = params_list[0]
+      self._params = params
 
   @property
   def params(self) -> hk.Params:
