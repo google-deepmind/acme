@@ -45,6 +45,7 @@ jax_requirements = [
     'optax',
     'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
     'dataclasses',  # Back-port for Python 3.6.
+    'typing-extensions',
 ]
 
 env_requirements = [

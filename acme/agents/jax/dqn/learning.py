@@ -15,41 +15,24 @@
 
 """DQN learner implementation."""
 
-from typing import Iterator, List, NamedTuple, Tuple
+from typing import Iterator
 
-import acme
-from acme.adders import reverb as adders
-from acme.jax import utils
-from acme.utils import async_utils
+from acme.agents.jax.dqn import learning_lib
+from acme.agents.jax.dqn import losses
 from acme.utils import counting
 from acme.utils import loggers
 from dm_env import specs
 import haiku as hk
-import jax
-import jax.numpy as jnp
 import optax
 import reverb
-import rlax
 
 
-class TrainingState(NamedTuple):
-  """Holds the agent's training state."""
-  params: hk.Params
-  target_params: hk.Params
-  opt_state: optax.OptState
-  steps: int
+class DQNLearner(learning_lib.SGDLearner):
+  """DQN learner.
 
-
-class LearnerOutputs(NamedTuple):
-  """Outputs from the SGD step, for logging and updating priorities."""
-  keys: jnp.ndarray
-  priorities: jnp.ndarray
-
-
-class DQNLearner(acme.Learner, acme.Saveable):
-  """DQN learner."""
-
-  _state: TrainingState
+  We are in the process of migrating towards a more general SGDLearner to allow
+  for easy configuration of the loss. This is maintained now for compatibility.
+  """
 
   def __init__(self,
                network: hk.Transformed,
@@ -66,121 +49,21 @@ class DQNLearner(acme.Learner, acme.Saveable):
                counter: counting.Counter = None,
                logger: loggers.Logger = None):
     """Initializes the learner."""
-
-    def loss(params: hk.Params, target_params: hk.Params,
-             sample: reverb.ReplaySample):
-      o_tm1, a_tm1, r_t, d_t, o_t = sample.data
-      keys, probs = sample.info[:2]
-
-      # Forward pass.
-      q_tm1 = network.apply(params, o_tm1)
-      q_t_value = network.apply(target_params, o_t)
-      q_t_selector = network.apply(params, o_t)
-
-      # Cast and clip rewards.
-      d_t = (d_t * discount).astype(jnp.float32)
-      r_t = jnp.clip(r_t, -max_abs_reward, max_abs_reward).astype(jnp.float32)
-
-      # Compute double Q-learning n-step TD-error.
-      batch_error = jax.vmap(rlax.double_q_learning)
-      td_error = batch_error(q_tm1, a_tm1, r_t, d_t, q_t_value, q_t_selector)
-      batch_loss = rlax.huber_loss(td_error, huber_loss_parameter)
-
-      # Importance weighting.
-      importance_weights = (1. / probs).astype(jnp.float32)
-      importance_weights **= importance_sampling_exponent
-      importance_weights /= jnp.max(importance_weights)
-
-      # Reweight.
-      mean_loss = jnp.mean(importance_weights * batch_loss)  # []
-
-      priorities = jnp.abs(td_error).astype(jnp.float64)
-
-      return mean_loss, (keys, priorities)
-
-    def sgd_step(
-        state: TrainingState,
-        samples: reverb.ReplaySample) -> Tuple[TrainingState, LearnerOutputs]:
-      grad_fn = jax.grad(loss, has_aux=True)
-      gradients, (keys, priorities) = grad_fn(state.params, state.target_params,
-                                              samples)
-      updates, new_opt_state = optimizer.update(gradients, state.opt_state)
-      new_params = optax.apply_updates(state.params, updates)
-
-      steps = state.steps + 1
-
-      # Periodically update target networks.
-      target_params = rlax.periodic_update(
-          new_params, state.target_params, steps, self._target_update_period)
-
-      new_state = TrainingState(
-          params=new_params,
-          target_params=target_params,
-          opt_state=new_opt_state,
-          steps=steps)
-
-      outputs = LearnerOutputs(keys=keys, priorities=priorities)
-
-      return new_state, outputs
-
-    def update_priorities(outputs: LearnerOutputs):
-      replay_client.mutate_priorities(
-          table=adders.DEFAULT_PRIORITY_TABLE,
-          updates=dict(zip(outputs.keys, outputs.priorities)))
-
-    # Internalise agent components (replay buffer, networks, optimizer).
-    self._replay_client = replay_client
-    self._iterator = utils.prefetch(iterator)
-
-    # Internalise the hyperparameters.
-    self._target_update_period = target_update_period
-
-    # Internalise logging/counting objects.
-    self._counter = counter or counting.Counter()
-    self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
-
-    # Initialise parameters and optimiser state.
-    initial_params = network.init(
-        next(rng), utils.add_batch_dim(utils.zeros_like(obs_spec)))
-    initial_target_params = network.init(
-        next(rng), utils.add_batch_dim(utils.zeros_like(obs_spec)))
-    initial_opt_state = optimizer.init(initial_params)
-
-    self._state = TrainingState(
-        params=initial_params,
-        target_params=initial_target_params,
-        opt_state=initial_opt_state,
-        steps=0)
-
-    self._forward = jax.jit(network.apply)
-    self._sgd_step = jax.jit(sgd_step)
-    self._async_priority_updater = async_utils.AsyncExecutor(update_priorities)
-
-  def step(self):
-    samples = next(self._iterator)
-    # Do a batch of SGD.
-    # TODO(jaslanides): Log metrics.
-    self._state, outputs = self._sgd_step(self._state, samples)
-
-    # Update our counts and record it.
-    result = self._counter.increment(steps=1)
-
-    # Update priorities in replay.
-    if self._replay_client:
-      # Use samples.info.key instead of outputs.keys because JAX casts uint64
-      # to int32, which loses information.
-      outputs = LearnerOutputs(
-          keys=samples.info.key, priorities=outputs.priorities)
-      self._async_priority_updater.put(outputs)
-
-    # Write to logs.
-    self._logger.write(result)
-
-  def get_variables(self, names: List[str]) -> List[hk.Params]:
-    return [self._state.params]
-
-  def save(self) -> TrainingState:
-    return self._state
-
-  def restore(self, state: TrainingState):
-    self._state = state
+    loss_fn = losses.PrioritizedDoubleQLearning(
+        discount=discount,
+        importance_sampling_exponent=importance_sampling_exponent,
+        max_abs_reward=max_abs_reward,
+        huber_loss_parameter=huber_loss_parameter,
+    )
+    super().__init__(
+        network=network,
+        obs_spec=obs_spec,
+        loss_fn=loss_fn,
+        optimizer=optimizer,
+        data_iterator=iterator,
+        target_update_period=target_update_period,
+        rng=rng,
+        replay_client=replay_client,
+        counter=counter,
+        logger=logger,
+    )
