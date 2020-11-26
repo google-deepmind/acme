@@ -32,9 +32,9 @@ action spaces as well, but here we focus on a discrete-action variant.
 
 Agent                                                    | Paper                    | Code
 -------------------------------------------------------- | :----------------------: | :--:
-Deep Q-Networks (DQN)                                    | Horgan et al., 2018      | [![TF](../../docs/logos/tf-small.png)][DQN_TF2] [![JAX](../../docs/logos/jax-small.png)][DQN_JAX]
-Importance-Weighted Actor-Learner Architectures (IMPALA) | Espeholt et al., 2018    | [![TF](../../docs/logos/tf-small.png)][IMPALA_TF2] [![JAX](../../docs/logos/jax-small.png)][IMPALA_JAX]
-Recurrent Replay Distributed DQN (R2D2)                  | Kapturowski et al., 2019 | [![TF](../../docs/logos/tf-small.png)][R2D2_TF2]
+Deep Q-Networks (DQN)                                    | [Horgan et al., 2018]      | [![TF](../../docs/logos/tf-small.png)][DQN_TF2] [![JAX](../../docs/logos/jax-small.png)][DQN_JAX]
+Importance-Weighted Actor-Learner Architectures (IMPALA) | [Espeholt et al., 2018]    | [![TF](../../docs/logos/tf-small.png)][IMPALA_TF2] [![JAX](../../docs/logos/jax-small.png)][IMPALA_JAX]
+Recurrent Replay Distributed DQN (R2D2)                  | [Kapturowski et al., 2019] | [![TF](../../docs/logos/tf-small.png)][R2D2_TF2]
 
 ### Batch RL
 
@@ -63,7 +63,7 @@ RL using a given or learned simulator
 
 Agent                          | Paper               | Code
 ------------------------------ | :-----------------: | :--:
-Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![TF](../../docs/logos/tf-small.png)][MCTS_TF2]
+Monte-Carlo Tree Search (MCTS) | [Silver et al., 2018] | [![TF](../../docs/logos/tf-small.png)][MCTS_TF2]
 
 <!-- TF agents -->
 
@@ -75,7 +75,7 @@ Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![TF](../../docs/logos/t
 [D4PG_TF2]: tf/d4pg/
 [MPO_TF2]: tf/mpo/
 [DMPO_TF2]: tf/dmpo/
-<!-- [MOMPO_TF2]: tf/mompo/ -->
+[MOMPO_TF2]: tf/mompo/
 [BC_TF2]: tf/bc/
 [DQFD_TF2]: tf/dqfd/
 [R2D3_TF2]: tf/r2d3/
@@ -85,3 +85,10 @@ Monte-Carlo Tree Search (MCTS) | Silver et al., 2018 | [![TF](../../docs/logos/t
 [DQN_JAX]: jax/dqn/
 [IMPALA_JAX]: jax/impala/
 [D4PG_JAX]: jax/d4pg/
+
+<!-- Papers -->
+
+[Horgan et al., 2018]: https://arxiv.org/abs/1803.00933
+[Silver et al., 2018]: https://science.sciencemag.org/content/362/6419/1140
+[Espeholt et al., 2018]: https://arxiv.org/abs/1802.01561
+[Kapturowski et al., 2019]: https://openreview.net/pdf?id=r1lyTjAqYX
