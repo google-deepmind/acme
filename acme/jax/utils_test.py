@@ -18,6 +18,7 @@
 from absl.testing import absltest
 from acme.jax import utils
 
+import jax
 import jax.numpy as jnp
 
 
@@ -38,6 +39,15 @@ class JaxUtilsTest(absltest.TestCase):
     expected_shape = [batch_size, 2 + 5 * 3 + 1 + 1]
     self.assertSequenceEqual(output_shape, expected_shape)
 
+  def test_mapreduce(self):
+
+    @utils.mapreduce
+    def f(y, x):
+      return jnp.square(x + y)
+
+    z = f(jnp.ones(shape=(32,)), jnp.ones(shape=(32,)))
+    z = jax.device_get(z)
+    self.assertEqual(z, 4)
 
 if __name__ == '__main__':
   absltest.main()

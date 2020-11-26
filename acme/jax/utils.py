@@ -18,7 +18,7 @@
 import functools
 import queue
 import threading
-from typing import Iterable, Generator, TypeVar
+from typing import Callable, Iterable, Generator, Optional, TypeVar
 
 from absl import logging
 from acme import types
@@ -27,6 +27,9 @@ from jax import tree_util
 import jax.numpy as jnp
 import numpy as np
 import tree
+
+F = TypeVar('F', bound=Callable)
+T = TypeVar('T')
 
 
 def add_batch_dim(values: types.Nest) -> types.NestedArray:
@@ -108,9 +111,6 @@ def tile_nested(inputs: types.Nest, multiple: int) -> types.Nest:
   return jax.tree_map(tile, inputs)
 
 
-T = TypeVar('T')
-
-
 def prefetch(iterable: Iterable[T],
              buffer_size: int = 5,
              device=None) -> Generator[T, None, None]:
@@ -166,3 +166,38 @@ def prefetch(iterable: Iterable[T],
 
   if producer_error:
     raise producer_error[0]
+
+
+def mapreduce(
+    f: F,
+    reduce_fn: Optional[Callable[[jnp.DeviceArray], jnp.DeviceArray]] = None,
+    in_axes: int = 0,
+    out_axes: int = 0,
+) -> F:
+  """A simple decorator that transforms `f` into (`reduce_fn` o vmap o f).
+
+  By default, we vmap over axis 0, and the `reduce_fn` is jnp.mean over axis 0.
+  Note that the call signature of `f` is invariant under this transformation.
+
+  If, for example, f has shape signature [H, W] -> [N], then mapreduce(f)
+  (with the default arguments) will have shape signature [B, H, W] -> [N].
+
+  Args:
+    f: A pure function over examples.
+    reduce_fn: A pure function that reduces DeviceArrays -> DeviceArrays.
+    in_axes: Which input axes to vmap over (default 0).
+    out_axes: Which output axes to vmap over (default 0).
+
+  Returns:
+    g: A pure function over batches of examples.
+  """
+
+  if reduce_fn is None:
+    reduce_fn = lambda x: jnp.mean(x, axis=0)
+
+  vmapped_f = jax.vmap(f, in_axes, out_axes)
+
+  def g(*args, **kwargs):
+    return jax.tree_map(reduce_fn, vmapped_f(*args, **kwargs))
+
+  return g
