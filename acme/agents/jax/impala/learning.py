@@ -19,6 +19,7 @@ from typing import Callable, Dict, Iterator, List, NamedTuple, Tuple
 
 import acme
 from acme import specs
+from acme.jax import losses
 from acme.jax import networks
 from acme.jax import utils
 from acme.utils import counting
@@ -29,8 +30,6 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 import reverb
-import rlax
-import tree
 
 
 class TrainingState(NamedTuple):
@@ -63,53 +62,12 @@ class IMPALALearner(acme.Learner, acme.Saveable):
     initial_state_fn = hk.without_apply_rng(
         hk.transform(initial_state_fn, apply_rng=True))
 
-    def loss(params: hk.Params, sample: reverb.ReplaySample) -> jnp.ndarray:
-      """Entropy-regularised actor-critic loss."""
-
-      # Extract the data.
-      data = sample.data
-      observations, actions, rewards, discounts, extra = (data.observation,
-                                                          data.action,
-                                                          data.reward,
-                                                          data.discount,
-                                                          data.extras)
-      initial_state = tree.map_structure(lambda s: s[0], extra['core_state'])
-      behaviour_logits = extra['logits']
-
-      # Apply reward clipping.
-      rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
-
-      # Unroll current policy over observations.
-      (logits, values), _ = unroll_fn.apply(params, observations, initial_state)
-
-      # Compute importance sampling weights: current policy / behavior policy.
-      rhos = rlax.categorical_importance_sampling_ratios(
-          logits[:-1], behaviour_logits[:-1], actions[:-1])
-
-      # Critic loss.
-      vtrace_returns = rlax.vtrace_td_error_and_advantage(
-          v_tm1=values[:-1],
-          v_t=values[1:],
-          r_t=rewards[:-1],
-          discount_t=discounts[:-1] * discount,
-          rho_t=rhos)
-      critic_loss = jnp.square(vtrace_returns.errors)
-
-      # Policy gradient loss.
-      policy_gradient_loss = rlax.policy_gradient_loss(
-          logits_t=logits[:-1],
-          a_t=actions[:-1],
-          adv_t=vtrace_returns.pg_advantage,
-          w_t=jnp.ones_like(rewards[:-1]))
-
-      # Entropy regulariser.
-      entropy_loss = rlax.entropy_loss(logits[:-1], jnp.ones_like(rewards[:-1]))
-
-      # Combine weighted sum of actor & critic losses.
-      mean_loss = jnp.mean(policy_gradient_loss + baseline_cost * critic_loss +
-                           entropy_cost * entropy_loss)
-
-      return mean_loss
+    loss_fn = losses.impala_loss(
+        unroll_fn,
+        discount=discount,
+        max_abs_reward=max_abs_reward,
+        baseline_cost=baseline_cost,
+        entropy_cost=entropy_cost)
 
     @jax.jit
     def sgd_step(
@@ -118,12 +76,10 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       """Computes an SGD step, returning new state and metrics for logging."""
 
       # Compute gradients.
-      batch_loss = jax.vmap(loss, in_axes=(None, 0))
-      mean_loss = lambda p, s: jnp.mean(batch_loss(p, s))
-      grad_fn = jax.value_and_grad(mean_loss)
+      grad_fn = jax.value_and_grad(loss_fn)
       loss_value, gradients = grad_fn(state.params, sample)
 
-      # Apply updates
+      # Apply updates.
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
       new_params = optax.apply_updates(state.params, updates)
 
