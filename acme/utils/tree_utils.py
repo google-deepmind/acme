@@ -165,3 +165,12 @@ def broadcast_structures(*args: Any) -> Any:
       return tree.map_structure(lambda _: value, reference_tree)
 
   return tuple(mirror_structure(arg, reference_tree) for arg in args)
+
+
+def tree_map(f):
+  """Transforms `f` into a tree-mapped version."""
+
+  def mapped_f(*structures):
+    return tree.map_structure(f, *structures)
+
+  return mapped_f

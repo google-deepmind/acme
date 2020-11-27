@@ -171,8 +171,7 @@ def prefetch(iterable: Iterable[T],
 def mapreduce(
     f: F,
     reduce_fn: Optional[Callable[[jnp.DeviceArray], jnp.DeviceArray]] = None,
-    in_axes: int = 0,
-    out_axes: int = 0,
+    **vmap_kwargs,
 ) -> F:
   """A simple decorator that transforms `f` into (`reduce_fn` o vmap o f).
 
@@ -185,8 +184,7 @@ def mapreduce(
   Args:
     f: A pure function over examples.
     reduce_fn: A pure function that reduces DeviceArrays -> DeviceArrays.
-    in_axes: Which input axes to vmap over (default 0).
-    out_axes: Which output axes to vmap over (default 0).
+    **vmap_kwargs: Keyword arguments to forward to `jax.vmap`.
 
   Returns:
     g: A pure function over batches of examples.
@@ -195,7 +193,7 @@ def mapreduce(
   if reduce_fn is None:
     reduce_fn = lambda x: jnp.mean(x, axis=0)
 
-  vmapped_f = jax.vmap(f, in_axes, out_axes)
+  vmapped_f = jax.vmap(f, **vmap_kwargs)
 
   def g(*args, **kwargs):
     return jax.tree_map(reduce_fn, vmapped_f(*args, **kwargs))
