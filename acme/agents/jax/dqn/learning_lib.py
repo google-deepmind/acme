@@ -63,6 +63,7 @@ class TrainingState(NamedTuple):
   target_params: hk.Params
   opt_state: optax.OptState
   steps: int
+  rng_key: jnp.DeviceArray
 
 
 class SGDLearner(acme.Learner, acme.Saveable):
@@ -91,11 +92,11 @@ class SGDLearner(acme.Learner, acme.Saveable):
 
     # SGD performs the loss, optimizer update and periodic target net update.
     def sgd_step(state: TrainingState,
-                 batch: reverb.ReplaySample,
-                 key: jnp.DeviceArray) -> Tuple[TrainingState, LossExtra]:
+                 batch: reverb.ReplaySample) -> Tuple[TrainingState, LossExtra]:
+      next_rng_key, rng_key = jax.random.split(state.rng_key)
       # Implements one SGD step of the loss and updates training state
       (loss, extra), grads = jax.value_and_grad(self._loss, has_aux=True)(
-          state.params, state.target_params, batch, key)
+          state.params, state.target_params, batch, rng_key)
       extra.metrics.update({'total_loss': loss})
 
       # Apply the optimizer updates
@@ -107,26 +108,26 @@ class SGDLearner(acme.Learner, acme.Saveable):
       target_params = rlax.periodic_update(
           new_params, state.target_params, steps, target_update_period)
       new_training_state = TrainingState(
-          new_params, target_params, new_opt_state, steps)
+          new_params, target_params, new_opt_state, steps, next_rng_key)
       return new_training_state, extra
     self._sgd_step = jax.jit(sgd_step)
 
     # Internalise agent components
     self._data_iterator = utils.prefetch(data_iterator)
-    self._rng = rng
     self._target_update_period = target_update_period
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
 
     # Initialize the network parameters
     dummy_obs = utils.add_batch_dim(utils.zeros_like(obs_spec))
-    initial_params = self.network.init(next(self._rng), dummy_obs)
-    initial_target_params = self.network.init(next(self._rng), dummy_obs)
+    initial_params = self.network.init(next(rng), dummy_obs)
+    initial_target_params = self.network.init(next(rng), dummy_obs)
     self._state = TrainingState(
         params=initial_params,
         target_params=initial_target_params,
         opt_state=optimizer.init(initial_params),
         steps=0,
+        rng_key=next(rng),
     )
 
     # Update replay priorities
@@ -143,7 +144,7 @@ class SGDLearner(acme.Learner, acme.Saveable):
   def step(self):
     """Takes one SGD step on the learner."""
     batch = next(self._data_iterator)
-    self._state, extra = self._sgd_step(self._state, batch, next(self._rng))
+    self._state, extra = self._sgd_step(self._state, batch)
 
     if self._replay_client:
       reverb_update = extra.reverb_update._replace(keys=batch.info.key)
