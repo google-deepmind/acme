@@ -29,6 +29,7 @@ from acme.jax.networks.continuous import NearZeroInitializedLinear
 from acme.jax.networks.distributional import CategoricalHead
 from acme.jax.networks.distributional import CategoricalValueHead
 from acme.jax.networks.distributional import MultivariateNormalDiagHead
+from acme.jax.networks.multiplexers import CriticMultiplexer
 from acme.jax.networks.policy_value import PolicyValueHead
 from acme.jax.networks.rescaling import ClipToSpec
 from acme.jax.networks.rescaling import TanhToSpec
