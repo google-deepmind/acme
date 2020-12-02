@@ -17,6 +17,7 @@
 from typing import Optional, Tuple
 
 from absl.testing import absltest
+from absl.testing import parameterized
 from acme import environment_loop
 from acme import specs
 from acme.agents.jax import actors
@@ -74,9 +75,12 @@ def _transform_without_rng(f):
   return hk.without_apply_rng(hk.transform(f, apply_rng=True))
 
 
-class RecurrentActorTest(absltest.TestCase):
+class RecurrentActorTest(parameterized.TestCase):
 
-  def test_recurrent(self):
+  @parameterized.named_parameters(
+      ('policy', False),
+      ('policy_with_extras', True))
+  def test_recurrent(self, has_extras):
     environment = _make_fake_env()
     env_spec = specs.make_environment_spec(environment)
     output_size = env_spec.actions.num_values
@@ -105,13 +109,18 @@ class RecurrentActorTest(absltest.TestCase):
     ) -> Tuple[jnp.ndarray, hk.LSTMState]:
       del key  # Unused for test-case deterministic policy.
       action_values, core_state = network.apply(params, observation, core_state)
-      return jnp.argmax(action_values, axis=-1), core_state
+      actions = jnp.argmax(action_values, axis=-1)
+      if has_extras:
+        return (actions, (action_values,)), core_state
+      else:
+        return actions, core_state
 
     variable_source = fakes.VariableSource(params)
     variable_client = variable_utils.VariableClient(variable_source, 'policy')
 
     actor = actors.RecurrentActor(
-        policy, hk.PRNGSequence(1), initial_state, variable_client)
+        policy, hk.PRNGSequence(1), initial_state, variable_client,
+        has_extras=has_extras)
 
     loop = environment_loop.EnvironmentLoop(environment, actor)
     loop.run(20)
