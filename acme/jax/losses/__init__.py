@@ -15,3 +15,6 @@
 """Common loss functions."""
 
 from acme.jax.losses.impala import impala_loss
+from acme.jax.losses.mpo import MPO
+from acme.jax.losses.mpo import MPOParams
+from acme.jax.losses.mpo import MPOStats
