@@ -14,7 +14,7 @@
 
 """Common tools for reverb replay."""
 
-from typing import Iterator
+from typing import Iterator, Optional
 
 from acme import adders as adders_lib
 from acme import datasets
@@ -40,31 +40,37 @@ def make_reverb_prioritized_nstep_replay(
     batch_size: int = 32,
     max_replay_size: int = 100_000,
     min_replay_size: int = 1,
-    priority_exponent: float = 0.,
     discount: float = 1.,
+    prefetch_size: int = 4,  # TODO(iosband): rationalize prefetch size.
     replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
-    prefetch_size: int = 4,
+    priority_exponent: Optional[float] = None,  # If None, default to uniform.
 ) -> ReverbReplay:
-  """Single-process replay for N-step TD data from an environment spec."""
+  """Creates a single-process replay infrastructure from an environment spec."""
+  # Parsing priority exponent to determine uniform vs prioritized replay
+  if priority_exponent is None:
+    sampler = reverb.selectors.Uniform()
+    priority_fns = {replay_table_name: lambda x: 1.}
+  else:
+    sampler = reverb.selectors.Prioritized(priority_exponent)
+    priority_fns = None
+
   # Create a replay server to add data to. This uses no limiter behavior in
   # order to allow the Agent interface to handle it.
-  signature = adders.NStepTransitionAdder.signature(
-      environment_spec, extra_spec)
   replay_table = reverb.Table(
       name=replay_table_name,
-      sampler=reverb.selectors.Prioritized(priority_exponent),
+      sampler=sampler,
       remover=reverb.selectors.Fifo(),
       max_size=max_replay_size,
       rate_limiter=reverb.rate_limiters.MinSize(min_replay_size),
-      signature=signature,
+      signature=adders.NStepTransitionAdder.signature(
+          environment_spec, extra_spec),
   )
   server = reverb.Server([replay_table], port=None)
 
   # The adder is used to insert observations into replay.
   address = f'localhost:{server.port}'
   client = reverb.Client(address)
-  adder = adders.NStepTransitionAdder(
-      client=client, n_step=n_step, discount=discount)
+  adder = adders.NStepTransitionAdder(client, n_step, discount, priority_fns)
 
   # The dataset provides an interface to sample from replay.
   data_iterator = datasets.make_reverb_dataset(
