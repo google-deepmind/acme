@@ -42,9 +42,12 @@ RecurrentPolicy = Callable[[hk.Params, RNGKey, Observation, RecurrentState],
 
 
 class FeedForwardActor(core.Actor):
-  """A simple feed-forward actor implemented in JAX."""
+  """A simple feed-forward actor implemented in JAX.
 
-  _extras: types.NestedArray = ()
+  An actor based on a policy which takes observations and outputs actions. It
+  also adds experiences to replay and updates the actor weights from the policy
+  on the learner.
+  """
 
   def __init__(
       self,
@@ -54,8 +57,21 @@ class FeedForwardActor(core.Actor):
       adder: Optional[adders.Adder] = None,
       has_extras: bool = False,
   ):
+    """Initializes a feed forward actor.
+
+    Args:
+      policy: A policy network taking observation and returning an action, if
+        `has_extras=False`, and returning an (action, extras) tuple if
+        `has_extras=True`.
+      rng: Random key generator.
+      variable_client: The variable client to get policy parameters from.
+      adder: An adder to add experiences to.
+      has_extras: Flag indicating whether the policy returns extra
+        information (e.g. q-values) in addition to an action.
+    """
     self._rng = rng
     self._has_extras = has_extras
+    self._extras: types.NestedArray = ()
 
     # Adding batch dimension inside jit is much more efficient than outside.
     def batched_policy(params: hk.Params, key: RNGKey,

@@ -41,19 +41,26 @@ def _make_fake_env() -> dm_env.Environment:
   return fakes.Environment(env_spec, episode_length=10)
 
 
-class ActorTest(absltest.TestCase):
+class ActorTest(parameterized.TestCase):
 
-  def test_feedforward(self):
+  @parameterized.named_parameters(
+      ('policy', False),
+      ('policy_with_extras', True))
+  def test_feedforward(self, has_extras):
     environment = _make_fake_env()
     env_spec = specs.make_environment_spec(environment)
 
     def policy(inputs: jnp.ndarray):
-      return hk.Sequential([
+      action_values = hk.Sequential([
           hk.Flatten(),
           hk.Linear(env_spec.actions.num_values),
-          lambda x: jnp.argmax(x, axis=-1),
       ])(
           inputs)
+      action = jnp.argmax(action_values, axis=-1)
+      if has_extras:
+        return action, (action_values,)
+      else:
+        return action
 
     policy = hk.transform(policy, apply_rng=True)
 
@@ -65,7 +72,8 @@ class ActorTest(absltest.TestCase):
     variable_client = variable_utils.VariableClient(variable_source, 'policy')
 
     actor = actors.FeedForwardActor(
-        policy.apply, rng=hk.PRNGSequence(1), variable_client=variable_client)
+        policy.apply, rng=hk.PRNGSequence(1), variable_client=variable_client,
+        has_extras=has_extras)
 
     loop = environment_loop.EnvironmentLoop(environment, actor)
     loop.run(20)
