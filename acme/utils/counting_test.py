@@ -83,6 +83,17 @@ class CountingTest(absltest.TestCase):
     expected = {'child1_foo': 1, 'child2_foo': 2}
     self.assertEqual(result, expected)
 
+  def test_return_only_prefixed(self):
+    parent = counting.Counter()
+    child1 = counting.Counter(
+        parent, 'child1', time_delta=0., return_only_prefixed=False)
+    child2 = counting.Counter(
+        parent, 'child2', time_delta=0., return_only_prefixed=True)
+    child1.increment(foo=1)
+    child2.increment(bar=1)
+    self.assertEqual(child1.get_counts(), {'child1_foo': 1, 'child2_bar': 1})
+    self.assertEqual(child2.get_counts(), {'bar': 1})
+
 
 if __name__ == '__main__':
   absltest.main()
