@@ -14,7 +14,7 @@
 
 """Common tools for reverb replay."""
 
-from typing import Iterator, Optional
+from typing import Any, Callable, Dict, Iterator, Optional
 
 from acme import adders as adders_lib
 from acme import datasets
@@ -30,7 +30,8 @@ class ReverbReplay:
   server: reverb.Server
   adder: adders_lib.Adder
   data_iterator: Iterator[reverb.ReplaySample]
-  client: reverb.Client
+  client: Optional[reverb.Client] = None
+  can_sample: Callable[[], bool] = lambda: True
 
 
 def make_reverb_prioritized_nstep_replay(
@@ -81,7 +82,47 @@ def make_reverb_prioritized_nstep_replay(
       environment_spec=environment_spec,
       transition_adder=True,
   ).as_numpy_iterator()
-  return ReverbReplay(server, adder, data_iterator, client)
+  return ReverbReplay(server, adder, data_iterator, client=client)
+
+
+def make_reverb_online_queue(
+    environment_spec: specs.EnvironmentSpec,
+    extra_spec: Dict[str, Any],
+    max_queue_size: int,
+    sequence_length: int,
+    sequence_period: int,
+    batch_size: int,
+    replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
+) -> ReverbReplay:
+  """Creates a single process queue from an environment spec and extra_spec."""
+  signature = adders.SequenceAdder.signature(environment_spec, extra_spec)
+  queue = reverb.Table.queue(
+      name=replay_table_name,
+      max_size=max_queue_size,
+      signature=signature)
+  server = reverb.Server([queue], port=None)
+  can_sample = lambda: queue.can_sample(batch_size)
+
+  # Component to add things into replay.
+  address = f'localhost:{server.port}'
+  adder = adders.SequenceAdder(
+      client=reverb.Client(address),
+      period=sequence_period,
+      sequence_length=sequence_length,
+  )
+
+  # The dataset object to learn from.
+  # We don't use datasets.make_reverb_dataset() here to avoid interleaving
+  # and prefetching, that doesn't work well with can_sample() check on update.
+  dataset = reverb.ReplayDataset.from_table_signature(
+      server_address=address,
+      table=replay_table_name,
+      max_in_flight_samples_per_worker=1,
+      sequence_length=sequence_length,
+      emit_timesteps=False)
+  dataset = dataset.batch(batch_size, drop_remainder=True)
+  data_iterator = dataset.as_numpy_iterator()
+  return ReverbReplay(server, adder, data_iterator, can_sample=can_sample)
 
 
 def make_reverb_prioritized_sequence_replay(

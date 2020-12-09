@@ -19,7 +19,7 @@ from typing import Callable
 
 import acme
 from acme import specs
-from acme.adders import reverb as adders
+from acme.agents import replay
 from acme.agents.jax.impala import acting
 from acme.agents.jax.impala import learning
 from acme.agents.jax.impala import types
@@ -32,7 +32,6 @@ import haiku as hk
 import jax
 import numpy as np
 import optax
-import reverb
 
 
 class IMPALA(acme.Actor):
@@ -59,53 +58,36 @@ class IMPALA(acme.Actor):
       max_gradient_norm: float = np.inf,
   ):
 
+    # Data is handled by the reverb replay queue.
     num_actions = environment_spec.actions.num_values
     self._logger = logger or loggers.TerminalLogger('agent')
-
     extra_spec = {
         'core_state':
-            hk.without_apply_rng(
-                hk.transform(initial_state_fn, apply_rng=True)).apply(None),
+            hk.without_apply_rng(hk.transform(initial_state_fn)).apply(None),
         'logits':
             np.ones(shape=(num_actions,), dtype=np.float32)
     }
-    signature = adders.SequenceAdder.signature(environment_spec, extra_spec)
-    queue = reverb.Table.queue(
-        name=adders.DEFAULT_PRIORITY_TABLE,
-        max_size=max_queue_size,
-        signature=signature)
-    self._server = reverb.Server([queue], port=None)
-    self._can_sample = lambda: queue.can_sample(batch_size)
-    address = f'localhost:{self._server.port}'
-
-    # Component to add things into replay.
-    adder = adders.SequenceAdder(
-        client=reverb.Client(address),
-        period=sequence_period,
+    reverb_queue = replay.make_reverb_online_queue(
+        environment_spec=environment_spec,
+        extra_spec=extra_spec,
+        max_queue_size=max_queue_size,
         sequence_length=sequence_length,
+        sequence_period=sequence_period,
+        batch_size=batch_size,
     )
+    self._server = reverb_queue.server
+    self._can_sample = reverb_queue.can_sample
 
-    # The dataset object to learn from.
-    # We don't use datasets.make_reverb_dataset() here to avoid interleaving
-    # and prefetching, that doesn't work well with can_sample() check on update.
-    dataset = reverb.ReplayDataset.from_table_signature(
-        server_address=address,
-        table=adders.DEFAULT_PRIORITY_TABLE,
-        max_in_flight_samples_per_worker=1,
-        sequence_length=sequence_length,
-        emit_timesteps=False)
-    dataset = dataset.batch(batch_size, drop_remainder=True)
-
+    # Make the learner.
     optimizer = optax.chain(
         optax.clip_by_global_norm(max_gradient_norm),
         optax.adam(learning_rate),
     )
-
     self._learner = learning.IMPALALearner(
         obs_spec=environment_spec.observations,
         unroll_fn=unroll_fn,
         initial_state_fn=initial_state_fn,
-        iterator=dataset.as_numpy_iterator(),
+        iterator=reverb_queue.data_iterator,
         rng=hk.PRNGSequence(seed),
         counter=counter,
         logger=logger,
@@ -116,15 +98,14 @@ class IMPALA(acme.Actor):
         max_abs_reward=max_abs_reward,
     )
 
+    # Make the actor.
     variable_client = variable_utils.VariableClient(self._learner, key='policy')
+    transformed = hk.without_apply_rng(hk.transform(forward_fn))
     self._actor = acting.IMPALAActor(
-        forward_fn=jax.jit(
-            hk.without_apply_rng(hk.transform(forward_fn,
-                                              apply_rng=True)).apply,
-            backend='cpu'),
+        forward_fn=jax.jit(transformed.apply, backend='cpu'),
         initial_state_fn=initial_state_fn,
         rng=hk.PRNGSequence(seed),
-        adder=adder,
+        adder=reverb_queue.adder,
         variable_client=variable_client,
     )
 
