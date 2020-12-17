@@ -15,7 +15,7 @@
 
 """Utilities for reverb-based adders."""
 
-from typing import Dict, Mapping, Sequence, Union
+from typing import Dict, Sequence, Union
 
 from acme import types
 from acme.adders.reverb import base
@@ -66,7 +66,7 @@ def final_step_like(step: base.Step,
       extras=zero_extras)
 
 
-def calculate_priorities(priority_fns: Mapping[str, base.PriorityFn],
+def calculate_priorities(priority_fns: base.PriorityFnMapping,
                          steps: Sequence[base.Step]) -> Dict[str, float]:
   """Helper used to calculate the priority of a sequence of steps.
 
@@ -95,10 +95,11 @@ def calculate_priorities(priority_fns: Mapping[str, base.PriorityFn],
     given collection of steps.
   """
 
-  # Stack the steps and wrap them as PrioityFnInput.
-  fn_input = base.PriorityFnInput(*tf2_utils.stack_sequence_fields(steps))
+  if any([priority_fn is not None for priority_fn in priority_fns.values()]):
+    # Stack the steps and wrap them as PrioityFnInput.
+    fn_input = base.PriorityFnInput(*tf2_utils.stack_sequence_fields(steps))
 
   return {
-      table: priority_fn(fn_input)
+      table: (priority_fn(fn_input) if priority_fn else 1.0)
       for table, priority_fn in priority_fns.items()
   }
