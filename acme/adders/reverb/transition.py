@@ -112,6 +112,10 @@ class NStepTransitionAdder(base.ReverbAdder):
     # upcast if rewards/discounts are float64 and left alone otherwise.
     self._discount = tree.map_structure(np.float32, discount)
 
+    # Creates a placeholder for the final Step, which will have zeros for every
+    # member except the observation.
+    self._final_step_placeholder: Optional[base.Step] = None
+
     super().__init__(
         client=client,
         buffer_size=n_step,
@@ -185,7 +189,13 @@ class NStepTransitionAdder(base.ReverbAdder):
                     next_observation)
 
     # Create a list of steps.
-    final_step = utils.final_step_like(self._buffer[0], next_observation)
+    if self._final_step_placeholder is None:
+      # utils.final_step_like is expensive (around 0.085ms) to run every time
+      # so we cache its output.
+      self._final_step_placeholder = utils.final_step_like(self._buffer[0],
+                                                           next_observation)
+    final_step: base.Step = self._final_step_placeholder._replace(
+        observation=next_observation)
     steps = list(self._buffer) + [final_step]
 
     # Calculate the priority for this transition.
