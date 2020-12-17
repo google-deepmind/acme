@@ -29,6 +29,7 @@ spec.loader.exec_module(_metadata)
 reverb_requirements = [
     'dm-reverb',
     'tensorflow>=2.3.0',
+    'tensorflow<2.4.0',
 ]
 
 tf_requirements = [
