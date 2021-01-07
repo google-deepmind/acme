@@ -44,7 +44,7 @@ include:
 
 Agent                 | Paper | Code
 --------------------- | :---: | :---------------------------------:
-Behavior Cloning (BC) | -     | [![TF](../../docs/logos/tf-small.png)][BC_TF2]
+Behavior Cloning (BC) | -     | [![TF](../../docs/logos/tf-small.png)][BC_TF2] [![JAX](../../docs/logos/jax-small.png)][BC_JAX]
 
 ### Learning from demonstrations
 
@@ -85,6 +85,7 @@ Monte-Carlo Tree Search (MCTS) | [Silver et al., 2018] | [![TF](../../docs/logos
 [DQN_JAX]: jax/dqn/
 [IMPALA_JAX]: jax/impala/
 [D4PG_JAX]: jax/d4pg/
+[BC_JAX]: jax/bc/
 
 <!-- Papers -->
 
