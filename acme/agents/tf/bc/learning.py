@@ -31,8 +31,7 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
   """BC learner.
 
   This is the learning component of a BC agent. IE it takes a dataset as input
-  and implements update functionality to learn from this dataset. Optionally
-  it takes a replay client as well to allow for updating of priorities.
+  and implements update functionality to learn from this dataset.
   """
 
   def __init__(self,
@@ -45,8 +44,8 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
     """Initializes the learner.
 
     Args:
-      network: the online Q network (the one being optimized)
-      learning_rate: learning rate for the q-network update.
+      network: the BC network (the one being optimized)
+      learning_rate: learning rate for the cross-entropy update.
       dataset: dataset to learn from.
       counter: Counter object for (potentially distributed) counting.
       logger: Logger object for writing logs to.

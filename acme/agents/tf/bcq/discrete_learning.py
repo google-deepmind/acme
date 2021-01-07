@@ -231,14 +231,14 @@ class DiscreteBCQLearner(core.Learner, tf2_savers.TFSaveable):
         learning_rate=learning_rate,
         dataset=dataset,
         counter=counting.Counter(counter, 'bc'),
-        logger=bc_logger,
+        logger=self._bc_logger,
         checkpoint=False)
     self._bcq_learner = _InternalBCQLearner(
         network=network,
         learning_rate=learning_rate,
         dataset=dataset,
         counter=counting.Counter(counter, 'bcq'),
-        logger=bcq_logger,
+        logger=self._bcq_logger,
         **bcq_learner_kwargs)
 
   def get_variables(self, names):

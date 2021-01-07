@@ -15,27 +15,106 @@
 
 """DQN agent implementation."""
 
-from acme import datasets
 from acme import specs
-from acme.adders import reverb as adders
 from acme.agents import agent
+from acme.agents import replay
 from acme.agents.jax import actors
 from acme.agents.jax.dqn import learning
 from acme.jax import variable_utils
+import dataclasses
 import haiku as hk
 import jax.numpy as jnp
 import optax
-import reverb
 import rlax
 
 
-class DQN(agent.Agent):
+@dataclasses.dataclass
+class DQNConfig:
+  """Configuration options for DQN agent."""
+  epsilon: float = 0.05  # Action selection via epsilon-greedy policy.
+  samples_per_insert: float = 0.5  # Ratio of learning samples to insert.
+  seed: int = 1  # Random seed.
+
+  # Learning rule
+  learning_rate: float = 1e-3  # Learning rate for Adam optimizer.
+  discount: float = 0.99  # Discount rate applied to value per timestep.
+  n_step: int = 5  # N-step TF learning.
+  target_update_period: int = 100  # Update target network every period.
+
+  # Replay options
+  batch_size: int = 256  # Number of transitions per batch.
+  min_replay_size: int = 1_000  # Minimum replay size.
+  max_replay_size: int = 1_000_000  # Maximum replay size.
+  importance_sampling_exponent: float = 0.2  # Importance sampling for replay.
+  priority_exponent: float = 0.6  # Priority exponent for replay.
+  prefetch_size: int = 4  # Prefetch size for reverb replay performance.
+
+
+class DQNFromConfig(agent.Agent):
   """DQN agent.
 
   This implements a single-process DQN agent. This is a simple Q-learning
   algorithm that inserts N-step transitions into a replay buffer, and
   periodically updates its policy by sampling these transitions using
   prioritization.
+  """
+
+  def __init__(
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      network: hk.Transformed,
+      config: DQNConfig,
+  ):
+    """Initialize the agent."""
+    # Data is communicated via reverb replay.
+    reverb_replay = replay.make_reverb_prioritized_nstep_replay(
+        environment_spec=environment_spec,
+        n_step=config.n_step,
+        batch_size=config.batch_size,
+        max_replay_size=config.max_replay_size,
+        min_replay_size=config.min_replay_size,
+        priority_exponent=config.priority_exponent,
+        discount=config.discount,
+    )
+    self._server = reverb_replay.server
+
+    # The learner updates the parameters (and initializes them).
+    learner = learning.DQNLearner(
+        network=network,
+        obs_spec=environment_spec.observations,
+        rng=hk.PRNGSequence(config.seed),
+        optimizer=optax.adam(config.learning_rate),
+        discount=config.discount,
+        importance_sampling_exponent=config.importance_sampling_exponent,
+        target_update_period=config.target_update_period,
+        iterator=reverb_replay.data_iterator,
+        replay_client=reverb_replay.client,
+    )
+
+    # The actor selects actions according to the policy.
+    def policy(params: hk.Params, key: jnp.ndarray,
+               observation: jnp.ndarray) -> jnp.ndarray:
+      action_values = network.apply(params, observation)
+      return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
+    actor = actors.FeedForwardActor(
+        policy=policy,
+        rng=hk.PRNGSequence(config.seed),
+        variable_client=variable_utils.VariableClient(learner, ''),
+        adder=reverb_replay.adder)
+
+    super().__init__(
+        actor=actor,
+        learner=learner,
+        min_observations=max(config.batch_size, config.min_replay_size),
+        observations_per_step=config.batch_size / config.samples_per_insert,
+    )
+
+
+class DQN(DQNFromConfig):
+  """DQN agent.
+
+  We are in the process of migrating towards a more modular agent configuration.
+  This is maintained now for compatibility.
   """
 
   def __init__(
@@ -56,63 +135,23 @@ class DQN(agent.Agent):
       discount: float = 0.99,
       seed: int = 1,
   ):
-    """Initialize the agent."""
-
-    # Create a replay server to add data to. This uses no limiter behavior in
-    # order to allow the Agent interface to handle it.
-    replay_table = reverb.Table(
-        name=adders.DEFAULT_PRIORITY_TABLE,
-        sampler=reverb.selectors.Prioritized(priority_exponent),
-        remover=reverb.selectors.Fifo(),
-        max_size=max_replay_size,
-        rate_limiter=reverb.rate_limiters.MinSize(1),
-        signature=adders.NStepTransitionAdder.signature(
-            environment_spec=environment_spec))
-    self._server = reverb.Server([replay_table], port=None)
-
-    # The adder is used to insert observations into replay.
-    address = f'localhost:{self._server.port}'
-    adder = adders.NStepTransitionAdder(
-        client=reverb.Client(address),
-        n_step=n_step,
-        discount=discount)
-
-    # The dataset provides an interface to sample from replay.
-    dataset = datasets.make_reverb_dataset(
-        server_address=address,
-        environment_spec=environment_spec,
+    config = DQNConfig(
         batch_size=batch_size,
         prefetch_size=prefetch_size,
-        transition_adder=True)
-
-    def policy(params: hk.Params, key: jnp.ndarray,
-               observation: jnp.ndarray) -> jnp.ndarray:
-      action_values = network.apply(params, observation)
-      return rlax.epsilon_greedy(epsilon).sample(key, action_values)
-
-    # The learner updates the parameters (and initializes them).
-    learner = learning.DQNLearner(
-        network=network,
-        obs_spec=environment_spec.observations,
-        rng=hk.PRNGSequence(seed),
-        optimizer=optax.adam(learning_rate),
-        discount=discount,
-        importance_sampling_exponent=importance_sampling_exponent,
         target_update_period=target_update_period,
-        iterator=dataset.as_numpy_iterator(),
-        replay_client=reverb.Client(address),
+        samples_per_insert=samples_per_insert,
+        min_replay_size=min_replay_size,
+        max_replay_size=max_replay_size,
+        importance_sampling_exponent=importance_sampling_exponent,
+        priority_exponent=priority_exponent,
+        n_step=n_step,
+        epsilon=epsilon,
+        learning_rate=learning_rate,
+        discount=discount,
+        seed=seed,
     )
-
-    variable_client = variable_utils.VariableClient(learner, '')
-
-    actor = actors.FeedForwardActor(
-        policy=policy,
-        rng=hk.PRNGSequence(seed),
-        variable_client=variable_client,
-        adder=adder)
-
     super().__init__(
-        actor=actor,
-        learner=learner,
-        min_observations=max(batch_size, min_replay_size),
-        observations_per_step=float(batch_size) / samples_per_insert)
+        environment_spec=environment_spec,
+        network=network,
+        config=config,
+    )

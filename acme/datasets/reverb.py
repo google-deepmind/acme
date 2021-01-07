@@ -46,7 +46,7 @@ def make_reverb_dataset(
     num_parallel_calls: int = 16,
     using_deprecated_adder: bool = False,
 ) -> tf.data.Dataset:
-  """Makes a TensorFlow dataset.
+  """Makes a TensorFlow dataset backed by a `Reverb` replay service.
 
   We need to explicitly specify up-front the shapes and dtypes of all the
   Tensors that will be drawn from the dataset. We require that the action and

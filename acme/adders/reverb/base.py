@@ -53,7 +53,7 @@ class PriorityFnInput(NamedTuple):
 
 # Define the type of a priority function and the mapping from table to function.
 PriorityFn = Callable[['PriorityFnInput'], float]
-PriorityFnMapping = Mapping[str, PriorityFn]
+PriorityFnMapping = Mapping[str, Optional[PriorityFn]]
 
 
 def spec_like_to_tensor_spec(paths: Iterable[str], spec: specs.Array):
@@ -118,7 +118,8 @@ class ReverbAdder(base.Adder):
           chunk_length=self._chunk_length)
     return self.__writer
 
-  def add_priority_table(self, table_name: str, priority_fn: PriorityFn):
+  def add_priority_table(self, table_name: str,
+                         priority_fn: Optional[PriorityFn]):
     if table_name in self._priority_fns:
       raise ValueError(
           'A priority function already exists for {}.'.format(table_name))

@@ -62,6 +62,7 @@ class DQN(agent.Agent):
       logger: loggers.Logger = None,
       checkpoint: bool = True,
       checkpoint_subpath: str = '~/acme/',
+      policy_network: Optional[snt.Module] = None,
   ):
     """Initialize the agent.
 
@@ -89,6 +90,9 @@ class DQN(agent.Agent):
       logger: logger object to be used by learner.
       checkpoint: boolean indicating whether to checkpoint the learner.
       checkpoint_subpath: directory for the checkpoint.
+      policy_network: if given, this will be used as the policy network.
+        Otherwise, an epsilon greedy policy using the online Q network will be
+        created. Policy network is used in the actor to sample actions.
     """
 
     # Create a replay server to add data to. This uses no limiter behavior in
@@ -116,10 +120,11 @@ class DQN(agent.Agent):
         batch_size=batch_size,
         prefetch_size=prefetch_size)
 
-    # Use constant 0.05 epsilon greedy policy by default.
-    if epsilon is None:
-      epsilon = tf.Variable(0.05, trainable=False)
+    # Create epsilon greedy policy network by default.
     if policy_network is None:
+      # Use constant 0.05 epsilon greedy policy by default.
+      if epsilon is None:
+        epsilon = tf.Variable(0.05, trainable=False)
       policy_network = snt.Sequential([
           network,
           lambda q: trfl.epsilon_greedy(q, epsilon=epsilon).sample(),

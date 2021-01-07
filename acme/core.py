@@ -123,7 +123,7 @@ class Learner(VariableSource, Worker):
   """Abstract learner object.
 
   This corresponds to an object which implements a learning loop. A single step
-  of learning should be implemented via the `update` method and this step
+  of learning should be implemented via the `step` method and this step
   is generally interacted with via the `run` method which runs update
   continuously.
 

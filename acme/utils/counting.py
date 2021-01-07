@@ -41,7 +41,7 @@ class Counter(core.Saveable):
         counter.
       return_only_prefixed: if True, and if `prefix` isn't empty, return counts
         restricted to the given `prefix` on each call to `increment` and
-        `get_counts`.
+        `get_counts`. The `prefix` is stripped from returned count names.
     """
 
     self._parent = parent

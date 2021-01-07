@@ -15,7 +15,7 @@
 
 """Tensor framework-agnostic utilities for manipulating nested structures."""
 
-from typing import Iterable, List, TypeVar, Any
+from typing import Sequence, List, TypeVar, Any
 
 import numpy as np
 import tree
@@ -32,7 +32,7 @@ def fast_map_structure(func, *structure):
   return tree.unflatten_as(structure[-1], [func(*x) for x in entries])
 
 
-def stack_sequence_fields(sequence: Iterable[ElementType]) -> ElementType:
+def stack_sequence_fields(sequence: Sequence[ElementType]) -> ElementType:
   """Stacks a list of identically nested objects.
 
   This takes a sequence of identically nested objects and returns a single
@@ -165,3 +165,12 @@ def broadcast_structures(*args: Any) -> Any:
       return tree.map_structure(lambda _: value, reference_tree)
 
   return tuple(mirror_structure(arg, reference_tree) for arg in args)
+
+
+def tree_map(f):
+  """Transforms `f` into a tree-mapped version."""
+
+  def mapped_f(*structures):
+    return tree.map_structure(f, *structures)
+
+  return mapped_f

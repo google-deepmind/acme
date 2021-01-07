@@ -42,9 +42,12 @@ RecurrentPolicy = Callable[[hk.Params, RNGKey, Observation, RecurrentState],
 
 
 class FeedForwardActor(core.Actor):
-  """A simple feed-forward actor implemented in JAX."""
+  """A simple feed-forward actor implemented in JAX.
 
-  _extras: types.NestedArray = ()
+  An actor based on a policy which takes observations and outputs actions. It
+  also adds experiences to replay and updates the actor weights from the policy
+  on the learner.
+  """
 
   def __init__(
       self,
@@ -54,8 +57,21 @@ class FeedForwardActor(core.Actor):
       adder: Optional[adders.Adder] = None,
       has_extras: bool = False,
   ):
+    """Initializes a feed forward actor.
+
+    Args:
+      policy: A policy network taking observation and returning an action, if
+        `has_extras=False`, and returning an (action, extras) tuple if
+        `has_extras=True`.
+      rng: Random key generator.
+      variable_client: The variable client to get policy parameters from.
+      adder: An adder to add experiences to.
+      has_extras: Flag indicating whether the policy returns extra
+        information (e.g. q-values) in addition to an action.
+    """
     self._rng = rng
     self._has_extras = has_extras
+    self._extras: types.NestedArray = ()
 
     # Adding batch dimension inside jit is much more efficient than outside.
     def batched_policy(params: hk.Params, key: RNGKey,
@@ -107,8 +123,28 @@ class RecurrentActor(core.Actor):
       initial_core_state: RecurrentState,
       variable_client: variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
+      has_extras: bool = False,
   ):
+    """Initializes a recurrent actor.
+
+    Args:
+      recurrent_policy: A recurrent policy network taking observation and state
+        and returning an (action, state) tuple, if `has_extras=False`, and
+        returning an ((action, extras), state) tuple if `has_extras=True`. In
+        the latter case, `extras` must be a tuple.
+      rng: Random key generator.
+      initial_core_state: Initial state of the recurrent policy.
+      variable_client: The variable client to get policy parameters from.
+      adder: An adder to add experiences to. The `extras` of the adder holds the
+        state of the recurrent policy. If `has_extras=True` then the `extras`
+        part returned from the recurrent policy is appended to the state before
+        added to the adder.
+      has_extras: Flag indicating whether the recurrent policy returns extra
+        information (e.g. q-values) in addition to an action.
+    """
     self._rng = rng
+    self._has_extras = has_extras
+    self._extras: types.NestedArray = ()
 
     # Adding batch dimension inside jit is much more efficient than outside.
     def batched_recurrent_policy(params, key, observation, core_state):
@@ -123,13 +159,19 @@ class RecurrentActor(core.Actor):
     self._client = variable_client
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
-    action, new_state = self._recurrent_policy(
+    result, new_state = self._recurrent_policy(
         self._client.params,
         key=next(self._rng),
         observation=observation,
         core_state=self._state)
     self._prev_state = self._state  # Keep previous state to save in replay.
     self._state = new_state  # Keep new state for next policy call.
+
+    if self._has_extras:
+      action, extras = result
+      self._extras = utils.to_numpy_squeeze(extras)   # Keep to save in replay.
+    else:
+      action = result
     return utils.to_numpy_squeeze(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
@@ -141,7 +183,8 @@ class RecurrentActor(core.Actor):
   def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     if self._adder:
       numpy_state = utils.to_numpy_squeeze(self._prev_state)
-      self._adder.add(action, next_timestep, extras=(numpy_state,))
+      self._adder.add(
+          action, next_timestep, extras=(numpy_state,) + self._extras)
 
   def update(self, wait: bool = False):
     self._client.update(wait)

@@ -122,7 +122,7 @@ def _convert_to_spec(space: gym.Space, name: str = None) -> types.NestedSpec:
         shape=space.shape,
         dtype=space.dtype,
         minimum=np.zeros(space.shape),
-        maximum=space.nvec,
+        maximum=space.nvec - 1,
         name=name)
 
   elif isinstance(space, spaces.Tuple):

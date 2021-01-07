@@ -22,13 +22,11 @@ from absl import flags
 import acme
 from acme import specs
 from acme import types
-from acme import wrappers
 from acme.agents.tf import actors
 from acme.agents.tf import d4pg
+from acme.examples.gym import helpers
 from acme.tf import networks
 from acme.tf import utils as tf2_utils
-import dm_env
-import gym
 import numpy as np
 import sonnet as snt
 
@@ -38,20 +36,6 @@ flags.DEFINE_integer('num_episodes', 100,
 flags.DEFINE_integer('num_episodes_per_eval', 10,
                      'Number of training episodes to run between evaluation '
                      'episodes.')
-
-
-def make_environment(
-    task: str = 'MountainCarContinuous-v0') -> dm_env.Environment:
-  """Creates an OpenAI Gym environment."""
-
-  # Load the gym environment.
-  environment = gym.make(task)
-
-  # Make sure the environment obeys the dm_env.Environment interface.
-  environment = wrappers.GymWrapper(environment)
-  environment = wrappers.SinglePrecisionWrapper(environment)
-
-  return environment
 
 
 # The default settings in this network factory will work well for the
@@ -99,7 +83,7 @@ def make_networks(
 
 def main(_):
   # Create an environment, grab the spec, and use it to create networks.
-  environment = make_environment()
+  environment = helpers.make_environment()
   environment_spec = specs.make_environment_spec(environment)
   agent_networks = make_networks(environment_spec.actions)
 
@@ -123,7 +107,7 @@ def main(_):
 
   # Create the evaluation actor and loop.
   eval_actor = actors.FeedForwardActor(policy_network=eval_policy)
-  eval_env = make_environment()
+  eval_env = helpers.make_environment()
   eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop')
 
   for _ in range(FLAGS.num_episodes // FLAGS.num_episodes_per_eval):

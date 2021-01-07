@@ -28,11 +28,11 @@ spec.loader.exec_module(_metadata)
 
 reverb_requirements = [
     'dm-reverb',
-    'tensorflow>=2.3.0',
+    'tensorflow>=2.4.0',
 ]
 
 tf_requirements = [
-    'tensorflow>=2.3.0',
+    'tensorflow>=2.4.0',
     'tensorflow_probability',
     'dm-sonnet',
     'trfl',
@@ -45,6 +45,7 @@ jax_requirements = [
     'optax',
     'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
     'dataclasses',  # Back-port for Python 3.6.
+    'typing-extensions',
 ]
 
 env_requirements = [

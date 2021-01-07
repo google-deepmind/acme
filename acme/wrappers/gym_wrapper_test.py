@@ -16,6 +16,7 @@
 """Tests for gym_wrapper."""
 
 import unittest
+
 from absl.testing import absltest
 from dm_env import specs
 import numpy as np
@@ -71,6 +72,16 @@ class GymWrapperTest(absltest.TestCase):
       ts = env.step(env.action_spec().generate_value())
     self.assertEqual(ts.discount, 1.0)
     env.close()
+
+  def test_multi_discrete(self):
+    space = gym.spaces.MultiDiscrete([2, 3])
+    spec = gym_wrapper._convert_to_spec(space)
+
+    spec.validate([0, 0])
+    spec.validate([1, 2])
+
+    self.assertRaises(ValueError, spec.validate, [2, 2])
+    self.assertRaises(ValueError, spec.validate, [1, 3])
 
 
 @unittest.skipIf(SKIP_GYM_TESTS, SKIP_GYM_MESSAGE)
