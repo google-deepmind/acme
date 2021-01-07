@@ -18,7 +18,9 @@
 from typing import Any, Callable, Iterable, Optional, Text, Union
 
 import acme
+# pytype: disable=import-error
 from acme.wrappers import open_spiel_wrapper
+# pytype: enable=import-error
 import numpy as np
 import sonnet as snt
 import tensorflow as tf

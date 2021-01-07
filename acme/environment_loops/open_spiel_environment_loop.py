@@ -19,6 +19,7 @@ import operator
 import time
 from typing import Optional, Sequence
 
+# pytype: disable=import-error
 from acme import core
 from acme.tf import utils as tf2_utils
 from acme.utils import counting

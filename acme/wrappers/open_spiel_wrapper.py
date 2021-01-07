@@ -17,6 +17,7 @@
 
 from typing import NamedTuple
 
+# pytype: disable=import-error
 from acme import specs
 from acme import types
 import dm_env
