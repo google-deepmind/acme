@@ -116,16 +116,7 @@ class OpenSpielEnvironmentLoop(core.Worker):
                            discount=timestep.discount[player],
                            step_type=timestep.step_type)
 
-  # TODO Remove? Currently used for debugging.
-  def _print_policy(self, timestep: dm_env.TimeStep, player: int):
-    batched_observation = tf2_utils.add_batch_dim(timestep.observation[player])
-    policy = tf.squeeze(
-        self._actors[player]._learner._network(batched_observation))
-    tf.print("Policy: ", policy, summarize=-1)
-    tf.print("Greedy action: ", tf.math.argmax(policy))
-
-  # TODO Remove verbose or add to logger?
-  def run_episode(self, verbose: bool = False) -> loggers.LoggingData:
+  def run_episode(self) -> loggers.LoggingData:
     """Run one episode.
 
     Each episode is a loop which interacts first with the environment to get an
@@ -165,15 +156,7 @@ class OpenSpielEnvironmentLoop(core.Worker):
         # TODO Support simultaneous move games.
         raise ValueError("Currently only supports sequential games.")
 
-      if verbose:
-        self._print_policy(timestep, self._environment.current_player)
-        print("Selected action: ", action_list[0])
-
       timestep = self._environment.step(action_list)
-
-      if verbose:
-        print("State:")
-        print(str(self._environment._state))
 
       # Have the agent observe the timestep and let the actor update itself.
       self._send_observation(timestep, self._environment.current_player)
@@ -183,9 +166,6 @@ class OpenSpielEnvironmentLoop(core.Worker):
 
       # Equivalent to: episode_return += timestep.reward
       tree.map_structure(operator.iadd, episode_return, timestep.reward)
-
-      if verbose:
-        print("Reward: ", timestep.reward)
 
     # Record counts.
     counts = self._counter.increment(episodes=1, steps=episode_steps)
@@ -231,10 +211,7 @@ class OpenSpielEnvironmentLoop(core.Worker):
 
     episode_count, step_count = 0, 0
     while not should_terminate(episode_count, step_count):
-      if episode_count % 1000 == 0:
-        result = self.run_episode(verbose=True)
-      else:
-        result = self.run_episode(verbose=False)
+      result = self.run_episode()
       episode_count += 1
       step_count += result['episode_length']
       # Log the given results.
