@@ -71,7 +71,7 @@ class OpenSpielEnvironmentLoop(core.Worker):
 
     # Track information necessary to coordinate updates among multiple actors.
     self._observed_first = [False] * len(self._actors)
-    self._prev_actions = [None] * len(self._actors)
+    self._prev_actions = [pyspiel.INVALID_ACTION] * len(self._actors)
 
   def _send_observation(self, timestep: dm_env.TimeStep, player: int):
     # If terminal all actors must update
@@ -87,7 +87,7 @@ class OpenSpielEnvironmentLoop(core.Worker):
           if self._should_update:
             self._actors[player_id].update()
       self._observed_first = [False] * len(self._actors)
-      self._prev_actions = [None] * len(self._actors)
+      self._prev_actions = [pyspiel.INVALID_ACTION] * len(self._actors)
     else:
       if not self._observed_first[player]:
         player_timestep = dm_env.TimeStep(
