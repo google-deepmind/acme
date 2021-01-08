@@ -46,7 +46,6 @@ class DQN(agent.Agent):
       self,
       environment_spec: specs.EnvironmentSpec,
       network: snt.Module,
-      policy_network: Optional[snt.Module] = None,
       batch_size: int = 256,
       prefetch_size: int = 4,
       target_update_period: int = 100,
