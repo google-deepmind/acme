@@ -60,13 +60,15 @@ testing_requirements = [
     'pytest-xdist',
 ]
 
-# Use the first paragraph of our README as the long_description.
-with open('README.md', 'r') as fh:
-  long_description = fh.read().split('\n\n')[4]
+long_description = \
+"""Acme is a library of reinforcement learning (RL) agents and agent building
+blocks. Acme strives to expose simple, efficient, and readable agents, that
+serve both as reference implementations of popular algorithms and as strong
+baselines, while still providing enough flexibility to do novel research. The
+design of Acme also attempts to provide multiple points of entry to the RL
+problem at differing levels of complexity.
 
-# Add a link to github.
-long_description += '\n\nFor more information see our '
-long_description += '[github repository](https://github.com/deepmind/acme).'
+For more information see [github repository](https://github.com/deepmind/acme)."""
 
 # Get the version from metadata.
 version = _metadata.__version__
