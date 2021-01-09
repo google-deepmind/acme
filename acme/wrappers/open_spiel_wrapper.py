@@ -33,8 +33,6 @@ class OLT(NamedTuple):
   terminal: types.Nest
 
 
-# TODO Wrap the underlying OpenSpiel game directly instead of OpenSpiel's
-# rl_environment?
 class OpenSpielWrapper(dm_env.Environment):
   """Environment wrapper for OpenSpiel RL environments."""
 
