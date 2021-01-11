@@ -109,6 +109,12 @@ class ReverbAdder(base.Adder):
     self._next_observation = None
     self._start_of_episode = False
 
+  def __del__(self):
+    if self.__writer is not None:
+      # Explicitly close the writer with no retry on server unavailable.
+      # This is to avoid hang on closing if the server has already terminated.
+      self.__writer.close(retry_on_unavailable=False)
+
   @property
   def _writer(self) -> reverb.Writer:
     if self.__writer is None:
