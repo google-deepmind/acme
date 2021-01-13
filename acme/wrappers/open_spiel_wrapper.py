@@ -43,7 +43,7 @@ class OpenSpielWrapper(dm_env.Environment):
   def __init__(self, environment: rl_environment.Environment):
     self._environment = environment
     self._reset_next_step = True
-    if environment._game.get_type(
+    if environment.game.get_type(
     ).dynamics != pyspiel.GameType.Dynamics.SEQUENTIAL:
       raise ValueError("Currently only supports sequential games.")
 
@@ -125,8 +125,8 @@ class OpenSpielWrapper(dm_env.Environment):
   def reward_spec(self) -> types.NestedSpec:
     return specs.BoundedArray((),
                               np.float32,
-                              minimum=self._game.min_utility(),
-                              maximum=self._game.max_utility())
+                              minimum=self._environment.game.min_utility(),
+                              maximum=self._environment.game.max_utility())
 
   def discount_spec(self) -> types.NestedSpec:
     return specs.BoundedArray((), np.float32, minimum=0, maximum=1.0)
