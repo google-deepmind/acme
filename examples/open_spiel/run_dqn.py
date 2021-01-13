@@ -27,15 +27,15 @@ from acme.wrappers import open_spiel_wrapper
 from open_spiel.python import rl_environment
 import sonnet as snt
 
-flags.DEFINE_string("game", "tic_tac_toe", "Name of the game")
-flags.DEFINE_integer("num_players", None, "Number of players")
+flags.DEFINE_string('game', 'tic_tac_toe', 'Name of the game')
+flags.DEFINE_integer('num_players', None, 'Number of players')
 
 FLAGS = flags.FLAGS
 
 
 def main(_):
   # Create an environment and grab the spec.
-  env_configs = {"players": FLAGS.num_players} if FLAGS.num_players else {}
+  env_configs = {'players': FLAGS.num_players} if FLAGS.num_players else {}
   raw_environment = rl_environment.Environment(FLAGS.game, **env_configs)
 
   environment = open_spiel_wrapper.OpenSpielWrapper(raw_environment)
@@ -45,7 +45,7 @@ def main(_):
   # Build the networks.
   networks = []
   policy_networks = []
-  for i in range(environment.num_players):
+  for _ in range(environment.num_players):
     network = legal_actions.MaskedSequential([
         snt.Flatten(),
         snt.nets.MLP([50, 50, environment_spec.actions.num_values])
