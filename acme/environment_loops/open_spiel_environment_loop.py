@@ -152,7 +152,7 @@ class OpenSpielEnvironmentLoop(core.Worker):
         ]
       else:
         # TODO Support simultaneous move games.
-        raise ValueError("Currently only supports sequential games.")
+        raise ValueError('Currently only supports sequential games.')
 
       timestep = self._environment.step(action_list)
 
