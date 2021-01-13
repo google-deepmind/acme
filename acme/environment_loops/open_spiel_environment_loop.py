@@ -131,10 +131,10 @@ class OpenSpielEnvironmentLoop(core.Worker):
     # For evaluation, this keeps track of the total undiscounted reward
     # for each player accumulated during the episode.
     multiplayer_reward_spec = specs.BoundedArray(
-        (self._environment._game.num_players(),),
+        (self._environment.game.num_players(),),
         np.float32,
-        minimum=self._environment._game.min_utility(),
-        maximum=self._environment._game.max_utility())
+        minimum=self._environment.game.min_utility(),
+        maximum=self._environment.game.max_utility())
     episode_return = tree.map_structure(_generate_zeros_from_spec,
                                         multiplayer_reward_spec)
 
