@@ -17,13 +17,14 @@
 
 from typing import NamedTuple
 
-# pytype: disable=import-error
 from acme import specs
 from acme import types
 import dm_env
 import numpy as np
+# pytype: disable=import-error
 from open_spiel.python import rl_environment
 import pyspiel
+# pytype: enable=import-error
 
 
 class OLT(NamedTuple):
