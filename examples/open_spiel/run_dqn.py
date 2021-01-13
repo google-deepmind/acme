@@ -68,7 +68,7 @@ def main(_):
   # Run the environment loop.
   loop = open_spiel_environment_loop.OpenSpielEnvironmentLoop(
       environment, agents)
-  loop.run(num_episodes=100000)  # pytype: disable=attribute-error
+  loop.run(num_episodes=100000)
 
 
 if __name__ == '__main__':
