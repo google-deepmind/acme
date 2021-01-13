@@ -21,7 +21,6 @@ from absl.testing import parameterized
 
 import acme
 from acme import core
-from acme.testing import fakes
 from acme import specs
 from acme import types
 from acme import wrappers
@@ -39,6 +38,7 @@ try:
   from acme.environment_loops import open_spiel_environment_loop
   from acme.wrappers import open_spiel_wrapper
   from open_spiel.python import rl_environment
+  # pytype: disable=import-error
 
   class RandomActor(core.Actor):
     """Fake actor which generates random actions and validates specs."""
@@ -85,7 +85,7 @@ class OpenSpielEnvironmentLoopTest(parameterized.TestCase):
     environment_spec = acme.make_environment_spec(env)
 
     actors = []
-    for i in range(env.num_players):
+    for _ in range(env.num_players):
       actors.append(RandomActor(environment_spec))
 
     loop = open_spiel_environment_loop.OpenSpielEnvironmentLoop(env, actors)
