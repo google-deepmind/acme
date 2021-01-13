@@ -14,6 +14,7 @@
 
 """Common tools for reverb replay."""
 
+import os
 from typing import Any, Callable, Dict, Iterator, Optional
 
 from acme import adders as adders_lib
@@ -45,6 +46,7 @@ def make_reverb_prioritized_nstep_replay(
     prefetch_size: int = 4,  # TODO(iosband): rationalize prefetch size.
     replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
     priority_exponent: Optional[float] = None,  # If None, default to uniform.
+    checkpoint_path: Optional[str]=None,
 ) -> ReverbReplay:
   """Creates a single-process replay infrastructure from an environment spec."""
   # Parsing priority exponent to determine uniform vs prioritized replay
@@ -66,7 +68,8 @@ def make_reverb_prioritized_nstep_replay(
       signature=adders.NStepTransitionAdder.signature(
           environment_spec, extra_spec),
   )
-  server = reverb.Server([replay_table], port=None)
+  server = reverb.Server(
+    [replay_table], checkpointer=_checkpointer_from_path(checkpoint_path), port=None)
 
   # The adder is used to insert observations into replay.
   address = f'localhost:{server.port}'
@@ -93,6 +96,7 @@ def make_reverb_online_queue(
     sequence_period: int,
     batch_size: int,
     replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
+    checkpoint_path: Optional[str]=None,
 ) -> ReverbReplay:
   """Creates a single process queue from an environment spec and extra_spec."""
   signature = adders.SequenceAdder.signature(environment_spec, extra_spec)
@@ -100,7 +104,8 @@ def make_reverb_online_queue(
       name=replay_table_name,
       max_size=max_queue_size,
       signature=signature)
-  server = reverb.Server([queue], port=None)
+  server = reverb.Server(
+    [queue], checkpointer=_checkpointer_from_path(checkpoint_path), port=None)
   can_sample = lambda: queue.can_sample(batch_size)
 
   # Component to add things into replay.
@@ -137,6 +142,7 @@ def make_reverb_prioritized_sequence_replay(
     sequence_period: int = 40,
     replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
     prefetch_size: int = 4,
+    checkpoint_path: Optional[str]=None,
 ) -> ReverbReplay:
   """Single-process replay for sequence data from an environment spec."""
   # Create a replay server to add data to. This uses no limiter behavior in
@@ -149,7 +155,8 @@ def make_reverb_prioritized_sequence_replay(
       rate_limiter=reverb.rate_limiters.MinSize(min_replay_size),
       signature=adders.SequenceAdder.signature(environment_spec, extra_spec),
   )
-  server = reverb.Server([replay_table], port=None)
+  server = reverb.Server(
+    [replay_table], checkpointer=_checkpointer_from_path(checkpoint_path), port=None)
 
   # The adder is used to insert observations into replay.
   address = f'localhost:{server.port}'
@@ -173,3 +180,16 @@ def make_reverb_prioritized_sequence_replay(
       sequence_length=sequence_length,
   ).as_numpy_iterator()
   return ReverbReplay(server, adder, data_iterator, client)
+
+
+def _checkpointer_from_path(
+  checkpoint_path: Optional[str]) -> Optional[reverb.checkpointers.DefaultCheckpointer]:
+  """Create a `reverb` checkpointer from the path to the checkpoint returned from
+  `client.checkpoint()`. See `reverb` issue https://github.com/deepmind/reverb/issues/12."""
+  if checkpoint_path is None:
+    return None
+  else:
+    # The `checkpointer` expects the **parent directory** and not the raw filename.
+    # See `reverb` issue: https://github.com/deepmind/reverb/issues/12.
+    return reverb.checkpointers.DefaultCheckpointer(
+      path=os.path.join(checkpoint_path, os.pardir))
