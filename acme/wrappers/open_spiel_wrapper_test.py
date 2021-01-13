@@ -28,6 +28,7 @@ try:
   # pytype: disable=import-error
   from acme.wrappers import open_spiel_wrapper
   from open_spiel.python import rl_environment
+  # pytype: enable=import-error
 except ModuleNotFoundError:
   SKIP_OPEN_SPIEL_TESTS = True
 
