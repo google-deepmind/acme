@@ -90,13 +90,15 @@ class OpenSpielWrapper(dm_env.Environment):
       self, open_spiel_timestep: rl_environment.TimeStep) -> types.NestedArray:
     observations = []
     for pid in range(self._environment.num_players):
-      legals = np.zeros(self._environment.game.num_distinct_actions())
-      legals[open_spiel_timestep.observations["legal_actions"][pid]] = 1
+      legals = np.zeros(self._environment.game.num_distinct_actions(),
+                        dtype=np.float32)
+      legals[open_spiel_timestep.observations["legal_actions"][pid]] = 1.0
       player_observation = OLT(observation=np.asarray(
-          open_spiel_timestep.observations["info_state"][pid]),
+          open_spiel_timestep.observations["info_state"][pid],
+          dtype=np.float32),
                                legal_actions=legals,
-                               terminal=np.asarray(
-                                   [float(open_spiel_timestep.last())]))
+                               terminal=np.asarray([open_spiel_timestep.last()],
+                                                   dtype=np.float32))
       observations.append(player_observation)
     return observations
 
