@@ -21,7 +21,6 @@ from typing import Optional, Sequence
 
 # pytype: disable=import-error
 from acme import core
-from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
 from acme.wrappers import open_spiel_wrapper
@@ -29,7 +28,6 @@ import dm_env
 from dm_env import specs
 import numpy as np
 import pyspiel
-import tensorflow as tf
 import tree
 
 
