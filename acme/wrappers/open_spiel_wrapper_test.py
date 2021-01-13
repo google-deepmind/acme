@@ -17,7 +17,6 @@
 
 import unittest
 from absl.testing import absltest
-from absl.testing import parameterized
 from dm_env import specs
 import numpy as np
 
@@ -34,7 +33,7 @@ except ModuleNotFoundError:
 
 
 @unittest.skipIf(SKIP_OPEN_SPIEL_TESTS, SKIP_OPEN_SPIEL_MESSAGE)
-class OpenSpielWrapperTest(parameterized.TestCase):
+class OpenSpielWrapperTest(absltest.TestCase):
 
   def test_tic_tac_toe(self):
     raw_env = rl_environment.Environment('tic_tac_toe')
