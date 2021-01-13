@@ -90,7 +90,7 @@ class OpenSpielWrapper(dm_env.Environment):
       self, open_spiel_timestep: rl_environment.TimeStep) -> types.NestedArray:
     observations = []
     for pid in range(self._environment.num_players):
-      legals = np.zeros(self._environment._game.num_distinct_actions())
+      legals = np.zeros(self._environment.game.num_distinct_actions())
       legals[open_spiel_timestep.observations["legal_actions"][pid]] = 1
       player_observation = OLT(observation=np.asarray(
           open_spiel_timestep.observations["info_state"][pid]),
@@ -102,25 +102,25 @@ class OpenSpielWrapper(dm_env.Environment):
 
   def observation_spec(self) -> types.NestedSpec:
     # Observation spec depends on whether the OpenSpiel environment is using
-    # observation/information_state tensors
+    # observation/information_state tensors.
     if self._environment._use_observation:
       return OLT(observation=specs.Array(
-          (self._environment._game.observation_tensor_size(),), np.float32),
+          (self._environment.game.observation_tensor_size(),), np.float32),
                  legal_actions=specs.Array(
-                     (self._environment._game.num_distinct_actions(),),
+                     (self._environment.game.num_distinct_actions(),),
                      np.float32),
                  terminal=specs.Array((1,), np.float32))
     else:
       return OLT(observation=specs.Array(
-          (self._environment._game.information_state_tensor_size(),),
+          (self._environment.game.information_state_tensor_size(),),
           np.float32),
                  legal_actions=specs.Array(
-                     (self._environment._game.num_distinct_actions(),),
+                     (self._environment.game.num_distinct_actions(),),
                      np.float32),
                  terminal=specs.Array((1,), np.float32))
 
   def action_spec(self) -> types.NestedSpec:
-    return specs.DiscreteArray(self._environment._game.num_distinct_actions())
+    return specs.DiscreteArray(self._environment.game.num_distinct_actions())
 
   def reward_spec(self) -> types.NestedSpec:
     return specs.BoundedArray((),
@@ -138,7 +138,7 @@ class OpenSpielWrapper(dm_env.Environment):
 
   @property
   def current_player(self) -> int:
-    return self._environment._state.current_player()
+    return self._environment.get_state.current_player()
 
   def __getattr__(self, name: str):
     """Expose any other attributes of the underlying environment."""
