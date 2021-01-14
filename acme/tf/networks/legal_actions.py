@@ -66,7 +66,7 @@ class MaskedSequential(snt.Module):
     return outputs
 
 
-# TODO Function to update epsilon
+# TODO Add functionality to support decaying epsilon parameter.
 # TODO This is a modified version of trfl's epsilon_greedy() which incorporates
 # code from the bug fix described here https://github.com/deepmind/trfl/pull/28
 class EpsilonGreedy(snt.Module):
