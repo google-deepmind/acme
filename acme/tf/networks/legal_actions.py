@@ -60,7 +60,7 @@ class MaskedSequential(snt.Module):
 
     # When computing the Q-learning target (r_t + d_t * max q_t) we need to
     # ensure max q_t = 0 in terminal states.
-    outputs = outputs * (1 - terminal)
+    outputs = tf.where(tf.equal(terminal, 1), tf.zeros_like(outputs), outputs)
 
     return outputs
 
