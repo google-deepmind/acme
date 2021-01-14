@@ -19,7 +19,6 @@ import operator
 import time
 from typing import Optional, Sequence
 
-# pytype: disable=import-error
 from acme import core
 from acme.utils import counting
 from acme.utils import loggers
@@ -27,7 +26,9 @@ from acme.wrappers import open_spiel_wrapper
 import dm_env
 from dm_env import specs
 import numpy as np
+# pytype: disable=import-error
 import pyspiel
+# pytype: enable=import-error
 import tree
 
 
