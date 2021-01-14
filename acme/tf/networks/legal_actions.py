@@ -15,7 +15,7 @@
 
 """Networks used for handling illegal actions."""
 
-from typing import Any, Callable, Iterable, Optional, Text, Union
+from typing import Any, Callable, Iterable, Union
 
 # pytype: disable=import-error
 from acme.wrappers import open_spiel_wrapper
@@ -38,8 +38,8 @@ class MaskedSequential(snt.Module):
 
   def __init__(self,
                layers: Iterable[Callable[..., Any]] = None,
-               name: Optional[Text] = None):
-    super(MaskedSequential, self).__init__(name=name)
+               name: str = 'MaskedSequential'):
+    super().__init__(name=name)
     self._layers = list(layers) if layers is not None else []
     self._illegal_action_penalty = -1e9
     # Note: illegal_action_penalty cannot be -np.inf because trfl's qlearning
@@ -86,8 +86,8 @@ class EpsilonGreedy(snt.Module):
   def __init__(self,
                epsilon: Union[tf.Tensor, float],
                threshold: float,
-               name: Optional[Text] = 'EpsilonGreedy'):
-    super(EpsilonGreedy, self).__init__(name=name)
+               name: str = 'EpsilonGreedy'):
+    super().__init__(name=name)
     self._epsilon = tf.Variable(epsilon, trainable=False)
     self._threshold = threshold
 
