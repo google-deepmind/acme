@@ -213,23 +213,26 @@ class GaussianMixture(snt.Module):
       scales = self._scale_factor * tf.nn.softplus(scales) + _MIN_SCALE
 
     if self._multivariate:
-      components_class = tfd.MultivariateNormalDiag
       shape = [-1, self._num_components, self._num_dimensions]
+      # Reshape the mixture's location and scale parameters appropriately.
+      locs = tf.reshape(locs, shape)
+      scales = tf.reshape(scales, shape)
       # In this case, no need to reshape logits as they are in the correct shape
       # already, namely [batch_size, num_components].
+      components_distribution = tfd.MultivariateNormalDiag(
+          loc=locs, scale_diag=scales)
     else:
-      components_class = tfd.Normal
       shape = [-1, self._num_dimensions, self._num_components]
+      # Reshape the mixture's location and scale parameters appropriately.
+      locs = tf.reshape(locs, shape)
+      scales = tf.reshape(scales, shape)
+      components_distribution = tfd.Normal(loc=locs, scale=scales)
       logits = tf.reshape(logits, shape)
-
-    # Reshape the mixture's location and scale parameters appropriately.
-    locs = tf.reshape(locs, shape)
-    scales = tf.reshape(scales, shape)
 
     # Create the mixture distribution.
     distribution = tfd.MixtureSameFamily(
         mixture_distribution=tfd.Categorical(logits=logits),
-        components_distribution=components_class(loc=locs, scale=scales))
+        components_distribution=components_distribution)
 
     if not self._multivariate:
       distribution = tfd.Independent(distribution)
