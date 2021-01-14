@@ -33,7 +33,6 @@ SKIP_OPEN_SPIEL_TESTS = False
 SKIP_OPEN_SPIEL_MESSAGE = 'open_spiel not installed.'
 
 try:
-  # pylint: disable=g-import-not-at-top
   # pytype: disable=import-error
   from acme.environment_loops import open_spiel_environment_loop
   from acme.wrappers import open_spiel_wrapper
