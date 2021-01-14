@@ -42,8 +42,9 @@ class MaskedSequential(snt.Module):
     super(MaskedSequential, self).__init__(name=name)
     self._layers = list(layers) if layers is not None else []
     self._illegal_action_penalty = -1e9
-    # Note: illegal_action_penalty cannot be -np.inf, throws error "Priority
-    # must not be NaN"
+    # Note: illegal_action_penalty cannot be -np.inf because trfl's qlearning
+    # ops utilize a batched_index function that returns NaN whenever -np.inf
+    # is present among action values.
 
   def __call__(self, inputs: open_spiel_wrapper.OLT) -> tf.Tensor:
     # Extract observation, legal actions, and terminal
