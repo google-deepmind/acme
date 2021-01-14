@@ -85,7 +85,7 @@ class EpsilonGreedy(snt.Module):
 
   def __init__(self,
                epsilon: Union[tf.Tensor, float],
-               threshold: float = -np.inf,
+               threshold: float,
                name: Optional[Text] = 'EpsilonGreedy'):
     super(EpsilonGreedy, self).__init__(name=name)
     self._epsilon = tf.Variable(epsilon, trainable=False)
