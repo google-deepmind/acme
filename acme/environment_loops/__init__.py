@@ -14,4 +14,7 @@
 
 """Specialized environment loops."""
 
-#from acme.environment_loops.open_spiel_environment_loop import OpenSpielEnvironmentLoop
+try:
+  from acme.environment_loops.open_spiel_environment_loop import OpenSpielEnvironmentLoop
+except ImportError:
+  pass
