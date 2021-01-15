@@ -105,7 +105,7 @@ class OpenSpielWrapper(dm_env.Environment):
   def observation_spec(self) -> types.NestedSpec:
     # Observation spec depends on whether the OpenSpiel environment is using
     # observation/information_state tensors.
-    if self._environment._use_observation:
+    if self._environment.use_observation:
       return OLT(observation=specs.Array(
           (self._environment.game.observation_tensor_size(),), np.float32),
                  legal_actions=specs.Array(
