@@ -15,7 +15,7 @@
 
 """Wraps an OpenSpiel RL environment to be used as a dm_env environment."""
 
-from typing import NamedTuple
+from typing import List, NamedTuple
 
 from acme import specs
 from acme import types
@@ -87,7 +87,7 @@ class OpenSpielWrapper(dm_env.Environment):
   # Convert OpenSpiel observation so it's dm_env compatible. Also, the list
   # of legal actions must be converted to a legal actions mask.
   def _convert_observation(
-      self, open_spiel_timestep: rl_environment.TimeStep) -> types.NestedArray:
+      self, open_spiel_timestep: rl_environment.TimeStep) -> List[OLT]:
     observations = []
     for pid in range(self._environment.num_players):
       legals = np.zeros(self._environment.game.num_distinct_actions(),
@@ -102,7 +102,7 @@ class OpenSpielWrapper(dm_env.Environment):
       observations.append(player_observation)
     return observations
 
-  def observation_spec(self) -> types.NestedSpec:
+  def observation_spec(self) -> OLT:
     # Observation spec depends on whether the OpenSpiel environment is using
     # observation/information_state tensors.
     if self._environment.use_observation:
@@ -121,16 +121,16 @@ class OpenSpielWrapper(dm_env.Environment):
                      np.float32),
                  terminal=specs.Array((1,), np.float32))
 
-  def action_spec(self) -> types.NestedSpec:
+  def action_spec(self) -> specs.DiscreteArray:
     return specs.DiscreteArray(self._environment.game.num_distinct_actions())
 
-  def reward_spec(self) -> types.NestedSpec:
+  def reward_spec(self) -> specs.BoundedArray:
     return specs.BoundedArray((),
                               np.float32,
                               minimum=self._environment.game.min_utility(),
                               maximum=self._environment.game.max_utility())
 
-  def discount_spec(self) -> types.NestedSpec:
+  def discount_spec(self) -> specs.BoundedArray:
     return specs.BoundedArray((), np.float32, minimum=0, maximum=1.0)
 
   @property
