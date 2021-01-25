@@ -54,6 +54,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
       checkpoint: bool = True,
+      max_gradient_norm: float = None,
   ):
     """Initializes the learner.
 
@@ -73,6 +74,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       counter: Counter object for (potentially distributed) counting.
       logger: Logger object for writing logs to.
       checkpoint: boolean indicating whether to checkpoint the learner.
+      max_gradient_norm: used for gradient clipping.
     """
 
     # Internalise agent components (replay buffer, networks, optimizer).
@@ -88,6 +90,9 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     self._target_update_period = target_update_period
     self._importance_sampling_exponent = importance_sampling_exponent
     self._huber_loss_parameter = huber_loss_parameter
+    if max_gradient_norm is None:
+      max_gradient_norm = 1e10  # A very large number. Infinity results in NaNs.
+    self._max_gradient_norm = tf.convert_to_tensor(max_gradient_norm)
 
     # Learner state.
     self._variables: List[List[tf.Tensor]] = [network.trainable_variables]
@@ -145,6 +150,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
 
     # Do a step of SGD.
     gradients = tape.gradient(loss, self._network.trainable_variables)
+    gradients, _ = tf.clip_by_global_norm(gradients, self._max_gradient_norm)
     self._optimizer.apply(gradients, self._network.trainable_variables)
 
     # Update the priorities in the replay buffer.

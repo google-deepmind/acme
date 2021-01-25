@@ -24,6 +24,7 @@ from acme.jax import variable_utils
 import dataclasses
 import haiku as hk
 import jax.numpy as jnp
+import numpy as np
 import optax
 import rlax
 
@@ -40,6 +41,7 @@ class DQNConfig:
   discount: float = 0.99  # Discount rate applied to value per timestep.
   n_step: int = 5  # N-step TF learning.
   target_update_period: int = 100  # Update target network every period.
+  max_gradient_norm: float = np.inf  # For gradient clipping.
 
   # Replay options
   batch_size: int = 256  # Number of transitions per batch.
@@ -78,12 +80,16 @@ class DQNFromConfig(agent.Agent):
     )
     self._server = reverb_replay.server
 
+    optimizer = optax.chain(
+        optax.clip_by_global_norm(config.max_gradient_norm),
+        optax.adam(config.learning_rate),
+    )
     # The learner updates the parameters (and initializes them).
     learner = learning.DQNLearner(
         network=network,
         obs_spec=environment_spec.observations,
         rng=hk.PRNGSequence(config.seed),
-        optimizer=optax.adam(config.learning_rate),
+        optimizer=optimizer,
         discount=config.discount,
         importance_sampling_exponent=config.importance_sampling_exponent,
         target_update_period=config.target_update_period,

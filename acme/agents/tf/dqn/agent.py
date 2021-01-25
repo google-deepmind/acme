@@ -62,6 +62,7 @@ class DQN(agent.Agent):
       checkpoint: bool = True,
       checkpoint_subpath: str = '~/acme/',
       policy_network: Optional[snt.Module] = None,
+      max_gradient_norm: Optional[float] = None,
   ):
     """Initialize the agent.
 
@@ -92,6 +93,7 @@ class DQN(agent.Agent):
       policy_network: if given, this will be used as the policy network.
         Otherwise, an epsilon greedy policy using the online Q network will be
         created. Policy network is used in the actor to sample actions.
+      max_gradient_norm: used for gradient clipping.
     """
 
     # Create a replay server to add data to. This uses no limiter behavior in
@@ -149,6 +151,7 @@ class DQN(agent.Agent):
         target_update_period=target_update_period,
         dataset=dataset,
         replay_client=replay_client,
+        max_gradient_norm=max_gradient_norm,
         logger=logger,
         checkpoint=checkpoint)
 
