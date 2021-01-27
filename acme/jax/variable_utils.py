@@ -24,7 +24,7 @@ import haiku as hk
 import jax
 
 
-class VariableClient:
+class VariableClient(core.VariableClient):
   """A variable client for updating variables from a remote source."""
 
   def __init__(self,
