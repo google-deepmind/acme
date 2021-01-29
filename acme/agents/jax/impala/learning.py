@@ -15,7 +15,8 @@
 
 """Learner for the IMPALA actor-critic agent."""
 
-from typing import Callable, Dict, Iterator, List, NamedTuple, Tuple
+import time
+from typing import Callable, Dict, Iterator, List, NamedTuple, Sequence, Tuple
 
 import acme
 from acme import specs
@@ -30,6 +31,8 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 import reverb
+
+_PMAP_AXIS_NAME = 'data'
 
 
 class TrainingState(NamedTuple):
@@ -55,7 +58,12 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       max_abs_reward: float = np.inf,
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
+      devices: Sequence[jax.xla.Device] = None,
+      prefetch_size: int = 2,
+      num_prefetch_threads: int = None,
   ):
+
+    devices = devices or jax.local_devices()
 
     # Transform into pure functions.
     unroll_fn = hk.without_apply_rng(hk.transform(unroll_fn, apply_rng=True))
@@ -79,6 +87,9 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       grad_fn = jax.value_and_grad(loss_fn)
       loss_value, gradients = grad_fn(state.params, sample)
 
+      # Average gradients over pmap replicas before optimizer update.
+      gradients = jax.lax.pmean(gradients, _PMAP_AXIS_NAME)
+
       # Apply updates.
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
       new_params = optax.apply_updates(state.params, updates)
@@ -98,15 +109,21 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       initial_state = initial_state_fn.apply(None)
       initial_params = unroll_fn.init(key, dummy_obs, initial_state)
       initial_opt_state = optimizer.init(initial_params)
-      return TrainingState(
-          params=initial_params, opt_state=initial_opt_state)
+      return TrainingState(params=initial_params, opt_state=initial_opt_state)
 
     # Initialise training state (parameters and optimiser state).
-    self._state = make_initial_state(next(rng))
+    state = make_initial_state(next(rng))
+    self._state = utils.replicate_in_all_devices(state)
 
-    # Internalise iterator.
-    self._iterator = iterator
-    self._sgd_step = sgd_step
+    self._prefetched_iterator = utils.sharded_prefetch(
+        iterator,
+        buffer_size=prefetch_size,
+        devices=devices,
+        num_threads=(len(devices) if num_prefetch_threads is None
+                     else num_prefetch_threads),
+    )
+
+    self._sgd_step = jax.pmap(sgd_step, axis_name=_PMAP_AXIS_NAME)
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()
@@ -114,22 +131,28 @@ class IMPALALearner(acme.Learner, acme.Saveable):
 
   def step(self):
     """Does a step of SGD and logs the results."""
+    samples = next(self._prefetched_iterator)
 
     # Do a batch of SGD.
-    sample = next(self._iterator)
-    self._state, results = self._sgd_step(self._state, sample)
+    start = time.time()
+    self._state, results = self._sgd_step(self._state, samples)
+
+    # Take results from first replica.
+    results = utils.first_replica(results)
 
     # Update our counts and record it.
-    counts = self._counter.increment(steps=1)
+    counts = self._counter.increment(steps=1, time_elapsed=time.time() - start)
 
     # Snapshot and attempt to write logs.
     self._logger.write({**results, **counts})
 
   def get_variables(self, names: List[str]) -> List[hk.Params]:
-    return [self._state.params]
+    # Return first replica of parameters.
+    return [utils.first_replica(self._state.params)]
 
   def save(self) -> TrainingState:
-    return self._state
+    # Serialize only the first replica of parameters and optimizer state.
+    return jax.tree_map(utils.first_replica, self._state)
 
   def restore(self, state: TrainingState):
-    self._state = state
+    self._state = utils.replicate_in_all_devices(state)
