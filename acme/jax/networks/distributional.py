@@ -15,7 +15,7 @@
 
 """Haiku modules that output tfd.Distributions."""
 
-from typing import Optional
+from typing import Any, Optional
 
 import haiku as hk
 import jax
@@ -25,6 +25,7 @@ hk_init = hk.initializers
 tfd = tensorflow_probability.experimental.substrates.jax.distributions
 
 _MIN_SCALE = 1e-4
+Initializer = hk.initializers.Initializer
 
 
 class CategoricalHead(hk.Module):
@@ -33,14 +34,17 @@ class CategoricalHead(hk.Module):
   def __init__(
       self,
       num_values: int,
+      dtype: Optional[Any] = jnp.int32,
+      w_init: Optional[Initializer] = None,
       name: Optional[str] = None,
   ):
     super().__init__(name=name)
-    self._linear = hk.Linear(num_values)
+    self._dtype = dtype
+    self._linear = hk.Linear(num_values, w_init=w_init)
 
   def __call__(self, inputs: jnp.ndarray) -> tfd.Distribution:
     logits = self._linear(inputs)
-    return tfd.Categorical(logits=logits)
+    return tfd.Categorical(logits=logits, dtype=self._dtype)
 
 
 class GaussianMixture(hk.Module):

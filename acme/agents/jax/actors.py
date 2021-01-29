@@ -76,7 +76,7 @@ class FeedForwardActor(core.Actor):
     # Adding batch dimension inside jit is much more efficient than outside.
     def batched_policy(params: hk.Params, key: RNGKey,
                        observation: Observation
-                       ) ->Union[Action, Tuple[Action, types.NestedArray]]:
+                       ) -> Union[Action, Tuple[Action, types.NestedArray]]:
       # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
       observation = utils.add_batch_dim(observation)
       output = policy(params, key, observation)
