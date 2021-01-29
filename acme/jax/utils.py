@@ -24,7 +24,6 @@ from typing import Callable, Iterable, Generator, NamedTuple, Optional, Sequence
 from absl import logging
 from acme import types
 import jax
-from jax import tree_util
 import jax.numpy as jnp
 import numpy as np
 import tree
@@ -35,7 +34,7 @@ T = TypeVar('T')
 
 
 def add_batch_dim(values: types.Nest) -> types.NestedArray:
-  return tree_util.tree_map(lambda x: jnp.expand_dims(x, axis=0), values)
+  return jax.tree_map(lambda x: jnp.expand_dims(x, axis=0), values)
 
 
 def _flatten(x: jnp.ndarray, num_batch_dims: int) -> jnp.ndarray:
@@ -70,20 +69,20 @@ def batch_concat(
 
 
 def zeros_like(nest: types.Nest) -> types.NestedArray:
-  return tree_util.tree_map(lambda x: jnp.zeros(x.shape, x.dtype), nest)
+  return jax.tree_map(lambda x: jnp.zeros(x.shape, x.dtype), nest)
 
 
 def squeeze_batch_dim(nest: types.Nest) -> types.NestedArray:
-  return tree_util.tree_map(lambda x: jnp.squeeze(x, axis=0), nest)
+  return jax.tree_map(lambda x: jnp.squeeze(x, axis=0), nest)
 
 
 def to_numpy_squeeze(values: types.Nest) -> types.NestedArray:
   """Converts to numpy and squeezes out dummy batch dimension."""
-  return tree_util.tree_map(lambda x: np.array(x).squeeze(axis=0), values)
+  return jax.tree_map(lambda x: np.array(x).squeeze(axis=0), values)
 
 
 def to_numpy(values: types.Nest) -> types.NestedArray:
-  return tree_util.tree_map(np.array, values)
+  return jax.tree_map(np.array, values)
 
 
 def fetch_devicearray(values: types.Nest) -> types.Nest:
@@ -98,7 +97,7 @@ def fetch_devicearray(values: types.Nest) -> types.Nest:
 
 
 def batch_to_sequence(values: types.Nest) -> types.NestedArray:
-  return tree_util.tree_map(
+  return jax.tree_map(
       lambda x: jnp.transpose(x, axes=(1, 0, *range(2, len(x.shape)))), values)
 
 
