@@ -231,7 +231,7 @@ def sharded_prefetch(
         if not items:
           break
         if split_fn is None:
-          buffer.put(jax.api.device_put_sharded(tuple(items), devices))
+          buffer.put(jax.device_put_sharded(tuple(items), devices))
         else:
           # ((host: x1, device: y1), ..., (host: xN, device: yN)).
           items_split = (split_fn(item) for item in items)
@@ -242,7 +242,7 @@ def sharded_prefetch(
           buffer.put(
               PrefetchingSplit(
                   host=np.stack(split.host),
-                  device=jax.api.device_put_sharded(split.device, devices)))
+                  device=jax.device_put_sharded(split.device, devices)))
     except Exception as e:  # pylint: disable=broad-except
       logging.exception('Error in producer thread for %s', iterable.__name__)
       producer_error.append(e)
