@@ -27,3 +27,9 @@ from acme.wrappers.single_precision import SinglePrecisionWrapper
 from acme.wrappers.step_limit import StepLimitWrapper
 from acme.wrappers.video import MujocoVideoWrapper
 from acme.wrappers.video import VideoWrapper
+
+try:
+  # pylint: disable=g-import-not-at-top
+  from acme.wrappers.open_spiel_wrapper import OpenSpielWrapper
+except ImportError:
+  pass

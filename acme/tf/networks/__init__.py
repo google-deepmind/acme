@@ -55,4 +55,11 @@ from acme.tf.networks.vision import ResNetTorso
 # For backwards compatibility.
 GaussianMixtureHead = UnivariateGaussianMixture
 
+try:
+  # pylint: disable=g-bad-import-order,g-import-not-at-top
+  from acme.tf.networks.legal_actions import MaskedSequential
+  from acme.tf.networks.legal_actions import EpsilonGreedy
+except ImportError:
+  pass
+
 # Internal imports.
