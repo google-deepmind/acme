@@ -16,7 +16,7 @@
 """Learner for the IMPALA actor-critic agent."""
 
 import time
-from typing import Callable, Dict, Iterator, List, NamedTuple, Sequence, Tuple
+from typing import Callable, Dict, Iterator, List, NamedTuple, Tuple, Optional, Sequence
 
 import acme
 from acme import specs
@@ -58,12 +58,12 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       max_abs_reward: float = np.inf,
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
-      devices: Sequence[jax.xla.Device] = None,
+      devices: Optional[Sequence[jax.xla.Device]] = None,
       prefetch_size: int = 2,
-      num_prefetch_threads: int = None,
+      num_prefetch_threads: Optional[int] = None,
   ):
 
-    devices = devices or jax.local_devices()
+    self._devices = devices or jax.local_devices()
 
     # Transform into pure functions.
     unroll_fn = hk.without_apply_rng(hk.transform(unroll_fn, apply_rng=True))
@@ -113,17 +113,19 @@ class IMPALALearner(acme.Learner, acme.Saveable):
 
     # Initialise training state (parameters and optimiser state).
     state = make_initial_state(next(rng))
-    self._state = utils.replicate_in_all_devices(state)
+    self._state = utils.replicate_in_all_devices(state, self._devices)
 
+    if num_prefetch_threads is None:
+      num_prefetch_threads = len(self._devices)
     self._prefetched_iterator = utils.sharded_prefetch(
         iterator,
         buffer_size=prefetch_size,
         devices=devices,
-        num_threads=(len(devices) if num_prefetch_threads is None
-                     else num_prefetch_threads),
+        num_threads=num_prefetch_threads,
     )
 
-    self._sgd_step = jax.pmap(sgd_step, axis_name=_PMAP_AXIS_NAME)
+    self._sgd_step = jax.pmap(
+        sgd_step, axis_name=_PMAP_AXIS_NAME, devices=self._devices)
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()
@@ -146,7 +148,7 @@ class IMPALALearner(acme.Learner, acme.Saveable):
     # Snapshot and attempt to write logs.
     self._logger.write({**results, **counts})
 
-  def get_variables(self, names: List[str]) -> List[hk.Params]:
+  def get_variables(self, names: Sequence[str]) -> List[hk.Params]:
     # Return first replica of parameters.
     return [utils.first_replica(self._state.params)]
 
@@ -155,4 +157,4 @@ class IMPALALearner(acme.Learner, acme.Saveable):
     return jax.tree_map(utils.first_replica, self._state)
 
   def restore(self, state: TrainingState):
-    self._state = utils.replicate_in_all_devices(state)
+    self._state = utils.replicate_in_all_devices(state, self._devices)
