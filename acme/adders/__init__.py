@@ -18,4 +18,3 @@
 # pylint: disable=unused-import
 
 from acme.adders.base import Adder
-# Internal imports.
