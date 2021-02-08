@@ -16,7 +16,7 @@
 """Learner for the IMPALA actor-critic agent."""
 
 import time
-from typing import Callable, Dict, Iterator, List, NamedTuple, Tuple, Optional, Sequence
+from typing import Callable, Dict, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 
 import acme
 from acme import specs
