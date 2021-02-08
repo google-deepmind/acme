@@ -17,13 +17,12 @@
 
 # pylint: disable=unused-import
 
-
 from acme.adders.reverb.base import DEFAULT_PRIORITY_TABLE
 from acme.adders.reverb.base import PriorityFn
 from acme.adders.reverb.base import PriorityFnInput
 from acme.adders.reverb.base import ReverbAdder
 from acme.adders.reverb.base import Step
-# Internal imports.
+
 from acme.adders.reverb.episode import EpisodeAdder
 from acme.adders.reverb.sequence import SequenceAdder
 from acme.adders.reverb.transition import NStepTransitionAdder
