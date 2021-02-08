@@ -24,11 +24,13 @@ from typing import Generic, List, Optional, TypeVar
 
 from acme import types
 # Internal imports.
+from acme.utils import metrics
 import dm_env
 
 T = TypeVar('T')
 
 
+@metrics.record_class_usage
 class Actor(abc.ABC):
   """Interface for an agent that can act.
 
@@ -128,6 +130,7 @@ class VariableClient(abc.ABC):
     """Immediately update and block until we get the result."""
 
 
+@metrics.record_class_usage
 class Worker(abc.ABC):
   """An interface for (potentially) distributed workers."""
 
