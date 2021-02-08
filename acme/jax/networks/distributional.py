@@ -55,6 +55,7 @@ class GaussianMixture(hk.Module):
                num_components: int,
                multivariate: bool,
                init_scale: Optional[float] = None,
+               append_singleton_event_dim: bool = False,
                name: str = 'GaussianMixture'):
     """Initialization.
 
@@ -63,6 +64,8 @@ class GaussianMixture(hk.Module):
       num_components: number of mixture components.
       multivariate: whether the resulting distribution is multivariate or not.
       init_scale: the initial scale for the Gaussian mixture components.
+      append_singleton_event_dim: (univariate only) Whether to add an extra
+        singleton dimension to the event shape.
       name: name of the module passed to snt.Module parent class.
     """
     super().__init__(name=name)
@@ -70,6 +73,7 @@ class GaussianMixture(hk.Module):
     self._num_dimensions = num_dimensions
     self._num_components = num_components
     self._multivariate = multivariate
+    self._append_singleton_event_dim = append_singleton_event_dim
 
     if init_scale is not None:
       self._scale_factor = init_scale / jax.nn.softplus(0.)
@@ -121,12 +125,14 @@ class GaussianMixture(hk.Module):
 
     if self._multivariate:
       components_class = tfd.MultivariateNormalDiag
-      shape = [-1, self._num_components, self._num_dimensions]
+      shape = [-1, self._num_components, self._num_dimensions]  # [B, C, D]
       # In this case, no need to reshape logits as they are in the correct shape
       # already, namely [batch_size, num_components].
     else:
       components_class = tfd.Normal
-      shape = [-1, self._num_dimensions, self._num_components]
+      shape = [-1, self._num_dimensions, self._num_components]  # [B, D, C]
+      if self._append_singleton_event_dim:
+        shape.insert(2, 1)  # [B, D, 1, C]
       logits = logits.reshape(shape)
 
     # Reshape the mixture's location and scale parameters appropriately.
