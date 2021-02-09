@@ -165,7 +165,13 @@ class OpenSpielEnvironmentLoop(core.Worker):
       episode_steps += 1
 
       # Equivalent to: episode_return += timestep.reward
-      tree.map_structure(operator.iadd, episode_return, timestep.reward)
+      # We capture the return value because if timestep.reward is a JAX
+      # DeviceArray, episode_return will not be mutated in-place. (In all other
+      # cases, the returned episode_return will be the same object as the
+      # argument episode_return.)
+      episode_return = tree.map_structure(operator.iadd,
+                                          episode_return,
+                                          timestep.reward)
 
     # Record counts.
     counts = self._counter.increment(episodes=1, steps=episode_steps)
