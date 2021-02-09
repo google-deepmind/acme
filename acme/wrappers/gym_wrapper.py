@@ -130,8 +130,7 @@ def _convert_to_spec(space: gym.Space, name: str = None) -> types.NestedSpec:
 
   elif isinstance(space, spaces.Dict):
     return {
-        key: _convert_to_spec(value, name)
-        for key, value in space.spaces.items()
+        key: _convert_to_spec(value, key) for key, value in space.spaces.items()
     }
 
   else:
