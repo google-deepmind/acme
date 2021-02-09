@@ -20,7 +20,7 @@ This file specifies and documents the notions of `Actor` and `Learner`.
 
 import abc
 import itertools
-from typing import Generic, List, Optional, TypeVar
+from typing import Generic, List, Optional, Sequence, TypeVar
 
 from acme import types
 # Internal imports.
@@ -100,7 +100,7 @@ class VariableSource(abc.ABC):
   """
 
   @abc.abstractmethod
-  def get_variables(self, names: List[str]) -> List[types.NestedArray]:
+  def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
     """Return the named variables as a collection of (nested) numpy arrays.
 
     Args:

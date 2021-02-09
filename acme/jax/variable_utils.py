@@ -16,7 +16,7 @@
 """Variable utilities for JAX."""
 
 from concurrent import futures
-from typing import List, Optional
+from typing import List, Optional, Sequence, Union
 
 from acme import core
 
@@ -29,7 +29,7 @@ class VariableClient(core.VariableClient):
 
   def __init__(self,
                client: core.VariableSource,
-               key: str,
+               key: Union[str, Sequence[str]],
                update_period: int = 1,
                device: Optional[str] = None):
     """Initializes the variable client.
@@ -41,7 +41,6 @@ class VariableClient(core.VariableClient):
       device: The name of a JAX device to put variables on. If None (default),
         don't put to device.
     """
-    self._key = key
     self._update_period = update_period
     self._call_counter = 0
     self._client = client
@@ -51,7 +50,9 @@ class VariableClient(core.VariableClient):
       self._device = jax.devices(device)[0]
 
     self._executor = futures.ThreadPoolExecutor(max_workers=1)
-    self._request = lambda: client.get_variables([self._key])
+    if isinstance(key, str):
+      key = [key]
+    self._request = lambda k=key: client.get_variables(k)
     self._future: Optional[futures.Future] = None
     self._async_request = lambda: self._executor.submit(self._request)
 
