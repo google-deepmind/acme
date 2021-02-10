@@ -53,6 +53,7 @@ class IMPALAActor(core.Actor):
     self._adder = adder
     self._variable_client = variable_client
     self._forward = forward_fn
+    self._reset_fn_or_none = getattr(forward_fn, 'reset', None)
     self._rng = rng
 
     # Make sure not to use a random policy after checkpoint restoration by
@@ -86,6 +87,11 @@ class IMPALAActor(core.Actor):
 
     # Set the state to None so that we re-initialize at the next policy call.
     self._state = None
+
+    # Reset state of inference functions that employ stateful wrappers (eg. BIT)
+    # at the start of the episode.
+    if self._reset_fn_or_none is not None:
+      self._reset_fn_or_none()
 
   def observe(
       self,
