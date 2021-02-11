@@ -24,7 +24,7 @@ import haiku as hk
 import jax
 
 
-class VariableClient(core.VariableClient):
+class VariableClient:
   """A variable client for updating variables from a remote source."""
 
   def __init__(self,
@@ -77,7 +77,8 @@ class VariableClient(core.VariableClient):
 
     if wait:
       if self._future is not None:
-        if self._future.running(): self._future.cancel()
+        if self._future.running():
+          self._future.cancel()
         self._future = None
       self._call_counter = 0
       self.update_and_wait()

@@ -113,23 +113,6 @@ class VariableSource(abc.ABC):
     """
 
 
-class VariableClient(abc.ABC):
-  """A variable client for updating variables from a remote source."""
-
-  @abc.abstractmethod
-  def update(self, wait: bool = False):
-    """Periodically updates the variables with the latest copy from the source.
-
-    Args:
-      wait: if True, executes blocking update.
-    """
-
-  # TODO(b/178587027): Eliminate this method.
-  @abc.abstractmethod
-  def update_and_wait(self):
-    """Immediately update and block until we get the result."""
-
-
 @metrics.record_class_usage
 class Worker(abc.ABC):
   """An interface for (potentially) distributed workers."""

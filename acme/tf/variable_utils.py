@@ -24,7 +24,7 @@ import tensorflow as tf
 import tree
 
 
-class VariableClient(core.VariableClient):
+class VariableClient:
   """A variable client for updating variables from a remote source."""
 
   def __init__(self,

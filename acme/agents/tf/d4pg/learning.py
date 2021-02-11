@@ -16,7 +16,7 @@
 """D4PG learner implementation."""
 
 import time
-from typing import Dict, List
+from typing import Dict, Iterator, List
 
 import acme
 from acme import types
@@ -27,6 +27,7 @@ from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
 import numpy as np
+import reverb
 import sonnet as snt
 import tensorflow as tf
 import tree
@@ -47,7 +48,7 @@ class D4PGLearner(acme.Learner):
       target_critic_network: snt.Module,
       discount: float,
       target_update_period: int,
-      dataset: tf.data.Dataset,
+      dataset_iterator: Iterator[reverb.ReplaySample],
       observation_network: types.TensorTransformation = lambda x: x,
       target_observation_network: types.TensorTransformation = lambda x: x,
       policy_optimizer: snt.Optimizer = None,
@@ -68,8 +69,8 @@ class D4PGLearner(acme.Learner):
       discount: discount to use for TD updates.
       target_update_period: number of learner steps to perform before updating
         the target networks.
-      dataset: dataset to learn from, whether fixed or from a replay buffer
-        (see `acme.datasets.reverb.make_dataset` documentation).
+      dataset_iterator: dataset to learn from, whether fixed or from a replay
+        buffer (see `acme.datasets.reverb.make_dataset` documentation).
       observation_network: an optional online network to process observations
         before the policy and the critic.
       target_observation_network: the target observation network.
@@ -106,8 +107,7 @@ class D4PGLearner(acme.Learner):
     self._target_update_period = target_update_period
 
     # Batch dataset and create iterator.
-    # TODO(b/155086959): Fix type stubs and remove.
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator = dataset_iterator
 
     # Create optimizers if they aren't given.
     self._critic_optimizer = critic_optimizer or snt.optimizers.Adam(1e-4)
