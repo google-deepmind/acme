@@ -78,11 +78,11 @@ def squeeze_batch_dim(nest: types.Nest) -> types.NestedArray:
 
 def to_numpy_squeeze(values: types.Nest) -> types.NestedArray:
   """Converts to numpy and squeezes out dummy batch dimension."""
-  return jax.tree_map(lambda x: np.array(x).squeeze(axis=0), values)
+  return jax.tree_map(lambda x: np.asarray(x).squeeze(axis=0), values)
 
 
 def to_numpy(values: types.Nest) -> types.NestedArray:
-  return jax.tree_map(np.array, values)
+  return jax.tree_map(np.asarray, values)
 
 
 def fetch_devicearray(values: types.Nest) -> types.Nest:
@@ -92,7 +92,7 @@ def fetch_devicearray(values: types.Nest) -> types.Nest:
 
 def _fetch_devicearray(x):
   if isinstance(x, jax.xla.DeviceArray):
-    return np.array(x)
+    return np.asarray(x)
   return x
 
 
