@@ -15,7 +15,7 @@
 
 """Common types used throughout Acme."""
 
-from typing import Any, Callable, Iterable, Mapping, Union
+from typing import Any, Callable, Iterable, Mapping, NamedTuple, Union
 from acme import specs
 
 # Define types for nested arrays and tensors.
@@ -34,3 +34,12 @@ Nest = Union[NestedArray, NestedTensor, NestedSpec]
 
 TensorTransformation = Callable[[NestedTensor], NestedTensor]
 TensorValuedCallable = Callable[..., NestedTensor]
+
+
+class Transition(NamedTuple):
+  """Container for a transition."""
+  observation: NestedArray
+  action: NestedArray
+  reward: NestedArray
+  discount: NestedArray
+  next_observation: NestedArray
