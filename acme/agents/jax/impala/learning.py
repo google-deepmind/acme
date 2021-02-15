@@ -140,7 +140,7 @@ class IMPALALearner(acme.Learner, acme.Saveable):
     self._state, results = self._sgd_step(self._state, samples)
 
     # Take results from first replica.
-    results = utils.first_replica(results)
+    results = utils.get_from_first_device(results)
 
     # Update our counts and record it.
     counts = self._counter.increment(steps=1, time_elapsed=time.time() - start)
@@ -150,11 +150,11 @@ class IMPALALearner(acme.Learner, acme.Saveable):
 
   def get_variables(self, names: Sequence[str]) -> List[hk.Params]:
     # Return first replica of parameters.
-    return [utils.first_replica(self._state.params)]
+    return [utils.get_from_first_device(self._state.params, as_numpy=False)]
 
   def save(self) -> TrainingState:
     # Serialize only the first replica of parameters and optimizer state.
-    return jax.tree_map(utils.first_replica, self._state)
+    return jax.tree_map(utils.get_from_first_device, self._state)
 
   def restore(self, state: TrainingState):
     self._state = utils.replicate_in_all_devices(state, self._devices)

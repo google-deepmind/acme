@@ -86,14 +86,14 @@ def to_numpy(values: types.Nest) -> types.NestedArray:
 
 
 def fetch_devicearray(values: types.Nest) -> types.Nest:
-  """Fetches and converts any DeviceArrays in `values`."""
+  """Fetches and converts any DeviceArrays to np.ndarrays."""
+  return tree.map_structure(_fetch_devicearray, values)
 
-  def _serialize(x):
-    if isinstance(x, jnp.DeviceArray):
-      return np.array(x)
-    return x
 
-  return tree.map_structure(_serialize, values)
+def _fetch_devicearray(x):
+  if isinstance(x, jax.xla.DeviceArray):
+    return np.array(x)
+  return x
 
 
 def batch_to_sequence(values: types.Nest) -> types.NestedArray:
@@ -272,9 +272,29 @@ def replicate_in_all_devices(nest: N,
   return jax.api.device_put_sharded([nest] * len(devices), devices)
 
 
-def first_replica(nest: N) -> N:
-  """Fetches the first copy of a replicated array nest."""
-  return jax.tree_map(lambda x: fetch_devicearray(x[0]), nest)
+def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
+  """Gets the first array of a nest of `jax.pxla.ShardedDeviceArray`s.
+
+  Args:
+    nest: A nest of `jax.pxla.ShardedDeviceArray`s.
+    as_numpy: If `True` then each `DeviceArray` that is retrieved is transformed
+      (and copied if not on the host machine) into a `np.ndarray`.
+
+  Returns:
+    The first array of a nest of `jax.pxla.ShardedDeviceArray`s. Note that if
+    `as_numpy=False` then the array will be a `DeviceArray` (which will live on
+    the same device as the sharded device array). If `as_numpy=True` then the
+    array will be copied to the host machine and converted into a `np.ndarray`.
+  """
+
+  def _slice_and_maybe_to_numpy(x):
+    if not isinstance(x, jax.pxla.ShardedDeviceArray):
+      raise ValueError('first_replica should only be used with '
+                       f'{jax.pxla.ShardedDeviceArray}, passed {type(x)}.')
+    x = x[0]
+    return _fetch_devicearray(x) if as_numpy else x
+
+  return jax.tree_map(_slice_and_maybe_to_numpy, nest)
 
 
 def mapreduce(
