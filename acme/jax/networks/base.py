@@ -19,13 +19,14 @@ import abc
 from typing import Callable, Tuple
 
 from acme import types
+import dataclasses
 import haiku as hk
 import jax.numpy as jnp
-from typing_extensions import Protocol
 
 # Commonly-used types.
 PRNGKey = jnp.ndarray
 Params = types.NestedArray
+NetworkOutput = types.NestedArray
 QValues = jnp.ndarray
 Logits = jnp.ndarray
 Value = jnp.ndarray
@@ -38,14 +39,18 @@ RecurrentQNetwork = Callable[[types.NestedArray, hk.LSTMState],
                              Tuple[QValues, hk.LSTMState]]
 
 
-class FeedForwardNetwork(Protocol):
-  """Generic protocol defining a feed-forward network."""
+@dataclasses.dataclass
+class FeedForwardNetwork:
+  """Holds a pair of pure functions defining a feed-forward network.
 
-  def init(self, key: PRNGKey, *args, **kwargs) -> Params:
-    """Initializes and returns the networks parameters."""
-
-  def apply(self, params: Params, *args, **kwargs) -> types.NestedArray:
-    """Computes and returns the outputs of a forward pass."""
+  Attributes:
+    init: A pure function: ``params = init(rng, *a, **k)``
+    apply: A pure function: ``out = apply(params, rng, *a, **k)``
+  """
+  # Initializes and returns the networks parameters.
+  init: Callable[..., Params]
+  # Computes and returns the outputs of a forward pass.
+  apply: Callable[..., NetworkOutput]
 
 
 class Module(hk.Module, abc.ABC):
