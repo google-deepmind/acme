@@ -20,6 +20,7 @@ from typing import Callable, Optional, Tuple, TypeVar, Union
 from acme import adders
 from acme import core
 from acme import types
+from acme.jax import networks as network_types
 from acme.jax import utils
 from acme.jax import variable_utils
 
@@ -35,10 +36,11 @@ Action = types.NestedArray
 RecurrentState = TypeVar('RecurrentState')
 
 # Signatures for functions that sample from parameterised stochastic policies.
-FeedForwardPolicy = Callable[[hk.Params, RNGKey, Observation],
+FeedForwardPolicy = Callable[[network_types.Params, RNGKey, Observation],
                              Union[Action, Tuple[Action, types.NestedArray]]]
-RecurrentPolicy = Callable[[hk.Params, RNGKey, Observation, RecurrentState],
-                           Tuple[Action, RecurrentState]]
+RecurrentPolicy = Callable[
+    [network_types.Params, RNGKey, Observation, RecurrentState],
+    Tuple[Union[Action, Tuple[Action, types.NestedArray]], RecurrentState]]
 
 
 class FeedForwardActor(core.Actor):
@@ -74,7 +76,7 @@ class FeedForwardActor(core.Actor):
     self._extras: types.NestedArray = ()
 
     # Adding batch dimension inside jit is much more efficient than outside.
-    def batched_policy(params: hk.Params, key: RNGKey,
+    def batched_policy(params: network_types.Params, key: RNGKey,
                        observation: Observation
                        ) -> Union[Action, Tuple[Action, types.NestedArray]]:
       # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
@@ -147,7 +149,10 @@ class RecurrentActor(core.Actor):
     self._extras: types.NestedArray = ()
 
     # Adding batch dimension inside jit is much more efficient than outside.
-    def batched_recurrent_policy(params, key, observation, core_state):
+    def batched_recurrent_policy(
+        params: network_types.Params, key: RNGKey, observation: Observation,
+        core_state: RecurrentState
+    ) -> Tuple[Union[Action, Tuple[Action, types.NestedArray]], RecurrentState]:
       # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
       observation = utils.add_batch_dim(observation)
       output, new_state = recurrent_policy(params, key, observation, core_state)

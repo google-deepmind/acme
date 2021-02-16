@@ -19,8 +19,8 @@ from concurrent import futures
 from typing import List, Optional, Sequence, Union
 
 from acme import core
+from acme.jax import networks as network_types
 
-import haiku as hk
 import jax
 
 
@@ -97,7 +97,7 @@ class VariableClient:
     """Immediately update and block until we get the result."""
     self._callback(self._request())
 
-  def _callback(self, params_list: List[hk.Params]):
+  def _callback(self, params_list: List[network_types.Params]):
     assert len(params_list) == 1
     params = params_list.pop()
     if self._device:
@@ -107,7 +107,7 @@ class VariableClient:
       self._params = params
 
   @property
-  def params(self) -> hk.Params:
+  def params(self) -> network_types.Params:
     if self._params is None:
       self.update_and_wait()
     return self._params
