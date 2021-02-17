@@ -19,6 +19,7 @@ from typing import Iterator
 
 from acme.agents.jax.dqn import learning_lib
 from acme.agents.jax.dqn import losses
+from acme.jax import networks as networks_lib
 from acme.utils import counting
 from acme.utils import loggers
 from dm_env import specs
@@ -35,7 +36,7 @@ class DQNLearner(learning_lib.SGDLearner):
   """
 
   def __init__(self,
-               network: hk.Transformed,
+               network: networks_lib.FeedForwardNetwork,
                obs_spec: specs.Array,
                discount: float,
                importance_sampling_exponent: float,

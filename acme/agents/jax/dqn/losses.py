@@ -17,8 +17,8 @@
 from typing import Tuple
 
 from acme.agents.jax.dqn import learning_lib
+from acme.jax import networks as networks_lib
 import dataclasses
-import haiku as hk
 import jax
 import jax.numpy as jnp
 import reverb
@@ -35,9 +35,9 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
 
   def __call__(
       self,
-      network: hk.Transformed,
-      params: hk.Params,
-      target_params: hk.Params,
+      network: networks_lib.FeedForwardNetwork,
+      params: networks_lib.Params,
+      target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
       key: jnp.DeviceArray,
   ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:

@@ -20,6 +20,7 @@ from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
 import acme
 from acme import specs
 from acme.adders import reverb as adders
+from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.utils import async_utils
 from acme.utils import counting
@@ -49,9 +50,9 @@ class LossFn(typing_extensions.Protocol):
   """A LossFn calculates a loss on a single batch of data."""
 
   def __call__(self,
-               network: hk.Transformed,
-               params: hk.Params,
-               target_params: hk.Params,
+               network: networks_lib.FeedForwardNetwork,
+               params: networks_lib.Params,
+               target_params: networks_lib.Params,
                batch: reverb.ReplaySample,
                key: jnp.DeviceArray) -> Tuple[jnp.DeviceArray, LossExtra]:
     """Calculates a loss on a single batch of data."""
@@ -59,8 +60,8 @@ class LossFn(typing_extensions.Protocol):
 
 class TrainingState(NamedTuple):
   """Holds the agent's training state."""
-  params: hk.Params
-  target_params: hk.Params
+  params: networks_lib.Params
+  target_params: networks_lib.Params
   opt_state: optax.OptState
   steps: int
   rng_key: jnp.DeviceArray
@@ -74,7 +75,7 @@ class SGDLearner(acme.Learner, acme.Saveable):
   """
 
   def __init__(self,
-               network: hk.Transformed,
+               network: networks_lib.FeedForwardNetwork,
                obs_spec: specs.Array,
                loss_fn: LossFn,
                optimizer: optax.GradientTransformation,
@@ -155,7 +156,7 @@ class SGDLearner(acme.Learner, acme.Saveable):
     result.update(extra.metrics)
     self._logger.write(result)
 
-  def get_variables(self, names: List[str]) -> List[hk.Params]:
+  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
     return [self._state.params]
 
   def save(self) -> TrainingState:

@@ -20,6 +20,7 @@ from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import dqn
+from acme.jax import networks as networks_lib
 from acme.testing import fakes
 
 import haiku as hk
@@ -47,6 +48,7 @@ class DQNTest(absltest.TestCase):
 
     # Make network purely functional
     network = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+    network = networks_lib.FeedForwardNetwork(network.init, network.apply)
 
     # Construct the agent.
     agent = dqn.DQN(
