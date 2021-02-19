@@ -22,7 +22,8 @@ import jax
 import jax.numpy as jnp
 import tensorflow_probability
 hk_init = hk.initializers
-tfd = tensorflow_probability.experimental.substrates.jax.distributions
+tfp = tensorflow_probability.experimental.substrates.jax
+tfd = tfp.distributions
 
 _MIN_SCALE = 1e-4
 Initializer = hk.initializers.Initializer
@@ -148,6 +149,78 @@ class GaussianMixture(hk.Module):
       distribution = tfd.Independent(distribution)
 
     return distribution
+
+
+class TanhTransformedDistribution(tfd.TransformedDistribution):
+  """Distribution followed by tanh."""
+
+  def __init__(self, distribution, threshold=.999, validate_args=False):
+    """Initialize the distribution.
+
+    Args:
+      distribution: The distribution to transform.
+      threshold: Clipping value of the action when computing the logprob.
+      validate_args: Passed to super class.
+    """
+    super().__init__(
+        distribution=distribution,
+        bijector=tfp.bijectors.Tanh(),
+        validate_args=validate_args)
+    # Computes the log of the average probability distribution outside the
+    # clipping range, i.e. on the interval [-inf, -atanh(threshold)] for
+    # log_prob_left and [atanh(threshold), inf] for log_prob_right.
+    self._threshold = threshold
+    inverse_threshold = self.bijector.inverse(threshold)
+    # average(pdf) = p/epsilon
+    # So log(average(pdf)) = log(p) - log(epsilon)
+    log_epsilon = jnp.log(1. - threshold)
+    # Those 2 values are differentiable w.r.t. model parameters, such that the
+    # gradient is defined everywhere.
+    self._log_prob_left = self.distribution.log_cdf(
+        -inverse_threshold) - log_epsilon
+    self._log_prob_right = self.distribution.log_survival_function(
+        inverse_threshold) - log_epsilon
+
+  def log_prob(self, event):
+    # Without this clip there would be NaNs in the inner tf.where and that
+    # causes issues for some reasons.
+    event = jnp.clip(event, -self._threshold, self._threshold)
+    # The inverse image of {threshold} is the interval [atanh(threshold), inf]
+    # which has a probability of "log_prob_right" under the given distribution.
+    return jnp.where(
+        event <= -self._threshold, self._log_prob_left,
+        jnp.where(event >= self._threshold, self._log_prob_right,
+                  super().log_prob(event)))
+
+
+class NormalTanhDistribution(hk.Module):
+  """Module that produces a tfd.MultivariateNormalDiag distribution."""
+
+  def __init__(self,
+               num_dimensions: int,
+               min_scale: float = 1e-6,
+               w_init: hk_init.Initializer = hk_init.VarianceScaling(1e-4),
+               b_init: hk_init.Initializer = hk_init.Constant(0.)):
+    """Initialization.
+
+    Args:
+      num_dimensions: Number of dimensions of MVN distribution.
+      min_scale: Minimum standard deviation.
+      w_init: Initialization for linear layer weights.
+      b_init: Initialization for linear layer biases.
+    """
+    super().__init__(name='Normal')
+    self._min_scale = min_scale
+    self._loc_layer = hk.Linear(num_dimensions, w_init=w_init, b_init=b_init)
+    self._scale_layer = hk.Linear(num_dimensions, w_init=w_init, b_init=b_init)
+
+  def __call__(self, inputs: jnp.ndarray) -> tfd.Distribution:
+    loc = self._loc_layer(inputs)
+    scale = self._scale_layer(inputs)
+    scale = jax.nn.softplus(scale) + self._min_scale
+    distribution = tfd.Normal(loc=loc, scale=scale)
+    return tfd.Independent(
+        TanhTransformedDistribution(distribution), reinterpreted_batch_ndims=1)
 
 
 class MultivariateNormalDiagHead(hk.Module):
