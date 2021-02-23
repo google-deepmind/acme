@@ -289,7 +289,7 @@ def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
 
   def _slice_and_maybe_to_numpy(x):
     if not isinstance(x, jax.pxla.ShardedDeviceArray):
-      raise ValueError('first_replica should only be used with '
+      raise ValueError('get_from_first_device should only be used with '
                        f'{jax.pxla.ShardedDeviceArray}, passed {type(x)}.')
     x = x[0]
     return _fetch_devicearray(x) if as_numpy else x
