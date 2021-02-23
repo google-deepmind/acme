@@ -24,6 +24,7 @@ from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
 import dataclasses
 import haiku as hk
+import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
@@ -85,11 +86,12 @@ class DQNFromConfig(agent.Agent):
         optax.clip_by_global_norm(config.max_gradient_norm),
         optax.adam(config.learning_rate),
     )
+    key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
     # The learner updates the parameters (and initializes them).
     learner = learning.DQNLearner(
         network=network,
         obs_spec=environment_spec.observations,
-        rng=hk.PRNGSequence(config.seed),
+        random_key=key_learner,
         optimizer=optimizer,
         discount=config.discount,
         importance_sampling_exponent=config.importance_sampling_exponent,
@@ -105,7 +107,7 @@ class DQNFromConfig(agent.Agent):
       return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
     actor = actors.FeedForwardActor(
         policy=policy,
-        rng=hk.PRNGSequence(config.seed),
+        rng=hk.PRNGSequence(key_actor),
         variable_client=variable_utils.VariableClient(learner, ''),
         adder=reverb_replay.adder)
 

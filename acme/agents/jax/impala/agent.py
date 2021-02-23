@@ -83,12 +83,13 @@ class IMPALA(acme.Actor):
         optax.clip_by_global_norm(max_gradient_norm),
         optax.adam(learning_rate),
     )
+    key_learner, key_actor = jax.random.split(jax.random.PRNGKey(seed))
     self._learner = learning.IMPALALearner(
         obs_spec=environment_spec.observations,
         unroll_fn=unroll_fn,
         initial_state_fn=initial_state_fn,
         iterator=reverb_queue.data_iterator,
-        rng=hk.PRNGSequence(seed),
+        random_key=key_learner,
         counter=counter,
         logger=logger,
         optimizer=optimizer,
@@ -104,7 +105,7 @@ class IMPALA(acme.Actor):
     self._actor = acting.IMPALAActor(
         forward_fn=jax.jit(transformed.apply, backend='cpu'),
         initial_state_fn=initial_state_fn,
-        rng=hk.PRNGSequence(seed),
+        rng=hk.PRNGSequence(key_actor),
         adder=reverb_queue.adder,
         variable_client=variable_client,
     )

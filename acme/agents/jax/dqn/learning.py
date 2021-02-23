@@ -23,7 +23,6 @@ from acme.jax import networks as networks_lib
 from acme.utils import counting
 from acme.utils import loggers
 from dm_env import specs
-import haiku as hk
 import optax
 import reverb
 
@@ -43,7 +42,7 @@ class DQNLearner(learning_lib.SGDLearner):
                target_update_period: int,
                iterator: Iterator[reverb.ReplaySample],
                optimizer: optax.GradientTransformation,
-               rng: hk.PRNGSequence,
+               random_key: networks_lib.PRNGKey,
                max_abs_reward: float = 1.,
                huber_loss_parameter: float = 1.,
                replay_client: reverb.Client = None,
@@ -63,7 +62,7 @@ class DQNLearner(learning_lib.SGDLearner):
         optimizer=optimizer,
         data_iterator=iterator,
         target_update_period=target_update_period,
-        rng=rng,
+        random_key=random_key,
         replay_client=replay_client,
         counter=counter,
         logger=logger,

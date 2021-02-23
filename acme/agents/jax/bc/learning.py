@@ -15,14 +15,14 @@
 
 """BC Learner implementation."""
 
-from typing import Dict, List, NamedTuple, Tuple, Callable
+from typing import Callable, Dict, List, NamedTuple, Tuple
 
 import acme
+from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.utils import counting
 from acme.utils import loggers
 from dm_env import specs
-import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
@@ -43,7 +43,7 @@ def _sparse_categorical_cross_entropy(
 
 class TrainingState(NamedTuple):
   """Holds the agent's training state."""
-  params: hk.Params
+  params: networks_lib.Params
   opt_state: optax.OptState
   steps: int
 
@@ -56,17 +56,18 @@ class BCLearner(acme.Learner, acme.Saveable):
   """
 
   def __init__(self,
-               network: hk.Transformed,
+               network: networks_lib.FeedForwardNetwork,
                obs_spec: specs.Array,
                optimizer: optax.GradientTransformation,
-               rng: hk.PRNGSequence,
+               random_key: networks_lib.PRNGKey,
                dataset: tf.data.Dataset,
                loss_fn: LossFn = _sparse_categorical_cross_entropy,
                counter: counting.Counter = None,
                logger: loggers.Logger = None):
     """Initializes the learner."""
 
-    def loss(params: hk.Params, sample: reverb.ReplaySample) -> jnp.DeviceArray:
+    def loss(params: networks_lib.Params,
+             sample: reverb.ReplaySample) -> jnp.ndarray:
       # Pull out the data needed for updates.
       o_tm1, a_tm1, r_t, d_t, o_t = sample.data
       del r_t, d_t, o_t
@@ -102,7 +103,7 @@ class BCLearner(acme.Learner, acme.Saveable):
 
     # Initialise parameters and optimiser state.
     initial_params = network.init(
-        next(rng), utils.add_batch_dim(utils.zeros_like(obs_spec)))
+        random_key, utils.add_batch_dim(utils.zeros_like(obs_spec)))
     initial_opt_state = optimizer.init(initial_params)
 
     self._state = TrainingState(
@@ -121,7 +122,7 @@ class BCLearner(acme.Learner, acme.Saveable):
 
     self._logger.write(result)
 
-  def get_variables(self, names: List[str]) -> List[hk.Params]:
+  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
     return [self._state.params]
 
   def save(self) -> TrainingState:
