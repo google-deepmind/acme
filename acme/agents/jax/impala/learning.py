@@ -21,7 +21,7 @@ from typing import Callable, Dict, Iterator, List, NamedTuple, Optional, Sequenc
 import acme
 from acme import specs
 from acme.jax import losses
-from acme.jax import networks
+from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.utils import counting
 from acme.utils import loggers
@@ -37,7 +37,7 @@ _PMAP_AXIS_NAME = 'data'
 
 class TrainingState(NamedTuple):
   """Training state consists of network parameters and optimiser state."""
-  params: hk.Params
+  params: networks_lib.Params
   opt_state: optax.OptState
 
 
@@ -47,11 +47,11 @@ class IMPALALearner(acme.Learner, acme.Saveable):
   def __init__(
       self,
       obs_spec: specs.Array,
-      unroll_fn: networks.PolicyValueRNN,
+      unroll_fn: networks_lib.PolicyValueRNN,
       initial_state_fn: Callable[[], hk.LSTMState],
       iterator: Iterator[reverb.ReplaySample],
       optimizer: optax.GradientTransformation,
-      rng: hk.PRNGSequence,
+      random_key: networks_lib.PRNGKey,
       discount: float = 0.99,
       entropy_cost: float = 0.,
       baseline_cost: float = 1.,
@@ -112,7 +112,7 @@ class IMPALALearner(acme.Learner, acme.Saveable):
       return TrainingState(params=initial_params, opt_state=initial_opt_state)
 
     # Initialise training state (parameters and optimiser state).
-    state = make_initial_state(next(rng))
+    state = make_initial_state(random_key)
     self._state = utils.replicate_in_all_devices(state, self._devices)
 
     if num_prefetch_threads is None:
@@ -148,7 +148,7 @@ class IMPALALearner(acme.Learner, acme.Saveable):
     # Snapshot and attempt to write logs.
     self._logger.write({**results, **counts})
 
-  def get_variables(self, names: Sequence[str]) -> List[hk.Params]:
+  def get_variables(self, names: Sequence[str]) -> List[networks_lib.Params]:
     # Return first replica of parameters.
     return [utils.get_from_first_device(self._state.params, as_numpy=False)]
 
