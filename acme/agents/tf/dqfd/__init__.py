@@ -16,3 +16,4 @@
 """Module for DQfD."""
 
 from acme.agents.tf.dqfd.agent import DQfD
+from acme.agents.tf.dqfd.bsuite_demonstrations import DemonstrationRecorder
