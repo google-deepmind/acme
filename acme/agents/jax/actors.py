@@ -20,26 +20,27 @@ from typing import Callable, Optional, Tuple, TypeVar, Union
 from acme import adders
 from acme import core
 from acme import types
-from acme.jax import networks as network_types
+from acme.jax import networks as network_lib
 from acme.jax import utils
 from acme.jax import variable_utils
 
 import dm_env
-import haiku as hk
 import jax
 import jax.numpy as jnp
 
 # Useful type aliases.
+# TODO(raveman): Nuke this type and use the one from agents/jax/networks.py
 RNGKey = jnp.ndarray
 Observation = types.NestedArray
 Action = types.NestedArray
 RecurrentState = TypeVar('RecurrentState')
 
 # Signatures for functions that sample from parameterised stochastic policies.
-FeedForwardPolicy = Callable[[network_types.Params, RNGKey, Observation],
-                             Union[Action, Tuple[Action, types.NestedArray]]]
+FeedForwardPolicy = Callable[
+    [network_lib.Params, network_lib.PRNGKey, Observation],
+    Union[Action, Tuple[Action, types.NestedArray]]]
 RecurrentPolicy = Callable[
-    [network_types.Params, RNGKey, Observation, RecurrentState],
+    [network_lib.Params, network_lib.PRNGKey, Observation, RecurrentState],
     Tuple[Union[Action, Tuple[Action, types.NestedArray]], RecurrentState]]
 
 
@@ -54,7 +55,7 @@ class FeedForwardActor(core.Actor):
   def __init__(
       self,
       policy: FeedForwardPolicy,
-      rng: hk.PRNGSequence,
+      random_key: network_lib.PRNGKey,
       variable_client: variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
       has_extras: bool = False,
@@ -65,32 +66,35 @@ class FeedForwardActor(core.Actor):
       policy: A policy network taking observation and returning an action, if
         `has_extras=False`, and returning an (action, extras) tuple if
         `has_extras=True`.
-      rng: Random key generator.
+      random_key: Random key.
       variable_client: The variable client to get policy parameters from.
       adder: An adder to add experiences to.
       has_extras: Flag indicating whether the policy returns extra
         information (e.g. q-values) in addition to an action.
     """
-    self._rng = rng
+    self._random_key = random_key
     self._has_extras = has_extras
     self._extras: types.NestedArray = ()
 
     # Adding batch dimension inside jit is much more efficient than outside.
-    def batched_policy(params: network_types.Params, key: RNGKey,
-                       observation: Observation
-                       ) -> Union[Action, Tuple[Action, types.NestedArray]]:
+    def batched_policy(
+        params: network_lib.Params, key: network_lib.PRNGKey,
+        observation: Observation
+    ) -> Tuple[Union[Action, Tuple[Action, types.NestedArray]],
+               network_lib.PRNGKey]:
       # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
+      key, key2 = jax.random.split(key)
       observation = utils.add_batch_dim(observation)
-      output = policy(params, key, observation)
-      return utils.squeeze_batch_dim(output)
+      output = policy(params, key2, observation)
+      return utils.squeeze_batch_dim(output), key
     self._policy = jax.jit(batched_policy, backend='cpu')
 
     self._adder = adder
     self._client = variable_client
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
-    key = next(self._rng)
-    result = self._policy(self._client.params, key, observation)
+    result, self._random_key = self._policy(self._client.params,
+                                            self._random_key, observation)
     if self._has_extras:
       action, self._extras = result
     else:
@@ -121,7 +125,7 @@ class RecurrentActor(core.Actor):
   def __init__(
       self,
       recurrent_policy: RecurrentPolicy,
-      rng: hk.PRNGSequence,
+      random_key: network_lib.PRNGKey,
       initial_core_state: RecurrentState,
       variable_client: variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
@@ -134,7 +138,7 @@ class RecurrentActor(core.Actor):
         and returning an (action, state) tuple, if `has_extras=False`, and
         returning an ((action, extras), state) tuple if `has_extras=True`. In
         the latter case, `extras` must be a tuple.
-      rng: Random key generator.
+      random_key: Random key.
       initial_core_state: Initial state of the recurrent policy.
       variable_client: The variable client to get policy parameters from.
       adder: An adder to add experiences to. The `extras` of the adder holds the
@@ -144,19 +148,22 @@ class RecurrentActor(core.Actor):
       has_extras: Flag indicating whether the recurrent policy returns extra
         information (e.g. q-values) in addition to an action.
     """
-    self._rng = rng
+    self._random_key = random_key
     self._has_extras = has_extras
     self._extras: types.NestedArray = ()
 
     # Adding batch dimension inside jit is much more efficient than outside.
     def batched_recurrent_policy(
-        params: network_types.Params, key: RNGKey, observation: Observation,
-        core_state: RecurrentState
-    ) -> Tuple[Union[Action, Tuple[Action, types.NestedArray]], RecurrentState]:
+        params: network_lib.Params, key: network_lib.PRNGKey,
+        observation: Observation, core_state: RecurrentState
+    ) -> Tuple[Union[Action, Tuple[Action, types.NestedArray]], RecurrentState,
+               network_lib.PRNGKey]:
       # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
       observation = utils.add_batch_dim(observation)
-      output, new_state = recurrent_policy(params, key, observation, core_state)
-      return output, new_state
+      key, key2 = jax.random.split(key)
+      output, new_state = recurrent_policy(params, key2, observation,
+                                           core_state)
+      return output, new_state, key
     self._recurrent_policy = jax.jit(batched_recurrent_policy, backend='cpu')
 
     self._initial_state = self._prev_state = self._state = initial_core_state
@@ -164,9 +171,9 @@ class RecurrentActor(core.Actor):
     self._client = variable_client
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
-    result, new_state = self._recurrent_policy(
+    result, new_state, self._random_key = self._recurrent_policy(
         self._client.params,
-        key=next(self._rng),
+        key=self._random_key,
         observation=observation,
         core_state=self._state)
     self._prev_state = self._state  # Keep previous state to save in replay.
