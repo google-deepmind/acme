@@ -23,7 +23,6 @@ from acme.agents.jax.dqn import learning
 from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
 import dataclasses
-import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -107,7 +106,7 @@ class DQNFromConfig(agent.Agent):
       return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
     actor = actors.FeedForwardActor(
         policy=policy,
-        rng=hk.PRNGSequence(key_actor),
+        random_key=key_actor,
         variable_client=variable_utils.VariableClient(learner, ''),
         adder=reverb_replay.adder)
 

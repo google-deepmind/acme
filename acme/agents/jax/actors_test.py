@@ -26,6 +26,7 @@ from acme.jax import variable_utils
 from acme.testing import fakes
 import dm_env
 import haiku as hk
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -72,8 +73,8 @@ class ActorTest(parameterized.TestCase):
     variable_client = variable_utils.VariableClient(variable_source, 'policy')
 
     actor = actors.FeedForwardActor(
-        policy.apply, rng=hk.PRNGSequence(1), variable_client=variable_client,
-        has_extras=has_extras)
+        policy.apply, random_key=jax.random.PRNGKey(1),
+        variable_client=variable_client, has_extras=has_extras)
 
     loop = environment_loop.EnvironmentLoop(environment, actor)
     loop.run(20)
@@ -127,7 +128,7 @@ class RecurrentActorTest(parameterized.TestCase):
     variable_client = variable_utils.VariableClient(variable_source, 'policy')
 
     actor = actors.RecurrentActor(
-        policy, hk.PRNGSequence(1), initial_state, variable_client,
+        policy, jax.random.PRNGKey(1), initial_state, variable_client,
         has_extras=has_extras)
 
     loop = environment_loop.EnvironmentLoop(environment, actor)
