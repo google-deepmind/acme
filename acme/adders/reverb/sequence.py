@@ -40,6 +40,7 @@ class SequenceAdder(base.ReverbAdder):
       priority_fns: Optional[base.PriorityFnMapping] = None,
       pad_end_of_episode: bool = True,
       break_end_of_episode: bool = True,
+      max_in_flight_items: Optional[int] = 25,
   ):
     """Makes a SequenceAdder instance.
 
@@ -60,6 +61,8 @@ class SequenceAdder(base.ReverbAdder):
         sequence in the episode may have length less than `sequence_length`.
       break_end_of_episode: If 'False' (True by default) does not break
         sequences on env reset. In this case 'pad_end_of_episode' is not used.
+      max_in_flight_items: The maximum number of items allowed to be "in flight"
+        at the same time. See `reverb.Writer.writer` for more info.
     """
     super().__init__(
         client=client,
@@ -67,7 +70,8 @@ class SequenceAdder(base.ReverbAdder):
         max_sequence_length=sequence_length,
         delta_encoded=delta_encoded,
         chunk_length=chunk_length,
-        priority_fns=priority_fns)
+        priority_fns=priority_fns,
+        max_in_flight_items=max_in_flight_items)
 
     if pad_end_of_episode and not break_end_of_episode:
       raise ValueError(
