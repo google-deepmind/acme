@@ -66,7 +66,12 @@ class FakeClient:
   def __init__(self):
     self.writers = []
 
-  def writer(self, max_sequence_length, delta_encoded=False, chunk_length=None):
+  def writer(self,
+             max_sequence_length,
+             delta_encoded=False,
+             chunk_length=None,
+             max_in_flight_items=None):
+    del max_in_flight_items
     new_writer = FakeWriter(max_sequence_length, delta_encoded, chunk_length)
     self.writers.append(new_writer)
     return new_writer

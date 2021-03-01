@@ -71,6 +71,7 @@ class ReverbAdder(base.Adder):
       delta_encoded: bool = False,
       chunk_length: Optional[int] = None,
       priority_fns: Optional[PriorityFnMapping] = None,
+      max_in_flight_items: Optional[int] = 25,
   ):
     """Initialize a ReverbAdder instance.
 
@@ -86,6 +87,8 @@ class ReverbAdder(base.Adder):
       priority_fns: A mapping from table names to priority functions; if
         omitted, all transitions/steps/sequences are given uniform priorities
         (1.0) and placed in DEFAULT_PRIORITY_TABLE.
+      max_in_flight_items: The maximum number of items allowed to be "in flight"
+        at the same time. See `reverb.Writer.writer` for more info.
     """
     if priority_fns:
       priority_fns = dict(priority_fns)
@@ -97,6 +100,7 @@ class ReverbAdder(base.Adder):
     self._max_sequence_length = max_sequence_length
     self._delta_encoded = delta_encoded
     self._chunk_length = chunk_length
+    self._max_in_flight_items = max_in_flight_items
 
     # This is exposed as the _writer property in such a way that it will create
     # a new writer automatically whenever the internal __writer is None. Users
@@ -121,7 +125,8 @@ class ReverbAdder(base.Adder):
       self.__writer = self._client.writer(
           self._max_sequence_length,
           delta_encoded=self._delta_encoded,
-          chunk_length=self._chunk_length)
+          chunk_length=self._chunk_length,
+          max_in_flight_items=self._max_in_flight_items)
     return self.__writer
 
   def add_priority_table(self, table_name: str,
