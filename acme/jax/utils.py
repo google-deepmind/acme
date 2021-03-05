@@ -19,7 +19,7 @@ import functools
 import itertools
 import queue
 import threading
-from typing import Callable, Iterable, Generator, NamedTuple, Optional, Sequence, TypeVar
+from typing import Callable, Iterable, Generator, NamedTuple, Optional, Sequence, TypeVar, Tuple
 
 from absl import logging
 from acme import types
@@ -328,3 +328,48 @@ def mapreduce(
     return jax.tree_map(reduce_fn, vmapped_f(*args, **kwargs))
 
   return g
+
+
+_TrainingState = TypeVar('_TrainingState')
+_TrainingAux = TypeVar('_TrainingAux')
+
+
+def process_multiple_batches(
+    process_one_batch: Callable[[_TrainingState, _TrainingAux],
+                                Tuple[_TrainingState, _TrainingAux]],
+    num_batches: int,
+    postprocess_aux: Optional[Callable[[_TrainingAux], _TrainingAux]] = None):
+  """Makes 'process_one_batch' process multiple batches at once.
+
+  Args:
+    process_one_batch: a function that takes 'state' and 'data', and returns
+      'new_state' and 'aux' (for example 'metrics').
+    num_batches: how many batches to process at once
+    postprocess_aux: how to merge the extra information, defaults to taking
+      the mean.
+  Returns:
+    A function with the same interface as 'process_one_batch' which processes
+    multiple batches at once.
+  """
+  assert num_batches >= 1
+  if num_batches == 1:
+    if not postprocess_aux:
+      return process_one_batch
+    def _process_one_batch(state, data):
+      state, aux = process_one_batch(state, data)
+      return state, process_aux(aux)
+    return _process_one_batch
+
+  if postprocess_aux is None:
+    process_aux = lambda x: jax.tree_map(jnp.mean, x)
+
+  def _process_multiple_batches(state, data):
+    data = jax.tree_map(
+        lambda a: jnp.reshape(a, (num_batches, -1, *a.shape[1:])), data)
+
+    state, aux = jax.lax.scan(
+        process_one_batch, state, data, length=num_batches)
+    return state, process_aux(aux)
+
+  return _process_multiple_batches
+

@@ -39,6 +39,7 @@ class LocalLayout(agent.Agent):
       min_replay_size: int = 1000,
       samples_per_insert: float = 256.0,
       batch_size: int = 256,
+      num_sgd_steps_per_step: int = 1,
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
       checkpoint: bool = True,
@@ -54,6 +55,11 @@ class LocalLayout(agent.Agent):
       samples_per_insert: number of samples to take from replay for every insert
         that is made.
       batch_size: batch size for updates.
+      num_sgd_steps_per_step: how many sgd steps a learner does per 'step' call.
+        For performance reasons (especially to reduce TPU host-device transfer
+        times) it is performance-beneficial to do multiple sgd updates at once,
+        provided that it does not hurt the training, which needs to be verified
+        empirically for each environment.
       counter: counter object used to keep track of steps.
       logger: logger object to be used by learner.
       checkpoint: boolean indicating whether to checkpoint the learner.
@@ -72,11 +78,12 @@ class LocalLayout(agent.Agent):
                                    logger=logger, checkpoint=checkpoint)
     actor = builder.make_actor(policy_network, adder, variable_source=learner)
 
+    effective_batch_size = batch_size * num_sgd_steps_per_step
     super().__init__(
         actor=actor,
         learner=learner,
-        min_observations=max(batch_size, min_replay_size),
-        observations_per_step=float(batch_size) / samples_per_insert)
+        min_observations=max(effective_batch_size, min_replay_size),
+        observations_per_step=float(effective_batch_size) / samples_per_insert)
 
     # Save the replay so we don't garbage collect it.
     self._replay_server = replay_server
