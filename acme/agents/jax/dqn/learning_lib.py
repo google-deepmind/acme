@@ -83,7 +83,8 @@ class SGDLearner(acme.Learner, acme.Saveable):
                random_key: networks_lib.PRNGKey,
                replay_client: Optional[reverb.Client] = None,
                counter: Optional[counting.Counter] = None,
-               logger: Optional[loggers.Logger] = None):
+               logger: Optional[loggers.Logger] = None,
+               num_sgd_steps_per_step: int = 1):
     """Initialize the SGD learner."""
     self.network = network
 
@@ -110,6 +111,16 @@ class SGDLearner(acme.Learner, acme.Saveable):
       new_training_state = TrainingState(
           new_params, target_params, new_opt_state, steps, next_rng_key)
       return new_training_state, extra
+
+    def postprocess_aux(extra: LossExtra) -> LossExtra:
+      reverb_update = jax.tree_map(lambda a: jnp.reshape(a, (-1, *a.shape[2:])),
+                                   extra.reverb_update)
+      return extra._replace(
+          metrics=jax.tree_map(jnp.mean, extra.metrics),
+          reverb_update=reverb_update)
+
+    sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step,
+                                              postprocess_aux)
     self._sgd_step = jax.jit(sgd_step)
 
     # Internalise agent components

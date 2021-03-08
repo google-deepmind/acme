@@ -357,11 +357,11 @@ def process_multiple_batches(
       return process_one_batch
     def _process_one_batch(state, data):
       state, aux = process_one_batch(state, data)
-      return state, process_aux(aux)
+      return state, postprocess_aux(aux)
     return _process_one_batch
 
   if postprocess_aux is None:
-    process_aux = lambda x: jax.tree_map(jnp.mean, x)
+    postprocess_aux = lambda x: jax.tree_map(jnp.mean, x)
 
   def _process_multiple_batches(state, data):
     data = jax.tree_map(
@@ -369,7 +369,7 @@ def process_multiple_batches(
 
     state, aux = jax.lax.scan(
         process_one_batch, state, data, length=num_batches)
-    return state, process_aux(aux)
+    return state, postprocess_aux(aux)
 
   return _process_multiple_batches
 
