@@ -177,7 +177,7 @@ class CheckpointingRunner(core.Worker):
 
   def __init__(
       self,
-      wrapped: Union[Checkpointable, core.Saveable, core.Learner, TFSaveable],
+      wrapped: Union[Checkpointable, core.Saveable, TFSaveable],
       *,
       time_delta_minutes: int = 30,
       **kwargs,

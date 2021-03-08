@@ -122,7 +122,19 @@ class Worker(abc.ABC):
     """Runs the worker."""
 
 
-class Learner(VariableSource, Worker):
+class Saveable(abc.ABC, Generic[T]):
+  """An interface for saveable objects."""
+
+  @abc.abstractmethod
+  def save(self) -> T:
+    """Returns the state from the object to be saved."""
+
+  @abc.abstractmethod
+  def restore(self, state: T):
+    """Given the state, restores the object."""
+
+
+class Learner(VariableSource, Worker, Saveable):
   """Abstract learner object.
 
   This corresponds to an object which implements a learning loop. A single step
@@ -150,14 +162,8 @@ class Learner(VariableSource, Worker):
     for _ in iterator:
       self.step()
 
+  def save(self):
+    raise NotImplementedError('Method "save" is not implemented.')
 
-class Saveable(abc.ABC, Generic[T]):
-  """An interface for saveable objects."""
-
-  @abc.abstractmethod
-  def save(self) -> T:
-    """Returns the state from the object to be saved."""
-
-  @abc.abstractmethod
-  def restore(self, state: T):
-    """Given the state, restores the object."""
+  def restore(self, state):
+    raise NotImplementedError('Method "restore" is not implemented.')

@@ -66,7 +66,7 @@ class TrainingState(NamedTuple):
   rng_key: jnp.DeviceArray
 
 
-class SGDLearner(acme.Learner, acme.Saveable):
+class SGDLearner(acme.Learner):
   """An Acme learner based around SGD on batches.
 
   This learner currently supports optional prioritized replay and assumes a

@@ -48,7 +48,7 @@ class TrainingState(NamedTuple):
   steps: int
 
 
-class BCLearner(acme.Learner, acme.Saveable):
+class BCLearner(acme.Learner):
   """BC learner.
 
   This is the learning component of a BC agent. IE it takes a dataset as input

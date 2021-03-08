@@ -41,7 +41,7 @@ class TrainingState(NamedTuple):
   opt_state: optax.OptState
 
 
-class IMPALALearner(acme.Learner, acme.Saveable):
+class IMPALALearner(acme.Learner):
   """Learner for an importanced-weighted advantage actor-critic."""
 
   def __init__(
