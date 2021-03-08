@@ -15,7 +15,9 @@
 
 """Loggers which filter other loggers."""
 
+import math
 import time
+from typing import Callable
 
 from acme.utils.loggers import base
 
@@ -57,3 +59,63 @@ class TimeFilter(base.Logger):
     if (now - self._time) > self._time_delta:
       self._to.write(values)
       self._time = now
+
+
+_GatingFn = Callable[[int], bool]
+
+
+class GatedFilter(base.Logger):
+  """Logger which writes to another logger based on a gating function.
+
+  This logger tracks the number of times its `write` method is called, and uses
+  a gating function on this number to decide when to write.
+  """
+
+  def __init__(self, to: base.Logger, gating_fn: _GatingFn):
+    """Initialises the logger.
+
+    Args:
+      to: A `Logger` object to which the current object will forward its results
+        when `write` is called.
+      gating_fn: A function that takes an integer (number of calls) as input.
+        For example, to log every tenth call: gating_fn=lambda t: t % 10 == 0.
+    """
+    self._to = to
+    self._gating_fn = gating_fn
+    self._calls = 0
+
+  def write(self, values: base.LoggingData):
+    if self._gating_fn(self._calls):
+      self._to.write(values)
+    self._calls += 1
+
+  @classmethod
+  def logarithmic(cls, to: base.Logger, n: int = 10) -> 'GatedFilter':
+    """Builds a logger for writing at logarithmically-spaced intervals.
+
+    This will log on a linear scale at each order of magnitude of `n`.
+    For example, with n=10, this will log at times:
+        [0, 1, 2, ..., 9, 10, 20, 30, ... 90, 100, 200, 300, ... 900, 1000]
+
+    Args:
+      to: The underlying logger to write to.
+      n: Base (default 10) on which to operate.
+    Returns:
+      A GatedFilter logger, which gates logarithmically as described above.
+    """
+    def logarithmic_filter(t: int) -> bool:
+      magnitude = math.floor(math.log10(max(t, 1))/math.log10(n))
+      return t % (n**magnitude) == 0
+    return cls(to, gating_fn=logarithmic_filter)
+
+  @classmethod
+  def periodic(cls, to: base.Logger, interval: int = 10) -> 'GatedFilter':
+    """Builds a logger for writing at linearly-spaced intervals.
+
+    Args:
+      to: The underlying logger to write to.
+      interval: The interval between writes.
+    Returns:
+      A GatedFilter logger, which gates periodically as described above.
+    """
+    return cls(to, gating_fn=lambda t: t % interval == 0)

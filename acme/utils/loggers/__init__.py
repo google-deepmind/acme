@@ -24,6 +24,7 @@ from acme.utils.loggers.base import to_numpy
 from acme.utils.loggers.constant import ConstantLogger
 from acme.utils.loggers.csv import CSVLogger
 from acme.utils.loggers.dataframe import InMemoryLogger
+from acme.utils.loggers.filters import GatedFilter
 from acme.utils.loggers.filters import NoneFilter
 from acme.utils.loggers.filters import TimeFilter
 from acme.utils.loggers.default import make_default_logger  # pylint: disable=g-bad-import-order
