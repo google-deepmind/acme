@@ -29,7 +29,7 @@ class Logger(abc.ABC):
   """A logger has a `write` method."""
 
   @abc.abstractmethod
-  def write(self, data: LoggingData):
+  def write(self, data: LoggingData) -> None:
     """Writes `data` to destination (file, terminal, database, etc)."""
 
 
