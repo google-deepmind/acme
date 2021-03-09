@@ -16,7 +16,7 @@
 """RL agent Builder interface."""
 
 import abc
-from typing import Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Union
 
 from acme import adders
 from acme import core
@@ -24,6 +24,9 @@ from acme import specs
 from acme.utils import counting
 from acme.utils import loggers
 import reverb
+
+
+NestedLogger = Union[loggers.Logger, Dict[str, loggers.Logger]]
 
 
 class ActorLearnerBuilder(abc.ABC):
@@ -83,9 +86,8 @@ class ActorLearnerBuilder(abc.ABC):
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
-      # TODO(mwhoffman): consider eliminating logger and log return values.
+      logger: Optional[NestedLogger] = None,
       # TODO(mwhoffman): eliminate checkpoint and move it outside.
-      logger: Optional[loggers.Logger] = None,
       checkpoint: bool = False,
   ) -> core.Learner:
     """Creates an instance of the learner.
