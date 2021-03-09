@@ -188,17 +188,6 @@ class AdderTestMixin(absltest.TestCase):
 
         adder.add(action, next_timestep=ts, extras=extras)
 
-      # Only check for the first episode.
-      if episode_id == 0:
-        if len(steps) == 1:
-          # adder.add() has not been called yet, so no writers have been
-          # created.
-          self.assertEmpty(self.client.writers)
-        else:
-          # Make sure the writer has been created but not closed.
-          self.assertLen(self.client.writers, 1)
-          self.assertFalse(self.client.writers[0].closed)
-
       # Add the final step.
       adder.add(*steps[-1])
 
@@ -233,12 +222,3 @@ class AdderTestMixin(absltest.TestCase):
       # Add the start of a second trajectory.
       adder.add_first(first)
       adder.add(*steps[0])
-
-      # Make sure this creates an new writer.
-      self.assertLen(self.client.writers, 2)
-      # The writer is closed if the recently added `dm_env.TimeStep`'s'
-      # step_type is `dm_env.StepType.LAST`.
-      if steps[0][1].last():
-        self.assertTrue(self.client.writers[1].closed)
-      else:
-        self.assertFalse(self.client.writers[1].closed)
