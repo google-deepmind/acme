@@ -26,7 +26,8 @@ from acme.utils import loggers
 import reverb
 
 
-NestedLogger = Union[loggers.Logger, Dict[str, loggers.Logger]]
+# It will be treated as Dict[str, Any]. Proper support is tracked b/109648354.
+NestedLogger = Union[loggers.Logger, Dict[str, 'NestedLogger']]  # pytype: disable=not-supported-yet
 
 
 class ActorLearnerBuilder(abc.ABC):
