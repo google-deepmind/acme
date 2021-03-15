@@ -20,7 +20,6 @@ from typing import Any
 from acme import specs
 from acme.agents import agent
 from acme.agents import builders
-from acme.agents.jax import actors
 from acme.utils import counting
 from acme.utils import loggers
 import reverb
@@ -35,7 +34,7 @@ class LocalLayout(agent.Agent):
       environment_spec: specs.EnvironmentSpec,
       builder: builders.ActorLearnerBuilder,
       networks: Any,
-      policy_network: actors.FeedForwardPolicy,
+      policy_network: Any,
       min_replay_size: int = 1000,
       samples_per_insert: float = 256.0,
       batch_size: int = 256,
