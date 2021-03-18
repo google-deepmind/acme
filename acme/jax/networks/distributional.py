@@ -192,6 +192,9 @@ class TanhTransformedDistribution(tfd.TransformedDistribution):
         jnp.where(event >= self._threshold, self._log_prob_right,
                   super().log_prob(event)))
 
+  def mode(self):
+    return self.bijector.forward(self.distribution.mode())
+
 
 class NormalTanhDistribution(hk.Module):
   """Module that produces a tfd.MultivariateNormalDiag distribution."""
