@@ -193,12 +193,15 @@ class AdderTestMixin(absltest.TestCase):
 
     # Ending the episode should close the writer. No new writer should yet have
     # been created as it is constructed lazily.
-    self.assertLen(self.client.writers, 1)
     if break_end_of_episode:
-      self.assertTrue(self.client.writers[0].closed)
+      self.assertTrue(all([w.closed for w in self.client.writers]))
 
     # Make sure our expected and observed data match.
-    observed_items = [p[1] for p in self.client.writers[0].priorities]
+    observed_items = []
+    for w in self.client.writers:
+      for p in w.priorities:
+        observed_items.append(p[1])
+
     self.assertEqual(len(expected_items), len(observed_items))
     for expected_item, observed_item in zip(expected_items, observed_items):
       if pack_expected_items:
