@@ -22,7 +22,6 @@ from acme.agents import agent
 from acme.agents import builders
 from acme.tf import savers
 from acme.utils import counting
-from acme.utils import loggers
 import reverb
 
 
@@ -42,7 +41,6 @@ class LocalLayout(agent.Agent):
       batch_size: int = 256,
       num_sgd_steps_per_step: int = 1,
       counter: counting.Counter = None,
-      logger: loggers.Logger = None,
       checkpoint: bool = True,
     ):
     """Initialize the agent.
@@ -63,7 +61,6 @@ class LocalLayout(agent.Agent):
         provided that it does not hurt the training, which needs to be verified
         empirically for each environment.
       counter: counter object used to keep track of steps.
-      logger: logger object to be used by learner.
       checkpoint: boolean indicating whether to checkpoint the learner.
     """
     # Create the replay server and grab its address.
@@ -97,7 +94,7 @@ class LocalLayout(agent.Agent):
     dataset = builder.make_dataset_iterator(replay_client)
     learner = builder.make_learner(networks=networks, dataset=dataset,
                                    replay_client=replay_client, counter=counter,
-                                   logger=logger, checkpoint=checkpoint)
+                                   checkpoint=checkpoint)
     if workdir is None:
       self._learner_checkpointer = None
     else:

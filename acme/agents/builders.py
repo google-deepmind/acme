@@ -16,18 +16,13 @@
 """RL agent Builder interface."""
 
 import abc
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Iterator, List, Optional
 
 from acme import adders
 from acme import core
 from acme import specs
 from acme.utils import counting
-from acme.utils import loggers
 import reverb
-
-
-# It will be treated as Dict[str, Any]. Proper support is tracked b/109648354.
-NestedLogger = Union[loggers.Logger, Dict[str, 'NestedLogger']]  # pytype: disable=not-supported-yet
 
 
 class ActorLearnerBuilder(abc.ABC):
@@ -87,7 +82,6 @@ class ActorLearnerBuilder(abc.ABC):
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
-      logger: Optional[NestedLogger] = None,
       # TODO(mwhoffman): eliminate checkpoint and move it outside.
       checkpoint: bool = False,
   ) -> core.Learner:
@@ -101,6 +95,5 @@ class ActorLearnerBuilder(abc.ABC):
         order to update priorities.
       counter: a Counter which allows for recording of counts (learner steps,
         actor steps, etc.) distributed throughout the agent.
-      logger: Logger object for logging metadata.
       checkpoint: bool controlling whether the learner checkpoints itself.
     """
