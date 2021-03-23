@@ -55,7 +55,7 @@ class Checkpointer:
   This can be used to checkpoint any object with trackable state (e.g.
   tensorflow variables or modules); see tf.train.Checkpoint for
   details. Objects inheriting from tf.train.experimental.PythonState can also
-  be checkointed.
+  be checkpointed.
 
   Typically people use Checkpointer to make sure that they can correctly recover
   from a machine going down during learning. For more permanent storage of self-
@@ -171,7 +171,7 @@ class CheckpointingRunner(core.Worker):
   """Wrap an object and expose a run method which checkpoints periodically.
 
   This internally creates a Checkpointer around `wrapped` object and exposes
-  all of the methods of `wrapped`. Additionally, anay `**kwargs` passed to the
+  all of the methods of `wrapped`. Additionally, any `**kwargs` passed to the
   runner are forwarded to the internal Checkpointer.
   """
 
@@ -240,7 +240,7 @@ class Snapshotter:
   """Convenience class for periodically snapshotting.
 
   Objects which can be snapshotted are limited to Sonnet or tensorflow Modules
-  which implement a a __call__ method. This will save the module's graph and
+  which implement a __call__ method. This will save the module's graph and
   variables such that they can be loaded later using `tf.saved_model.load`. See
   https://www.tensorflow.org/guide/saved_model for more details.
 
