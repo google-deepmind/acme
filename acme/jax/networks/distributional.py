@@ -201,8 +201,9 @@ class NormalTanhDistribution(hk.Module):
 
   def __init__(self,
                num_dimensions: int,
-               min_scale: float = 1e-6,
-               w_init: hk_init.Initializer = hk_init.VarianceScaling(1e-4),
+               min_scale: float = 1e-3,
+               w_init: hk_init.Initializer = hk_init.VarianceScaling(
+                   1.0, 'fan_in', 'uniform'),
                b_init: hk_init.Initializer = hk_init.Constant(0.)):
     """Initialization.
 
