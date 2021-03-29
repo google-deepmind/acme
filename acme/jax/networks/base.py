@@ -27,6 +27,7 @@ import jax.numpy as jnp
 PRNGKey = jnp.ndarray
 Params = types.NestedArray
 NetworkOutput = types.NestedArray
+Action = types.NestedArray
 QValues = jnp.ndarray
 Logits = jnp.ndarray
 Value = jnp.ndarray
@@ -37,6 +38,8 @@ LSTMOutputs = Tuple[Tuple[Logits, Value], hk.LSTMState]
 PolicyValueRNN = Callable[[types.NestedArray, hk.LSTMState], LSTMOutputs]
 RecurrentQNetwork = Callable[[types.NestedArray, hk.LSTMState],
                              Tuple[QValues, hk.LSTMState]]
+SampleFn = Callable[[NetworkOutput, PRNGKey], Action]
+LogProbFn = Callable[[NetworkOutput, Action], Logits]
 
 
 @dataclasses.dataclass
