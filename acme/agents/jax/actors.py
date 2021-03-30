@@ -26,22 +26,19 @@ from acme.jax import variable_utils
 
 import dm_env
 import jax
-import jax.numpy as jnp
 
 # Useful type aliases.
-# TODO(raveman): Nuke this type and use the one from agents/jax/networks.py
-RNGKey = jnp.ndarray
-Observation = types.NestedArray
-Action = types.NestedArray
 RecurrentState = TypeVar('RecurrentState')
 
 # Signatures for functions that sample from parameterised stochastic policies.
 FeedForwardPolicy = Callable[
-    [network_lib.Params, network_lib.PRNGKey, Observation],
-    Union[Action, Tuple[Action, types.NestedArray]]]
-RecurrentPolicy = Callable[
-    [network_lib.Params, network_lib.PRNGKey, Observation, RecurrentState],
-    Tuple[Union[Action, Tuple[Action, types.NestedArray]], RecurrentState]]
+    [network_lib.Params, network_lib.PRNGKey, network_lib.Observation],
+    Union[network_lib.Action, Tuple[network_lib.Action, types.NestedArray]]]
+RecurrentPolicy = Callable[[
+    network_lib.Params, network_lib.PRNGKey, network_lib
+    .Observation, RecurrentState
+], Tuple[Union[network_lib.Action, Tuple[network_lib.Action,
+                                         types.NestedArray]], RecurrentState]]
 
 
 class FeedForwardActor(core.Actor):
@@ -79,9 +76,9 @@ class FeedForwardActor(core.Actor):
     # Adding batch dimension inside jit is much more efficient than outside.
     def batched_policy(
         params: network_lib.Params, key: network_lib.PRNGKey,
-        observation: Observation
-    ) -> Tuple[Union[Action, Tuple[Action, types.NestedArray]],
-               network_lib.PRNGKey]:
+        observation: network_lib.Observation
+    ) -> Tuple[Union[network_lib.Action, Tuple[
+        network_lib.Action, types.NestedArray]], network_lib.PRNGKey]:
       # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
       key, key2 = jax.random.split(key)
       observation = utils.add_batch_dim(observation)
@@ -92,7 +89,8 @@ class FeedForwardActor(core.Actor):
     self._adder = adder
     self._client = variable_client
 
-  def select_action(self, observation: types.NestedArray) -> types.NestedArray:
+  def select_action(self,
+                    observation: network_lib.Observation) -> types.NestedArray:
     result, self._random_key = self._policy(self._client.params,
                                             self._random_key, observation)
     if self._has_extras:
@@ -105,7 +103,7 @@ class FeedForwardActor(core.Actor):
     if self._adder:
       self._adder.add_first(timestep)
 
-  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
+  def observe(self, action: network_lib.Action, next_timestep: dm_env.TimeStep):
     if self._adder:
       self._adder.add(action, next_timestep, extras=self._extras)
 
@@ -155,8 +153,9 @@ class RecurrentActor(core.Actor):
     # Adding batch dimension inside jit is much more efficient than outside.
     def batched_recurrent_policy(
         params: network_lib.Params, key: network_lib.PRNGKey,
-        observation: Observation, core_state: RecurrentState
-    ) -> Tuple[Union[Action, Tuple[Action, types.NestedArray]], RecurrentState,
+        observation: network_lib.Observation, core_state: RecurrentState
+    ) -> Tuple[Union[network_lib.Action, Tuple[
+        network_lib.Action, types.NestedArray]], RecurrentState,
                network_lib.PRNGKey]:
       # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
       observation = utils.add_batch_dim(observation)
@@ -170,7 +169,8 @@ class RecurrentActor(core.Actor):
     self._adder = adder
     self._client = variable_client
 
-  def select_action(self, observation: types.NestedArray) -> types.NestedArray:
+  def select_action(self,
+                    observation: network_lib.Observation) -> network_lib.Action:
     result, new_state, self._random_key = self._recurrent_policy(
         self._client.params,
         key=self._random_key,
@@ -192,7 +192,7 @@ class RecurrentActor(core.Actor):
     # Re-initialize state at beginning of new episode.
     self._state = self._initial_state
 
-  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
+  def observe(self, action: network_lib.Action, next_timestep: dm_env.TimeStep):
     if self._adder:
       numpy_state = utils.to_numpy_squeeze(self._prev_state)
       self._adder.add(

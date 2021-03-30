@@ -19,9 +19,11 @@ from acme.jax.networks.atari import AtariTorso
 from acme.jax.networks.atari import DeepIMPALAAtariNetwork
 from acme.jax.networks.atari import dqn_atari_network
 from acme.jax.networks.atari import R2D2AtariNetwork
+from acme.jax.networks.base import Action
 from acme.jax.networks.base import FeedForwardNetwork
 from acme.jax.networks.base import Logits
 from acme.jax.networks.base import LogProbFn
+from acme.jax.networks.base import Observation
 from acme.jax.networks.base import Params
 from acme.jax.networks.base import PolicyValueRNN
 from acme.jax.networks.base import PRNGKey

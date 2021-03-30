@@ -25,6 +25,8 @@ import jax.numpy as jnp
 
 # Commonly-used types.
 PRNGKey = jnp.ndarray
+Observation = types.NestedArray
+Action = types.NestedArray
 Params = types.NestedArray
 NetworkOutput = types.NestedArray
 Action = types.NestedArray
@@ -33,10 +35,10 @@ Logits = jnp.ndarray
 Value = jnp.ndarray
 
 # Commonly-used function/network signatures.
-QNetwork = Callable[[types.NestedArray], QValues]
+QNetwork = Callable[[Observation], QValues]
 LSTMOutputs = Tuple[Tuple[Logits, Value], hk.LSTMState]
-PolicyValueRNN = Callable[[types.NestedArray, hk.LSTMState], LSTMOutputs]
-RecurrentQNetwork = Callable[[types.NestedArray, hk.LSTMState],
+PolicyValueRNN = Callable[[Observation, hk.LSTMState], LSTMOutputs]
+RecurrentQNetwork = Callable[[Observation, hk.LSTMState],
                              Tuple[QValues, hk.LSTMState]]
 SampleFn = Callable[[NetworkOutput, PRNGKey], Action]
 LogProbFn = Callable[[NetworkOutput, Action], Logits]
