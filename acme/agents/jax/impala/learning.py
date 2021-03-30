@@ -63,7 +63,9 @@ class IMPALALearner(acme.Learner):
       num_prefetch_threads: Optional[int] = None,
   ):
 
-    self._devices = devices or jax.local_devices()
+    local_devices = jax.local_devices()
+    self._devices = devices or local_devices
+    self._local_devices = [d for d in self._devices if d in local_devices]
 
     # Transform into pure functions.
     unroll_fn = hk.without_apply_rng(hk.transform(unroll_fn, apply_rng=True))
@@ -113,14 +115,14 @@ class IMPALALearner(acme.Learner):
 
     # Initialise training state (parameters and optimiser state).
     state = make_initial_state(random_key)
-    self._state = utils.replicate_in_all_devices(state, self._devices)
+    self._state = utils.replicate_in_all_devices(state, self._local_devices)
 
     if num_prefetch_threads is None:
-      num_prefetch_threads = len(self._devices)
+      num_prefetch_threads = len(self._local_devices)
     self._prefetched_iterator = utils.sharded_prefetch(
         iterator,
         buffer_size=prefetch_size,
-        devices=devices,
+        devices=self._local_devices,
         num_threads=num_prefetch_threads,
     )
 
@@ -157,4 +159,4 @@ class IMPALALearner(acme.Learner):
     return jax.tree_map(utils.get_from_first_device, self._state)
 
   def restore(self, state: TrainingState):
-    self._state = utils.replicate_in_all_devices(state, self._devices)
+    self._state = utils.replicate_in_all_devices(state, self._local_devices)
