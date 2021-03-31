@@ -22,7 +22,6 @@ from acme.agents.jax.dqn import losses
 from acme.jax import networks as networks_lib
 from acme.utils import counting
 from acme.utils import loggers
-from dm_env import specs
 import optax
 import reverb
 
@@ -36,7 +35,6 @@ class DQNLearner(learning_lib.SGDLearner):
 
   def __init__(self,
                network: networks_lib.FeedForwardNetwork,
-               obs_spec: specs.Array,
                discount: float,
                importance_sampling_exponent: float,
                target_update_period: int,
@@ -57,7 +55,6 @@ class DQNLearner(learning_lib.SGDLearner):
     )
     super().__init__(
         network=network,
-        obs_spec=obs_spec,
         loss_fn=loss_fn,
         optimizer=optimizer,
         data_iterator=iterator,

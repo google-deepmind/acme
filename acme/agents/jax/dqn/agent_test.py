@@ -16,13 +16,12 @@
 """Tests for DQN agent."""
 
 from absl.testing import absltest
-
 import acme
 from acme import specs
 from acme.agents.jax import dqn
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.testing import fakes
-
 import haiku as hk
 import numpy as np
 
@@ -47,8 +46,12 @@ class DQNTest(absltest.TestCase):
       return model(x)
 
     # Make network purely functional
-    network = hk.without_apply_rng(hk.transform(network, apply_rng=True))
-    network = networks_lib.FeedForwardNetwork(network.init, network.apply)
+    network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+    dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
+
+    network = networks_lib.FeedForwardNetwork(
+        init=lambda rng: network_hk.init(rng, dummy_obs),
+        apply=network_hk.apply)
 
     # Construct the agent.
     agent = dqn.DQN(

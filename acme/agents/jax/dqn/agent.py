@@ -89,7 +89,6 @@ class DQNFromConfig(agent.Agent):
     # The learner updates the parameters (and initializes them).
     learner = learning.DQNLearner(
         network=network,
-        obs_spec=environment_spec.observations,
         random_key=key_learner,
         optimizer=optimizer,
         discount=config.discount,

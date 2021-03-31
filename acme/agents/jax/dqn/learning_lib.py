@@ -18,7 +18,6 @@ import functools
 from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
 
 import acme
-from acme import specs
 from acme.adders import reverb as adders
 from acme.jax import networks as networks_lib
 from acme.jax import utils
@@ -75,7 +74,6 @@ class SGDLearner(acme.Learner):
 
   def __init__(self,
                network: networks_lib.FeedForwardNetwork,
-               obs_spec: specs.Array,
                loss_fn: LossFn,
                optimizer: optax.GradientTransformation,
                data_iterator: Iterator[reverb.ReplaySample],
@@ -130,10 +128,9 @@ class SGDLearner(acme.Learner):
     self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
 
     # Initialize the network parameters
-    dummy_obs = utils.add_batch_dim(utils.zeros_like(obs_spec))
     key_params, key_target, key_state = jax.random.split(random_key, 3)
-    initial_params = self.network.init(key_params, dummy_obs)
-    initial_target_params = self.network.init(key_target, dummy_obs)
+    initial_params = self.network.init(key_params)
+    initial_target_params = self.network.init(key_target)
     self._state = TrainingState(
         params=initial_params,
         target_params=initial_target_params,
