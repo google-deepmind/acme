@@ -165,11 +165,13 @@ def _spec_to_shapes_and_dtypes(transition_adder: bool,
   """
   # The *transition* adder is special in that it also adds an arrival state.
   if transition_adder:
-    # Use the environment spec but convert it to a plain tuple.
-    adder_spec = tuple(environment_spec) + (environment_spec.observations,)
-    # Any 'extra' data that is passed to the adder is put on the end.
-    if extra_spec:
-      adder_spec += (extra_spec,)
+    adder_spec = types.Transition(
+        observation=environment_spec.observations,
+        action=environment_spec.actions,
+        reward=environment_spec.rewards,
+        discount=environment_spec.discounts,
+        next_observation=environment_spec.observations,
+        extras=() if not extra_spec else extra_spec)
   elif using_deprecated_adder and deprecated_base is not None:
     adder_spec = deprecated_base.Step(
         observation=environment_spec.observations,

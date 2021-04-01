@@ -18,6 +18,7 @@
 from absl.testing import absltest
 
 from acme import specs
+from acme import types
 from acme.adders import reverb as adders
 from acme.datasets import reverb as reverb_dataset
 from acme.testing import fakes
@@ -128,11 +129,15 @@ class DatasetsTest(absltest.TestCase):
         environment_spec=environment_spec,
         transition_adder=True)
 
-    environment_spec = tuple(environment_spec) + (
-        environment_spec.observations,)
+    environment_spec = types.Transition(
+        observation=environment_spec.observations,
+        action=environment_spec.actions,
+        reward=environment_spec.rewards,
+        discount=environment_spec.discounts,
+        next_observation=environment_spec.observations,
+        extras=())
 
-    self.assertTrue(
-        _check_specs(tuple(environment_spec), dataset.element_spec.data))
+    self.assertTrue(_check_specs(environment_spec, dataset.element_spec.data))
 
   def test_make_dataset_with_batch_size(self):
     batch_size = 4

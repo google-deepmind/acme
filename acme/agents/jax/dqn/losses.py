@@ -16,6 +16,7 @@
 """DQN losses."""
 from typing import Tuple
 
+from acme import types
 from acme.agents.jax.dqn import learning_lib
 from acme.jax import networks as networks_lib
 import dataclasses
@@ -43,22 +44,23 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
   ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     del key
-    o_tm1, a_tm1, r_t, d_t, o_t = batch.data
+    transitions: types.Transition = batch.data
     keys, probs, *_ = batch.info
 
     # Forward pass.
-    q_tm1 = network.apply(params, o_tm1)
-    q_t_value = network.apply(target_params, o_t)
-    q_t_selector = network.apply(params, o_t)
+    q_tm1 = network.apply(params, transitions.observation)
+    q_t_value = network.apply(target_params, transitions.next_observation)
+    q_t_selector = network.apply(params, transitions.next_observation)
 
     # Cast and clip rewards.
-    d_t = (d_t * self.discount).astype(jnp.float32)
-    r_t = jnp.clip(
-        r_t, -self.max_abs_reward, self.max_abs_reward).astype(jnp.float32)
+    d_t = (transitions.discount * self.discount).astype(jnp.float32)
+    r_t = jnp.clip(transitions.reward, -self.max_abs_reward,
+                   self.max_abs_reward).astype(jnp.float32)
 
     # Compute double Q-learning n-step TD-error.
     batch_error = jax.vmap(rlax.double_q_learning)
-    td_error = batch_error(q_tm1, a_tm1, r_t, d_t, q_t_value, q_t_selector)
+    td_error = batch_error(q_tm1, transitions.action, r_t, d_t, q_t_value,
+                           q_t_selector)
     batch_loss = rlax.huber_loss(td_error, self.huber_loss_parameter)
 
     # Importance weighting.
@@ -72,4 +74,3 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
         keys=keys, priorities=jnp.abs(td_error).astype(jnp.float64))
     extra = learning_lib.LossExtra(metrics={}, reverb_update=reverb_update)
     return loss, extra
-

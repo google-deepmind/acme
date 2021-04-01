@@ -326,7 +326,7 @@ def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
   action = environment.action_spec().generate_value()
   reward = environment.reward_spec().generate_value()
   discount = environment.discount_spec().generate_value()
-  data = (observation, action, reward, discount, observation)
+  data = types.Transition(observation, action, reward, discount, observation)
 
   key = np.array(0, np.uint64)
   probability = np.array(1.0, np.float64)

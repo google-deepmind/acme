@@ -214,4 +214,5 @@ def _n_step_transition_from_episode(observations: acme_types.NestedTensor,
       probability=probability,
       table_size=table_size,
       priority=priority)
-  return reverb.ReplaySample(info=info, data=(o_t, a_t, r_t, d_t, o_tp1))
+  return reverb.ReplaySample(
+      info=info, data=acme_types.Transition(o_t, a_t, r_t, d_t, o_tp1))

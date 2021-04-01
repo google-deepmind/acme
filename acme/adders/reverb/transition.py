@@ -181,12 +181,13 @@ class NStepTransitionAdder(base.ReverbAdder):
       # Equivalent to: `total_discount *= step.discount`.
       tree.map_structure(operator.imul, total_discount, step_discount)
 
-    if extras:
-      transition = (observation, action, n_step_return, total_discount,
-                    next_observation, extras)
-    else:
-      transition = (observation, action, n_step_return, total_discount,
-                    next_observation)
+    transition = types.Transition(
+        observation=observation,
+        action=action,
+        reward=n_step_return,
+        discount=total_discount,
+        next_observation=next_observation,
+        extras=extras)
 
     # Create a list of steps.
     if self._final_step_placeholder is None:
@@ -237,19 +238,16 @@ class NStepTransitionAdder(base.ReverbAdder):
                                       step_discounts_spec)
     step_discounts_spec = tree.map_structure(copy.deepcopy, step_discounts_spec)
 
-    transition_spec = [
+    transition_spec = types.Transition(
         environment_spec.observations,
         environment_spec.actions,
         rewards_spec,
         step_discounts_spec,
         environment_spec.observations,  # next_observation
-    ]
-
-    if extras_spec:
-      transition_spec.append(extras_spec)
+        extras_spec)
 
     return tree.map_structure_with_path(base.spec_like_to_tensor_spec,
-                                        tuple(transition_spec))
+                                        transition_spec)
 
 
 def _broadcast_specs(*args: specs.Array) -> specs.Array:
@@ -264,4 +262,3 @@ def _broadcast_specs(*args: specs.Array) -> specs.Array:
   bc_info = np.broadcast(*tuple(a.generate_value() for a in args))
   dtype = np.result_type(*tuple(a.dtype for a in args))
   return specs.Array(shape=bc_info.shape, dtype=dtype)
-

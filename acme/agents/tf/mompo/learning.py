@@ -248,19 +248,20 @@ class MultiObjectiveMPOLearner(acme.Learner):
     # Get data from replay (dropping extras if any). Note there is no
     # extra data here because we do not insert any into Reverb.
     inputs = next(self._iterator)
-    o_tm1, a_tm1, r_t, d_t, o_t = inputs.data
+    transitions: types.Transition = inputs.data
 
     with tf.GradientTape(persistent=True) as tape:
       # Maybe transform the observation before feeding into policy and critic.
       # Transforming the observations this way at the start of the learning
       # step effectively means that the policy and critic share observation
       # network weights.
-      o_tm1 = self._observation_network(o_tm1)
+      o_tm1 = self._observation_network(transitions.observation)
       # This stop_gradient prevents gradients to propagate into the target
       # observation network. In addition, since the online policy network is
       # evaluated at o_t, this also means the policy loss does not influence
       # the observation network training.
-      o_t = tf.stop_gradient(self._target_observation_network(o_t))
+      o_t = tf.stop_gradient(
+          self._target_observation_network(transitions.next_observation))
 
       # Get online and target action distributions from policy networks.
       online_action_distribution = self._policy_network(o_t)
@@ -280,13 +281,13 @@ class MultiObjectiveMPOLearner(acme.Learner):
           snt.merge_leading_dims(sampled_actions, num_dims=2))
 
       # Compute online critic value distribution of a_tm1 in state o_tm1.
-      q_tm1_all = self._critic_network(o_tm1, a_tm1)
+      q_tm1_all = self._critic_network(o_tm1, transitions.action)
 
       # Compute rewards for objectives with defined reward_fn
       reward_stats = {}
       r_t_all = []
       for objective in self._reward_objectives:
-        r = objective.reward_fn(o_tm1, a_tm1, r_t)
+        r = objective.reward_fn(o_tm1, transitions.action, transitions.reward)
         reward_stats['{}_reward'.format(objective.name)] = tf.reduce_mean(r)
         r_t_all.append(r)
       r_t_all = tf.stack(r_t_all, axis=-1)
@@ -294,12 +295,12 @@ class MultiObjectiveMPOLearner(acme.Learner):
 
       if isinstance(sampled_q_t_all, list):  # Distributional critics
         critic_loss, sampled_q_t = _compute_distributional_critic_loss(
-            sampled_q_t_all, q_tm1_all, r_t_all, d_t, self._discount,
-            self._num_samples)
+            sampled_q_t_all, q_tm1_all, r_t_all, transitions.discount,
+            self._discount, self._num_samples)
       else:
         critic_loss, sampled_q_t = _compute_critic_loss(
-            sampled_q_t_all, q_tm1_all, r_t_all, d_t, self._discount,
-            self._num_samples, self._num_critic_heads)
+            sampled_q_t_all, q_tm1_all, r_t_all, transitions.discount,
+            self._discount, self._num_samples, self._num_critic_heads)
 
       # Add sampled Q-values for objectives with defined qvalue_fn
       sampled_q_t_k = [sampled_q_t]
@@ -452,4 +453,3 @@ def _compute_critic_loss(
   critic_loss = trfl.td_learning(q_tm1, r_t_all, discount * d_t, q_t).loss
   critic_loss = tf.reduce_mean(critic_loss)
   return critic_loss, sampled_q_t
-

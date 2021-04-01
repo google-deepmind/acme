@@ -17,6 +17,7 @@
 
 from absl.testing import absltest
 from absl.testing import parameterized
+from acme import types
 from acme.adders.reverb import test_utils
 from acme.adders.reverb import transition as adders
 import dm_env
@@ -39,9 +40,9 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation=4)),
         ),
         expected_transitions=(
-            (1, 0, 0.0, 1.0, 2),
-            (2, 0, 0.0, 1.0, 3),
-            (3, 0, 1.0, 0.0, 4),
+            types.Transition(1, 0, 0.0, 1.0, 2),
+            types.Transition(2, 0, 0.0, 1.0, 3),
+            types.Transition(3, 0, 1.0, 0.0, 4),
         )),
     dict(
         testcase_name='OneStepDict',
@@ -54,9 +55,9 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation={'foo': 4})),
         ),
         expected_transitions=(
-            ({'foo': 1}, 0, 0.0, 1.0, {'foo': 2}),
-            ({'foo': 2}, 0, 0.0, 1.0, {'foo': 3}),
-            ({'foo': 3}, 0, 1.0, 0.0, {'foo': 4}),
+            types.Transition({'foo': 1}, 0, 0.0, 1.0, {'foo': 2}),
+            types.Transition({'foo': 2}, 0, 0.0, 1.0, {'foo': 3}),
+            types.Transition({'foo': 3}, 0, 1.0, 0.0, {'foo': 4}),
         )),
     dict(
         testcase_name='OneStepExtras',
@@ -84,9 +85,9 @@ TEST_CASES = [
             ),
         ),
         expected_transitions=(
-            (1, 0, 0.0, 1.0, 2, {'state': 0}),
-            (2, 0, 0.0, 1.0, 3, {'state': 1}),
-            (3, 0, 1.0, 0.0, 4, {'state': 2}),
+            types.Transition(1, 0, 0.0, 1.0, 2, {'state': 0}),
+            types.Transition(2, 0, 0.0, 1.0, 3, {'state': 1}),
+            types.Transition(3, 0, 1.0, 0.0, 4, {'state': 2}),
         )),
     dict(
         testcase_name='TwoStep',
@@ -99,10 +100,10 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation=4)),
         ),
         expected_transitions=(
-            (1, 0, 1.0, 0.50, 2),
-            (1, 0, 1.5, 0.25, 3),
-            (2, 0, 1.5, 0.00, 4),
-            (3, 0, 1.0, 0.00, 4),
+            types.Transition(1, 0, 1.0, 0.50, 2),
+            types.Transition(1, 0, 1.5, 0.25, 3),
+            types.Transition(2, 0, 1.5, 0.00, 4),
+            types.Transition(3, 0, 1.0, 0.00, 4),
         )),
     dict(
         testcase_name='TwoStepStructuredReward',
@@ -120,10 +121,10 @@ TEST_CASES = [
                                    observation=4)),
         ),
         expected_transitions=(
-            (1, 0, (1.0, 2.0), (0.50, 0.50), 2),
-            (1, 0, (1.5, 3.0), (0.25, 0.25), 3),
-            (2, 0, (1.5, 3.0), (0.00, 0.00), 4),
-            (3, 0, (1.0, 2.0), (0.00, 0.00), 4),
+            types.Transition(1, 0, (1.0, 2.0), (0.50, 0.50), 2),
+            types.Transition(1, 0, (1.5, 3.0), (0.25, 0.25), 3),
+            types.Transition(2, 0, (1.5, 3.0), (0.00, 0.00), 4),
+            types.Transition(3, 0, (1.0, 2.0), (0.00, 0.00), 4),
         )),
     dict(
         testcase_name='TwoStepNDArrayReward',
@@ -141,10 +142,14 @@ TEST_CASES = [
                                    observation=4)),
         ),
         expected_transitions=(
-            (1, 0, np.array((1.0, 2.0)), np.array((0.50, 0.50)), 2),
-            (1, 0, np.array((1.5, 3.0)), np.array((0.25, 0.25)), 3),
-            (2, 0, np.array((1.5, 3.0)), np.array((0.00, 0.00)), 4),
-            (3, 0, np.array((1.0, 2.0)), np.array((0.00, 0.00)), 4),
+            types.Transition(1, 0, np.array((1.0, 2.0)), np.array((0.50, 0.50)),
+                             2),
+            types.Transition(1, 0, np.array((1.5, 3.0)), np.array((0.25, 0.25)),
+                             3),
+            types.Transition(2, 0, np.array((1.5, 3.0)), np.array((0.00, 0.00)),
+                             4),
+            types.Transition(3, 0, np.array((1.0, 2.0)), np.array((0.00, 0.00)),
+                             4),
         )),
     dict(
         testcase_name='TwoStepStructuredDiscount',
@@ -161,10 +166,34 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation=4)),
         ),
         expected_transitions=(
-            (1, 0, {'a': 1.0, 'b': 1.0}, {'a': 0.50, 'b': 0.10}, 2),
-            (1, 0, {'a': 1.5, 'b': 1.1}, {'a': 0.25, 'b': 0.01}, 3),
-            (2, 0, {'a': 1.5, 'b': 1.1}, {'a': 0.00, 'b': 0.00}, 4),
-            (3, 0, {'a': 1.0, 'b': 1.0}, {'a': 0.00, 'b': 0.00}, 4),
+            types.Transition(1, 0, {
+                'a': 1.0,
+                'b': 1.0
+            }, {
+                'a': 0.50,
+                'b': 0.10
+            }, 2),
+            types.Transition(1, 0, {
+                'a': 1.5,
+                'b': 1.1
+            }, {
+                'a': 0.25,
+                'b': 0.01
+            }, 3),
+            types.Transition(2, 0, {
+                'a': 1.5,
+                'b': 1.1
+            }, {
+                'a': 0.00,
+                'b': 0.00
+            }, 4),
+            types.Transition(3, 0, {
+                'a': 1.0,
+                'b': 1.0
+            }, {
+                'a': 0.00,
+                'b': 0.00
+            }, 4),
         )),
     dict(
         testcase_name='TwoStepNDArrayDiscount',
@@ -181,10 +210,14 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation=4)),
         ),
         expected_transitions=(
-            (1, 0, np.array((1.0, 1.0)), np.array((0.50, 0.10)), 2),
-            (1, 0, np.array((1.5, 1.1)), np.array((0.25, 0.01)), 3),
-            (2, 0, np.array((1.5, 1.1)), np.array((0.00, 0.00)), 4),
-            (3, 0, np.array((1.0, 1.0)), np.array((0.00, 0.00)), 4),
+            types.Transition(1, 0, np.array((1.0, 1.0)), np.array((0.50, 0.10)),
+                             2),
+            types.Transition(1, 0, np.array((1.5, 1.1)), np.array((0.25, 0.01)),
+                             3),
+            types.Transition(2, 0, np.array((1.5, 1.1)), np.array((0.00, 0.00)),
+                             4),
+            types.Transition(3, 0, np.array((1.0, 1.0)), np.array((0.00, 0.00)),
+                             4),
         )),
     dict(
         testcase_name='TwoStepBroadcastedNDArrays',
@@ -202,22 +235,14 @@ TEST_CASES = [
                                    observation=4)),
         ),
         expected_transitions=(
-            (1, 0,
-             np.array([[1.0, 2.0], [1.0, 2.0]]),
-             np.array([[0.50], [0.10]]),
-             2),
-            (1, 0,
-             np.array([[1.5, 3.0], [1.1, 2.2]]),
-             np.array([[0.25], [0.01]]),
-             3),
-            (2, 0,
-             np.array([[1.5, 3.0], [1.1, 2.2]]),
-             np.array([[0.00], [0.00]]),
-             4),
-            (3, 0,
-             np.array([[1.0, 2.0], [1.0, 2.0]]),
-             np.array([[0.00], [0.00]]),
-             4),
+            types.Transition(1, 0, np.array([[1.0, 2.0], [1.0, 2.0]]),
+                             np.array([[0.50], [0.10]]), 2),
+            types.Transition(1, 0, np.array([[1.5, 3.0], [1.1, 2.2]]),
+                             np.array([[0.25], [0.01]]), 3),
+            types.Transition(2, 0, np.array([[1.5, 3.0], [1.1, 2.2]]),
+                             np.array([[0.00], [0.00]]), 4),
+            types.Transition(3, 0, np.array([[1.0, 2.0], [1.0, 2.0]]),
+                             np.array([[0.00], [0.00]]), 4),
         )),
     dict(
         testcase_name='TwoStepStructuredBroadcastedNDArrays',
@@ -235,14 +260,14 @@ TEST_CASES = [
                                    observation=4)),
         ),
         expected_transitions=(
-            (1, 0, {'a': np.array([[1.0, 2.0], [1.0, 2.0]])},
-             {'a': np.array([[0.50], [0.10]])}, 2),
-            (1, 0, {'a': np.array([[1.5, 3.0], [1.1, 2.2]])},
-             {'a': np.array([[0.25], [0.01]])}, 3),
-            (2, 0, {'a': np.array([[1.5, 3.0], [1.1, 2.2]])},
-             {'a': np.array([[0.00], [0.00]])}, 4),
-            (3, 0, {'a': np.array([[1.0, 2.0], [1.0, 2.0]])},
-             {'a': np.array([[0.00], [0.00]])}, 4),
+            types.Transition(1, 0, {'a': np.array([[1.0, 2.0], [1.0, 2.0]])},
+                             {'a': np.array([[0.50], [0.10]])}, 2),
+            types.Transition(1, 0, {'a': np.array([[1.5, 3.0], [1.1, 2.2]])},
+                             {'a': np.array([[0.25], [0.01]])}, 3),
+            types.Transition(2, 0, {'a': np.array([[1.5, 3.0], [1.1, 2.2]])},
+                             {'a': np.array([[0.00], [0.00]])}, 4),
+            types.Transition(3, 0, {'a': np.array([[1.0, 2.0], [1.0, 2.0]])},
+                             {'a': np.array([[0.00], [0.00]])}, 4),
         )),
     dict(
         testcase_name='TwoStepWithExtras',
@@ -267,10 +292,10 @@ TEST_CASES = [
             ),
         ),
         expected_transitions=(
-            (1, 0, 1.0, 0.50, 2, {'state': 0}),
-            (1, 0, 1.5, 0.25, 3, {'state': 0}),
-            (2, 0, 1.5, 0.00, 4, {'state': 1}),
-            (3, 0, 1.0, 0.00, 4, {'state': 2}),
+            types.Transition(1, 0, 1.0, 0.50, 2, {'state': 0}),
+            types.Transition(1, 0, 1.5, 0.25, 3, {'state': 0}),
+            types.Transition(2, 0, 1.5, 0.00, 4, {'state': 1}),
+            types.Transition(3, 0, 1.0, 0.00, 4, {'state': 2}),
         )),
     dict(
         testcase_name='ThreeStepDiscounted',
@@ -283,11 +308,11 @@ TEST_CASES = [
             (0, dm_env.termination(reward=1.0, observation=4)),
         ),
         expected_transitions=(
-            (1, 0, 1.00, 0.5, 2),
-            (1, 0, 1.20, 0.1, 3),
-            (1, 0, 1.24, 0.0, 4),
-            (2, 0, 1.20, 0.0, 4),
-            (3, 0, 1.00, 0.0, 4),
+            types.Transition(1, 0, 1.00, 0.5, 2),
+            types.Transition(1, 0, 1.20, 0.1, 3),
+            types.Transition(1, 0, 1.24, 0.0, 4),
+            types.Transition(2, 0, 1.20, 0.0, 4),
+            types.Transition(3, 0, 1.00, 0.0, 4),
         )),
     dict(
         testcase_name='ThreeStepVaryingReward',
@@ -301,12 +326,12 @@ TEST_CASES = [
             (0, dm_env.termination(reward=7.0, observation=5)),
         ),
         expected_transitions=(
-            (1, 0, 2, 1.00, 2),
-            (1, 0, 2 + 0.5 * 3, 0.50, 3),
-            (1, 0, 2 + 0.5 * 3 + 0.25 * 5, 0.25, 4),
-            (2, 0, 3 + 0.5 * 5 + 0.25 * 7, 0.00, 5),
-            (3, 0, 5 + 0.5 * 7, 0.00, 5),
-            (4, 0, 7, 0.00, 5),
+            types.Transition(1, 0, 2, 1.00, 2),
+            types.Transition(1, 0, 2 + 0.5 * 3, 0.50, 3),
+            types.Transition(1, 0, 2 + 0.5 * 3 + 0.25 * 5, 0.25, 4),
+            types.Transition(2, 0, 3 + 0.5 * 5 + 0.25 * 7, 0.00, 5),
+            types.Transition(3, 0, 5 + 0.5 * 7, 0.00, 5),
+            types.Transition(4, 0, 7, 0.00, 5),
         ))
 ]
 

@@ -172,22 +172,23 @@ class MPOLearner(acme.Learner):
 
     # Get data from replay (dropping extras if any). Note there is no
     # extra data here because we do not insert any into Reverb.
-    o_tm1, a_tm1, r_t, d_t, o_t = inputs.data
+    transitions: types.Transition = inputs.data
 
     # Cast the additional discount to match the environment discount dtype.
-    discount = tf.cast(self._discount, dtype=d_t.dtype)
+    discount = tf.cast(self._discount, dtype=transitions.discount.dtype)
 
     with tf.GradientTape(persistent=True) as tape:
       # Maybe transform the observation before feeding into policy and critic.
       # Transforming the observations this way at the start of the learning
       # step effectively means that the policy and critic share observation
       # network weights.
-      o_tm1 = self._observation_network(o_tm1)
+      o_tm1 = self._observation_network(transitions.observation)
       # This stop_gradient prevents gradients to propagate into the target
       # observation network. In addition, since the online policy network is
       # evaluated at o_t, this also means the policy loss does not influence
       # the observation network training.
-      o_t = tf.stop_gradient(self._target_observation_network(o_t))
+      o_t = tf.stop_gradient(
+          self._target_observation_network(transitions.next_observation))
 
       # Get action distributions from policy networks.
       online_action_distribution = self._policy_network(o_t)
@@ -209,11 +210,12 @@ class MPOLearner(acme.Learner):
       q_t = tf.reduce_mean(sampled_q_t, axis=0)  # [B]
 
       # Compute online critic value of a_tm1 in state o_tm1.
-      q_tm1 = self._critic_network(o_tm1, a_tm1)  # [B, 1]
+      q_tm1 = self._critic_network(o_tm1, transitions.action)  # [B, 1]
       q_tm1 = tf.squeeze(q_tm1, axis=-1)  # [B]; necessary for trfl.td_learning.
 
       # Critic loss.
-      critic_loss = trfl.td_learning(q_tm1, r_t, discount * d_t, q_t).loss
+      critic_loss = trfl.td_learning(q_tm1, transitions.reward,
+                                     discount * transitions.discount, q_t).loss
       critic_loss = tf.reduce_mean(critic_loss)
 
       # Actor learning.

@@ -172,25 +172,26 @@ class DistributionalMPOLearner(acme.Learner):
     # Get data from replay (dropping extras if any). Note there is no
     # extra data here because we do not insert any into Reverb.
     inputs = next(self._iterator)
-    o_tm1, a_tm1, r_t, d_t, o_t = inputs.data
+    transitions: types.Transition = inputs.data
 
     # Get batch size and scalar dtype.
-    batch_size = r_t.shape[0]
+    batch_size = transitions.reward.shape[0]
 
     # Cast the additional discount to match the environment discount dtype.
-    discount = tf.cast(self._discount, dtype=d_t.dtype)
+    discount = tf.cast(self._discount, dtype=transitions.discount.dtype)
 
     with tf.GradientTape(persistent=True) as tape:
       # Maybe transform the observation before feeding into policy and critic.
       # Transforming the observations this way at the start of the learning
       # step effectively means that the policy and critic share observation
       # network weights.
-      o_tm1 = self._observation_network(o_tm1)
+      o_tm1 = self._observation_network(transitions.observation)
       # This stop_gradient prevents gradients to propagate into the target
       # observation network. In addition, since the online policy network is
       # evaluated at o_t, this also means the policy loss does not influence
       # the observation network training.
-      o_t = tf.stop_gradient(self._target_observation_network(o_t))
+      o_t = tf.stop_gradient(
+          self._target_observation_network(transitions.next_observation))
 
       # Get online and target action distributions from policy networks.
       online_action_distribution = self._policy_network(o_t)
@@ -221,10 +222,11 @@ class DistributionalMPOLearner(acme.Learner):
           values=sampled_q_t_distributions.values, logits=averaged_logits)
 
       # Compute online critic value distribution of a_tm1 in state o_tm1.
-      q_tm1_distribution = self._critic_network(o_tm1, a_tm1)
+      q_tm1_distribution = self._critic_network(o_tm1, transitions.action)
 
       # Compute critic distributional loss.
-      critic_loss = losses.categorical(q_tm1_distribution, r_t, discount * d_t,
+      critic_loss = losses.categorical(q_tm1_distribution, transitions.reward,
+                                       discount * transitions.discount,
                                        q_t_distribution)
       critic_loss = tf.reduce_mean(critic_loss)
 

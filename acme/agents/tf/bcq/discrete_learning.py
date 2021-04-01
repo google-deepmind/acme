@@ -22,6 +22,7 @@ import copy
 from typing import Dict, List
 
 from acme import core
+from acme import types
 from acme.adders import reverb as adders
 from acme.agents.tf import bc
 from acme.tf import losses
@@ -113,23 +114,24 @@ class _InternalBCQLearner(core.Learner, tf2_savers.TFSaveable):
 
     # Pull out the data needed for updates/priorities.
     inputs = next(self._iterator)
-    o_tm1, a_tm1, r_t, d_t, o_t = inputs.data
+    transitions: types.Transition = inputs.data
     keys, probs = inputs.info[:2]
 
     with tf.GradientTape() as tape:
       # Evaluate our networks.
-      q_tm1 = self._q_network(o_tm1)
-      q_t_value = self._target_q_network(o_t)
-      q_t_selector = self._network(o_t)
+      q_tm1 = self._q_network(transitions.observation)
+      q_t_value = self._target_q_network(transitions.next_observation)
+      q_t_selector = self._network(transitions.next_observation)
 
       # The rewards and discounts have to have the same type as network values.
-      r_t = tf.cast(r_t, q_tm1.dtype)
+      r_t = tf.cast(transitions.reward, q_tm1.dtype)
       r_t = tf.clip_by_value(r_t, -1., 1.)
-      d_t = tf.cast(d_t, q_tm1.dtype) * tf.cast(self._discount, q_tm1.dtype)
+      d_t = tf.cast(transitions.discount, q_tm1.dtype) * tf.cast(
+          self._discount, q_tm1.dtype)
 
       # Compute the loss.
-      _, extra = trfl.double_qlearning(q_tm1, a_tm1, r_t, d_t, q_t_value,
-                                       q_t_selector)
+      _, extra = trfl.double_qlearning(q_tm1, transitions.action, r_t, d_t,
+                                       q_t_value, q_t_selector)
       loss = losses.huber(extra.td_error, self._huber_loss_parameter)
 
       # Get the importance weights.

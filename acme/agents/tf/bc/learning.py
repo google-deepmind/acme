@@ -18,6 +18,7 @@
 from typing import Dict, List
 
 import acme
+from acme import types
 from acme.tf import savers as tf2_savers
 from acme.tf import utils as tf2_utils
 from acme.utils import counting
@@ -78,14 +79,13 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
 
     # Pull out the data needed for updates/priorities.
     inputs = next(self._iterator)
-    o_tm1, a_tm1, r_t, d_t, o_t = inputs.data
-    del r_t, d_t, o_t
+    transitions: types.Transition = inputs.data
 
     with tf.GradientTape() as tape:
       # Evaluate our networks.
-      logits = self._network(o_tm1)
+      logits = self._network(transitions.observation)
       cce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-      loss = cce(a_tm1, logits)
+      loss = cce(transitions.action, logits)
 
     gradients = tape.gradient(loss, self._network.trainable_variables)
     self._optimizer.apply(gradients, self._network.trainable_variables)

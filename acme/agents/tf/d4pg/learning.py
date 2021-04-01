@@ -176,18 +176,18 @@ class D4PGLearner(acme.Learner):
     # Get data from replay (dropping extras if any). Note there is no
     # extra data here because we do not insert any into Reverb.
     sample = next(self._iterator)
-    o_tm1, a_tm1, r_t, d_t, o_t = sample.data  # Assuming ReverbSample.
+    transitions: types.Transition = sample.data  # Assuming ReverbSample.
 
     # Cast the additional discount to match the environment discount dtype.
-    discount = tf.cast(self._discount, dtype=d_t.dtype)
+    discount = tf.cast(self._discount, dtype=transitions.discount.dtype)
 
     with tf.GradientTape(persistent=True) as tape:
       # Maybe transform the observation before feeding into policy and critic.
       # Transforming the observations this way at the start of the learning
       # step effectively means that the policy and critic share observation
       # network weights.
-      o_tm1 = self._observation_network(o_tm1)
-      o_t = self._target_observation_network(o_t)
+      o_tm1 = self._observation_network(transitions.observation)
+      o_t = self._target_observation_network(transitions.next_observation)
       # This stop_gradient prevents gradients to propagate into the target
       # observation network. In addition, since the online policy network is
       # evaluated at o_t, this also means the policy loss does not influence
@@ -195,11 +195,12 @@ class D4PGLearner(acme.Learner):
       o_t = tree.map_structure(tf.stop_gradient, o_t)
 
       # Critic learning.
-      q_tm1 = self._critic_network(o_tm1, a_tm1)
+      q_tm1 = self._critic_network(o_tm1, transitions.action)
       q_t = self._target_critic_network(o_t, self._target_policy_network(o_t))
 
       # Critic loss.
-      critic_loss = losses.categorical(q_tm1, r_t, discount * d_t, q_t)
+      critic_loss = losses.categorical(q_tm1, transitions.reward,
+                                       discount * transitions.discount, q_t)
       critic_loss = tf.reduce_mean(critic_loss, axis=[0])
 
       # Actor learning.
