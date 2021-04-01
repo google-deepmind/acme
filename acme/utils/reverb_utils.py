@@ -17,6 +17,9 @@
 
 Contains functions manipulating reverb tables and samples.
 """
+
+from acme import types
+import jax.numpy as jnp
 import reverb
 from reverb import item_selectors
 from reverb import rate_limiters
@@ -74,3 +77,36 @@ def _make_rate_limiter_from_rate_limiter_info(
       samples_per_insert=info.samples_per_insert,
       min_size_to_sample=info.min_size_to_sample,
       error_buffer=(info.min_diff, info.max_diff))
+
+
+def replay_sample_to_sars_transition(
+    sample: reverb.ReplaySample,
+    is_sequence: bool) -> types.Transition:
+  """Converts the replay sample to a types.Transition.
+
+  NB: If is_sequence is True then the last next_observation of each sequence is
+  rubbish. Don't train on it.
+
+  Args:
+    sample: The replay sample
+    is_sequence: If False we expect the sample data to match the
+      types.Transition already. Otherwise we expect a batch of sequences of
+      steps.
+
+  Returns:
+    A types.Transition built from the sample data. The number of leading
+    dimensions will be unchanged, so expect 2 for sequence based ([Batch, Time])
+    and 1 ([Batch]) otherwise.
+    NB: If is_sequence is True then the last next_observation of each sequence
+    is rubbish. Don't train on it.
+  """
+  if not is_sequence:
+    return types.Transition(*sample.data)
+  # Note that the last next_observation is invalid.
+  steps = sample.data
+  return types.Transition(
+      observation=steps.observation,
+      action=steps.action,
+      reward=steps.reward,
+      discount=steps.discount,
+      next_observation=jnp.roll(steps.observation, shift=-1, axis=1))
