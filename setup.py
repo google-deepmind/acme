@@ -26,14 +26,15 @@ spec = import_util.spec_from_file_location('_metadata', 'acme/_metadata.py')
 _metadata = import_util.module_from_spec(spec)
 spec.loader.exec_module(_metadata)
 
+# TODO(b/184148890): Add a release flag
+
 reverb_requirements = [
-    'dm-reverb',
-    'tensorflow>=2.4.0',
+    'dm-reverb-nightly',
 ]
 
 tf_requirements = [
-    'tensorflow>=2.4.0',
-    'tensorflow_probability',
+    'tf-nightly',
+    'tfp-nightly',
     'dm-sonnet',
     'trfl',
 ]
