@@ -20,12 +20,12 @@ order to test or interact with other components.
 """
 
 import threading
-from typing import List, Mapping, Sequence, Optional
+from typing import List, Mapping, Optional, Sequence
 
 from acme import core
 from acme import specs
 from acme import types
-
+from acme import wrappers
 import dm_env
 import numpy as np
 import reverb
@@ -314,8 +314,8 @@ def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
   """Fake dataset of Reverb N-step transition samples.
 
   Args:
-    environment: Used to create a fake transition by looking at the
-      observation, action, discount and reward specs.
+    environment: Used to create a fake transition by looking at the observation,
+      action, discount and reward specs.
 
   Returns:
     tf.data.Dataset that produces the same fake N-step transition ReverSample
@@ -340,3 +340,25 @@ def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
   sample = reverb.ReplaySample(info=info, data=data)
 
   return tf.data.Dataset.from_tensors(sample).repeat()
+
+
+def fake_atari_wrapped(oar_wrapper: bool = False) -> dm_env.Environment:
+  """Builds fake version of the environment to be used by tests.
+
+  Args:
+    oar_wrapper: Should ObservationActionRewardWrapper be applied.
+
+  Returns:
+    Fake version of the environment equivalent to the one returned by
+    env_loader.load_atari_wrapped
+  """
+  env = DiscreteEnvironment(
+      num_actions=18,
+      num_observations=2,
+      obs_shape=(84, 84, 4),
+      obs_dtype=np.float32,
+      episode_length=10)
+
+  if oar_wrapper:
+    env = wrappers.ObservationActionRewardWrapper(env)
+  return env
