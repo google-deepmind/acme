@@ -19,38 +19,14 @@ from acme import specs
 from acme.agents import agent
 from acme.agents import replay
 from acme.agents.jax import actors
+from acme.agents.jax.dqn import config as dqn_config
 from acme.agents.jax.dqn import learning
 from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
-import dataclasses
 import jax
 import jax.numpy as jnp
-import numpy as np
 import optax
 import rlax
-
-
-@dataclasses.dataclass
-class DQNConfig:
-  """Configuration options for DQN agent."""
-  epsilon: float = 0.05  # Action selection via epsilon-greedy policy.
-  samples_per_insert: float = 0.5  # Ratio of learning samples to insert.
-  seed: int = 1  # Random seed.
-
-  # Learning rule
-  learning_rate: float = 1e-3  # Learning rate for Adam optimizer.
-  discount: float = 0.99  # Discount rate applied to value per timestep.
-  n_step: int = 5  # N-step TF learning.
-  target_update_period: int = 100  # Update target network every period.
-  max_gradient_norm: float = np.inf  # For gradient clipping.
-
-  # Replay options
-  batch_size: int = 256  # Number of transitions per batch.
-  min_replay_size: int = 1_000  # Minimum replay size.
-  max_replay_size: int = 1_000_000  # Maximum replay size.
-  importance_sampling_exponent: float = 0.2  # Importance sampling for replay.
-  priority_exponent: float = 0.6  # Priority exponent for replay.
-  prefetch_size: int = 4  # Prefetch size for reverb replay performance.
 
 
 class DQNFromConfig(agent.Agent):
@@ -66,7 +42,7 @@ class DQNFromConfig(agent.Agent):
       self,
       environment_spec: specs.EnvironmentSpec,
       network: networks_lib.FeedForwardNetwork,
-      config: DQNConfig,
+      config: dqn_config.DQNConfig,
   ):
     """Initialize the agent."""
     # Data is communicated via reverb replay.
@@ -142,7 +118,7 @@ class DQN(DQNFromConfig):
       discount: float = 0.99,
       seed: int = 1,
   ):
-    config = DQNConfig(
+    config = dqn_config.DQNConfig(
         batch_size=batch_size,
         prefetch_size=prefetch_size,
         target_update_period=target_update_period,
