@@ -16,16 +16,16 @@
 """Learner for the IMPALA actor-critic agent."""
 
 import time
-from typing import Callable, Dict, Iterator, List, NamedTuple, Optional, Sequence, Tuple
+from typing import Dict, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 
 import acme
 from acme import specs
+from acme.agents.jax.impala import types
 from acme.jax import losses
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.utils import counting
 from acme.utils import loggers
-import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -47,8 +47,10 @@ class IMPALALearner(acme.Learner):
   def __init__(
       self,
       obs_spec: specs.Array,
-      unroll_fn: networks_lib.PolicyValueRNN,
-      initial_state_fn: Callable[[], hk.LSTMState],
+      unroll_init_fn: types.PolicyValueInitFn,
+      unroll_fn: types.PolicyValueFn,
+      initial_state_init_fn: types.RecurrentStateInitFn,
+      initial_state_fn: types.RecurrentStateFn,
       iterator: Iterator[reverb.ReplaySample],
       optimizer: optax.GradientTransformation,
       random_key: networks_lib.PRNGKey,
@@ -66,11 +68,6 @@ class IMPALALearner(acme.Learner):
     local_devices = jax.local_devices()
     self._devices = devices or local_devices
     self._local_devices = [d for d in self._devices if d in local_devices]
-
-    # Transform into pure functions.
-    unroll_fn = hk.without_apply_rng(hk.transform(unroll_fn, apply_rng=True))
-    initial_state_fn = hk.without_apply_rng(
-        hk.transform(initial_state_fn, apply_rng=True))
 
     loss_fn = losses.impala_loss(
         unroll_fn,
@@ -108,10 +105,17 @@ class IMPALALearner(acme.Learner):
       """Initialises the training state (parameters and optimiser state)."""
       dummy_obs = utils.zeros_like(obs_spec)
       dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
-      initial_state = initial_state_fn.apply(None)
-      initial_params = unroll_fn.init(key, dummy_obs, initial_state)
+
+      key, key_initial_state = jax.random.split(key)
+      params = initial_state_init_fn(key_initial_state)
+      # TODO(jferret): as it stands, we do not yet support
+      # training the initial state params.
+      initial_state = initial_state_fn(params)
+
+      initial_params = unroll_init_fn(key, dummy_obs, initial_state)
       initial_opt_state = optimizer.init(initial_params)
-      return TrainingState(params=initial_params, opt_state=initial_opt_state)
+      return TrainingState(
+          params=initial_params, opt_state=initial_opt_state)
 
     # Initialise training state (parameters and optimiser state).
     state = make_initial_state(random_key)

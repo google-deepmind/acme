@@ -39,7 +39,7 @@ class ImpalaTest(absltest.TestCase):
     # Define a trivial recurrent actor-critic network.
     @hk.without_apply_rng
     @hk.transform
-    def unroll_fn(observations, state):
+    def unroll_fn_transformed(observations, state):
       lstm = hk.LSTM(hidden_size)
       embedding, state = hk.dynamic_unroll(lstm, observations, state)
       logits = hk.Linear(num_actions)(embedding)
@@ -82,10 +82,11 @@ class ImpalaTest(absltest.TestCase):
 
     # Initialise parameters.
     rng = hk.PRNGSequence(1)
-    params = unroll_fn.init(next(rng), observations, initial_state)
+    params = unroll_fn_transformed.init(next(rng), observations, initial_state)
 
     # Make loss function.
-    loss_fn = impala.impala_loss(unroll_fn, discount=0.99)
+    loss_fn = impala.impala_loss(
+        unroll_fn_transformed.apply, discount=0.99)
 
     # Return value should be scalar.
     loss = loss_fn(params, sample)

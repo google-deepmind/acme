@@ -23,6 +23,7 @@ from acme.jax.networks.base import Action
 from acme.jax.networks.base import FeedForwardNetwork
 from acme.jax.networks.base import Logits
 from acme.jax.networks.base import LogProbFn
+from acme.jax.networks.base import LSTMOutputs
 from acme.jax.networks.base import Observation
 from acme.jax.networks.base import Params
 from acme.jax.networks.base import PolicyValueRNN

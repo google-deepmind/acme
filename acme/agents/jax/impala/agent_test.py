@@ -22,6 +22,7 @@ from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import impala
+from acme.agents.jax.impala import agent as impala_agent
 from acme.jax import networks
 from acme.testing import fakes
 
@@ -76,15 +77,31 @@ class IMPALATest(absltest.TestCase):
       model = MyNetwork(spec.actions.num_values)
       return hk.static_unroll(model, inputs, state)
 
+    # We pass pure, Haiku-agnostic functions to the agent.
+    forward_fn_transformed = hk.without_apply_rng(hk.transform(
+        forward_fn,
+        apply_rng=True))
+    unroll_fn_transformed = hk.without_apply_rng(hk.transform(
+        unroll_fn,
+        apply_rng=True))
+    initial_state_fn_transformed = hk.without_apply_rng(hk.transform(
+        initial_state_fn,
+        apply_rng=True))
+
     # Construct the agent.
-    agent = impala.IMPALA(
-        environment_spec=spec,
-        forward_fn=forward_fn,
-        initial_state_fn=initial_state_fn,
-        unroll_fn=unroll_fn,
+    config = impala_agent.IMPALAConfig(
         sequence_length=3,
         sequence_period=3,
         batch_size=6,
+    )
+    agent = impala.IMPALAFromConfig(
+        environment_spec=spec,
+        forward_fn=forward_fn_transformed.apply,
+        initial_state_init_fn=initial_state_fn_transformed.init,
+        initial_state_fn=initial_state_fn_transformed.apply,
+        unroll_init_fn=unroll_fn_transformed.init,
+        unroll_fn=unroll_fn_transformed.apply,
+        config=config,
     )
 
     # Try running the environment loop. We have no assertions here because all

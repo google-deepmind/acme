@@ -27,6 +27,7 @@ from acme.jax import networks
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
+import dataclasses
 import dm_env
 import haiku as hk
 import jax
@@ -34,76 +35,93 @@ import numpy as np
 import optax
 
 
-class IMPALA(acme.Actor):
+@dataclasses.dataclass
+class IMPALAConfig:
+  """Configuration options for IMPALA."""
+  seed: int = 0
+
+  # Loss options
+  batch_size: int = 16
+  sequence_length: int = 20
+  sequence_period: int = 20
+  learning_rate: float = 1e-3
+  discount: float = 0.99
+  entropy_cost: float = 0.01
+  baseline_cost: float = 0.5
+  max_abs_reward: float = np.inf
+  max_gradient_norm: float = np.inf
+
+  # Replay options
+  max_queue_size: int = 10_000
+
+
+class IMPALAFromConfig(acme.Actor):
   """IMPALA Agent."""
 
   def __init__(
       self,
       environment_spec: specs.EnvironmentSpec,
-      forward_fn: networks.PolicyValueRNN,
-      unroll_fn: networks.PolicyValueRNN,
-      initial_state_fn: Callable[[], hk.LSTMState],
-      sequence_length: int,
-      sequence_period: int,
+      forward_fn: types.PolicyValueFn,
+      unroll_init_fn: types.PolicyValueInitFn,
+      unroll_fn: types.PolicyValueFn,
+      initial_state_init_fn: types.RecurrentStateInitFn,
+      initial_state_fn: types.RecurrentStateFn,
+      config: IMPALAConfig,
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
-      discount: float = 0.99,
-      max_queue_size: int = 100000,
-      batch_size: int = 16,
-      learning_rate: float = 1e-3,
-      entropy_cost: float = 0.01,
-      baseline_cost: float = 0.5,
-      seed: int = 0,
-      max_abs_reward: float = np.inf,
-      max_gradient_norm: float = np.inf,
   ):
+    self._config = config
 
     # Data is handled by the reverb replay queue.
     num_actions = environment_spec.actions.num_values
     self._logger = logger or loggers.TerminalLogger('agent')
+
+    key, key_initial_state = jax.random.split(
+        jax.random.PRNGKey(self._config.seed))
+    params = initial_state_init_fn(key_initial_state)
     extra_spec = {
-        'core_state':
-            hk.without_apply_rng(hk.transform(initial_state_fn)).apply(None),
-        'logits':
-            np.ones(shape=(num_actions,), dtype=np.float32)
+        'core_state': initial_state_fn(params),
+        'logits': np.ones(shape=(num_actions,), dtype=np.float32)
     }
     reverb_queue = replay.make_reverb_online_queue(
         environment_spec=environment_spec,
         extra_spec=extra_spec,
-        max_queue_size=max_queue_size,
-        sequence_length=sequence_length,
-        sequence_period=sequence_period,
-        batch_size=batch_size,
+        max_queue_size=self._config.max_queue_size,
+        sequence_length=self._config.sequence_length,
+        sequence_period=self._config.sequence_period,
+        batch_size=self._config.batch_size,
     )
     self._server = reverb_queue.server
     self._can_sample = reverb_queue.can_sample
 
     # Make the learner.
     optimizer = optax.chain(
-        optax.clip_by_global_norm(max_gradient_norm),
-        optax.adam(learning_rate),
+        optax.clip_by_global_norm(self._config.max_gradient_norm),
+        optax.adam(self._config.learning_rate),
     )
-    key_learner, key_actor = jax.random.split(jax.random.PRNGKey(seed))
+    key_learner, key_actor = jax.random.split(key)
     self._learner = learning.IMPALALearner(
         obs_spec=environment_spec.observations,
+        unroll_init_fn=unroll_init_fn,
         unroll_fn=unroll_fn,
+        initial_state_init_fn=initial_state_init_fn,
         initial_state_fn=initial_state_fn,
         iterator=reverb_queue.data_iterator,
         random_key=key_learner,
         counter=counter,
         logger=logger,
         optimizer=optimizer,
-        discount=discount,
-        entropy_cost=entropy_cost,
-        baseline_cost=baseline_cost,
-        max_abs_reward=max_abs_reward,
+        discount=self._config.discount,
+        entropy_cost=self._config.entropy_cost,
+        baseline_cost=self._config.baseline_cost,
+        max_abs_reward=self._config.max_abs_reward,
     )
 
     # Make the actor.
     variable_client = variable_utils.VariableClient(self._learner, key='policy')
-    transformed = hk.without_apply_rng(hk.transform(forward_fn))
     self._actor = acting.IMPALAActor(
-        forward_fn=jax.jit(transformed.apply, backend='cpu'),
+        forward_fn=jax.jit(forward_fn, backend='cpu'),
+        initial_state_init_fn=initial_state_init_fn,
         initial_state_fn=initial_state_fn,
         rng=hk.PRNGSequence(key_actor),
         adder=reverb_queue.adder,
@@ -132,3 +150,67 @@ class IMPALA(acme.Actor):
 
   def select_action(self, observation: np.ndarray) -> int:
     return self._actor.select_action(observation)
+
+
+class IMPALA(IMPALAFromConfig):
+  """IMPALA agent.
+
+  We are in the process of migrating towards a more modular agent configuration.
+  This is maintained now for compatibility.
+  """
+
+  def __init__(
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      forward_fn: networks.PolicyValueRNN,
+      unroll_fn: networks.PolicyValueRNN,
+      initial_state_fn: Callable[[], hk.LSTMState],
+      sequence_length: int,
+      sequence_period: int,
+      counter: counting.Counter = None,
+      logger: loggers.Logger = None,
+      discount: float = 0.99,
+      max_queue_size: int = 100000,
+      batch_size: int = 16,
+      learning_rate: float = 1e-3,
+      entropy_cost: float = 0.01,
+      baseline_cost: float = 0.5,
+      seed: int = 0,
+      max_abs_reward: float = np.inf,
+      max_gradient_norm: float = np.inf,
+  ):
+
+    forward_fn_transformed = hk.without_apply_rng(hk.transform(
+        forward_fn,
+        apply_rng=True))
+    unroll_fn_transformed = hk.without_apply_rng(hk.transform(
+        unroll_fn,
+        apply_rng=True))
+    initial_state_fn_transformed = hk.without_apply_rng(hk.transform(
+        initial_state_fn,
+        apply_rng=True))
+
+    config = IMPALAConfig(
+        sequence_length=sequence_length,
+        sequence_period=sequence_period,
+        discount=discount,
+        max_queue_size=max_queue_size,
+        batch_size=batch_size,
+        learning_rate=learning_rate,
+        entropy_cost=entropy_cost,
+        baseline_cost=baseline_cost,
+        seed=seed,
+        max_abs_reward=max_abs_reward,
+        max_gradient_norm=max_gradient_norm,
+    )
+    super().__init__(
+        environment_spec=environment_spec,
+        forward_fn=forward_fn_transformed.apply,
+        unroll_init_fn=unroll_fn_transformed.init,
+        unroll_fn=unroll_fn_transformed.apply,
+        initial_state_init_fn=initial_state_fn_transformed.init,
+        initial_state_fn=initial_state_fn_transformed.apply,
+        config=config,
+        counter=counter,
+        logger=logger,
+    )

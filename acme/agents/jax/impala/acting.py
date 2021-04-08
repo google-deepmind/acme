@@ -15,22 +15,16 @@
 
 """IMPALA actor implementation."""
 
-from typing import Callable, Optional, Tuple
+from typing import Optional
 
 from acme import adders
 from acme import core
 from acme.agents.jax.impala import types
-from acme.jax import networks
 from acme.jax import variable_utils
 import dm_env
 import haiku as hk
 import jax
 import jax.numpy as jnp
-
-
-_LogitsAndValue = Tuple[networks.Logits, networks.Value]
-PolicyValueFn = Callable[[hk.Params, types.Observation, hk.LSTMState],
-                         Tuple[_LogitsAndValue, hk.LSTMState]]
 
 
 class IMPALAActor(core.Actor):
@@ -42,8 +36,9 @@ class IMPALAActor(core.Actor):
 
   def __init__(
       self,
-      forward_fn: PolicyValueFn,
-      initial_state_fn: Callable[[], hk.LSTMState],
+      forward_fn: types.PolicyValueFn,
+      initial_state_init_fn: types.RecurrentStateInitFn,
+      initial_state_fn: types.RecurrentStateFn,
       rng: hk.PRNGSequence,
       variable_client: Optional[variable_utils.VariableClient] = None,
       adder: Optional[adders.Adder] = None,
@@ -61,8 +56,8 @@ class IMPALAActor(core.Actor):
     if self._variable_client is not None:
       self._variable_client.update_and_wait()
 
-    self._initial_state = hk.without_apply_rng(
-        hk.transform(initial_state_fn, apply_rng=True)).apply(None)
+    params = initial_state_init_fn(next(self._rng))
+    self._initial_state = initial_state_fn(params)
 
   def select_action(self, observation: types.Observation) -> types.Action:
 

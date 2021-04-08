@@ -14,6 +14,8 @@
 # limitations under the License.
 
 """Importance-weighted actor-learner architecture (IMPALA) agent."""
+# pylint: disable=g-bad-import-order
 
 from acme.agents.jax.impala.agent import IMPALA
+from acme.agents.jax.impala.agent import IMPALAFromConfig
 from acme.agents.jax.impala.learning import IMPALALearner

@@ -19,6 +19,7 @@
 
 from typing import Callable
 
+from acme.agents.jax.impala import types
 from acme.jax import utils
 import haiku as hk
 import jax.numpy as jnp
@@ -29,7 +30,7 @@ import tree
 
 
 def impala_loss(
-    unroll_fn: hk.Transformed,
+    unroll_fn: types.PolicyValueFn,
     *,
     discount: float,
     max_abs_reward: float = np.inf,
@@ -68,7 +69,7 @@ def impala_loss(
     rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
 
     # Unroll current policy over observations.
-    (logits, values), _ = unroll_fn.apply(params, observations, initial_state)
+    (logits, values), _ = unroll_fn(params, observations, initial_state)
 
     # Compute importance sampling weights: current policy / behavior policy.
     rhos = rlax.categorical_importance_sampling_ratios(logits[:-1],
