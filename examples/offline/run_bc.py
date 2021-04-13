@@ -138,7 +138,8 @@ def main(_):
   if hasattr(raw_environment, 'raw_env'):
     raw_environment = raw_environment.raw_env
 
-  batch_dataset = bsuite_demonstrations.make_dataset(raw_environment)
+  batch_dataset = bsuite_demonstrations.make_dataset(raw_environment,
+                                                     stochastic=False)
   # Combine with demonstration dataset.
   transition = functools.partial(
       _n_step_transition_from_episode, n_step=1, additional_discount=1.)

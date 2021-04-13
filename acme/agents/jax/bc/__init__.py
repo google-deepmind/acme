@@ -16,3 +16,7 @@
 """Implementation of a behavior cloning (BC) agent."""
 
 from acme.agents.jax.bc.learning import BCLearner
+from acme.agents.jax.bc.losses import logp
+from acme.agents.jax.bc.losses import mse
+from acme.agents.jax.bc.losses import peerbc
+from acme.agents.jax.bc.losses import rcal

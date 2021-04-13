@@ -69,7 +69,8 @@ def main(_):
   agent = dqfd.DQfD(
       environment_spec=environment_spec,
       network=make_network(environment_spec.actions),
-      demonstration_dataset=bsuite_demonstrations.make_dataset(raw_environment),
+      demonstration_dataset=bsuite_demonstrations.make_dataset(
+          raw_environment, stochastic=False),
       demonstration_ratio=FLAGS.demonstration_ratio,
       samples_per_insert=FLAGS.samples_per_insert,
       learning_rate=FLAGS.learning_rate)

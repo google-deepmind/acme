@@ -125,15 +125,12 @@ def _make_deep_sea_stochastic_dataset(environment: deep_sea.DeepSea):
   return recorder.make_tf_dataset()
 
 
-def make_dataset(environment: dm_env.Environment):
+def make_dataset(environment: dm_env.Environment, stochastic: bool):
   """Make bsuite demos for the current task."""
 
-  if FLAGS.bsuite_id.startswith('deep_sea/'):
+  if not stochastic:
     assert isinstance(environment, deep_sea.DeepSea)
     return _make_deep_sea_dataset(environment)
-  elif FLAGS.bsuite_id.startswith('deep_sea_stochastic/'):
+  else:
     assert isinstance(environment, deep_sea.DeepSea)
     return _make_deep_sea_stochastic_dataset(environment)
-  else:
-    raise ValueError('Could not produce demonstrations for {}'
-                     .format(FLAGS.bsuite_id))
