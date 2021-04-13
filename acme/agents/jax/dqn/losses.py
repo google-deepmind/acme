@@ -40,7 +40,7 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
       params: networks_lib.Params,
       target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
-      key: jnp.DeviceArray,
+      key: networks_lib.PRNGKey,
   ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     del key

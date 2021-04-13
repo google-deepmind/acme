@@ -52,7 +52,7 @@ class LossFn(typing_extensions.Protocol):
                params: networks_lib.Params,
                target_params: networks_lib.Params,
                batch: reverb.ReplaySample,
-               key: jnp.DeviceArray) -> Tuple[jnp.DeviceArray, LossExtra]:
+               key: networks_lib.PRNGKey) -> Tuple[jnp.DeviceArray, LossExtra]:
     """Calculates a loss on a single batch of data."""
 
 
@@ -62,7 +62,7 @@ class TrainingState(NamedTuple):
   target_params: networks_lib.Params
   opt_state: optax.OptState
   steps: int
-  rng_key: jnp.DeviceArray
+  rng_key: networks_lib.PRNGKey
 
 
 class SGDLearner(acme.Learner):
