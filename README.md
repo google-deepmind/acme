@@ -74,7 +74,7 @@ novel implementation.
 
 ## Installation
 
-We have tested `acme` on Python 3.6 & 3.7.
+We have tested `acme` on Python 3.6, 3.7 & 3.8.
 
 1.  **Optional**: We strongly recommend using a
     [Python virtual environment](https://docs.python.org/3/tutorial/venv.html)

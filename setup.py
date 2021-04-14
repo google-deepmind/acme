@@ -61,13 +61,12 @@ testing_requirements = [
     'pytest-xdist',
 ]
 
-long_description = \
-"""Acme is a library of reinforcement learning (RL) agents and agent building
-blocks. Acme strives to expose simple, efficient, and readable agents, that
-serve both as reference implementations of popular algorithms and as strong
-baselines, while still providing enough flexibility to do novel research. The
-design of Acme also attempts to provide multiple points of entry to the RL
-problem at differing levels of complexity.
+long_description = """Acme is a library of reinforcement learning (RL) agents
+and agent building blocks. Acme strives to expose simple, efficient,
+and readable agents, that serve both as reference implementations of popular
+algorithms and as strong baselines, while still providing enough flexibility
+to do novel research. The design of Acme also attempts to provide multiple
+points of entry to the RL problem at differing levels of complexity.
 
 For more information see [github repository](https://github.com/deepmind/acme)."""
 
@@ -112,6 +111,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
 )
