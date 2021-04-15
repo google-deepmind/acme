@@ -373,3 +373,8 @@ def process_multiple_batches(
 
   return _process_multiple_batches
 
+
+def weighted_softmax(x: jnp.ndarray, weights: jnp.ndarray, axis: int = 0):
+  x = x - jnp.max(x, axis=axis)
+  return weights * jnp.exp(x) / jnp.sum(weights * jnp.exp(x),
+                                        axis=axis, keepdims=True)

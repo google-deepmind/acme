@@ -20,7 +20,7 @@ order to test or interact with other components.
 """
 
 import threading
-from typing import List, Mapping, Optional, Sequence
+from typing import List, Mapping, Optional, Sequence, Callable, Iterator
 
 from acme import core
 from acme import specs
@@ -340,6 +340,30 @@ def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
   sample = reverb.ReplaySample(info=info, data=data)
 
   return tf.data.Dataset.from_tensors(sample).repeat()
+
+
+def transition_iterator(
+    environment: dm_env.Environment
+) -> Callable[[int], Iterator[types.Transition]]:
+  """Fake dataset of Reverb N-step transition samples.
+
+  Args:
+    environment: Used to create a fake transition by looking at the observation,
+      action, discount and reward specs.
+
+  Returns:
+    A callable that given a batch_size returns an iterator with demonstrations.
+  """
+
+  observation = environment.observation_spec().generate_value()
+  action = environment.action_spec().generate_value()
+  reward = environment.reward_spec().generate_value()
+  discount = environment.discount_spec().generate_value()
+  data = types.Transition(observation, action, reward, discount, observation)
+
+  dataset = tf.data.Dataset.from_tensors(data).repeat()
+
+  return lambda batch_size: dataset.batch(batch_size).as_numpy_iterator()
 
 
 def fake_atari_wrapped(oar_wrapper: bool = False) -> dm_env.Environment:
