@@ -41,7 +41,7 @@ pip install gym[atari]
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
 
 # Run static type-checking.
-pytype -k -j "${N_CPU}" acme
+pytype -k -j "${N_CPU}" `find . -maxdepth 1 -mindepth 1 -type d` -x 'examples/open_spiel examples/offline acme_testing'
 
 # Run all tests.
 pytest -n "${N_CPU}" acme
