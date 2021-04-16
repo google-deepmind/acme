@@ -150,7 +150,7 @@ def prefetch(iterable: Iterable[T],
           item = jax.device_put(item, device)
         buffer.put(item)
     except Exception as e:  # pylint: disable=broad-except
-      logging.exception('Error in producer thread for %s', iterable.__name__)
+      logging.exception('Error in producer thread for %s', iterable)
       producer_error.append(e)
     finally:
       buffer.put(end)
@@ -244,7 +244,7 @@ def sharded_prefetch(
                   host=np.stack(split.host),
                   device=jax.device_put_sharded(split.device, devices)))
     except Exception as e:  # pylint: disable=broad-except
-      logging.exception('Error in producer thread for %s', iterable.__name__)
+      logging.exception('Error in producer thread for %s', iterable)
       producer_error.append(e)
     finally:
       buffer.put(end)
