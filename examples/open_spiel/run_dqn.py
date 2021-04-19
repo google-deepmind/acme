@@ -40,7 +40,7 @@ def main(_):
   raw_environment = rl_environment.Environment(FLAGS.game, **env_configs)
 
   environment = open_spiel_wrapper.OpenSpielWrapper(raw_environment)
-  environment = wrappers.SinglePrecisionWrapper(environment)  # type: open_spiel_wrapper.OpenSpielWrapper
+  environment = wrappers.SinglePrecisionWrapper(environment)  # type: open_spiel_wrapper.OpenSpielWrapper  # pytype: disable=annotation-type-mismatch
   environment_spec = acme.make_environment_spec(environment)
 
   # Build the networks.
