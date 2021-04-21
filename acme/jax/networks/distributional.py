@@ -197,7 +197,7 @@ class TanhTransformedDistribution(tfd.TransformedDistribution):
 
 
 class NormalTanhDistribution(hk.Module):
-  """Module that produces a tfd.MultivariateNormalDiag distribution."""
+  """Module that produces a TanhTransformedDistribution distribution."""
 
   def __init__(self,
                num_dimensions: int,
@@ -208,7 +208,7 @@ class NormalTanhDistribution(hk.Module):
     """Initialization.
 
     Args:
-      num_dimensions: Number of dimensions of MVN distribution.
+      num_dimensions: Number of dimensions of a distribution.
       min_scale: Minimum standard deviation.
       w_init: Initialization for linear layer weights.
       b_init: Initialization for linear layer biases.
