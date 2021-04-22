@@ -15,6 +15,7 @@
 
 """Default logger."""
 
+import logging
 from typing import Any, Callable, Mapping, Optional
 
 from acme.utils.loggers import aggregators
@@ -51,7 +52,7 @@ def make_default_logger(
   """
   del steps_key
   if not print_fn:
-    print_fn = print
+    print_fn = logging.info
   terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
 
   loggers = [terminal_logger]

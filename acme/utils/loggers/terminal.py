@@ -15,6 +15,7 @@
 
 """Utilities for logging to the terminal."""
 
+import logging
 import time
 from typing import Any, Callable
 
@@ -65,7 +66,7 @@ class TerminalLogger(base.Logger):
   def __init__(
       self,
       label: str = '',
-      print_fn: Callable[[str], None] = print,
+      print_fn: Callable[[str], None] = logging.info,
       serialize_fn: Callable[[base.LoggingData], str] = serialize,
       time_delta: float = 0.0,
   ):
