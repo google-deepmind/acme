@@ -1,9 +1,11 @@
 # Agents
 
-Acme includes a number of pre-built agents listed below. These are all
-single-process agents. While there is currently no plan to release the
-distributed variants of these agents, they share the exact same learning and
-acting code as their single-process counterparts available in this repository.
+Acme includes a number of pre-built agents listed below. All are
+provided as single-process agents, but we also include a distributed
+implementation using [Launchpad](https://github.com/deepmind/launchpad),
+with more examples coming soon.
+Distributed agents share the exact same learning and acting code as their
+single-process counterparts.
 
 We've also listed the agents below in separate sections based on their different
 use cases, however these distinction are often subtle. For more information on

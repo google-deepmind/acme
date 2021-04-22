@@ -34,6 +34,7 @@ pip install .[tf]
 pip install .[reverb]
 pip install .[envs]
 pip install .[testing]
+pip install .[launchpad]
 
 # Install manually since extra_dependencies ignores the foo[bar] notation.
 pip install gym[atari]

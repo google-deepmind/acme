@@ -36,9 +36,3 @@
 
 -   **How should I spell Acme?** Acme is a proper noun, not an acronym, and
     hence should be spelled "Acme" without caps.
-
--   **Do you plan to release the distributed agents?** We've only open-sourced
-    our single-process agents. Internally, our distributed agents run the same
-    code as these open-sourced agents but are tied to Launchpad and other
-    DeepMind infrastructure. We don’t currently have a timetable for releasing
-    these components.

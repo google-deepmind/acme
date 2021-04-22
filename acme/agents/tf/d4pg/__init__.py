@@ -15,4 +15,5 @@
 """Implementations of a D4PG agent."""
 
 from acme.agents.tf.d4pg.agent import D4PG
+from acme.agents.tf.d4pg.agent_distributed import DistributedD4PG
 from acme.agents.tf.d4pg.learning import D4PGLearner

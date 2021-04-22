@@ -101,6 +101,15 @@ We have tested `acme` on Python 3.6, 3.7 & 3.8.
     pip install dm-acme[jax]
     ```
 
+1.  To install support for distributed agents:
+
+    ```bash
+    pip install dm-acme[launchpad]
+    ```
+
+    See [here](https://github.com/deepmind/acme/tree/master/examples/gym/lp_d4pg_local.py)
+    for an example of an agent using launchpad. More to come soon!
+
 1.  Finally, to install a few example environments (including [gym],
     [dm_control], and [bsuite]):
 
