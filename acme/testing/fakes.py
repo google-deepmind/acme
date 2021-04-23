@@ -366,10 +366,12 @@ def transition_iterator(
   return lambda batch_size: dataset.batch(batch_size).as_numpy_iterator()
 
 
-def fake_atari_wrapped(oar_wrapper: bool = False) -> dm_env.Environment:
+def fake_atari_wrapped(episode_length: int = 10,
+                       oar_wrapper: bool = False) -> dm_env.Environment:
   """Builds fake version of the environment to be used by tests.
 
   Args:
+    episode_length: The length of episodes produced by this environment.
     oar_wrapper: Should ObservationActionRewardWrapper be applied.
 
   Returns:
@@ -381,7 +383,7 @@ def fake_atari_wrapped(oar_wrapper: bool = False) -> dm_env.Environment:
       num_observations=2,
       obs_shape=(84, 84, 4),
       obs_dtype=np.float32,
-      episode_length=10)
+      episode_length=episode_length)
 
   if oar_wrapper:
     env = wrappers.ObservationActionRewardWrapper(env)
