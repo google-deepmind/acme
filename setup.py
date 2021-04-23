@@ -37,6 +37,7 @@ tf_requirements = [
     'tfp-nightly',
     'dm-sonnet',
     'trfl',
+    'tensorflow_datasets',
 ]
 
 jax_requirements = [
