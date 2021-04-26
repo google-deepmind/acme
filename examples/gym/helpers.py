@@ -20,10 +20,12 @@ from typing import Mapping, Sequence
 from acme import specs
 from acme import types
 from acme import wrappers
+from acme.datasets import tfds
 from acme.tf import networks
 from acme.tf import utils as tf2_utils
 import dm_env
 import gym
+import jax
 import numpy as np
 import sonnet as snt
 
@@ -90,3 +92,11 @@ def make_networks(
       'critic': critic_network,
       'observation': observation_network,
   }
+
+
+def make_demonstration_iterator(batch_size: int,
+                                dataset_name: str,
+                                seed: int = 0):
+  dataset = tfds.get_tfds_dataset(dataset_name)
+  return tfds.JaxInMemoryRandomSampleIterator(dataset, jax.random.PRNGKey(seed),
+                                              batch_size)
