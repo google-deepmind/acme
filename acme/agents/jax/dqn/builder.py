@@ -95,6 +95,7 @@ class DQNBuilder(builders.ActorLearnerBuilder):
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:
+    assert variable_source is not None
     key, self._random_key = jax.random.split(self._random_key)
     return actors.FeedForwardActor(
         policy=policy_network,
