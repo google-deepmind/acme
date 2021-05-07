@@ -16,12 +16,19 @@
 """
 import functools
 import operator
+from typing import Callable
 
+from acme import core
+from acme import environment_loop
 from acme import specs
 from acme import types
+from acme.agents.jax import actors
 from acme.agents.tf.dqfd import bsuite_demonstrations
 from acme.jax import networks as networks_lib
 from acme.jax import utils
+from acme.jax import variable_utils
+from acme.utils import counting
+from acme.utils import loggers
 from acme.wrappers import single_precision
 import bsuite
 import dm_env
@@ -129,3 +136,53 @@ def make_demonstrations(env: dm_env.Environment,
   dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
   return dataset
+
+
+def make_actor_evaluator(
+    environment_factory: Callable[[bool], dm_env.Environment],
+    evaluator_network: actors.FeedForwardPolicy,
+    random_key: networks_lib.PRNGKey,
+) -> Callable[[core.VariableSource, counting.Counter], core.Worker]:
+  """Makes an evaluator that runs the agent on the environment.
+
+  Args:
+    environment_factory: Function that creates a dm_env.
+    evaluator_network: Network to be use by the actor.
+    random_key: A random key.
+
+  Returns:
+    actor_evaluator: Function that returns a Worker that will be executed
+      by launchpad.
+  """
+  def actor_evaluator(
+      variable_source: core.VariableSource,
+      counter: counting.Counter,
+  ):
+    """The evaluation process."""
+    # Create the actor loading the weights from variable source.
+    actor = actors.FeedForwardActor(
+        policy=evaluator_network,
+        random_key=random_key,
+        # Inference happens on CPU, so it's better to move variables there too.
+        variable_client=variable_utils.VariableClient(
+            variable_source, 'policy', device='cpu'))
+
+    # Logger.
+    logger = loggers.make_default_logger(
+        'evaluator', steps_key='evaluator_steps')
+
+    # Create environment and evaluator networks
+    environment = environment_factory(False)
+
+    # Create logger and counter.
+    counter = counting.Counter(counter, 'evaluator')
+
+    # Create the run loop and return it.
+    return environment_loop.EnvironmentLoop(
+        environment,
+        actor,
+        counter,
+        logger,
+    )
+
+  return actor_evaluator
