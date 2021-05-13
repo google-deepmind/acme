@@ -42,6 +42,22 @@ class VariableClientTest(absltest.TestCase):
     tree.map_structure(np.testing.assert_array_equal, variable_client.params,
                        params)
 
+  def test_multiple_keys(self):
+    init_fn, _ = hk.without_apply_rng(
+        hk.transform(dummy_network, apply_rng=True))
+    params = init_fn(jax.random.PRNGKey(1), jnp.zeros(shape=(1, 32)))
+    steps = jnp.zeros(shape=1)
+    variables = {'network': params, 'steps': steps}
+    variable_source = fakes.VariableSource(variables, use_default_key=False)
+    variable_client = variable_utils.VariableClient(
+        variable_source, key=['network', 'steps'])
+    variable_client.update_and_wait()
+
+    tree.map_structure(np.testing.assert_array_equal, variable_client.params[0],
+                       params)
+    tree.map_structure(np.testing.assert_array_equal, variable_client.params[1],
+                       steps)
+
 
 if __name__ == '__main__':
   absltest.main()

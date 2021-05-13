@@ -36,7 +36,8 @@ class VariableClient:
 
     Args:
       client: A variable source from which we fetch variables.
-      key: Which variables to request.
+      key: Which variables to request. When multiple keys are used, params
+        property will return a list of params.
       update_period: Interval between fetches.
       device: The name of a JAX device to put variables on. If None (default),
         don't put to device.
@@ -44,7 +45,7 @@ class VariableClient:
     self._update_period = update_period
     self._call_counter = 0
     self._client = client
-    self._params = None
+    self._params: Sequence[network_types.Params] = None
     self._device = None
     if device:
       self._device = jax.devices(device)[0]
@@ -98,16 +99,19 @@ class VariableClient:
     self._callback(self._request())
 
   def _callback(self, params_list: List[network_types.Params]):
-    assert len(params_list) == 1
-    params = params_list.pop()
     if self._device:
       # Move variables to a proper device.
-      self._params = jax.device_put(params, self._device)
+      self._params = jax.device_put(params_list, self._device)
     else:
-      self._params = params
+      self._params = params_list
 
   @property
-  def params(self) -> network_types.Params:
+  def params(self) -> Union[network_types.Params, List[network_types.Params]]:
+    """Returns the first params for one key, otherwise the whole params list."""
     if self._params is None:
       self.update_and_wait()
-    return self._params
+
+    if len(self._params) == 1:
+      return self._params[0]
+    else:
+      return self._params

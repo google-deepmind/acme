@@ -65,10 +65,14 @@ class VariableSource(core.VariableSource):
   """Fake variable source."""
 
   def __init__(self,
-               variables: types.NestedArray = None,
-               barrier: threading.Barrier = None):
+               variables: Optional[types.NestedArray] = None,
+               barrier: Optional[threading.Barrier] = None,
+               use_default_key: bool = True):
     # Add dummy variables so we can expose them in get_variables.
-    self._variables = {'policy': [] if variables is None else variables}
+    if use_default_key:
+      self._variables = {'policy': [] if variables is None else variables}
+    else:
+      self._variables = variables
     self._barrier = barrier
 
   def get_variables(self, names: List[str]) -> List[types.NestedArray]:
