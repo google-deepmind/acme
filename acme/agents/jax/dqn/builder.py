@@ -134,8 +134,7 @@ class DQNBuilder(builders.ActorLearnerBuilder):
         server_address=replay_client.server_address,
         batch_size=(
             self._config.batch_size * self._config.num_sgd_steps_per_step),
-        prefetch_size=self._config.prefetch_size,
-        transition_adder=True)
+        prefetch_size=self._config.prefetch_size)
     return dataset.as_numpy_iterator()
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:

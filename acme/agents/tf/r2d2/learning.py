@@ -112,7 +112,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
     # fill the replay buffer.
     self._timestamp = None
 
-  @tf.function
+  # @tf.function
   def _step(self) -> Dict[str, tf.Tensor]:
 
     # Draw a batch of data from replay.
@@ -173,7 +173,6 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
       # Calculate importance weights and use them to scale the loss.
       sample_info = sample.info
       keys, probs = sample_info.key, sample_info.probability
-      probs = tf2_utils.batch_to_sequence(probs)
       importance_weights = 1. / (self._max_replay_size * probs)  # [T, B]
       importance_weights **= self._importance_sampling_exponent
       importance_weights /= tf.reduce_max(importance_weights)
@@ -201,7 +200,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
       # Compute priorities and add an op to update them on the reverb side.
       self._reverb_client.update_priorities(
           table=adders.DEFAULT_PRIORITY_TABLE,
-          keys=keys[:, 0],
+          keys=keys,
           priorities=tf.cast(priorities, tf.float64))
 
     return {'loss': loss}

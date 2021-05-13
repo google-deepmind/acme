@@ -15,66 +15,85 @@
 
 """Utilities for testing Reverb adders."""
 
-from typing import Any, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, TypeVar, Union
 
 from absl.testing import absltest
 from acme import specs
+from acme.adders import reverb as adders
 from acme.adders.reverb import base
+from acme.utils import tree_utils
 import dm_env
 import numpy as np
+import reverb
 import tensorflow as tf
 import tree
 
-Step = Union[Tuple[Any, dm_env.TimeStep],  # Without extras
-             Tuple[Any, dm_env.TimeStep, Any]]  # With extras
+StepWithExtra = Tuple[Any, dm_env.TimeStep, Any]
+StepWithoutExtra = Tuple[Any, dm_env.TimeStep]
+Step = TypeVar('Step', StepWithExtra, StepWithoutExtra)
 
 
-class FakeWriter:
+# TODO(b//185308702): consider replacing with a mock-like object.
+class FakeWriter(reverb.TrajectoryWriter):
   """Fake writer for testing."""
 
-  def __init__(self,
-               max_sequence_length,
-               delta_encoded=False,
-               chunk_length=None):
-    self.max_sequence_length = max_sequence_length
-    self.delta_encoded = delta_encoded
-    self.chunk_length = chunk_length
+  def __init__(self, writer: reverb.TrajectoryWriter):
+    self._writer = writer
+    self.num_episodes = 0
 
-    self.timesteps = []
     self.priorities = []
     self.closed = False
 
-  def append(self, timestep):
-    assert not self.closed, 'Trying to use closed Writer'
-    self.timesteps.append(timestep)
+  @property
+  def episode_steps(self):
+    return self._writer.episode_steps
 
-  def create_item(self, table, num_timesteps, priority):
+  @property
+  def history(self) -> Step:
+    return self._writer.history
+
+  def append(self, timestep: Step, partial_step: bool = False):
     assert not self.closed, 'Trying to use closed Writer'
-    assert num_timesteps <= len(self.timesteps)
-    assert num_timesteps <= self.max_sequence_length
-    item = self.timesteps[-num_timesteps:]
-    self.priorities.append((table, item, priority))
+    self._writer.append(timestep, partial_step=partial_step)
+
+  def create_item(self, table: str, priority: float, trajectory: Step):
+    assert not self.closed, 'Trying to use closed Writer'
+    trajectory_np = tree.map_structure(lambda x: x.numpy(), trajectory)
+    self.priorities.append((table, priority, trajectory_np))
+    self._writer.create_item(table, priority, trajectory)
 
   def close(self):
     assert not self.closed, 'Trying to use closed Writer'
     self.closed = True
+    self._writer.close()
+
+  def end_episode(self,
+                  clear_buffers: bool = False,
+                  timeout_ms: Optional[int] = None):
+    assert not self.closed, 'Trying to use closed Writer'
+    self.num_episodes += 1
+    self._writer.end_episode(clear_buffers=clear_buffers, timeout_ms=timeout_ms)
+
+  def flush(self,
+            block_until_num_items: int = 0,
+            timeout_ms: Optional[int] = None):
+    assert not self.closed, 'Trying to use closed Writer'
+    self._writer.flush(block_until_num_items=block_until_num_items,
+                       timeout_ms=timeout_ms)
 
 
-class FakeClient:
+class FakeClient(reverb.Client):
   """Fake client for testing."""
 
-  def __init__(self):
-    self.writers = []
+  def __init__(self, server_address: str):
+    super().__init__(server_address)
+    self.writer = None
 
-  def writer(self,
-             max_sequence_length,
-             delta_encoded=False,
-             chunk_length=None,
-             max_in_flight_items=None):
-    del max_in_flight_items
-    new_writer = FakeWriter(max_sequence_length, delta_encoded, chunk_length)
-    self.writers.append(new_writer)
-    return new_writer
+  def trajectory_writer(self,
+                        num_keep_alive_refs: int,
+                        get_signature_timeout_ms: Optional[int] = 3000):
+    self.writer = FakeWriter(super().trajectory_writer(num_keep_alive_refs))
+    return self.writer
 
 
 def make_trajectory(observations):
@@ -127,11 +146,32 @@ class AdderTestMixin(absltest.TestCase):
   that provides the Python unittest assert methods.
   """
 
-  client: FakeClient
+  server: reverb.Server
+  client: reverb.Client
+
+  @classmethod
+  def setUpClass(cls):
+    super().setUpClass()
+
+    replay_table = reverb.Table(
+        name=adders.DEFAULT_PRIORITY_TABLE,
+        sampler=reverb.selectors.Uniform(),
+        remover=reverb.selectors.Fifo(),
+        max_size=1000,
+        rate_limiter=reverb.rate_limiters.MinSize(1),
+    )
+    cls.server = reverb.Server([replay_table])
 
   def setUp(self):
     super().setUp()
-    self.client = FakeClient()
+    # The adder is used to insert observations into replay.
+    address = f'localhost:{self.server.port}'
+    self.client = FakeClient(address)
+
+  @classmethod
+  def tearDownClass(cls):
+    super().tearDownClass()
+    cls.server.stop()
 
   def run_test_adder(self,
                      adder: base.ReverbAdder,
@@ -139,6 +179,7 @@ class AdderTestMixin(absltest.TestCase):
                      steps: Sequence[Step],
                      expected_items: Sequence[Any],
                      pack_expected_items: bool = False,
+                     stack_sequence_fields: bool = True,
                      repeat_episode_times: int = 1,
                      break_end_of_episode: bool = True):
     """Runs a unit test case for the adder.
@@ -152,12 +193,18 @@ class AdderTestMixin(absltest.TestCase):
       expected_items: The sequence of items that are expected to be created
         by calling the adder's `add_first()` method on `first` and `add()` on
         all of the elements in `steps`.
-      pack_expected_items: If true the expected items are given unpacked and
-        need to be packed in a list before comparison.
+      pack_expected_items: Deprecated and not used. If true the expected items
+        are given unpacked and need to be packed in a list before comparison.
+      stack_sequence_fields: Whether to stack the sequence fields of the
+        expected items before comparing to the observed items. Usually False
+        for transition adders and True for both episode and sequence adders.
       repeat_episode_times: How many times to run an episode.
       break_end_of_episode: If False, an end of an episode does not break the
         sequence.
     """
+
+    del pack_expected_items
+
     if not steps:
       raise ValueError('At least one step must be given.')
 
@@ -194,34 +241,29 @@ class AdderTestMixin(absltest.TestCase):
     # Ending the episode should close the writer. No new writer should yet have
     # been created as it is constructed lazily.
     if break_end_of_episode:
-      self.assertTrue(all([w.closed for w in self.client.writers]))
+      self.assertEqual(self.client.writer.num_episodes, repeat_episode_times)
 
     # Make sure our expected and observed data match.
-    observed_items = []
-    for w in self.client.writers:
-      for p in w.priorities:
-        observed_items.append(p[1])
+    observed_items = [p[2] for p in self.client.writer.priorities]
 
+    # Check matching number of items.
     self.assertEqual(len(expected_items), len(observed_items))
+
+    # Check items are matching according to numpy's almost_equal.
     for expected_item, observed_item in zip(expected_items, observed_items):
-      if pack_expected_items:
-        expected_item = [expected_item]
-      # Set check_types=False because
+      if stack_sequence_fields:
+        expected_item = tree_utils.stack_sequence_fields(expected_item)
+
+      # Set check_types=False because we check them below.
       tree.map_structure(
           np.testing.assert_array_almost_equal,
           expected_item,
-          observed_item,
+          tuple(observed_item),
           check_types=False)
 
-    def _check_signature(spec: tf.TensorSpec, value):
-      # Convert int/float to numpy arrays of dtype np.int64 and np.float64.
-      value = np.asarray(value)
+    # Make sure the signature matches was is being written by Reverb.
+    def _check_signature(spec: tf.TensorSpec, value: np.ndarray):
       self.assertTrue(spec.is_compatible_with(tf.convert_to_tensor(value)))
 
-    for step in self.client.writers[0].timesteps:
-      tree.map_structure(_check_signature, signature, step)
-
-    if break_end_of_episode:
-      # Add the start of a second trajectory.
-      adder.add_first(first)
-      adder.add(*steps[0])
+    # Check the last transition's signature.
+    tree.map_structure(_check_signature, signature, observed_items[-1])

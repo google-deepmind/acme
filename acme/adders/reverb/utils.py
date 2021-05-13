@@ -66,8 +66,9 @@ def final_step_like(step: base.Step,
       extras=zero_extras)
 
 
-def calculate_priorities(priority_fns: base.PriorityFnMapping,
-                         steps: Sequence[base.Step]) -> Dict[str, float]:
+def calculate_priorities(
+    priority_fns: base.PriorityFnMapping,
+    steps: Union[base.Step, Sequence[base.Step]]) -> Dict[str, float]:
   """Helper used to calculate the priority of a sequence of steps.
 
   This converts the sequence of steps into a PriorityFnInput tuple where the
@@ -95,9 +96,12 @@ def calculate_priorities(priority_fns: base.PriorityFnMapping,
     given collection of steps.
   """
 
+  if isinstance(steps, list):
+    steps = tf2_utils.stack_sequence_fields(steps)
+
   if any([priority_fn is not None for priority_fn in priority_fns.values()]):
     # Stack the steps and wrap them as PrioityFnInput.
-    fn_input = base.PriorityFnInput(*tf2_utils.stack_sequence_fields(steps))
+    fn_input = base.PriorityFnInput(*steps)
 
   return {
       table: (priority_fn(fn_input) if priority_fn else 1.0)

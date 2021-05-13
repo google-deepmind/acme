@@ -16,9 +16,9 @@
 """Adders that use Reverb (github.com/deepmind/reverb) as a backend."""
 
 import abc
-import collections
 from typing import Callable, Iterable, Mapping, NamedTuple, Optional, Union, Tuple
 
+from absl import logging
 from acme import specs
 from acme import types
 from acme.adders import base
@@ -29,6 +29,8 @@ import tensorflow as tf
 import tree
 
 DEFAULT_PRIORITY_TABLE = 'priority_table'
+StartOfEpisodeType = Union[bool, specs.Array, tf.Tensor, tf.TensorSpec,
+                           Tuple[()]]
 
 
 class Step(NamedTuple):
@@ -37,8 +39,8 @@ class Step(NamedTuple):
   action: types.NestedArray
   reward: types.NestedArray
   discount: types.NestedArray
-  start_of_episode: Union[bool, specs.Array, tf.Tensor, Tuple[()]]
-  extras: types.NestedArray
+  start_of_episode: StartOfEpisodeType
+  extras: types.NestedArray = ()
 
 
 class PriorityFnInput(NamedTuple):
@@ -66,29 +68,25 @@ class ReverbAdder(base.Adder):
   def __init__(
       self,
       client: reverb.Client,
-      buffer_size: int,
       max_sequence_length: int,
+      max_in_flight_items: int,
       delta_encoded: bool = False,
-      chunk_length: Optional[int] = None,
       priority_fns: Optional[PriorityFnMapping] = None,
-      max_in_flight_items: Optional[int] = 25,
   ):
     """Initialize a ReverbAdder instance.
 
     Args:
       client: A client to the Reverb backend.
-      buffer_size: Number of steps to retain in memory.
       max_sequence_length: The maximum length of sequences (corresponding to the
         number of observations) that can be added to replay.
+      max_in_flight_items: The maximum number of items allowed to be "in flight"
+        at the same time. See `block_until_num_items` in
+        `reverb.TrajectoryWriter.flush` for more info.
       delta_encoded: If `True` (False by default) enables delta encoding, see
         `Client` for more information.
-      chunk_length: Number of timesteps grouped together before delta encoding
-        and compression. See `Client` for more information.
       priority_fns: A mapping from table names to priority functions; if
         omitted, all transitions/steps/sequences are given uniform priorities
         (1.0) and placed in DEFAULT_PRIORITY_TABLE.
-      max_in_flight_items: The maximum number of items allowed to be "in flight"
-        at the same time. See `reverb.Writer.writer` for more info.
     """
     if priority_fns:
       priority_fns = dict(priority_fns)
@@ -99,50 +97,51 @@ class ReverbAdder(base.Adder):
     self._priority_fns = priority_fns
     self._max_sequence_length = max_sequence_length
     self._delta_encoded = delta_encoded
-    self._chunk_length = chunk_length
     self._max_in_flight_items = max_in_flight_items
 
     # This is exposed as the _writer property in such a way that it will create
     # a new writer automatically whenever the internal __writer is None. Users
     # should ONLY ever interact with self._writer.
     self.__writer = None
-
-    # The state of the adder is captured by a buffer of `buffer_size` steps
-    # (generally SAR tuples) and one additional dangling observation.
-    self._buffer = collections.deque(maxlen=buffer_size)
-    self._next_observation = None
-    self._start_of_episode = False
+    # Every time a new writer is created, it must fetch the signature from the
+    # Reverb server. If this is set too low it can crash the adders in a
+    # distributed setup where the replay may take a while to spin up.
+    self._get_signature_timeout_ms = 300_000
 
   def __del__(self):
     if self.__writer is not None:
-      # Explicitly close the writer with no retry on server unavailable.
-      # This is to avoid hang on closing if the server has already terminated.
-      self.__writer.close(retry_on_unavailable=False)
+      timeout_ms = 10_000
+      # Try flush all appended data before closing to avoid loss of experience.
+      try:
+        self.__writer.flush(self._max_in_flight_items, timeout_ms=timeout_ms)
+      except reverb.DeadlineExceededError as e:
+        logging.error(
+            'Timeout (%d ms) exceeded when flushing the writer before '
+            'deleting it. Caught Reverb exception: %s', timeout_ms, str(e))
+      self.__writer.close()
 
   @property
-  def _writer(self) -> reverb.Writer:
+  def _writer(self) -> reverb.TrajectoryWriter:
     if self.__writer is None:
-      self.__writer = self._client.writer(
-          self._max_sequence_length,
-          delta_encoded=self._delta_encoded,
-          chunk_length=self._chunk_length,
-          max_in_flight_items=self._max_in_flight_items)
+      self.__writer = self._client.trajectory_writer(
+          num_keep_alive_refs=self._max_sequence_length,
+          get_signature_timeout_ms=self._get_signature_timeout_ms)
     return self.__writer
 
   def add_priority_table(self, table_name: str,
                          priority_fn: Optional[PriorityFn]):
     if table_name in self._priority_fns:
       raise ValueError(
-          'A priority function already exists for {}.'.format(table_name))
+          f'A priority function already exists for {table_name}. '
+          f'Existing tables: {", ".join(self._priority_fns.keys())}.'
+      )
     self._priority_fns[table_name] = priority_fn
 
-  def reset(self):
+  def reset(self, timeout_ms: Optional[int] = None):
     """Resets the adder's buffer."""
     if self.__writer:
-      self._writer.close()
-      self.__writer = None
-    self._buffer.clear()
-    self._next_observation = None
+      # Flush all appended data and clear the buffers.
+      self.__writer.end_episode(clear_buffers=True, timeout_ms=timeout_ms)
 
   def add_first(self, timestep: dm_env.TimeStep):
     """Record the first observation of a trajectory."""
@@ -150,53 +149,48 @@ class ReverbAdder(base.Adder):
       raise ValueError('adder.add_first with an initial timestep (i.e. one for '
                        'which timestep.first() is True')
 
-    if self._next_observation is not None:
-      raise ValueError('adder.reset must be called before adder.add_first '
-                       '(called automatically if `next_timestep.last()` is '
-                       'true when `add` is called).')
-
-    # Record the next observation.
-    self._next_observation = timestep.observation
-    self._start_of_episode = True
+    # Record the next observation but leave the history buffer row open by
+    # passing `partial_step=True`.
+    self._writer.append(dict(observation=timestep.observation,
+                             start_of_episode=timestep.first()),
+                        partial_step=True)
 
   def add(self,
           action: types.NestedArray,
           next_timestep: dm_env.TimeStep,
           extras: types.NestedArray = ()):
     """Record an action and the following timestep."""
-    if self._next_observation is None:
+
+    try:
+      history = self._writer.history
+    except RuntimeError:
       raise ValueError('adder.add_first must be called before adder.add.')
 
-    discount = next_timestep.discount
-    if next_timestep.last():
-      # Terminal timesteps created by dm_env.termination() will have a scalar
-      # discount of 0.0. This may not match the array shape / nested structure
-      # of the previous timesteps' discounts. The below will match
-      # next_timestep.discount's shape/structure to that of
-      # self._buffer[-1].discount.
-      if self._buffer and not tree.is_nested(next_timestep.discount):
-        discount = tree.map_structure(
-            lambda d: np.broadcast_to(next_timestep.discount, np.shape(d)),
-            self._buffer[-1].discount)
-
     # Add the timestep to the buffer.
-    self._buffer.append(
-        Step(
-            observation=self._next_observation,
-            action=action,
-            reward=next_timestep.reward,
-            discount=discount,
-            start_of_episode=self._start_of_episode,
-            extras=extras,
-        ))
+    current_step = dict(
+        # Observation was passed at the previous add call.
+        action=action,
+        reward=next_timestep.reward,
+        discount=next_timestep.discount,
+        # Start of episode indicator was passed at the previous add call.
+        **({'extras': extras} if extras else {})
+    )
+    self._writer.append(current_step)
 
     # Record the next observation and write.
-    self._next_observation = next_timestep.observation
-    self._start_of_episode = False
+    self._writer.append(
+        dict(
+            observation=next_timestep.observation,
+            start_of_episode=next_timestep.first()),
+        partial_step=True)
     self._write()
 
-    # Write the last "dangling" observation.
     if next_timestep.last():
+      # Complete the row by appending zeros to remaining open fields.
+      # TODO(b/183945808): remove this when fields are no longer expected to be
+      # of equal length on the learner side.
+      dummy_step = tree.map_structure(np.zeros_like, current_step)
+      self._writer.append(dummy_step)
       self._write_last()
       self.reset()
 

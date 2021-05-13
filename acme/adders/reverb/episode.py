@@ -18,14 +18,21 @@
 This implements full episode adders, potentially with padding.
 """
 
-from typing import Optional
+from typing import Callable, Optional, Iterable, Tuple
 
+from acme import specs
 from acme import types
 from acme.adders.reverb import base
 from acme.adders.reverb import utils
 
 import dm_env
+import numpy as np
 import reverb
+import tensorflow as tf
+import tree
+
+
+_PaddingFn = Callable[[Tuple[int, ...], np.dtype], np.ndarray]
 
 
 class EpisodeAdder(base.ReverbAdder):
@@ -36,17 +43,22 @@ class EpisodeAdder(base.ReverbAdder):
       client: reverb.Client,
       max_sequence_length: int,
       delta_encoded: bool = False,
-      chunk_length: Optional[int] = None,
       priority_fns: Optional[base.PriorityFnMapping] = None,
+      max_in_flight_items: int = 1,
+      padding_fn: Optional[_PaddingFn] = None,
+      # Deprecated kwargs.
+      chunk_length: Optional[int] = None,
   ):
+    del chunk_length
+
     super().__init__(
         client=client,
-        buffer_size=max_sequence_length - 1,
         max_sequence_length=max_sequence_length,
         delta_encoded=delta_encoded,
-        chunk_length=chunk_length,
         priority_fns=priority_fns,
+        max_in_flight_items=max_in_flight_items,
     )
+    self._padding_fn = padding_fn
 
   def add(
       self,
@@ -54,33 +66,86 @@ class EpisodeAdder(base.ReverbAdder):
       next_timestep: dm_env.TimeStep,
       extras: types.NestedArray = (),
   ):
-    if len(self._buffer) == self._buffer.maxlen:
-      # If the buffer is full that means we've buffered max_sequence_length-1
-      # steps, one dangling observation, and are trying to add one more (which
-      # will overflow the buffer).
+    if self._writer.episode_steps >= self._max_sequence_length - 1:
       raise ValueError(
-          'The number of observations within the same episode exceeds '
-          'max_sequence_length')
+          'The number of observations within the same episode will exceed '
+          'max_sequence_length with the addition of this transition.')
 
     super().add(action, next_timestep, extras)
 
   def _write(self):
-    # Append the previous step.
-    self._writer.append(self._buffer[-1])
+    # This adder only writes at the end of the episode, see _write_last()
+    pass
 
   def _write_last(self):
-    # Append a zero-filled final step.
-    final_step = utils.final_step_like(self._buffer[0], self._next_observation)
-    self._writer.append(final_step)
+    if self._padding_fn is not None and self._writer.episode_steps < self._max_sequence_length:
+      history = self._writer.history
+      padding_step = dict(
+          observation=history['observation'],
+          action=history['action'],
+          reward=history['reward'],
+          discount=history['discount'],
+          extras=history.get('extras', ()))
+      # Get shapes and dtypes from the last element.
+      padding_step = tree.map_structure(
+          lambda col: self._padding_fn(col[-1].shape, col[-1].dtype),
+          padding_step)
+      padding_step['start_of_episode'] = False
+      while self._writer.episode_steps < self._max_sequence_length:
+        self._writer.append(padding_step)
 
-    # The length of the sequence we will be adding is the size of the buffer
-    # plus one due to the final step.
-    steps = list(self._buffer) + [final_step]
-    num_steps = len(steps)
+    trajectory = tree.map_structure(lambda x: x[:], self._writer.history)
+
+    # Pack the history into a base.Step structure and get numpy converted
+    # variant for priotiy computation.
+    trajectory = base.Step(**trajectory)
+    trajectory_np = tree.map_structure(lambda x: x.numpy(), trajectory)
 
     # Calculate the priority for this episode.
-    table_priorities = utils.calculate_priorities(self._priority_fns, steps)
+    table_priorities = utils.calculate_priorities(self._priority_fns,
+                                                  trajectory_np)
 
     # Create a prioritized item for each table.
     for table_name, priority in table_priorities.items():
-      self._writer.create_item(table_name, num_steps, priority)
+      self._writer.create_item(table_name, priority, trajectory)
+
+  # TODO(b/185309817): make this into a standalone method.
+  @classmethod
+  def signature(cls, environment_spec: specs.EnvironmentSpec,
+                extras_spec: types.NestedSpec = (),
+                sequence_length: Optional[int] = None):
+    """This is a helper method for generating signatures for Reverb tables.
+
+    Signatures are useful for validating data types and shapes, see Reverb's
+    documentation for details on how they are used.
+
+    Args:
+      environment_spec: A `specs.EnvironmentSpec` whose fields are nested
+        structures with leaf nodes that have `.shape` and `.dtype` attributes.
+        This should come from the environment that will be used to generate
+        the data inserted into the Reverb table.
+      extras_spec: A nested structure with leaf nodes that have `.shape` and
+        `.dtype` attributes. The structure (and shapes/dtypes) of this must
+        be the same as the `extras` passed into `ReverbAdder.add`.
+      sequence_length: An optional integer representing the expected length of
+        sequences that will be added to replay.
+
+    Returns:
+      A `Step` whose leaf nodes are `tf.TensorSpec` objects.
+    """
+
+    def add_time_dim(paths: Iterable[str], spec: tf.TensorSpec):
+      return tf.TensorSpec(shape=(sequence_length, *spec.shape),
+                           dtype=spec.dtype,
+                           name='/'.join(str(p) for p in paths))
+
+    trajectory_env_spec, trajectory_extras_spec = tree.map_structure_with_path(
+        add_time_dim, (environment_spec, extras_spec))
+
+    trajectory_spec = base.Step(
+        *trajectory_env_spec,
+        start_of_episode=tf.TensorSpec(
+            shape=(sequence_length,), dtype=tf.bool, name='start_of_episode'),
+        extras=trajectory_extras_spec)
+
+    return trajectory_spec

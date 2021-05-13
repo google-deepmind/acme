@@ -79,8 +79,6 @@ def make_reverb_prioritized_nstep_replay(
       server_address=address,
       batch_size=batch_size,
       prefetch_size=prefetch_size,
-      environment_spec=environment_spec,
-      transition_adder=True,
   ).as_numpy_iterator()
   return ReverbReplay(server, adder, data_iterator, client=client)
 
@@ -114,12 +112,11 @@ def make_reverb_online_queue(
   # The dataset object to learn from.
   # We don't use datasets.make_reverb_dataset() here to avoid interleaving
   # and prefetching, that doesn't work well with can_sample() check on update.
-  dataset = reverb.ReplayDataset.from_table_signature(
+  dataset = reverb.TrajectoryDataset.from_table_signature(
       server_address=address,
       table=replay_table_name,
       max_in_flight_samples_per_worker=1,
-      sequence_length=sequence_length,
-      emit_timesteps=False)
+      )
   dataset = dataset.batch(batch_size, drop_remainder=True)
   data_iterator = dataset.as_numpy_iterator()
   return ReverbReplay(server, adder, data_iterator, can_sample=can_sample)
@@ -168,8 +165,5 @@ def make_reverb_prioritized_sequence_replay(
       server_address=address,
       batch_size=batch_size,
       prefetch_size=prefetch_size,
-      environment_spec=environment_spec,
-      extra_spec=extra_spec,
-      sequence_length=sequence_length,
   ).as_numpy_iterator()
   return ReverbReplay(server, adder, data_iterator, client)

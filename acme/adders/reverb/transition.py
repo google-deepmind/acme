@@ -20,9 +20,8 @@ into a single transition, simplifying to a simple transition adder when N=1.
 """
 
 import copy
-import itertools
 import operator
-from typing import Optional
+from typing import Optional, Tuple
 
 from acme import specs
 from acme import types
@@ -110,30 +109,113 @@ class NStepTransitionAdder(base.ReverbAdder):
     """
     # Makes the additional discount a float32, which means that it will be
     # upcast if rewards/discounts are float64 and left alone otherwise.
+    self.n_step = n_step
     self._discount = tree.map_structure(np.float32, discount)
-
-    # Creates a placeholder for the final Step, which will have zeros for every
-    # member except the observation.
-    self._final_step_placeholder: Optional[base.Step] = None
+    self._first_idx = 0
+    self._last_idx = 0
 
     super().__init__(
         client=client,
-        buffer_size=n_step,
-        max_sequence_length=1,
-        priority_fns=priority_fns)
+        max_sequence_length=n_step + 1,
+        priority_fns=priority_fns,
+        max_in_flight_items=50)
+
+  def add(self, *args, **kwargs):
+    # Increment the indices for the start and end of the window for computing
+    # n-step returns.
+    if self._writer.episode_steps >= self.n_step:
+      self._first_idx += 1
+    self._last_idx += 1
+
+    super().add(*args, **kwargs)
+
+  def reset(self):
+    super().reset()
+    self._first_idx = 0
+    self._last_idx = 0
+
+  @property
+  def _n_step(self) -> int:
+    """Effective n-step, which may vary at starts and ends of episodes."""
+    return self._last_idx - self._first_idx
 
   def _write(self):
-    # NOTE: we do not check that the buffer is of length N here. This means
-    # that at the beginning of an episode we will add the initial N-1
+    # Convenient getters for use in tree operations.
+    get_first = lambda x: x[self._first_idx]
+    get_last = lambda x: x[self._last_idx]
+    # Note: this getter is meant to be used on a TrajectoryWriter.history to
+    # obtain its numpy values.
+    get_all_np = lambda x: x[self._first_idx:self._last_idx].numpy()
+
+    # Get the state, action, next_state, as well as possibly extras for the
+    # transition that is about to be written.
+    s, a = tree.map_structure(
+        get_first,
+        (self._writer.history['observation'], self._writer.history['action']))
+    s_ = tree.map_structure(get_last, self._writer.history['observation'])
+
+    # Maybe get extras to add to the transition later.
+    if 'extras' in self._writer.history:
+      extras = tree.map_structure(get_first, self._writer.history['extras'])
+
+    # Note: at the beginning of an episode we will add the initial N-1
     # transitions (of size 1, 2, ...) and at the end of an episode (when
     # called from write_last) we will write the final transitions of size (N,
     # N-1, ...). See the Note in the docstring.
+    # Get numpy view of the steps to be fed into the priority functions.
+    history_np = tree.map_structure(get_all_np, {
+        k: v for k, v in self._writer.history.items() if k in base.Step._fields
+    })
 
-    # Form the n-step transition given the steps.
-    observation = self._buffer[0].observation
-    action = self._buffer[0].action
-    extras = self._buffer[0].extras
-    next_observation = self._next_observation
+    # Compute discounted return and geometric discount over n steps.
+    n_step_return, total_discount = self._compute_cumulative_quantities(
+        history_np)
+
+    # Append the computed n-step return and total discount.
+    # Note: if this call to _write() is within a call to _write_last(), then
+    # this is the only data being appended and so it is not a partial append.
+    self._writer.append(
+        dict(n_step_return=n_step_return, total_discount=total_discount),
+        partial_step=self._writer.episode_steps <= self._last_idx)
+
+    # Form the n-step transition by using the following:
+    # the first observation and action in the buffer, along with the cumulative
+    # reward and discount computed above.
+    n_step_return, total_discount = tree.map_structure(
+        lambda x: x[-1], (self._writer.history['n_step_return'],
+                          self._writer.history['total_discount']))
+    transition = types.Transition(
+        observation=s,
+        action=a,
+        reward=n_step_return,
+        discount=total_discount,
+        next_observation=s_,
+        extras=(extras if 'extras' in self._writer.history else ()))
+
+    # Calculate the priority for this transition.
+    table_priorities = utils.calculate_priorities(self._priority_fns,
+                                                  base.Step(**history_np))
+
+    # Insert the transition into replay along with its priority.
+    for table, priority in table_priorities.items():
+      self._writer.create_item(
+          table=table, priority=priority, trajectory=transition)
+
+  def _write_last(self):
+    # Write the remaining shorter transitions by alternating writing and
+    # incrementingfirst_idx. Note that last_idx will no longer be incremented
+    # once we're in this method's scope.
+    self._first_idx += 1
+    while self._first_idx < self._last_idx:
+      self._write()
+      self._first_idx += 1
+
+  def _compute_cumulative_quantities(
+      self, history: types.NestedArray
+  ) -> Tuple[types.NestedArray, types.NestedArray]:
+
+    first_step, *next_steps = tree_utils.unstack_sequence_fields(
+        history, self._n_step)
 
     # Give the same tree structure to the n-step return accumulator,
     # n-step discount accumulator, and self.discount, so that they can be
@@ -141,17 +223,15 @@ class NStepTransitionAdder(base.ReverbAdder):
     (n_step_return,
      total_discount,
      self_discount) = tree_utils.broadcast_structures(
-         self._buffer[0].reward,
-         self._buffer[0].discount,
+         first_step['reward'],
+         first_step['discount'],
          self._discount)
 
-    # Copy total_discount, so that accumulating into it doesn't affect
-    # _buffer[0].discount.
+    # Copy total_discount as it is otherwise read-only.
     total_discount = tree.map_structure(np.copy, total_discount)
 
     # Broadcast n_step_return to have the broadcasted shape of
-    # reward * discount. Also copy, to avoid accumulating into
-    # _buffer[0].reward.
+    # reward * discount.
     n_step_return = tree.map_structure(
         lambda r, d: np.copy(np.broadcast_to(r, np.broadcast(r, d).shape)),
         n_step_return,
@@ -161,12 +241,12 @@ class NStepTransitionAdder(base.ReverbAdder):
     # step.discounts. This is so that when the learner/update uses an additional
     # discount we don't apply it twice. Inside the following loop we will
     # apply this right before summing up the n_step_return.
-    for step in itertools.islice(self._buffer, 1, None):
+    for step in next_steps:
       (step_discount,
        step_reward,
        total_discount) = tree_utils.broadcast_structures(
-           step.discount,
-           step.reward,
+           step['discount'],
+           step['reward'],
            total_discount)
 
       # Equivalent to: `total_discount *= self._discount`.
@@ -181,40 +261,11 @@ class NStepTransitionAdder(base.ReverbAdder):
       # Equivalent to: `total_discount *= step.discount`.
       tree.map_structure(operator.imul, total_discount, step_discount)
 
-    transition = types.Transition(
-        observation=observation,
-        action=action,
-        reward=n_step_return,
-        discount=total_discount,
-        next_observation=next_observation,
-        extras=extras)
+    return n_step_return, total_discount
 
-    # Create a list of steps.
-    if self._final_step_placeholder is None:
-      # utils.final_step_like is expensive (around 0.085ms) to run every time
-      # so we cache its output.
-      self._final_step_placeholder = utils.final_step_like(self._buffer[0],
-                                                           next_observation)
-    final_step: base.Step = self._final_step_placeholder._replace(
-        observation=next_observation)
-    steps = list(self._buffer) + [final_step]
-
-    # Calculate the priority for this transition.
-    table_priorities = utils.calculate_priorities(self._priority_fns, steps)
-
-    # Insert the transition into replay along with its priority.
-    self._writer.append(transition)
-    for table, priority in table_priorities.items():
-      self._writer.create_item(
-          table=table, num_timesteps=1, priority=priority)
-
-  def _write_last(self):
-    # Drain the buffer until there are no transitions.
-    self._buffer.popleft()
-    while self._buffer:
-      self._write()
-      self._buffer.popleft()
-
+  # TODO(bshahr): make this into a standalone method. Class methods should be
+  # used as alternative constructors or when modifying some global state,
+  # neither of which is done here.
   @classmethod
   def signature(cls,
                 environment_spec: specs.EnvironmentSpec,

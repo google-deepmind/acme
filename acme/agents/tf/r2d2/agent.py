@@ -74,18 +74,18 @@ class R2D2(agent.Agent):
     else:
       extra_spec = ()
 
+    sequence_length = burn_in_length + trace_length + 1
     replay_table = reverb.Table(
         name=adders.DEFAULT_PRIORITY_TABLE,
         sampler=reverb.selectors.Prioritized(priority_exponent),
         remover=reverb.selectors.Fifo(),
         max_size=max_replay_size,
         rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1),
-        signature=adders.SequenceAdder.signature(environment_spec,
-                                                   extra_spec))
+        signature=adders.SequenceAdder.signature(
+            environment_spec, extra_spec, sequence_length=sequence_length))
     self._server = reverb.Server([replay_table], port=None)
     address = f'localhost:{self._server.port}'
 
-    sequence_length = burn_in_length + trace_length + 1
     # Component to add things into replay.
     adder = adders.SequenceAdder(
         client=reverb.Client(address),
@@ -97,8 +97,7 @@ class R2D2(agent.Agent):
     dataset = datasets.make_reverb_dataset(
         server_address=address,
         batch_size=batch_size,
-        prefetch_size=prefetch_size,
-        sequence_length=sequence_length)
+        prefetch_size=prefetch_size)
 
     target_network = copy.deepcopy(network)
     tf2_utils.create_variables(network, [environment_spec.observations])

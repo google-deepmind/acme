@@ -66,6 +66,7 @@ class R2D3(agent.Agent):
                max_replay_size: int = 1000000,
                samples_per_insert: float = 32.0):
 
+    sequence_length = burn_in_length + trace_length + 1
     extra_spec = {
         'core_state': network.initial_state(1),
     }
@@ -77,12 +78,11 @@ class R2D3(agent.Agent):
         remover=reverb.selectors.Fifo(),
         max_size=max_replay_size,
         rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1),
-        signature=adders.SequenceAdder.signature(environment_spec,
-                                                   extra_spec))
+        signature=adders.SequenceAdder.signature(
+            environment_spec, extra_spec, sequence_length=sequence_length))
     self._server = reverb.Server([replay_table], port=None)
     address = f'localhost:{self._server.port}'
 
-    sequence_length = burn_in_length + trace_length + 1
     # Component to add things into replay.
     sequence_kwargs = dict(
         period=replay_period,
@@ -93,8 +93,7 @@ class R2D3(agent.Agent):
 
     # The dataset object to learn from.
     dataset = datasets.make_reverb_dataset(
-        server_address=address,
-        sequence_length=sequence_length)
+        server_address=address)
 
     # Combine with demonstration dataset.
     transition = functools.partial(_sequence_from_episode,
@@ -215,10 +214,10 @@ def _sequence_from_episode(observations: acme_types.NestedTensor,
 
   e_t = tree.map_structure(_sequence_zeros, extra_spec)
 
-  key = tf.zeros([sequence_length], tf.uint64)
-  probability = tf.ones([sequence_length], tf.float64)
-  table_size = tf.ones([sequence_length], tf.int64)
-  priority = tf.ones([sequence_length], tf.float64)
+  key = tf.zeros([], tf.uint64)
+  probability = tf.ones([], tf.float64)
+  table_size = tf.ones([], tf.int64)
+  priority = tf.ones([], tf.float64)
   info = reverb.SampleInfo(
       key=key,
       probability=probability,

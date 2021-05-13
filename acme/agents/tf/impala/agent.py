@@ -69,7 +69,9 @@ class IMPALA(acme.Actor):
         name=adders.DEFAULT_PRIORITY_TABLE,
         max_size=max_queue_size,
         signature=adders.SequenceAdder.signature(
-            environment_spec, extras_spec=extra_spec))
+            environment_spec,
+            extras_spec=extra_spec,
+            sequence_length=sequence_length))
     self._server = reverb.Server([queue], port=None)
     self._can_sample = lambda: queue.can_sample(batch_size)
     address = f'localhost:{self._server.port}'
@@ -84,8 +86,7 @@ class IMPALA(acme.Actor):
     # The dataset object to learn from.
     dataset = datasets.make_reverb_dataset(
         server_address=address,
-        batch_size=batch_size,
-        sequence_length=sequence_length)
+        batch_size=batch_size)
 
     tf2_utils.create_variables(network, [environment_spec.observations])
 

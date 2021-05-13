@@ -68,20 +68,23 @@ TEST_CASES = [
             (
                 0,
                 dm_env.transition(reward=0.0, observation=2),
-                {'state': 0},
-
+                {
+                    'state': 0
+                },
             ),
             (
                 0,
                 dm_env.transition(reward=0.0, observation=3),
-                {'state': 1},
-
+                {
+                    'state': 1
+                },
             ),
             (
                 0,
                 dm_env.termination(reward=1.0, observation=4),
-                {'state': 2},
-
+                {
+                    'state': 2
+                },
             ),
         ),
         expected_transitions=(
@@ -111,14 +114,11 @@ TEST_CASES = [
         additional_discount=1.0,
         first=dm_env.restart(1),
         steps=(
-            (0, dm_env.transition(reward=(1.0, 2.0),
-                                  observation=2,
-                                  discount=0.5)),
-            (0, dm_env.transition(reward=(1.0, 2.0),
-                                  observation=3,
-                                  discount=0.5)),
-            (0, dm_env.termination(reward=(1.0, 2.0),
-                                   observation=4)),
+            (0,
+             dm_env.transition(reward=(1.0, 2.0), observation=2, discount=0.5)),
+            (0,
+             dm_env.transition(reward=(1.0, 2.0), observation=3, discount=0.5)),
+            (0, dm_env.termination(reward=(1.0, 2.0), observation=4)),
         ),
         expected_transitions=(
             types.Transition(1, 0, (1.0, 2.0), (0.50, 0.50), 2),
@@ -132,14 +132,13 @@ TEST_CASES = [
         additional_discount=1.0,
         first=dm_env.restart(1),
         steps=(
-            (0, dm_env.transition(reward=np.array((1.0, 2.0)),
-                                  observation=2,
-                                  discount=0.5)),
-            (0, dm_env.transition(reward=np.array((1.0, 2.0)),
-                                  observation=3,
-                                  discount=0.5)),
-            (0, dm_env.termination(reward=np.array((1.0, 2.0)),
-                                   observation=4)),
+            (0,
+             dm_env.transition(
+                 reward=np.array((1.0, 2.0)), observation=2, discount=0.5)),
+            (0,
+             dm_env.transition(
+                 reward=np.array((1.0, 2.0)), observation=3, discount=0.5)),
+            (0, dm_env.termination(reward=np.array((1.0, 2.0)), observation=4)),
         ),
         expected_transitions=(
             types.Transition(1, 0, np.array((1.0, 2.0)), np.array((0.50, 0.50)),
@@ -157,13 +156,23 @@ TEST_CASES = [
         additional_discount=1.0,
         first=dm_env.restart(1),
         steps=(
-            (0, dm_env.transition(reward=1.0,
-                                  observation=2,
-                                  discount={'a': 0.5, 'b': 0.1})),
-            (0, dm_env.transition(reward=1.0,
-                                  observation=3,
-                                  discount={'a': 0.5, 'b': 0.1})),
-            (0, dm_env.termination(reward=1.0, observation=4)),
+            (0,
+             dm_env.transition(
+                 reward=1.0, observation=2, discount={
+                     'a': 0.5,
+                     'b': 0.1
+                 })),
+            (0,
+             dm_env.transition(
+                 reward=1.0, observation=3, discount={
+                     'a': 0.5,
+                     'b': 0.1
+                 })),
+            (0, dm_env.termination(reward=1.0,
+                                   observation=4)._replace(discount={
+                                       'a': 0.0,
+                                       'b': 0.0
+                                   })),
         ),
         expected_transitions=(
             types.Transition(1, 0, {
@@ -201,13 +210,15 @@ TEST_CASES = [
         additional_discount=1.0,
         first=dm_env.restart(1),
         steps=(
-            (0, dm_env.transition(reward=1.0,
-                                  observation=2,
-                                  discount=np.array((0.5, 0.1)))),
-            (0, dm_env.transition(reward=1.0,
-                                  observation=3,
-                                  discount=np.array((0.5, 0.1)))),
-            (0, dm_env.termination(reward=1.0, observation=4)),
+            (0,
+             dm_env.transition(
+                 reward=1.0, observation=2, discount=np.array((0.5, 0.1)))),
+            (0,
+             dm_env.transition(
+                 reward=1.0, observation=3, discount=np.array((0.5, 0.1)))),
+            (0, dm_env.termination(
+                reward=1.0,
+                observation=4)._replace(discount=np.array((0.0, 0.0)))),
         ),
         expected_transitions=(
             types.Transition(1, 0, np.array((1.0, 1.0)), np.array((0.50, 0.10)),
@@ -225,14 +236,19 @@ TEST_CASES = [
         additional_discount=1.0,
         first=dm_env.restart(1),
         steps=(
-            (0, dm_env.transition(reward=np.array([[1.0, 2.0]]),
-                                  observation=2,
-                                  discount=np.array([[0.5], [0.1]]))),
-            (0, dm_env.transition(reward=np.array([[1.0, 2.0]]),
-                                  observation=3,
-                                  discount=np.array([[0.5], [0.1]]))),
-            (0, dm_env.termination(reward=np.array([[1.0, 2.0]]),
-                                   observation=4)),
+            (0,
+             dm_env.transition(
+                 reward=np.array([[1.0, 2.0]]),
+                 observation=2,
+                 discount=np.array([[0.5], [0.1]]))),
+            (0,
+             dm_env.transition(
+                 reward=np.array([[1.0, 2.0]]),
+                 observation=3,
+                 discount=np.array([[0.5], [0.1]]))),
+            (0, dm_env.termination(
+                reward=np.array([[1.0, 2.0]]),
+                observation=4)._replace(discount=np.array([[0.0], [0.0]]))),
         ),
         expected_transitions=(
             types.Transition(1, 0, np.array([[1.0, 2.0], [1.0, 2.0]]),
@@ -250,14 +266,21 @@ TEST_CASES = [
         additional_discount=1.0,
         first=dm_env.restart(1),
         steps=(
-            (0, dm_env.transition(reward={'a': np.array([[1.0, 2.0]])},
-                                  observation=2,
-                                  discount=np.array([[0.5], [0.1]]))),
-            (0, dm_env.transition(reward={'a': np.array([[1.0, 2.0]])},
-                                  observation=3,
-                                  discount=np.array([[0.5], [0.1]]))),
-            (0, dm_env.termination(reward={'a': np.array([[1.0, 2.0]])},
-                                   observation=4)),
+            (0,
+             dm_env.transition(
+                 reward={'a': np.array([[1.0, 2.0]])},
+                 observation=2,
+                 discount=np.array([[0.5], [0.1]]))),
+            (0,
+             dm_env.transition(
+                 reward={'a': np.array([[1.0, 2.0]])},
+                 observation=3,
+                 discount=np.array([[0.5], [0.1]]))),
+            (0,
+             dm_env.termination(
+                 reward={
+                     'a': np.array([[1.0, 2.0]])
+                 }, observation=4)._replace(discount=np.array([[0.0], [0.0]]))),
         ),
         expected_transitions=(
             types.Transition(1, 0, {'a': np.array([[1.0, 2.0], [1.0, 2.0]])},
@@ -278,17 +301,23 @@ TEST_CASES = [
             (
                 0,
                 dm_env.transition(reward=1.0, observation=2, discount=0.5),
-                {'state': 0},
+                {
+                    'state': 0
+                },
             ),
             (
                 0,
                 dm_env.transition(reward=1.0, observation=3, discount=0.5),
-                {'state': 1},
+                {
+                    'state': 1
+                },
             ),
             (
                 0,
                 dm_env.termination(reward=1.0, observation=4),
-                {'state': 2},
+                {
+                    'state': 2
+                },
             ),
         ),
         expected_transitions=(
@@ -332,7 +361,46 @@ TEST_CASES = [
             types.Transition(2, 0, 3 + 0.5 * 5 + 0.25 * 7, 0.00, 5),
             types.Transition(3, 0, 5 + 0.5 * 7, 0.00, 5),
             types.Transition(4, 0, 7, 0.00, 5),
-        ))
+        )),
+    dict(
+        testcase_name='SingleTransitionEpisode',
+        n_step=4,
+        additional_discount=1.0,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.termination(reward=1.0, observation=2)),
+        ),
+        expected_transitions=(
+            types.Transition(1, 0, 1.00, 0.0, 2),
+        )),
+    dict(
+        testcase_name='EpisodeShorterThanN',
+        n_step=4,
+        additional_discount=1.0,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=1.0, observation=2)),
+            (0, dm_env.termination(reward=1.0, observation=3)),
+        ),
+        expected_transitions=(
+            types.Transition(1, 0, 1.00, 1.0, 2),
+            types.Transition(1, 0, 2.00, 0.0, 3),
+            types.Transition(2, 0, 1.00, 0.0, 3),
+        )),
+    dict(
+        testcase_name='EpisodeEqualToN',
+        n_step=3,
+        additional_discount=1.0,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=1.0, observation=2)),
+            (0, dm_env.termination(reward=1.0, observation=3)),
+        ),
+        expected_transitions=(
+            types.Transition(1, 0, 1.00, 1.0, 2),
+            types.Transition(1, 0, 2.00, 0.0, 3),
+            types.Transition(2, 0, 1.00, 0.0, 3),
+        )),
 ]
 
 
@@ -349,7 +417,7 @@ class NStepTransitionAdderTest(test_utils.AdderTestMixin,
         first=first,
         steps=steps,
         expected_items=expected_transitions,
-        pack_expected_items=True)
+        stack_sequence_fields=False)
 
 
 if __name__ == '__main__':
