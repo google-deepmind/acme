@@ -149,14 +149,15 @@ class NStepTransitionAdder(base.ReverbAdder):
 
     # Get the state, action, next_state, as well as possibly extras for the
     # transition that is about to be written.
+    history = self._writer.history
     s, a = tree.map_structure(
         get_first,
-        (self._writer.history['observation'], self._writer.history['action']))
-    s_ = tree.map_structure(get_last, self._writer.history['observation'])
+        (history['observation'], history['action']))
+    s_ = tree.map_structure(get_last, history['observation'])
 
     # Maybe get extras to add to the transition later.
-    if 'extras' in self._writer.history:
-      extras = tree.map_structure(get_first, self._writer.history['extras'])
+    if 'extras' in history:
+      extras = tree.map_structure(get_first, history['extras'])
 
     # Note: at the beginning of an episode we will add the initial N-1
     # transitions (of size 1, 2, ...) and at the end of an episode (when
@@ -164,7 +165,7 @@ class NStepTransitionAdder(base.ReverbAdder):
     # N-1, ...). See the Note in the docstring.
     # Get numpy view of the steps to be fed into the priority functions.
     history_np = tree.map_structure(get_all_np, {
-        k: v for k, v in self._writer.history.items() if k in base.Step._fields
+        k: v for k, v in history.items() if k in base.Step._fields
     })
 
     # Compute discounted return and geometric discount over n steps.
@@ -177,20 +178,23 @@ class NStepTransitionAdder(base.ReverbAdder):
     self._writer.append(
         dict(n_step_return=n_step_return, total_discount=total_discount),
         partial_step=self._writer.episode_steps <= self._last_idx)
+    # This should be done immediately after self._writer.append so the history
+    # includes the recently appended data.
+    history = self._writer.history
 
     # Form the n-step transition by using the following:
     # the first observation and action in the buffer, along with the cumulative
     # reward and discount computed above.
     n_step_return, total_discount = tree.map_structure(
-        lambda x: x[-1], (self._writer.history['n_step_return'],
-                          self._writer.history['total_discount']))
+        lambda x: x[-1], (history['n_step_return'],
+                          history['total_discount']))
     transition = types.Transition(
         observation=s,
         action=a,
         reward=n_step_return,
         discount=total_discount,
         next_observation=s_,
-        extras=(extras if 'extras' in self._writer.history else ()))
+        extras=(extras if 'extras' in history else ()))
 
     # Calculate the priority for this transition.
     table_priorities = utils.calculate_priorities(self._priority_fns,

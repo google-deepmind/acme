@@ -209,9 +209,9 @@ class SequenceAdder(base.ReverbAdder):
 
     get_traj_np = lambda x: get_traj(x).numpy()
 
-    trajectory = base.Step(**tree.map_structure(get_traj, self._writer.history))
-    trajectory_np = base.Step(**tree.map_structure(get_traj_np,
-                                                   self._writer.history))
+    history = self._writer.history
+    trajectory = base.Step(**tree.map_structure(get_traj, history))
+    trajectory_np = base.Step(**tree.map_structure(get_traj_np, history))
 
     # Compute priorities for the buffer.
     table_priorities = utils.calculate_priorities(self._priority_fns,
