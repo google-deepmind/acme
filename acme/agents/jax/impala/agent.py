@@ -44,6 +44,7 @@ class IMPALAConfig:
   batch_size: int = 16
   sequence_length: int = 20
   sequence_period: int = 20
+  break_end_of_episode: bool = True
   learning_rate: float = 1e-3
   discount: float = 0.99
   entropy_cost: float = 0.01
@@ -178,6 +179,7 @@ class IMPALA(IMPALAFromConfig):
       seed: int = 0,
       max_abs_reward: float = np.inf,
       max_gradient_norm: float = np.inf,
+      break_end_of_episode: bool = True
   ):
 
     forward_fn_transformed = hk.without_apply_rng(hk.transform(
@@ -202,6 +204,7 @@ class IMPALA(IMPALAFromConfig):
         seed=seed,
         max_abs_reward=max_abs_reward,
         max_gradient_norm=max_gradient_norm,
+        break_end_of_episode=break_end_of_episode,
     )
     super().__init__(
         environment_spec=environment_spec,

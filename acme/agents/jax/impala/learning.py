@@ -105,6 +105,7 @@ class IMPALALearner(acme.Learner):
       """Initialises the training state (parameters and optimiser state)."""
       dummy_obs = utils.zeros_like(obs_spec)
       dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
+      dummy_start_episode = np.array([False])  # Dummy 'sequence' dim.
 
       key, key_initial_state = jax.random.split(key)
       params = initial_state_init_fn(key_initial_state)
@@ -112,7 +113,7 @@ class IMPALALearner(acme.Learner):
       # training the initial state params.
       initial_state = initial_state_fn(params)
 
-      initial_params = unroll_init_fn(key, dummy_obs, initial_state)
+      initial_params = unroll_init_fn(key, dummy_obs, initial_state, dummy_start_episode)
       initial_opt_state = optimizer.init(initial_params)
       return TrainingState(
           params=initial_params, opt_state=initial_opt_state)

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """Some types/assumptions used in the IMPALA agent."""
-from typing import Callable
+from typing import Callable, Optional
 
 from acme.jax import networks
 import haiku as hk
@@ -24,9 +24,9 @@ import jax.numpy as jnp
 # Only simple observations & discrete action spaces for now.
 Observation = jnp.ndarray
 Action = int
-PolicyValueInitFn = Callable[[networks.PRNGKey, Observation, hk.LSTMState],
+PolicyValueInitFn = Callable[[networks.PRNGKey, Observation, hk.LSTMState, Optional[jnp.ndarray]],
                              networks.Params]
-PolicyValueFn = Callable[[networks.Params, Observation, hk.LSTMState],
+PolicyValueFn = Callable[[networks.Params, Observation, hk.LSTMState, Optional[jnp.ndarray]],
                          networks.LSTMOutputs]
 RecurrentStateInitFn = Callable[[networks.PRNGKey], networks.Params]
 RecurrentStateFn = Callable[[networks.Params], hk.LSTMState]

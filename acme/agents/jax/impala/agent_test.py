@@ -35,22 +35,44 @@ class MyNetwork(hk.RNNCore):
   """A simple recurrent network for testing."""
 
   def __init__(self, num_actions: int):
-    super().__init__(name='my_network')
+    super().__init__(name="my_network")
     self._torso = hk.Sequential([
-        lambda x: jnp.reshape(x, [np.prod(x.shape)]),
+        hk.Flatten(),
         hk.nets.MLP([50, 50]),
     ])
     self._core = hk.LSTM(20)
     self._head = networks.PolicyValueHead(num_actions)
 
   def __call__(self, inputs, state):
-    embeddings = self._torso(inputs)
+    embeddings = self.embed(inputs)
     embeddings, new_state = self._core(embeddings, state)
     logits, value = self._head(embeddings)
     return (logits, value), new_state
 
   def initial_state(self, batch_size: int):
     return self._core.initial_state(batch_size)
+
+  def embed(self, observation):
+    if observation.ndim not in [2, 3]:
+      raise ValueError("Expects inputs to have rank 3 (unbatched) or 4 (batched), "
+                       f"got {observation.ndim} instead")
+    expand_obs = observation.ndim == 2
+    if expand_obs:
+      observation = jnp.expand_dims(observation, 0)
+    features = self._torso(observation.astype(jnp.float32))
+    if expand_obs:
+      features = jnp.squeeze(features, 0)
+    return features
+
+  def unroll(self, inputs, initial_state, start_of_episode=None):
+    embeddings = self.embed(inputs)
+    core = self._core
+    if start_of_episode is not None:
+      embeddings = (embeddings, start_of_episode)
+      core = hk.ResetCore(self._core)
+    initial_state = hk.LSTMState(initial_state.hidden, initial_state.cell)
+    core_outputs, final_state = hk.static_unroll(core, embeddings, initial_state)
+    return self._head(core_outputs), final_state
 
 
 class IMPALATest(absltest.TestCase):
@@ -73,9 +95,9 @@ class IMPALATest(absltest.TestCase):
       model = MyNetwork(spec.actions.num_values)
       return model.initial_state(batch_size)
 
-    def unroll_fn(inputs, state):
+    def unroll_fn(inputs, state, start_of_episode=None):
       model = MyNetwork(spec.actions.num_values)
-      return hk.static_unroll(model, inputs, state)
+      return model.unroll(inputs, state, start_of_episode)
 
     # We pass pure, Haiku-agnostic functions to the agent.
     forward_fn_transformed = hk.without_apply_rng(hk.transform(
@@ -93,6 +115,7 @@ class IMPALATest(absltest.TestCase):
         sequence_length=3,
         sequence_period=3,
         batch_size=6,
+        break_end_of_episode=True,
     )
     agent = impala.IMPALAFromConfig(
         environment_spec=spec,

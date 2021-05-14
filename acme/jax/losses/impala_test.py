@@ -39,8 +39,11 @@ class ImpalaTest(absltest.TestCase):
     # Define a trivial recurrent actor-critic network.
     @hk.without_apply_rng
     @hk.transform
-    def unroll_fn_transformed(observations, state):
+    def unroll_fn_transformed(observations, state, start_of_episode=None):
       lstm = hk.LSTM(hidden_size)
+      if start_of_episode is not None:
+        lstm = hk.ResetCore(lstm)
+        observations = (observations, start_of_episode)
       embedding, state = hk.dynamic_unroll(lstm, observations, state)
       logits = hk.Linear(num_actions)(embedding)
       values = jnp.squeeze(hk.Linear(1)(embedding), axis=-1)
@@ -60,6 +63,7 @@ class ImpalaTest(absltest.TestCase):
     actions = np.random.randint(num_actions, size=sequence_len)
     rewards = np.random.rand(sequence_len)
     discounts = np.ones(shape=(sequence_len,))
+    start_of_episode = np.zeros(shape=(sequence_len,), dtype=np.bool)
 
     batch_tile = tree_map(lambda x: np.tile(x, [batch_size, *([1] * x.ndim)]))
     seq_tile = tree_map(lambda x: np.tile(x, [sequence_len, *([1] * x.ndim)]))
@@ -76,7 +80,7 @@ class ImpalaTest(absltest.TestCase):
         rewards,
         discounts,
         extras=extras,
-        start_of_episode=())
+        start_of_episode=start_of_episode)
     data = batch_tile(data)
     sample = reverb.ReplaySample(info=None, data=data)
 

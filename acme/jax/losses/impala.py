@@ -57,24 +57,30 @@ def impala_loss(
 
     # Extract the data.
     data = sample.data
-    observations, actions, rewards, discounts, extra = (data.observation,
-                                                        data.action,
-                                                        data.reward,
-                                                        data.discount,
-                                                        data.extras)
-    initial_state = tree.map_structure(lambda s: s[0], extra['core_state'])
-    behaviour_logits = extra['logits']
+    observations, actions, rewards, discounts, start_of_episode, extra = (
+        data.observation,
+        data.action,
+        data.reward,
+        data.discount,
+        data.start_of_episode,
+        data.extras,
+    )
+    initial_state = tree.map_structure(lambda s: s[0], extra["core_state"])
+    behaviour_logits = extra["logits"]
 
     # Apply reward clipping.
     rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
 
     # Unroll current policy over observations.
-    (logits, values), _ = unroll_fn(params, observations, initial_state)
+    (logits, values), _ = unroll_fn(params, observations,
+                                    initial_state, start_of_episode)
 
     # Compute importance sampling weights: current policy / behavior policy.
     rhos = rlax.categorical_importance_sampling_ratios(logits[:-1],
                                                        behaviour_logits[:-1],
                                                        actions[:-1])
+    # Mask out invalid transitions from LAST to FIRST
+    mask = (1. - start_of_episode[1:].astype(jnp.float32))
 
     # Critic loss.
     vtrace_returns = rlax.vtrace_td_error_and_advantage(
@@ -90,14 +96,16 @@ def impala_loss(
         logits_t=logits[:-1],
         a_t=actions[:-1],
         adv_t=vtrace_returns.pg_advantage,
-        w_t=jnp.ones_like(rewards[:-1]))
+        w_t=mask)
 
     # Entropy regulariser.
-    entropy_loss = rlax.entropy_loss(logits[:-1], jnp.ones_like(rewards[:-1]))
+    entropy_loss = jnp.mean(rlax.entropy_loss(logits[:-1], mask))
+    critic_loss = jnp.mean(critic_loss * mask)
+    policy_gradient_loss = jnp.mean(policy_gradient_loss)
 
     # Combine weighted sum of actor & critic losses, averaged over the sequence.
-    mean_loss = jnp.mean(policy_gradient_loss + baseline_cost * critic_loss +
-                         entropy_cost * entropy_loss)  # []
+    mean_loss = (policy_gradient_loss + baseline_cost * critic_loss +
+                 entropy_cost * entropy_loss)  # []
 
     return mean_loss
 

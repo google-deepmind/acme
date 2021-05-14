@@ -90,6 +90,7 @@ def make_reverb_online_queue(
     sequence_length: int,
     sequence_period: int,
     batch_size: int,
+    break_end_of_episode: bool = True,
     replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
 ) -> ReverbReplay:
   """Creates a single process queue from an environment spec and extra_spec."""
@@ -107,6 +108,7 @@ def make_reverb_online_queue(
       client=reverb.Client(address),
       period=sequence_period,
       sequence_length=sequence_length,
+      break_end_of_episode=break_end_of_episode
   )
 
   # The dataset object to learn from.
