@@ -20,6 +20,7 @@ import gc
 import os
 
 from absl.testing import absltest
+from absl.testing import parameterized
 from acme.testing import test_utils
 from acme.utils import paths
 from acme.utils.loggers import csv as csv_logger
@@ -55,7 +56,8 @@ class CSVLoggingTest(test_utils.TestCase):
         outputs.append(dict(row))
     self.assertEqual(outputs, inputs)
 
-  def test_logging_input_is_file(self):
+  @parameterized.parameters(True, False)
+  def test_logging_input_is_file(self, add_uid):
     inputs = [{
         'c': 'foo',
         'a': '1337',
@@ -66,9 +68,9 @@ class CSVLoggingTest(test_utils.TestCase):
         'b': '43.0001',
     }]
     directory = paths.process_path(
-        self.get_tempdir(), 'logs', 'my_label', add_uid=True)
+        self.get_tempdir(), 'logs', 'my_label', add_uid=add_uid)
     file = open(os.path.join(directory, 'logs.csv'), 'a')
-    logger = csv_logger.CSVLogger(directory_or_file=file)
+    logger = csv_logger.CSVLogger(directory_or_file=file, add_uid=add_uid)
     for inp in inputs:
       logger.write(inp)
     outputs = []
