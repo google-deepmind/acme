@@ -56,10 +56,7 @@ class CSVLoggingTest(test_utils.TestCase):
         outputs.append(dict(row))
     self.assertEqual(outputs, inputs)
 
-  @parameterized.parameters(
-    {'add_uid': True},
-    {'add_uid': False},
-  )
+  @parameterized.parameters(True, False)
   def test_logging_input_is_file(self, add_uid):
     inputs = [{
         'c': 'foo',
