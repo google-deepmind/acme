@@ -35,7 +35,7 @@ def main(_):
 
   program = d4pg.DistributedD4PG(
       environment_factory=environment_factory,
-      network_factory=lp_utils.partial_kwargs(helpers.make_networks),
+      network_factory=lp_utils.partial_kwargs(d4pg.make_default_networks),
       num_actors=2).build()
 
   lp.launch(program, lp.LaunchType.LOCAL_MULTI_PROCESSING)

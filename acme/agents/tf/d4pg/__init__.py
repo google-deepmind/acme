@@ -17,3 +17,4 @@
 from acme.agents.tf.d4pg.agent import D4PG
 from acme.agents.tf.d4pg.agent_distributed import DistributedD4PG
 from acme.agents.tf.d4pg.learning import D4PGLearner
+from acme.agents.tf.d4pg.networks import make_default_networks

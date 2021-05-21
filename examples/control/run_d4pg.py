@@ -37,7 +37,7 @@ def main(_):
   # Create an environment, grab the spec, and use it to create networks.
   environment = helpers.make_environment()
   environment_spec = specs.make_environment_spec(environment)
-  agent_networks = helpers.make_networks(environment_spec.actions)
+  agent_networks = d4pg.make_default_networks(environment_spec.actions)
 
   # Construct the agent.
   agent = d4pg.D4PG(
