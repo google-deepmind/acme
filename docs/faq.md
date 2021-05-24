@@ -11,6 +11,9 @@
     interface. See e.g. the `acme.wrappers.gym_wrapper` module which can be used
     to interact with [OpenAI Gym][gym] environments.
 
+    Note: Follow the instructions [here](atari) to install ROMs for Atari
+    environments.
+
     Similarly, _learners_ in Acme are designed to consume dataset iterators
     (generally `tf.Dataset` instances) which consume either transition tuples or
     sequences of state, action, reward, etc. tuples. If your data does not match
@@ -19,6 +22,7 @@
 
 [dm_env]: https://github.com/deepmind/dm_env
 [gym]: https://gym.openai.com/
+[atari]: https://github.com/openai/atari-py#roms
 
 ## TensorFlow agents
 

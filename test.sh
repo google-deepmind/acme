@@ -36,9 +36,6 @@ pip install .[envs]
 pip install .[testing]
 pip install .[launchpad]
 
-# Install manually since extra_dependencies ignores the foo[bar] notation.
-pip install gym[atari]
-
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
 
 # Run static type-checking.
