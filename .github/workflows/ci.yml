@@ -23,7 +23,7 @@ jobs:
         pip install .[tf]
         pip install .[envs]
         pip install .[testing]
-        pip install gym[atari]
+        pip install .[launchpad]
     - name: Check types with pytype
       run: |
         pytype -j "$(grep -c ^processor /proc/cpuinfo)" acme
