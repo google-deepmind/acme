@@ -23,11 +23,13 @@ from acme import specs
 NestedArray = Any
 NestedTensor = Any
 
+# pytype: disable=not-supported-yet
 NestedSpec = Union[
     specs.Array,
     Iterable['NestedSpec'],
-    Mapping[Any, 'NestedSpec'],  # pytype: disable=not-supported-yet
+    Mapping[Any, 'NestedSpec'],
 ]
+# pytype: enable=not-supported-yet
 
 # TODO(b/144763593): Replace all instances of nest with the tensor/array types.
 Nest = Union[NestedArray, NestedTensor, NestedSpec]
