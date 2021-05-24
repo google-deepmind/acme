@@ -20,7 +20,6 @@ This is convenient for e.g. interactive usage via Google Colab.
 from typing import Sequence
 
 from acme.utils.loggers import base
-import pandas as pd
 
 
 class InMemoryLogger(base.Logger):
@@ -32,9 +31,11 @@ class InMemoryLogger(base.Logger):
   def write(self, data: base.LoggingData):
     self._data.append(data)
 
-  def to_dataframe(self) -> pd.DataFrame:
+  def to_dataframe(self):
     """Builds a Pandas DataFrame from data in memory."""
-    return pd.DataFrame(self._data)
+    raise NotImplementedError(
+        'This method has been deprecated. '
+        'Please use pandas.DataFrame(InMemoryLogger.data) instead.')
 
   @property
   def data(self) -> Sequence[base.LoggingData]:
