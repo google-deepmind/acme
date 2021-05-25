@@ -86,6 +86,11 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     self._optimizer = snt.optimizers.Adam(learning_rate)
     self._replay_client = replay_client
 
+    # Make sure to initialize the optimizer so that its variables (e.g. the Adam
+    # moments) are included in the state returned by the learner (which can then
+    # be checkpointed and restored).
+    self._optimizer._initialize(network.trainable_variables)  # pylint: disable= protected-access
+
     # Internalise the hyperparameters.
     self._discount = discount
     self._target_update_period = target_update_period
