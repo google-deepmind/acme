@@ -33,7 +33,7 @@ StepWithoutExtra = Tuple[Any, dm_env.TimeStep]
 Step = TypeVar('Step', StepWithExtra, StepWithoutExtra)
 
 
-# TODO(b//185308702): consider replacing with a mock-like object.
+# TODO(b/185308702): consider replacing with a mock-like object.
 class FakeWriter(reverb.TrajectoryWriter):
   """Fake writer for testing."""
 

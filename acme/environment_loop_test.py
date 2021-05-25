@@ -53,7 +53,8 @@ class EnvironmentLoopTest(parameterized.TestCase):
   def test_one_episode(self, discount_spec, reward_spec):
     _, loop = _parameterized_setup(discount_spec, reward_spec)
     result = loop.run_episode()
-    self.assertDictContainsSubset({'episode_length': EPISODE_LENGTH}, result)
+    self.assertIn('episode_length', result)
+    self.assertEqual(EPISODE_LENGTH, result['episode_length'])
     self.assertIn('episode_return', result)
     self.assertIn('steps_per_second', result)
 

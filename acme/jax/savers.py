@@ -50,7 +50,7 @@ def restore_from_path(ckpt_dir: str) -> CheckpointState:
   unflattened_tree = tree.unflatten_as(exemplar, flat_state)
 
   def maybe_convert_to_python(value, numpy):
-    return value if numpy else np.asscalar(value)
+    return value if numpy else value.item()
 
   return tree.map_structure(maybe_convert_to_python, unflattened_tree, exemplar)
 
