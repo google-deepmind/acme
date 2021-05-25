@@ -42,7 +42,7 @@ N_CPU=$(grep -c ^processor /proc/cpuinfo)
 pytype -k -j "${N_CPU}" `find . -maxdepth 1 -mindepth 1 -type d` -x 'examples/open_spiel examples/offline acme_testing'
 
 # Run all tests.
-pytest -n "${N_CPU}" acme
+pytest --ignore-glob="*/agent_test.py" --ignore-glob="*/agent_distributed_test.py" --durations=10 -n "${N_CPU}" acme
 
 # Clean-up.
 deactivate

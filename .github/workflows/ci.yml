@@ -1,32 +1,17 @@
-name: pytest
-
-on: [push, pull_request]
+name: acme-tests
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  test-ubuntu:
+  run-acme-tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        docker-image: ["python:3.6", "python:3.7", "python:3.8"]
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Checkout acme
+      uses: actions/checkout@v2
+    - name: Run tests in docker
       run: |
-        pip install --upgrade pip setuptools
-        pip install .
-        pip install .[reverb]
-        pip install .[jax]
-        pip install .[tf]
-        pip install .[envs]
-        pip install .[testing]
-        pip install .[launchpad]
-    - name: Check types with pytype
-      run: |
-        pytype -j "$(grep -c ^processor /proc/cpuinfo)" acme
-    - name: Test with pytest
-      run: |
-        pytest -n "$(grep -c ^processor /proc/cpuinfo)" acme
+        docker run --mount "type=bind,src=$(pwd),dst=/tmp/acme" \
+            -w "/tmp/acme" --rm ${{ matrix.docker-image }} /bin/bash test.sh
+
