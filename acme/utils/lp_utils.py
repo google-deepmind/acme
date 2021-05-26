@@ -76,7 +76,6 @@ class StepsLimiter:
                steps_key: str = 'actor_steps'):
     self._counter = counter
     self._max_steps = max_steps
-    self._stop_program = lp.make_program_stopper(FLAGS.lp_launch_type)
     self._steps_key = steps_key
 
   def run(self):
@@ -95,7 +94,7 @@ class StepsLimiter:
       if num_steps > self._max_steps:
         logging.info('StepsLimiter: Max steps of %d was reached, terminating',
                      self._max_steps)
-        self._stop_program()
+        lp.stop()
 
       # Don't spam the counter.
       time.sleep(10.)
