@@ -84,7 +84,12 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     self._network = network
     self._target_network = target_network
     self._optimizer = snt.optimizers.Adam(learning_rate)
-    self._replay_client = replay_client
+
+    # TODO(mwhoffman): pass in a plain replay client.
+    if replay_client:
+      self._replay_client = reverb.Client(replay_client._server_address)
+    else:
+      self._replay_client = None
 
     # Make sure to initialize the optimizer so that its variables (e.g. the Adam
     # moments) are included in the state returned by the learner (which can then
@@ -160,11 +165,8 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     gradients, _ = tf.clip_by_global_norm(gradients, self._max_gradient_norm)
     self._optimizer.apply(gradients, self._network.trainable_variables)
 
-    # Update the priorities in the replay buffer.
-    if self._replay_client:
-      priorities = tf.cast(tf.abs(extra.td_error), tf.float64)
-      self._replay_client.update_priorities(
-          table=adders.DEFAULT_PRIORITY_TABLE, keys=keys, priorities=priorities)
+    # Get the priorities that we'll use to update.
+    priorities = tf.abs(extra.td_error)
 
     # Periodically update the target network.
     if tf.math.mod(self._num_steps, self._target_update_period) == 0:
@@ -176,6 +178,8 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     # Report loss & statistics for logging.
     fetches = {
         'loss': loss,
+        'keys': keys,
+        'priorities': priorities,
     }
 
     return fetches
@@ -183,6 +187,16 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
   def step(self):
     # Do a batch of SGD.
     result = self._step()
+
+    # Get the keys and priorities.
+    keys = result.pop('keys')
+    priorities = result.pop('priorities')
+
+    # Update the priorities in the replay buffer.
+    if self._replay_client:
+      self._replay_client.mutate_priorities(
+          table=adders.DEFAULT_PRIORITY_TABLE,
+          updates=dict(zip(keys.numpy(), priorities.numpy())))
 
     # Compute elapsed time.
     timestamp = time.time()
