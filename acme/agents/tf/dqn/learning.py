@@ -16,7 +16,7 @@
 """DQN learner implementation."""
 
 import time
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import acme
 from acme import types
@@ -51,7 +51,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       target_update_period: int,
       dataset: tf.data.Dataset,
       huber_loss_parameter: float = 1.,
-      replay_client: reverb.TFClient = None,
+      replay_client: Union[reverb.Client, reverb.TFClient] = None,
       counter: counting.Counter = None,
       logger: loggers.Logger = None,
       checkpoint: bool = True,
@@ -78,18 +78,19 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       max_gradient_norm: used for gradient clipping.
     """
 
+    # TODO(mwhoffman): stop allowing replay_client to be passed as a TFClient.
+    # This is just here for backwards compatability for agents which reuse this
+    # Learner and still pass a TFClient instance.
+    if isinstance(replay_client, reverb.TFClient):
+      replay_client = reverb.Client(replay_client._server_address)
+
     # Internalise agent components (replay buffer, networks, optimizer).
     # TODO(b/155086959): Fix type stubs and remove.
     self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
     self._network = network
     self._target_network = target_network
     self._optimizer = snt.optimizers.Adam(learning_rate)
-
-    # TODO(mwhoffman): pass in a plain replay client.
-    if replay_client:
-      self._replay_client = reverb.Client(replay_client._server_address)
-    else:
-      self._replay_client = None
+    self._replay_client = replay_client
 
     # Make sure to initialize the optimizer so that its variables (e.g. the Adam
     # moments) are included in the state returned by the learner (which can then

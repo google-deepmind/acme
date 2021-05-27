@@ -115,7 +115,7 @@ class DQN(agent.Agent):
         discount=discount)
 
     # The dataset provides an interface to sample from replay.
-    replay_client = reverb.TFClient(address)
+    replay_client = reverb.Client(address)
     dataset = datasets.make_reverb_dataset(
         server_address=address,
         batch_size=batch_size,
