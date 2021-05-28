@@ -15,11 +15,10 @@
 
 """Utilities for reverb-based adders."""
 
-from typing import Dict, Sequence, Union
+from typing import Dict, Union
 
 from acme import types
 from acme.adders.reverb import base
-from acme.tf import utils as tf2_utils
 import jax.numpy as jnp
 import numpy as np
 import tree
@@ -68,42 +67,31 @@ def final_step_like(step: base.Step,
 
 def calculate_priorities(
     priority_fns: base.PriorityFnMapping,
-    steps: Union[base.Step, Sequence[base.Step]]) -> Dict[str, float]:
-  """Helper used to calculate the priority of a sequence of steps.
+    trajectory_or_transition: Union[base.Trajectory, types.Transition],
+) -> Dict[str, float]:
+  """Helper used to calculate the priority of a Trajectory or Transition.
 
-  This converts the sequence of steps into a PriorityFnInput tuple where the
-  components of each step (actions, observations, etc.) are stacked along the
-  time dimension.
-
-  Priorities are calculated for the sequence or transition that starts from
-  step[0].next_observation. As a result, the stack of observations comes from
-  steps[0:] whereas all other components (e.g. actions, rewards, discounts,
-  extras) corresponds to steps[1:].
-
-  Note: this means that all components other than the observation will be
-  ignored from step[0]. This also means that step[0] is allowed to correspond to
-  an "initial step" in which case the action, reward, discount, and extras are
-  each None, which is handled properly by this function.
+  This helper converts the leaves of the Trajectory or Transition from
+  `reverb.TrajectoryColumn` objects into numpy arrays. The converted Trajectory
+  or Transition is then passed into each of the functions in `priority_fns`.
 
   Args:
     priority_fns: a mapping from table names to priority functions (i.e. a
       callable of type PriorityFn). The given function will be used to generate
       the priority (a float) for the given table.
-    steps: a list of Step objects used to compute the priorities.
+    trajectory_or_transition: the trajectory or transition used to compute
+      priorities.
 
   Returns:
     A dictionary mapping from table names to the priority (a float) for the
-    given collection of steps.
+    given collection Trajectory or Transition.
   """
-
-  if isinstance(steps, list):
-    steps = tf2_utils.stack_sequence_fields(steps)
-
   if any([priority_fn is not None for priority_fn in priority_fns.values()]):
-    # Stack the steps and wrap them as PrioityFnInput.
-    fn_input = base.PriorityFnInput(*steps)
+
+    trajectory_or_transition = tree.map_structure(lambda col: col.numpy(),
+                                                  trajectory_or_transition)
 
   return {
-      table: (priority_fn(fn_input) if priority_fn else 1.0)
+      table: (priority_fn(trajectory_or_transition) if priority_fn else 1.0)
       for table, priority_fn in priority_fns.items()
   }

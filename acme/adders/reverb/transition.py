@@ -164,13 +164,12 @@ class NStepTransitionAdder(base.ReverbAdder):
     # called from write_last) we will write the final transitions of size (N,
     # N-1, ...). See the Note in the docstring.
     # Get numpy view of the steps to be fed into the priority functions.
-    history_np = tree.map_structure(get_all_np, {
-        k: v for k, v in history.items() if k in base.Step._fields
-    })
+    reward, discount = tree.map_structure(
+        get_all_np, (history['reward'], history['discount']))
 
     # Compute discounted return and geometric discount over n steps.
     n_step_return, total_discount = self._compute_cumulative_quantities(
-        history_np)
+        reward, discount)
 
     # Append the computed n-step return and total discount.
     # Note: if this call to _write() is within a call to _write_last(), then
@@ -198,7 +197,7 @@ class NStepTransitionAdder(base.ReverbAdder):
 
     # Calculate the priority for this transition.
     table_priorities = utils.calculate_priorities(self._priority_fns,
-                                                  base.Step(**history_np))
+                                                  transition)
 
     # Insert the transition into replay along with its priority.
     for table, priority in table_priorities.items():
@@ -215,11 +214,12 @@ class NStepTransitionAdder(base.ReverbAdder):
       self._first_idx += 1
 
   def _compute_cumulative_quantities(
-      self, history: types.NestedArray
+      self, reward: types.NestedArray, discount: types.NestedArray
   ) -> Tuple[types.NestedArray, types.NestedArray]:
 
+    data = {'reward': reward, 'discount': discount}
     first_step, *next_steps = tree_utils.unstack_sequence_fields(
-        history, self._n_step)
+        data, self._n_step)
 
     # Give the same tree structure to the n-step return accumulator,
     # n-step discount accumulator, and self.discount, so that they can be

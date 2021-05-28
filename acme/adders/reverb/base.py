@@ -33,6 +33,7 @@ StartOfEpisodeType = Union[bool, specs.Array, tf.Tensor, tf.TensorSpec,
                            Tuple[()]]
 
 
+# TODO(b/188510142): Delete Step.
 class Step(NamedTuple):
   """Step class used internally for reverb adders."""
   observation: types.NestedArray
@@ -41,6 +42,10 @@ class Step(NamedTuple):
   discount: types.NestedArray
   start_of_episode: StartOfEpisodeType
   extras: types.NestedArray = ()
+
+
+# TODO(b/188510142): Replace with proper Trajectory class.
+Trajectory = Step
 
 
 class PriorityFnInput(NamedTuple):
@@ -91,7 +96,7 @@ class ReverbAdder(base.Adder):
     if priority_fns:
       priority_fns = dict(priority_fns)
     else:
-      priority_fns = {DEFAULT_PRIORITY_TABLE: lambda x: 1.}
+      priority_fns = {DEFAULT_PRIORITY_TABLE: None}
 
     self._client = client
     self._priority_fns = priority_fns

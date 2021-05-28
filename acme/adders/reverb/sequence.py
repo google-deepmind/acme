@@ -207,15 +207,12 @@ class SequenceAdder(base.ReverbAdder):
     else:
       get_traj = operator.itemgetter(slice(-sequence_length, None))
 
-    get_traj_np = lambda x: get_traj(x).numpy()
-
     history = self._writer.history
-    trajectory = base.Step(**tree.map_structure(get_traj, history))
-    trajectory_np = base.Step(**tree.map_structure(get_traj_np, history))
+    trajectory = base.Trajectory(**tree.map_structure(get_traj, history))
 
     # Compute priorities for the buffer.
     table_priorities = utils.calculate_priorities(self._priority_fns,
-                                                  trajectory_np)
+                                                  trajectory)
 
     # Create a prioritized item for each table.
     for table_name, priority in table_priorities.items():
@@ -245,7 +242,7 @@ class SequenceAdder(base.ReverbAdder):
         sequences that will be added to replay.
 
     Returns:
-      A `Step` whose leaf nodes are `tf.TensorSpec` objects.
+      A `Trajectory` whose leaf nodes are `tf.TensorSpec` objects.
     """
 
     def add_time_dim(paths: Iterable[str], spec: tf.TensorSpec):
@@ -256,7 +253,7 @@ class SequenceAdder(base.ReverbAdder):
     trajectory_env_spec, trajectory_extras_spec = tree.map_structure_with_path(
         add_time_dim, (environment_spec, extras_spec))
 
-    spec_step = base.Step(
+    spec_step = base.Trajectory(
         *trajectory_env_spec,
         start_of_episode=tf.TensorSpec(
             shape=(sequence_length,), dtype=tf.bool, name='start_of_episode'),

@@ -98,12 +98,11 @@ class EpisodeAdder(base.ReverbAdder):
 
     # Pack the history into a base.Step structure and get numpy converted
     # variant for priotiy computation.
-    trajectory = base.Step(**trajectory)
-    trajectory_np = tree.map_structure(lambda x: x.numpy(), trajectory)
+    trajectory = base.Trajectory(**trajectory)
 
     # Calculate the priority for this episode.
     table_priorities = utils.calculate_priorities(self._priority_fns,
-                                                  trajectory_np)
+                                                  trajectory)
 
     # Create a prioritized item for each table.
     for table_name, priority in table_priorities.items():
@@ -142,7 +141,7 @@ class EpisodeAdder(base.ReverbAdder):
     trajectory_env_spec, trajectory_extras_spec = tree.map_structure_with_path(
         add_time_dim, (environment_spec, extras_spec))
 
-    trajectory_spec = base.Step(
+    trajectory_spec = base.Trajectory(
         *trajectory_env_spec,
         start_of_episode=tf.TensorSpec(
             shape=(sequence_length,), dtype=tf.bool, name='start_of_episode'),
