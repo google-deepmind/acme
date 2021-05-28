@@ -54,8 +54,8 @@ class EnvironmentLoop(core.Worker):
       self,
       environment: dm_env.Environment,
       actor: core.Actor,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       should_update: bool = True,
       label: str = 'environment_loop',
   ):

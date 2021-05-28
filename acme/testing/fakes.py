@@ -85,8 +85,8 @@ class Learner(core.Learner, VariableSource):
   """Fake Learner."""
 
   def __init__(self,
-               variables: types.NestedArray = None,
-               barrier: threading.Barrier = None):
+               variables: Optional[types.NestedArray] = None,
+               barrier: Optional[threading.Barrier] = None):
     super().__init__(variables=variables, barrier=barrier)
     self.step_counter = 0
 

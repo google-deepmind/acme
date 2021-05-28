@@ -57,8 +57,8 @@ class OpenSpielEnvironmentLoop(core.Worker):
       self,
       environment: open_spiel_wrapper.OpenSpielWrapper,
       actors: Sequence[core.Actor],
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       should_update: bool = True,
       label: str = 'open_spiel_environment_loop',
   ):

@@ -15,7 +15,7 @@
 
 """DQN learner implementation."""
 
-from typing import Iterator
+from typing import Iterator, Optional
 
 from acme.agents.jax.dqn import learning_lib
 from acme.agents.jax.dqn import losses
@@ -43,9 +43,9 @@ class DQNLearner(learning_lib.SGDLearner):
                random_key: networks_lib.PRNGKey,
                max_abs_reward: float = 1.,
                huber_loss_parameter: float = 1.,
-               replay_client: reverb.Client = None,
-               counter: counting.Counter = None,
-               logger: loggers.Logger = None):
+               replay_client: Optional[reverb.Client] = None,
+               counter: Optional[counting.Counter] = None,
+               logger: Optional[loggers.Logger] = None):
     """Initializes the learner."""
     loss_fn = losses.PrioritizedDoubleQLearning(
         discount=discount,

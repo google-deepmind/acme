@@ -15,7 +15,7 @@
 
 """BC Learner implementation."""
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import acme
 from acme import types
@@ -39,8 +39,8 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
                network: snt.Module,
                learning_rate: float,
                dataset: tf.data.Dataset,
-               counter: counting.Counter = None,
-               logger: loggers.Logger = None,
+               counter: Optional[counting.Counter] = None,
+               logger: Optional[loggers.Logger] = None,
                checkpoint: bool = True):
     """Initializes the learner.
 

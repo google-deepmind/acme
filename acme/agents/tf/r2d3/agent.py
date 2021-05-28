@@ -16,6 +16,7 @@
 """Recurrent DQfD (R2D3) agent implementation."""
 
 import functools
+from typing import Optional
 
 from acme import datasets
 from acme import specs
@@ -51,8 +52,8 @@ class R2D3(agent.Agent):
                replay_period: int,
                demonstration_dataset: tf.data.Dataset,
                demonstration_ratio: float,
-               counter: counting.Counter = None,
-               logger: loggers.Logger = None,
+               counter: Optional[counting.Counter] = None,
+               logger: Optional[loggers.Logger] = None,
                discount: float = 0.99,
                batch_size: int = 32,
                target_update_period: int = 100,

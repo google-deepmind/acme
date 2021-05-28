@@ -15,6 +15,7 @@
 
 """Losses for Deterministic Policy Gradients."""
 
+from typing import Optional
 import tensorflow as tf
 
 
@@ -22,7 +23,7 @@ def dpg(
     q_max: tf.Tensor,
     a_max: tf.Tensor,
     tape: tf.GradientTape,
-    dqda_clipping: float = None,
+    dqda_clipping: Optional[float] = None,
     clip_norm: bool = False,
 ) -> tf.Tensor:
   """Deterministic policy gradient loss, similar to trfl.dpg."""

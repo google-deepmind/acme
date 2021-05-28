@@ -19,7 +19,7 @@ As described in https://arxiv.org/pdf/1910.01708.pdf.
 """
 
 import copy
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from acme import core
 from acme import types
@@ -53,9 +53,9 @@ class _InternalBCQLearner(core.Learner, tf2_savers.TFSaveable):
       target_update_period: int,
       dataset: tf.data.Dataset,
       huber_loss_parameter: float = 1.,
-      replay_client: reverb.TFClient = None,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      replay_client: Optional[reverb.TFClient] = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       checkpoint: bool = False,
   ):
     """Initializes the learner.
@@ -218,9 +218,9 @@ class DiscreteBCQLearner(core.Learner, tf2_savers.TFSaveable):
                network: discrete_networks.DiscreteFilteredQNetwork,
                dataset: tf.data.Dataset,
                learning_rate: float,
-               counter: counting.Counter = None,
-               bc_logger: loggers.Logger = None,
-               bcq_logger: loggers.Logger = None,
+               counter: Optional[counting.Counter] = None,
+               bc_logger: Optional[loggers.Logger] = None,
+               bcq_logger: Optional[loggers.Logger] = None,
                **bcq_learner_kwargs):
     counter = counter or counting.Counter()
     self._bc_logger = bc_logger or loggers.TerminalLogger('bc_learner',

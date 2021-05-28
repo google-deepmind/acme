@@ -16,6 +16,7 @@
 """Distributional MPO agent implementation."""
 
 import copy
+from typing import Optional
 
 from acme import datasets
 from acme import specs
@@ -57,14 +58,14 @@ class DistributionalMPO(agent.Agent):
                min_replay_size: int = 1000,
                max_replay_size: int = 1000000,
                samples_per_insert: float = 32.0,
-               policy_loss_module: snt.Module = None,
-               policy_optimizer: snt.Optimizer = None,
-               critic_optimizer: snt.Optimizer = None,
+               policy_loss_module: Optional[snt.Module] = None,
+               policy_optimizer: Optional[snt.Optimizer] = None,
+               critic_optimizer: Optional[snt.Optimizer] = None,
                n_step: int = 5,
                num_samples: int = 20,
                clipping: bool = True,
-               logger: loggers.Logger = None,
-               counter: counting.Counter = None,
+               logger: Optional[loggers.Logger] = None,
+               counter: Optional[counting.Counter] = None,
                checkpoint: bool = True,
                replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE):
     """Initialize the agent.

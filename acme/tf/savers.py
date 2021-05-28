@@ -84,7 +84,7 @@ class Checkpointer:
       add_uid: bool = True,
       max_to_keep: int = 1,
       checkpoint_ttl_seconds: int = _DEFAULT_CHECKPOINT_TTL,
-      keep_checkpoint_every_n_hours: int = None,
+      keep_checkpoint_every_n_hours: Optional[int] = None,
   ):
     """Builds the saver object.
 

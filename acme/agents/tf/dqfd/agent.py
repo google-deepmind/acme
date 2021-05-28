@@ -18,6 +18,7 @@
 import copy
 import functools
 import operator
+from typing import Optional
 
 from acme import datasets
 from acme import specs
@@ -55,7 +56,7 @@ class DQfD(agent.Agent):
       max_replay_size: int = 1000000,
       importance_sampling_exponent: float = 0.2,
       n_step: int = 5,
-      epsilon: tf.Tensor = None,
+      epsilon: Optional[tf.Tensor] = None,
       learning_rate: float = 1e-3,
       discount: float = 0.99,
   ):
