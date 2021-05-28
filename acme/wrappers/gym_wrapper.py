@@ -15,7 +15,7 @@
 
 """Wraps an OpenAI Gym environment to be used as a dm_env environment."""
 
-from typing import List
+from typing import List, Optional
 
 from acme import specs
 from acme import types
@@ -83,7 +83,8 @@ class GymWrapper(dm_env.Environment):
     self._environment.close()
 
 
-def _convert_to_spec(space: gym.Space, name: str = None) -> types.NestedSpec:
+def _convert_to_spec(space: gym.Space,
+                     name: Optional[str] = None) -> types.NestedSpec:
   """Converts an OpenAI Gym space to a dm_env spec or nested structure of specs.
 
   Box, MultiBinary and MultiDiscrete Gym spaces are converted to BoundedArray

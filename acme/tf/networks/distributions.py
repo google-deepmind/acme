@@ -15,6 +15,7 @@
 
 """Distributions, for use in acme/networks/distributional.py."""
 
+from typing import Optional
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -33,8 +34,8 @@ class DiscreteValuedDistribution(tfd.Categorical):
 
   def __init__(self,
                values: tf.Tensor,
-               logits: tf.Tensor = None,
-               probs: tf.Tensor = None,
+               logits: Optional[tf.Tensor] = None,
+               probs: Optional[tf.Tensor] = None,
                name: str = 'DiscreteValuedDistribution'):
     """Initialization.
 

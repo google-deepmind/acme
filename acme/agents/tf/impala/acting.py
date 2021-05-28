@@ -15,6 +15,8 @@
 
 """IMPALA actor implementation."""
 
+from typing import Optional
+
 from acme import adders
 from acme import core
 from acme import types
@@ -35,8 +37,8 @@ class IMPALAActor(core.Actor):
   def __init__(
       self,
       network: snt.RNNCore,
-      adder: adders.Adder = None,
-      variable_client: tf2_variable_utils.VariableClient = None,
+      adder: Optional[adders.Adder] = None,
+      variable_client: Optional[tf2_variable_utils.VariableClient] = None,
   ):
 
     # Store these for later use.

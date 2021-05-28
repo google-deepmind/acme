@@ -15,7 +15,7 @@
 
 """Networks used for handling illegal actions."""
 
-from typing import Any, Callable, Iterable, Union
+from typing import Any, Callable, Iterable, Optional, Union
 
 # pytype: disable=import-error
 from acme.wrappers import open_spiel_wrapper
@@ -37,7 +37,7 @@ class MaskedSequential(snt.Module):
   """
 
   def __init__(self,
-               layers: Iterable[Callable[..., Any]] = None,
+               layers: Optional[Iterable[Callable[..., Any]]] = None,
                name: str = 'MaskedSequential'):
     super().__init__(name=name)
     self._layers = list(layers) if layers is not None else []

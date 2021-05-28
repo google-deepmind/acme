@@ -15,7 +15,7 @@
 
 """Visual networks for processing pixel inputs."""
 
-from typing import Union, Sequence, Callable
+from typing import Callable, Optional, Sequence, Union
 import sonnet as snt
 import tensorflow as tf
 
@@ -84,7 +84,7 @@ class ResidualBlockGroup(snt.Module):
                pool_stride: Union[int, Sequence[int]],
                data_format: str = 'NHWC',
                activation: Callable[[tf.Tensor], tf.Tensor] = tf.nn.relu,
-               name: str = None):
+               name: Optional[str] = None):
     super().__init__(name=name)
 
     self._num_blocks = num_blocks

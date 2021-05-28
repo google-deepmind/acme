@@ -16,7 +16,7 @@
 """D4PG learner implementation."""
 
 import time
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Optional
 
 import acme
 from acme import types
@@ -51,11 +51,11 @@ class D4PGLearner(acme.Learner):
       dataset_iterator: Iterator[reverb.ReplaySample],
       observation_network: types.TensorTransformation = lambda x: x,
       target_observation_network: types.TensorTransformation = lambda x: x,
-      policy_optimizer: snt.Optimizer = None,
-      critic_optimizer: snt.Optimizer = None,
+      policy_optimizer: Optional[snt.Optimizer] = None,
+      critic_optimizer: Optional[snt.Optimizer] = None,
       clipping: bool = True,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
   ):
     """Initializes the learner.

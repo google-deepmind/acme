@@ -41,7 +41,7 @@ class DistributedD4PG:
       network_factory: Callable[[specs.BoundedArray], Dict[str, snt.Module]],
       num_actors: int = 1,
       num_caches: int = 0,
-      environment_spec: specs.EnvironmentSpec = None,
+      environment_spec: Optional[specs.EnvironmentSpec] = None,
       batch_size: int = 256,
       prefetch_size: int = 4,
       min_replay_size: int = 1000,
@@ -51,10 +51,10 @@ class DistributedD4PG:
       sigma: float = 0.3,
       clipping: bool = True,
       discount: float = 0.99,
-      policy_optimizer: snt.Optimizer = None,
-      critic_optimizer: snt.Optimizer = None,
+      policy_optimizer: Optional[snt.Optimizer] = None,
+      critic_optimizer: Optional[snt.Optimizer] = None,
       target_update_period: int = 100,
-      max_actor_steps: int = None,
+      max_actor_steps: Optional[int] = None,
       log_every: float = 10.0,
   ):
 
@@ -178,7 +178,7 @@ class DistributedD4PG:
       self,
       variable_source: acme.VariableSource,
       counter: counting.Counter,
-      logger: loggers.Logger = None,
+      logger: Optional[loggers.Logger] = None,
   ):
     """The evaluation process."""
 

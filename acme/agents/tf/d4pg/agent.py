@@ -256,8 +256,8 @@ class D4PG(agent.Agent):
       batch_size: int = 256,
       prefetch_size: int = 4,
       target_update_period: int = 100,
-      policy_optimizer: snt.Optimizer = None,
-      critic_optimizer: snt.Optimizer = None,
+      policy_optimizer: Optional[snt.Optimizer] = None,
+      critic_optimizer: Optional[snt.Optimizer] = None,
       min_replay_size: int = 1000,
       max_replay_size: int = 1000000,
       samples_per_insert: float = 32.0,
@@ -265,8 +265,8 @@ class D4PG(agent.Agent):
       sigma: float = 0.3,
       clipping: bool = True,
       replay_table_name: str = reverb_adders.DEFAULT_PRIORITY_TABLE,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
   ):
     """Initialize the agent.

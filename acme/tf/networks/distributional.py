@@ -45,8 +45,8 @@ class DiscreteValuedHead(snt.Module):
                vmin: Union[float, np.ndarray, tf.Tensor],
                vmax: Union[float, np.ndarray, tf.Tensor],
                num_atoms: int,
-               w_init: snt.initializers.Initializer = None,
-               b_init: snt.initializers.Initializer = None):
+               w_init: Optional[snt.initializers.Initializer] = None,
+               b_init: Optional[snt.initializers.Initializer] = None):
     """Initialization.
 
     If vmin and vmax have shape S, this will store the category values as a

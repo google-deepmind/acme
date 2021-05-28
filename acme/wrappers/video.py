@@ -94,7 +94,7 @@ class VideoWrapper(base.EnvironmentWrapper):
                process_path: Callable[[str, str], str] = paths.process_path,
                record_every: int = 100,
                frame_rate: int = 30,
-               figsize: Union[float, Tuple[int, int]] = None):
+               figsize: Optional[Union[float, Tuple[int, int]]] = None):
     super(VideoWrapper, self).__init__(environment)
     self._path = process_path(path, 'videos')
     self._filename = filename

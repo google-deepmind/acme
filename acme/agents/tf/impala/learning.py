@@ -49,8 +49,8 @@ class IMPALALearner(acme.Learner, tf2_savers.TFSaveable):
       baseline_cost: float = 1.,
       max_abs_reward: Optional[float] = None,
       max_gradient_norm: Optional[float] = None,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
   ):
 
     # Internalise, optimizer, and dataset.

@@ -67,7 +67,7 @@ class AtariWrapper(base.EnvironmentWrapper):
                zero_discount_on_life_loss: bool = False,
                expose_lives_observation: bool = False,
                num_stacked_frames: int = 4,
-               max_episode_len: int = None,
+               max_episode_len: Optional[int] = None,
                to_float: bool = False,
                grayscaling: bool = True):
     """Initializes a new AtariWrapper.
