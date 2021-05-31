@@ -64,6 +64,9 @@ class EnvironmentWrapper(dm_env.Environment):
   def reward_spec(self):
     return self._environment.reward_spec()
 
+  def close(self):
+    return self._environment.close()
+
 
 def wrap_all(
     environment: dm_env.Environment,
