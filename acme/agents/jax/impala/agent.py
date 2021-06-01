@@ -15,7 +15,7 @@
 
 """Importance weighted advantage actor-critic (IMPALA) agent implementation."""
 
-from typing import Callable
+from typing import Callable, Optional
 
 import acme
 from acme import specs
@@ -67,8 +67,8 @@ class IMPALAFromConfig(acme.Actor):
       initial_state_init_fn: types.RecurrentStateInitFn,
       initial_state_fn: types.RecurrentStateFn,
       config: IMPALAConfig,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
   ):
     self._config = config
 
@@ -167,8 +167,8 @@ class IMPALA(IMPALAFromConfig):
       initial_state_fn: Callable[[], hk.LSTMState],
       sequence_length: int,
       sequence_period: int,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       discount: float = 0.99,
       max_queue_size: int = 100000,
       batch_size: int = 16,

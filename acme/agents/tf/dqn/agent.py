@@ -58,7 +58,7 @@ class DQN(agent.Agent):
       epsilon: Optional[tf.Variable] = None,
       learning_rate: float = 1e-3,
       discount: float = 0.99,
-      logger: loggers.Logger = None,
+      logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
       checkpoint_subpath: str = '~/acme/',
       policy_network: Optional[snt.Module] = None,

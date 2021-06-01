@@ -15,7 +15,7 @@
 
 """A MCTS actor."""
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 import acme
 from acme import adders
@@ -44,8 +44,8 @@ class MCTSActor(acme.Actor):
       network: snt.Module,
       discount: float,
       num_simulations: int,
-      adder: adders.Adder = None,
-      variable_client: tf2_variable_utils.VariableClient = None,
+      adder: Optional[adders.Adder] = None,
+      variable_client: Optional[tf2_variable_utils.VariableClient] = None,
   ):
 
     # Internalize components: model, network, data sink and variable source.

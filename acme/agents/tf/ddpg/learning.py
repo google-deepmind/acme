@@ -16,7 +16,7 @@
 """DDPG learner implementation."""
 
 import time
-from typing import List
+from typing import List, Optional
 
 import acme
 from acme import types
@@ -50,11 +50,11 @@ class DDPGLearner(acme.Learner):
       dataset: tf.data.Dataset,
       observation_network: types.TensorTransformation = lambda x: x,
       target_observation_network: types.TensorTransformation = lambda x: x,
-      policy_optimizer: snt.Optimizer = None,
-      critic_optimizer: snt.Optimizer = None,
+      policy_optimizer: Optional[snt.Optimizer] = None,
+      critic_optimizer: Optional[snt.Optimizer] = None,
       clipping: bool = True,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
   ):
     """Initializes the learner.

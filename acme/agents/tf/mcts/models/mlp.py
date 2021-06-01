@@ -15,7 +15,7 @@
 
 """A simple (deterministic) environment transition model from pixels."""
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 from acme import specs
 from acme.agents.tf.mcts import types
@@ -157,7 +157,7 @@ class MLPModel(base.Model):
       return dm_env.termination(reward=reward, observation=self._state.copy())
     return dm_env.transition(reward=reward, observation=self._state.copy())
 
-  def reset(self, initial_state: types.Observation = None):
+  def reset(self, initial_state: Optional[types.Observation] = None):
     if initial_state is None:
       raise ValueError('Model must be reset with an initial state.')
     # We reset to an initial state that we are explicitly given.

@@ -16,6 +16,7 @@
 """DDPG agent implementation."""
 
 import copy
+from typing import Optional
 
 from acme import datasets
 from acme import specs
@@ -57,8 +58,8 @@ class DDPG(agent.Agent):
                n_step: int = 5,
                sigma: float = 0.3,
                clipping: bool = True,
-               logger: loggers.Logger = None,
-               counter: counting.Counter = None,
+               logger: Optional[loggers.Logger] = None,
+               counter: Optional[counting.Counter] = None,
                checkpoint: bool = True,
                replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE):
     """Initialize the agent.

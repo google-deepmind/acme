@@ -16,6 +16,7 @@
 """Recurrent DQN (R2D2) agent implementation."""
 
 import copy
+from typing import Optional
 
 from acme import datasets
 from acme import specs
@@ -49,8 +50,8 @@ class R2D2(agent.Agent):
       burn_in_length: int,
       trace_length: int,
       replay_period: int,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       discount: float = 0.99,
       batch_size: int = 32,
       prefetch_size: int = tf.data.experimental.AUTOTUNE,

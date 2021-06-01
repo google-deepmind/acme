@@ -16,6 +16,7 @@
 """Base model class, specifying the interface.."""
 
 import abc
+from typing import Optional
 
 from acme.agents.tf.mcts import types
 
@@ -43,7 +44,7 @@ class Model(dm_env.Environment, abc.ABC):
     """Updates the model given an observation, action, reward, and discount."""
 
   @abc.abstractmethod
-  def reset(self, initial_state: types.Observation = None):
+  def reset(self, initial_state: Optional[types.Observation] = None):
     """Resets the model, optionally to an initial state."""
 
   @property

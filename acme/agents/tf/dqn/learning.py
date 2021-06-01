@@ -16,7 +16,7 @@
 """DQN learner implementation."""
 
 import time
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import acme
 from acme import types
@@ -51,11 +51,11 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       target_update_period: int,
       dataset: tf.data.Dataset,
       huber_loss_parameter: float = 1.,
-      replay_client: Union[reverb.Client, reverb.TFClient] = None,
-      counter: counting.Counter = None,
-      logger: loggers.Logger = None,
+      replay_client: Optional[Union[reverb.Client, reverb.TFClient]] = None,
+      counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
-      max_gradient_norm: float = None,
+      max_gradient_norm: Optional[float] = None,
   ):
     """Initializes the learner.
 
@@ -82,7 +82,10 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     # This is just here for backwards compatability for agents which reuse this
     # Learner and still pass a TFClient instance.
     if isinstance(replay_client, reverb.TFClient):
-      replay_client = reverb.Client(replay_client._server_address)
+      # TODO(b/170419518): open source pytype does not understand this
+      # isinstance() check because it does not have a way of getting precise
+      # type information for pip-installed packages.
+      replay_client = reverb.Client(replay_client._server_address)  # pytype: disable=attribute-error
 
     # Internalise agent components (replay buffer, networks, optimizer).
     # TODO(b/155086959): Fix type stubs and remove.
