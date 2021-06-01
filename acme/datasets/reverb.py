@@ -31,6 +31,7 @@ def make_reverb_dataset(
     prefetch_size: Optional[int] = None,
     table: str = adders.DEFAULT_PRIORITY_TABLE,
     num_parallel_calls: int = 12,
+    max_in_flight_samples_per_worker: Optional[int] = None,
     # Deprecated kwargs.
     environment_spec: Optional[specs.EnvironmentSpec] = None,
     extra_spec: Optional[types.NestedSpec] = None,
@@ -57,7 +58,10 @@ def make_reverb_dataset(
   del sequence_length
 
   # This is the default that used to be set by reverb.TFClient.dataset().
-  max_in_flight_samples_per_worker = 2 * batch_size if batch_size else 100
+  if max_in_flight_samples_per_worker is None and batch_size is None:
+    max_in_flight_samples_per_worker = 100
+  elif max_in_flight_samples_per_worker is None:
+    max_in_flight_samples_per_worker = 2 * batch_size
 
   def _make_dataset(unused_idx: tf.Tensor) -> tf.data.Dataset:
     dataset = reverb.TrajectoryDataset.from_table_signature(
