@@ -1,3 +1,4 @@
+# Lint as: python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-# Lint as: python3
 """Tests for TF2 savers."""
 
 import os
+import signal
+import threading
 import time
 from unittest import mock
 
@@ -27,6 +28,7 @@ from acme.tf import networks
 from acme.tf import savers as tf2_savers
 from acme.tf import utils as tf2_utils
 from acme.utils import paths
+from acme.utils import signals
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
@@ -121,6 +123,48 @@ class CheckpointerTest(test_utils.TestCase):
     checkpoint_runner._checkpointer.restore()
 
     np.testing.assert_array_equal(x._state.numpy(), np.int32(0))
+
+
+class CheckpointingRunnerTest(test_utils.TestCase):
+
+  def test_signal_handling(self):
+    x = DummySaveable()
+    directory = self.get_tempdir()
+    event = threading.Event()
+
+    true_add_handler = signals.add_handler
+    # Patch signals.add_handler so the registered signal handler sets the event.
+    with mock.patch.object(signals, 'add_handler') as mock_add_handler:
+      def add_handler(signo, fn):
+        def _wrapped():
+          fn()
+          event.set()
+        true_add_handler(signo, _wrapped)
+      mock_add_handler.side_effect = add_handler
+
+      unused_runner = tf2_savers.CheckpointingRunner(
+          wrapped=x,
+          time_delta_minutes=0,
+          directory=directory)
+
+    # Increment the value of DummySavable.
+    x.state['state'].assign_add(1)
+
+    # Send SIGTERM, this will cause the unused_runner to checkpoint.
+    os.kill(os.getpid(), signal.SIGTERM)
+
+    # Wait for the checkpoint to finalize.
+    event.wait()
+
+    # Recreate DummySavable(), its tf.Variable is initialized to 0.
+    x = DummySaveable()
+    # Recreate the CheckpointingRunner, which will restore DummySavable() to 1.
+    tf2_savers.CheckpointingRunner(
+        wrapped=x,
+        time_delta_minutes=0,
+        directory=directory)
+    # Check DummyVariable() was restored properly.
+    np.testing.assert_array_equal(x.state['state'].numpy(), np.int32(1))
 
 
 class SnapshotterTest(test_utils.TestCase):

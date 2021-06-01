@@ -21,11 +21,12 @@ import os
 import pickle
 import signal
 import time
-from typing import Mapping, Union, Optional
+from typing import Mapping, Optional, Union
 
 from absl import logging
 from acme import core
 from acme.utils import paths
+from acme.utils import signals
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -198,18 +199,11 @@ class CheckpointingRunner(core.Worker):
         **kwargs)
 
     # Handle preemption signal. Note that this must happen in the main thread.
-    def _signal_handler(signum: signal.Signals, frame):
-      del signum, frame
+    def _signal_handler():
       logging.info('Caught SIGTERM: forcing a checkpoint save.')
       self._checkpointer.save(force=True)
 
-    try:
-      signal.signal(signal.SIGTERM, _signal_handler)
-    except ValueError:
-      logging.warning(
-          'Caught ValueError when registering signal handler. '
-          'This probably means we are not running in the main thread. '
-          'Proceeding without checkpointing-on-preemption.')
+    signals.add_handler(signal.SIGTERM, _signal_handler)
 
   def step(self):
     if isinstance(self._wrapped, core.Learner):
