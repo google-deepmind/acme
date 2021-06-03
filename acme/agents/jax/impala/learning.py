@@ -18,6 +18,7 @@
 import time
 from typing import Dict, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 
+from absl import logging
 import acme
 from acme import specs
 from acme.agents.jax.impala import types
@@ -66,6 +67,11 @@ class IMPALALearner(acme.Learner):
   ):
 
     local_devices = jax.local_devices()
+    process_id = jax.process_index()
+    logging.info('Learner process id: %s. Devices passed: %s', process_id,
+                 devices)
+    logging.info('Learner process id: %s. Local devices from JAX API: %s',
+                 process_id, local_devices)
     self._devices = devices or local_devices
     self._local_devices = [d for d in self._devices if d in local_devices]
 
@@ -95,6 +101,8 @@ class IMPALALearner(acme.Learner):
 
       metrics = {
           'loss': loss_value,
+          'param_norm': optax.global_norm(new_params),
+          'param_updates_norm': optax.global_norm(updates),
       }
 
       new_state = TrainingState(params=new_params, opt_state=new_opt_state)

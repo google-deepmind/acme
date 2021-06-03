@@ -15,14 +15,15 @@
 
 """Importance weighted advantage actor-critic (IMPALA) agent implementation."""
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import acme
 from acme import specs
+from acme import types
 from acme.agents import replay
 from acme.agents.jax.impala import acting
 from acme.agents.jax.impala import learning
-from acme.agents.jax.impala import types
+from acme.agents.jax.impala import types as impala_types
 from acme.jax import networks
 from acme.jax import variable_utils
 from acme.utils import counting
@@ -44,15 +45,23 @@ class IMPALAConfig:
   batch_size: int = 16
   sequence_length: int = 20
   sequence_period: int = 20
-  learning_rate: float = 1e-3
   discount: float = 0.99
   entropy_cost: float = 0.01
   baseline_cost: float = 0.5
   max_abs_reward: float = np.inf
   max_gradient_norm: float = np.inf
 
+  # Optimizer options
+  learning_rate: float = 1e-4
+  adam_momentum_decay: float = 0.0
+  adam_variance_decay: float = 0.99
+
   # Replay options
-  max_queue_size: int = 10_000
+  max_queue_size: Union[int, types.Batches] = types.Batches(10)
+
+  def __post_init__(self):
+    if isinstance(self.max_queue_size, types.Batches):
+      self.max_queue_size *= self.batch_size
 
 
 class IMPALAFromConfig(acme.Actor):
@@ -61,15 +70,16 @@ class IMPALAFromConfig(acme.Actor):
   def __init__(
       self,
       environment_spec: specs.EnvironmentSpec,
-      forward_fn: types.PolicyValueFn,
-      unroll_init_fn: types.PolicyValueInitFn,
-      unroll_fn: types.PolicyValueFn,
-      initial_state_init_fn: types.RecurrentStateInitFn,
-      initial_state_fn: types.RecurrentStateFn,
+      forward_fn: impala_types.PolicyValueFn,
+      unroll_init_fn: impala_types.PolicyValueInitFn,
+      unroll_fn: impala_types.PolicyValueFn,
+      initial_state_init_fn: impala_types.RecurrentStateInitFn,
+      initial_state_fn: impala_types.RecurrentStateFn,
       config: IMPALAConfig,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
   ):
+
     self._config = config
 
     # Data is handled by the reverb replay queue.
@@ -83,6 +93,7 @@ class IMPALAFromConfig(acme.Actor):
         'core_state': initial_state_fn(params),
         'logits': np.ones(shape=(num_actions,), dtype=np.float32)
     }
+
     reverb_queue = replay.make_reverb_online_queue(
         environment_spec=environment_spec,
         extra_spec=extra_spec,
@@ -133,7 +144,7 @@ class IMPALAFromConfig(acme.Actor):
 
   def observe(
       self,
-      action: types.Action,
+      action: impala_types.Action,
       next_timestep: dm_env.TimeStep,
   ):
     self._actor.observe(action, next_timestep)
@@ -170,7 +181,7 @@ class IMPALA(IMPALAFromConfig):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       discount: float = 0.99,
-      max_queue_size: int = 100000,
+      max_queue_size: Union[int, types.Batches] = types.Batches(10),
       batch_size: int = 16,
       learning_rate: float = 1e-3,
       entropy_cost: float = 0.01,
