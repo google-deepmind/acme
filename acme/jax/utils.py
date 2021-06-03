@@ -68,8 +68,12 @@ def batch_concat(
   return jnp.concatenate(tree.flatten(flat_leaves), axis=-1)
 
 
-def zeros_like(nest: types.Nest) -> types.NestedArray:
-  return jax.tree_map(lambda x: jnp.zeros(x.shape, x.dtype), nest)
+def zeros_like(nest: types.Nest, dtype=None) -> types.NestedArray:
+  return jax.tree_map(lambda x: jnp.zeros(x.shape, dtype or x.dtype), nest)
+
+
+def ones_like(nest: types.Nest, dtype=None) -> types.NestedArray:
+  return jax.tree_map(lambda x: jnp.ones(x.shape, dtype or x.dtype), nest)
 
 
 def squeeze_batch_dim(nest: types.Nest) -> types.NestedArray:
