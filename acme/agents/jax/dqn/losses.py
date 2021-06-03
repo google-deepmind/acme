@@ -118,6 +118,50 @@ class QLearning(learning_lib.LossFn):
 
 
 @dataclasses.dataclass
+class RegularizedQLearning(learning_lib.LossFn):
+  """Regularized Q-learning.
+
+  Implements DQNReg loss function: https://arxiv.org/abs/2101.03958.
+  This is almost identical to QLearning except: 1) Adds a regularization term;
+  2) Uses vanilla TD error without huber loss. 3) No reward clipping.
+  """
+  discount: float = 0.99
+  regularizer_coeff = 0.1
+
+  def __call__(
+      self,
+      network: networks_lib.FeedForwardNetwork,
+      params: networks_lib.Params,
+      target_params: networks_lib.Params,
+      batch: reverb.ReplaySample,
+      key: networks_lib.PRNGKey,
+  ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
+    """Calculate a loss on a single batch of data."""
+    del key
+    transitions: types.Transition = batch.data
+
+    # Forward pass.
+    q_tm1 = network.apply(params, transitions.observation)
+    q_t = network.apply(target_params, transitions.next_observation)
+
+    d_t = (transitions.discount * self.discount).astype(jnp.float32)
+
+    # Compute Q-learning TD-error.
+    batch_error = jax.vmap(rlax.q_learning)
+    td_error = batch_error(
+        q_tm1, transitions.action, transitions.reward, d_t, q_t)
+    td_error = 0.5 * jnp.square(td_error)
+
+    def select(qtm1, action):
+      return qtm1[action]
+    q_regularizer = jax.vmap(select)(q_tm1, transitions.action)
+
+    loss = self.regularizer_coeff * jnp.mean(q_regularizer) + jnp.mean(td_error)
+    extra = learning_lib.LossExtra(metrics={})
+    return loss, extra
+
+
+@dataclasses.dataclass
 class MunchausenQLearning(learning_lib.LossFn):
   """Munchausen q learning.
 
