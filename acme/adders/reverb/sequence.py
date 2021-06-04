@@ -33,7 +33,7 @@ import tensorflow as tf
 import tree
 
 
-class EndOfEpisodeBehavior(enum.Enum):
+class EndBehavior(enum.Enum):
   """Class to enumerate available options for writing behavior at episode ends.
 
   Example:
@@ -52,6 +52,7 @@ class EndOfEpisodeBehavior(enum.Enum):
              . . 3 4 5
 
   Written sequences for the different end of episode behaviors:
+  Here are the last written sequences for each end of episode behavior:
 
    WRITE     . . . 4 5 6
    CONTINUE  . . . . 5 6 F
@@ -76,13 +77,15 @@ class SequenceAdder(base.ReverbAdder):
       client: reverb.Client,
       sequence_length: int,
       period: int,
+      *,
       delta_encoded: bool = False,
       priority_fns: Optional[base.PriorityFnMapping] = None,
-      pad_end_of_episode: bool = True,
-      break_end_of_episode: bool = True,
       max_in_flight_items: Optional[int] = 2,
+      end_of_episode_behavior: Optional[EndBehavior] = None,
       # Deprecated kwargs.
       chunk_length: Optional[int] = None,
+      pad_end_of_episode: Optional[bool] = None,
+      break_end_of_episode: Optional[bool] = None,
   ):
     """Makes a SequenceAdder instance.
 
@@ -95,16 +98,19 @@ class SequenceAdder(base.ReverbAdder):
       delta_encoded: If `True` (False by default) enables delta encoding, see
         `Client` for more information.
       priority_fns: See docstring for BaseAdder.
+      max_in_flight_items: The maximum number of items allowed to be "in flight"
+        at the same time. See `block_until_num_items` in
+        `reverb.TrajectoryWriter.flush` for more info.
+      end_of_episode_behavior:  Determines how sequences at the end of the
+        episode are handled (default `EndOfEpisodeBehavior.ZERO_PAD`). See
+        the docstring for `EndOfEpisodeBehavior` for more information.
+      chunk_length: Deprecated and unused.
       pad_end_of_episode: If True (default) then upon end of episode the current
         sequence will be padded (with observations, actions, etc... whose values
         are 0) until its length is `sequence_length`. If False then the last
         sequence in the episode may have length less than `sequence_length`.
       break_end_of_episode: If 'False' (True by default) does not break
         sequences on env reset. In this case 'pad_end_of_episode' is not used.
-      max_in_flight_items: The maximum number of items allowed to be "in flight"
-        at the same time. See `block_until_num_items` in
-        `reverb.TrajectoryWriter.flush` for more info.
-      chunk_length: Deprecated and unused.
     """
     del chunk_length
     super().__init__(
@@ -124,22 +130,42 @@ class SequenceAdder(base.ReverbAdder):
     self._period = period
     self._sequence_length = sequence_length
 
-    if not break_end_of_episode:
-      self._end_of_episode_behavior = EndOfEpisodeBehavior.CONTINUE
-    elif break_end_of_episode and pad_end_of_episode:
-      self._end_of_episode_behavior = EndOfEpisodeBehavior.ZERO_PAD
-    elif break_end_of_episode and not pad_end_of_episode:
-      self._end_of_episode_behavior = EndOfEpisodeBehavior.TRUNCATE
-    else:
+    if end_of_episode_behavior and (pad_end_of_episode is not None or
+                                    break_end_of_episode is not None):
       raise ValueError(
-          'Reached an unexpected configuration of the SequenceAdder '
-          f'with break_end_of_episode={break_end_of_episode} '
-          f'and pad_end_of_episode={pad_end_of_episode}.')
+          'Using end_of_episode_behavior and either '
+          'pad_end_of_episode or break_end_of_episode is not permitted. '
+          'Please use only end_of_episode_behavior instead.')
+
+    # Set pad_end_of_episode and break_end_of_episode to default values.
+    if end_of_episode_behavior is None and pad_end_of_episode is None:
+      pad_end_of_episode = True
+    if end_of_episode_behavior is None and break_end_of_episode is None:
+      break_end_of_episode = True
+
+    self._end_of_episode_behavior = EndBehavior.ZERO_PAD
+    if pad_end_of_episode is not None or break_end_of_episode is not None:
+      if not break_end_of_episode:
+        self._end_of_episode_behavior = EndBehavior.CONTINUE
+      elif break_end_of_episode and pad_end_of_episode:
+        self._end_of_episode_behavior = EndBehavior.ZERO_PAD
+      elif break_end_of_episode and not pad_end_of_episode:
+        self._end_of_episode_behavior = EndBehavior.TRUNCATE
+      else:
+        raise ValueError(
+            'Reached an unexpected configuration of the SequenceAdder '
+            f'with break_end_of_episode={break_end_of_episode} '
+            f'and pad_end_of_episode={pad_end_of_episode}.')
+    elif isinstance(end_of_episode_behavior, EndBehavior):
+      self._end_of_episode_behavior = end_of_episode_behavior
+    else:
+      raise ValueError('end_of_episod_behavior must be an instance of '
+                       f'EndBehavior, received {end_of_episode_behavior}.')
 
   def reset(self):
     """Resets the adder's buffer."""
     # If we do not write on end of episode, we should not reset the writer.
-    if self._end_of_episode_behavior is EndOfEpisodeBehavior.CONTINUE:
+    if self._end_of_episode_behavior is EndBehavior.CONTINUE:
       return
 
     super().reset()
@@ -149,27 +175,27 @@ class SequenceAdder(base.ReverbAdder):
 
   def _write_last(self):
     # Maybe determine the delta to the next time we would write a sequence.
-    if self._end_of_episode_behavior in (EndOfEpisodeBehavior.TRUNCATE,
-                                         EndOfEpisodeBehavior.ZERO_PAD):
+    if self._end_of_episode_behavior in (EndBehavior.TRUNCATE,
+                                         EndBehavior.ZERO_PAD):
       delta = self._sequence_length - self._writer.episode_steps
       if delta < 0:
         delta = (self._period + delta) % self._period
 
     # Handle various end-of-episode cases.
-    if self._end_of_episode_behavior is EndOfEpisodeBehavior.CONTINUE:
+    if self._end_of_episode_behavior is EndBehavior.CONTINUE:
       self._maybe_create_item(self._sequence_length, end_of_episode=True)
 
-    elif self._end_of_episode_behavior is EndOfEpisodeBehavior.WRITE:
+    elif self._end_of_episode_behavior is EndBehavior.WRITE:
       self._maybe_create_item(
           self._sequence_length, end_of_episode=True, force=True)
 
-    elif self._end_of_episode_behavior is EndOfEpisodeBehavior.TRUNCATE:
+    elif self._end_of_episode_behavior is EndBehavior.TRUNCATE:
       self._maybe_create_item(
           self._sequence_length - delta,
           end_of_episode=True,
           force=True)
 
-    elif self._end_of_episode_behavior is EndOfEpisodeBehavior.ZERO_PAD:
+    elif self._end_of_episode_behavior is EndBehavior.ZERO_PAD:
       zero_step = tree.map_structure(lambda x: np.zeros_like(x[-2].numpy()),
                                      self._writer.history)
       for _ in range(delta):

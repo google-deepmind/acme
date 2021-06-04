@@ -42,6 +42,7 @@ class FakeWriter(reverb.TrajectoryWriter):
     self.num_episodes = 0
 
     self.priorities = []
+    self.appends = []
     self.closed = False
 
   @property
@@ -54,6 +55,7 @@ class FakeWriter(reverb.TrajectoryWriter):
 
   def append(self, timestep: Step, partial_step: bool = False):
     assert not self.closed, 'Trying to use closed Writer'
+    self.appends.append(timestep)
     self._writer.append(timestep, partial_step=partial_step)
 
   def create_item(self, table: str, priority: float, trajectory: Step):
@@ -173,15 +175,16 @@ class AdderTestMixin(absltest.TestCase):
     super().tearDownClass()
     cls.server.stop()
 
-  def run_test_adder(self,
-                     adder: base.ReverbAdder,
-                     first: dm_env.TimeStep,
-                     steps: Sequence[Step],
-                     expected_items: Sequence[Any],
-                     pack_expected_items: bool = False,
-                     stack_sequence_fields: bool = True,
-                     repeat_episode_times: int = 1,
-                     break_end_of_episode: bool = True):
+  def run_test_adder(
+      self,
+      adder: base.ReverbAdder,
+      first: dm_env.TimeStep,
+      steps: Sequence[Step],
+      expected_items: Sequence[Any],
+      pack_expected_items: bool = False,
+      stack_sequence_fields: bool = True,
+      repeat_episode_times: int = 1,
+      end_behavior: adders.EndBehavior = adders.EndBehavior.ZERO_PAD):
     """Runs a unit test case for the adder.
 
     Args:
@@ -199,8 +202,7 @@ class AdderTestMixin(absltest.TestCase):
         expected items before comparing to the observed items. Usually False
         for transition adders and True for both episode and sequence adders.
       repeat_episode_times: How many times to run an episode.
-      break_end_of_episode: If False, an end of an episode does not break the
-        sequence.
+      end_behavior: How end of episode should be handled.
     """
 
     del pack_expected_items
@@ -240,7 +242,7 @@ class AdderTestMixin(absltest.TestCase):
 
     # Ending the episode should close the writer. No new writer should yet have
     # been created as it is constructed lazily.
-    if break_end_of_episode:
+    if end_behavior is not adders.EndBehavior.CONTINUE:
       self.assertEqual(self.client.writer.num_episodes, repeat_episode_times)
 
     # Make sure our expected and observed data match.
