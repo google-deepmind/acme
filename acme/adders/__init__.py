@@ -18,3 +18,5 @@
 # pylint: disable=unused-import
 
 from acme.adders.base import Adder
+from acme.adders.wrappers import ForkingAdder
+from acme.adders.wrappers import IgnoreExtrasAdder
