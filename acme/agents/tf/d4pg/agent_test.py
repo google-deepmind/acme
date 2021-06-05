@@ -81,6 +81,7 @@ class D4PGTest(absltest.TestCase):
     # we care about is that the agent runs without raising any errors.
     loop = acme.EnvironmentLoop(environment, agent)
     loop.run(num_episodes=2)
+    # Imports check
 
 
 if __name__ == '__main__':
