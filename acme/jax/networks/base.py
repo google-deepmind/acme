@@ -29,7 +29,6 @@ Observation = types.NestedArray
 Action = types.NestedArray
 Params = types.NestedArray
 NetworkOutput = types.NestedArray
-Action = types.NestedArray
 QValues = jnp.ndarray
 Logits = jnp.ndarray
 Value = jnp.ndarray
