@@ -26,7 +26,7 @@ python -m venv acme_testing
 source acme_testing/bin/activate
 
 # Install dependencies.
-pip install --upgrade pip setuptools
+pip install --upgrade pip setuptools absl-py
 pip --version
 pip install .
 pip install .[jax]
