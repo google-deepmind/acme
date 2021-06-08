@@ -15,6 +15,7 @@
 
 """Tests for the D4PG agent."""
 
+import sys
 from typing import Dict, Sequence
 
 from absl.testing import absltest
