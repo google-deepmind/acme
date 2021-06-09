@@ -86,15 +86,11 @@ class VariableClient:
       return
 
     # Return early if we are still waiting for a previous request to come back.
-    if self._future and self._future.running():
+    if self._future and not self._future.done():
       return
 
     # Get a future and add the copy function as a callback.
     self._call_counter = 0
-    if self._future:
-      # NOTE: Calling 'cancel' prevents a memory leak inside the
-      # ThreadPoolExecutor's queue.
-      self._future.cancel()
     self._future = self._async_request()
     self._future.add_done_callback(lambda f: self._callback(f.result()))
 
