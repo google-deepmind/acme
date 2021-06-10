@@ -214,56 +214,43 @@ class NStepTransitionAdder(base.ReverbAdder):
       self._first_idx += 1
 
   def _compute_cumulative_quantities(
-      self, reward: types.NestedArray, discount: types.NestedArray
+      self, rewards: types.NestedArray, discounts: types.NestedArray
   ) -> Tuple[types.NestedArray, types.NestedArray]:
-
-    data = {'reward': reward, 'discount': discount}
-    first_step, *next_steps = tree_utils.unstack_sequence_fields(
-        data, self._n_step)
 
     # Give the same tree structure to the n-step return accumulator,
     # n-step discount accumulator, and self.discount, so that they can be
     # iterated in parallel using tree.map_structure.
-    (n_step_return,
-     total_discount,
-     self_discount) = tree_utils.broadcast_structures(
-         first_step['reward'],
-         first_step['discount'],
-         self._discount)
+    rewards, discounts, self_discount = tree_utils.broadcast_structures(
+        rewards, discounts, self._discount)
 
     # Copy total_discount as it is otherwise read-only.
-    total_discount = tree.map_structure(np.copy, total_discount)
+    total_discount = tree.map_structure(lambda a: np.copy(a[0]), discounts)
 
     # Broadcast n_step_return to have the broadcasted shape of
     # reward * discount.
+    npcpy = np.copy  # alias used to make lambda fit onto a single line
     n_step_return = tree.map_structure(
-        lambda r, d: np.copy(np.broadcast_to(r, np.broadcast(r, d).shape)),
-        n_step_return,
+        lambda r, d: npcpy(np.broadcast_to(r[0], np.broadcast(r[0], d).shape)),
+        rewards,
         total_discount)
 
-    # NOTE: total discount will have one less discount than it does
-    # step.discounts. This is so that when the learner/update uses an additional
-    # discount we don't apply it twice. Inside the following loop we will
-    # apply this right before summing up the n_step_return.
-    for step in next_steps:
-      (step_discount,
-       step_reward,
-       total_discount) = tree_utils.broadcast_structures(
-           step['discount'],
-           step['reward'],
-           total_discount)
-
+    # NOTE: total_discount will have one less self_discount applied to it than
+    # the value of self._n_step. This is so that when the learner/update uses
+    # an additional discount we don't apply it twice. Inside the following loop
+    # we will apply this right before summing up the n_step_return.
+    for i in range(1, self._n_step):
       # Equivalent to: `total_discount *= self._discount`.
       tree.map_structure(operator.imul, total_discount, self_discount)
 
       # Equivalent to: `n_step_return += step.reward * total_discount`.
-      tree.map_structure(lambda nsr, sr, td: operator.iadd(nsr, sr * td),
+      tree.map_structure(lambda nsr, r, td, i=i: operator.iadd(nsr, r[i] * td),
                          n_step_return,
-                         step_reward,
+                         rewards,
                          total_discount)
 
       # Equivalent to: `total_discount *= step.discount`.
-      tree.map_structure(operator.imul, total_discount, step_discount)
+      tree.map_structure(lambda td, d, i=i: operator.imul(td, d[i]),
+                         total_discount, discounts)
 
     return n_step_return, total_discount
 
