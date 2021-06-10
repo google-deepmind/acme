@@ -20,7 +20,6 @@ into a single transition, simplifying to a simple transition adder when N=1.
 """
 
 import copy
-import operator
 from typing import Optional, Tuple
 
 from acme import specs
@@ -222,36 +221,36 @@ class NStepTransitionAdder(base.ReverbAdder):
     # iterated in parallel using tree.map_structure.
     rewards, discounts, self_discount = tree_utils.broadcast_structures(
         rewards, discounts, self._discount)
+    flat_rewards = tree.flatten(rewards)
+    flat_discounts = tree.flatten(discounts)
+    flat_self_discount = tree.flatten(self_discount)
 
     # Copy total_discount as it is otherwise read-only.
-    total_discount = tree.map_structure(lambda a: np.copy(a[0]), discounts)
+    total_discount = [np.copy(a[0]) for a in flat_discounts]
 
     # Broadcast n_step_return to have the broadcasted shape of
     # reward * discount.
-    npcpy = np.copy  # alias used to make lambda fit onto a single line
-    n_step_return = tree.map_structure(
-        lambda r, d: npcpy(np.broadcast_to(r[0], np.broadcast(r[0], d).shape)),
-        rewards,
-        total_discount)
+    n_step_return = [
+        np.copy(np.broadcast_to(r[0], np.broadcast(r[0], d).shape))
+        for r, d in zip(flat_rewards, total_discount)
+    ]
 
     # NOTE: total_discount will have one less self_discount applied to it than
     # the value of self._n_step. This is so that when the learner/update uses
     # an additional discount we don't apply it twice. Inside the following loop
     # we will apply this right before summing up the n_step_return.
     for i in range(1, self._n_step):
-      # Equivalent to: `total_discount *= self._discount`.
-      tree.map_structure(operator.imul, total_discount, self_discount)
+      for nsr, td, r, d, sd in zip(n_step_return, total_discount, flat_rewards,
+                                   flat_discounts, flat_self_discount):
+        # Equivalent to: `total_discount *= self._discount`.
+        td *= sd
+        # Equivalent to: `n_step_return += reward[i] * total_discount`.
+        nsr += r[i] * td
+        # Equivalent to: `total_discount *= discount[i]`.
+        td *= d[i]
 
-      # Equivalent to: `n_step_return += step.reward * total_discount`.
-      tree.map_structure(lambda nsr, r, td, i=i: operator.iadd(nsr, r[i] * td),
-                         n_step_return,
-                         rewards,
-                         total_discount)
-
-      # Equivalent to: `total_discount *= step.discount`.
-      tree.map_structure(lambda td, d, i=i: operator.imul(td, d[i]),
-                         total_discount, discounts)
-
+    n_step_return = tree.unflatten_as(rewards, n_step_return)
+    total_discount = tree.unflatten_as(rewards, total_discount)
     return n_step_return, total_discount
 
   # TODO(bshahr): make this into a standalone method. Class methods should be
