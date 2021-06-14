@@ -23,7 +23,6 @@ import itertools
 from typing import Generic, List, Optional, Sequence, TypeVar
 
 from acme import types
-# Internal imports.
 from acme.utils import metrics
 import dm_env
 
@@ -86,9 +85,6 @@ class Actor(abc.ABC):
     Args:
       wait: if True, the update will be blocking.
     """
-
-
-# Internal class.
 
 
 class VariableSource(abc.ABC):

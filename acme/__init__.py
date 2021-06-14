@@ -26,7 +26,6 @@ from acme._metadata import __version__
 
 # Expose core interfaces.
 from acme.core import Actor
-# Internal core import.
 from acme.core import Learner
 from acme.core import Saveable
 from acme.core import VariableSource
