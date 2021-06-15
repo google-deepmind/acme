@@ -20,7 +20,6 @@ import time
 from typing import Optional
 
 from acme import core
-# Internal imports.
 from acme.utils import counting
 from acme.utils import loggers
 
@@ -166,5 +165,3 @@ class EnvironmentLoop(core.Worker):
 def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
   return np.zeros(spec.shape, spec.dtype)
 
-
-# Internal class.

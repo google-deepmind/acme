@@ -33,7 +33,6 @@ from acme.core import Worker
 
 # Expose the environment loop.
 from acme.environment_loop import EnvironmentLoop
-# Internal environment_loop import.
 
 from acme.specs import make_environment_spec
 
