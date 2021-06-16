@@ -18,7 +18,7 @@
 [0] https://arxiv.org/abs/1511.06581
 """
 
-from typing import Sequence
+from typing import Sequence, Optional
 
 import haiku as hk
 import jax.numpy as jnp
@@ -31,11 +31,13 @@ class DuellingMLP(hk.Module):
       self,
       num_actions: int,
       hidden_sizes: Sequence[int],
+      w_init: Optional[hk.initializers.Initializer] = None,
   ):
     super().__init__(name='duelling_q_network')
 
-    self._value_mlp = hk.nets.MLP([*hidden_sizes, 1])
-    self._advantage_mlp = hk.nets.MLP([*hidden_sizes, num_actions])
+    self._value_mlp = hk.nets.MLP([*hidden_sizes, 1], w_init=w_init)
+    self._advantage_mlp = hk.nets.MLP([*hidden_sizes, num_actions],
+                                      w_init=w_init)
 
   def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
     """Forward pass of the duelling network.
