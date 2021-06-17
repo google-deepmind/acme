@@ -151,8 +151,10 @@ def broadcast_structures(*args: Any) -> Any:
       reference_tree = arg
       break
 
+  # If reference_tree is None then none of args are nested and we can skip over
+  # the rest of this function, which would be a no-op.
   if reference_tree is None:
-    reference_tree = args[0]
+    return args
 
   def mirror_structure(value, reference_tree):
     if tree.is_nested(value):
