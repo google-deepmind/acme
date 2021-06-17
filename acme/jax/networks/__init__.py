@@ -37,6 +37,7 @@ from acme.jax.networks.continuous import LayerNormMLP
 from acme.jax.networks.continuous import NearZeroInitializedLinear
 from acme.jax.networks.distributional import CategoricalHead
 from acme.jax.networks.distributional import CategoricalValueHead
+from acme.jax.networks.distributional import DiscreteValued
 from acme.jax.networks.distributional import GaussianMixture
 from acme.jax.networks.distributional import MultivariateNormalDiagHead
 from acme.jax.networks.distributional import NormalTanhDistribution

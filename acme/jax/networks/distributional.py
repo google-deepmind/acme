@@ -271,3 +271,34 @@ class CategoricalValueHead(hk.Module):
     logits = self._logit_layer(inputs)
     value = jnp.squeeze(self._value_layer(inputs), axis=-1)
     return (tfd.Categorical(logits=logits), value)
+
+
+class DiscreteValued(hk.Module):
+  """C51-style head.
+
+  For each action, it produces the logits for a discrete distribution over
+  atoms. Therefore, the returned logits represents several distributions, one
+  for each action.
+  """
+
+  def __init__(
+      self,
+      num_actions: int,
+      head_units: int = 512,
+      num_atoms: int = 51,
+      v_min: float = -1.0,
+      v_max: float = 1.0,
+  ):
+    super().__init__('DiscreteValued')
+    self._num_actions = num_actions
+    self._num_atoms = num_atoms
+    self._atoms = jnp.linspace(v_min, v_max, self._num_atoms)
+    self._network = hk.nets.MLP([head_units, num_actions * num_atoms])
+
+  def __call__(self, inputs: jnp.ndarray):
+    q_logits = self._network(inputs)
+    q_logits = jnp.reshape(q_logits, (-1, self._num_actions, self._num_atoms))
+    q_dist = jax.nn.softmax(q_logits)
+    q_values = jnp.sum(q_dist * self._atoms, axis=2)
+    q_values = jax.lax.stop_gradient(q_values)
+    return q_values, q_logits, self._atoms
