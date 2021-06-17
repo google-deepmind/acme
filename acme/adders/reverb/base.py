@@ -103,6 +103,7 @@ class ReverbAdder(base.Adder):
     self._max_sequence_length = max_sequence_length
     self._delta_encoded = delta_encoded
     self._max_in_flight_items = max_in_flight_items
+    self._add_first_called = False
 
     # This is exposed as the _writer property in such a way that it will create
     # a new writer automatically whenever the internal __writer is None. Users
@@ -147,6 +148,7 @@ class ReverbAdder(base.Adder):
     if self.__writer:
       # Flush all appended data and clear the buffers.
       self.__writer.end_episode(clear_buffers=True, timeout_ms=timeout_ms)
+    self._add_first_called = False
 
   def add_first(self, timestep: dm_env.TimeStep):
     """Record the first observation of a trajectory."""
@@ -159,6 +161,7 @@ class ReverbAdder(base.Adder):
     self._writer.append(dict(observation=timestep.observation,
                              start_of_episode=timestep.first()),
                         partial_step=True)
+    self._add_first_called = True
 
   def add(self,
           action: types.NestedArray,
@@ -166,9 +169,7 @@ class ReverbAdder(base.Adder):
           extras: types.NestedArray = ()):
     """Record an action and the following timestep."""
 
-    try:
-      history = self._writer.history
-    except RuntimeError:
+    if not self._add_first_called:
       raise ValueError('adder.add_first must be called before adder.add.')
 
     # Add the timestep to the buffer.
