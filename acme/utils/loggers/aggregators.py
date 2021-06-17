@@ -35,3 +35,7 @@ class Dispatcher(base.Logger):
       values = self._serialize_fn(values)
     for logger in self._to:
       logger.write(values)
+
+  def close(self):
+    for logger in self._to:
+      logger.close()

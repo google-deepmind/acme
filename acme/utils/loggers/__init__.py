@@ -17,6 +17,7 @@
 
 from acme.utils.loggers.aggregators import Dispatcher
 from acme.utils.loggers.asynchronous import AsyncLogger
+from acme.utils.loggers.auto_close import AutoCloseLogger
 from acme.utils.loggers.base import Logger
 from acme.utils.loggers.base import LoggingData
 from acme.utils.loggers.base import NoOpLogger

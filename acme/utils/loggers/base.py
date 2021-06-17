@@ -32,6 +32,12 @@ class Logger(abc.ABC):
   def write(self, data: LoggingData) -> None:
     """Writes `data` to destination (file, terminal, database, etc)."""
 
+  def close(self) -> None:
+    """Closes the logger, not expecting any further write."""
+    # TOOD(b/191285680): Make this function an abstract method
+    # to avoid missing close implementation in concrete Logger implementation.
+    pass
+
 
 class NoOpLogger(Logger):
   """Simple Logger which does nothing and outputs no logs.

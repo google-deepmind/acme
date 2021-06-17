@@ -38,6 +38,9 @@ class NoneFilter(base.Logger):
     values = {k: v for k, v in values.items() if v is not None}
     self._to.write(values)
 
+  def close(self):
+    self._to.close()
+
 
 class TimeFilter(base.Logger):
   """Logger which writes to another logger at a given time interval."""
@@ -59,6 +62,9 @@ class TimeFilter(base.Logger):
     if (now - self._time) > self._time_delta:
       self._to.write(values)
       self._time = now
+
+  def close(self):
+    self._to.close()
 
 
 _GatingFn = Callable[[int], bool]
@@ -88,6 +94,9 @@ class GatedFilter(base.Logger):
     if self._gating_fn(self._calls):
       self._to.write(values)
     self._calls += 1
+
+  def close(self):
+    self._to.close()
 
   @classmethod
   def logarithmic(cls, to: base.Logger, n: int = 10) -> 'GatedFilter':
