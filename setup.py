@@ -29,12 +29,12 @@ spec.loader.exec_module(_metadata)
 # TODO(b/184148890): Add a release flag
 
 reverb_requirements = [
-    'dm-reverb-nightly==0.3.0.dev20210617',
+    'dm-reverb-nightly',
 ]
 
 tf_requirements = [
-    'tf-nightly==2.6.0.dev20210617',
-    'tfp-nightly==0.14.0.dev20210617',
+    'tf-nightly',
+    'tfp-nightly',
     'dm-sonnet',
     'trfl',
     'tensorflow_datasets',
@@ -63,7 +63,7 @@ testing_requirements = [
 ]
 
 launchpad_requirements = [
-    'dm-launchpad-nightly==0.3.0.dev20210617',
+    'dm-launchpad-nightly',
 ]
 
 long_description = """Acme is a library of reinforcement learning (RL) agents

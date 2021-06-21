@@ -1,0 +1,23 @@
+absl-py==0.12.0
+atari-py==0.2.9
+bsuite==0.3.5
+dataclasses
+dm-control==0.0.364896371
+dm-env==1.4
+dm-haiku==0.0.4
+dm-launchpad-nightly==0.3.0.dev20210621
+dm-reverb-nightly==0.3.0.dev20210621
+dm-sonnet==2.0.0
+dm-tree==0.1.6
+jax==0.2.14
+jaxlib==0.1.67
+keras-nightly==2.6.0.dev2021062100
+optax==0.0.8
+pytype==2021.6.17
+pytest-xdist==2.3.0
+rlax @ git+git://github.com/deepmind/rlax.git@3566d85af6d41abba82c20828e1e50f05bc2a559
+tensorflow-datasets==4.3.0
+tf-estimator-nightly==2.6.0.dev2021061601
+tf-nightly==2.6.0.dev20210621
+tfp-nightly==0.14.0.dev20210621
+trfl==1.1.0

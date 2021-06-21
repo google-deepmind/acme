@@ -26,15 +26,9 @@ python -m venv acme_testing
 source acme_testing/bin/activate
 
 # Install dependencies.
-pip install --upgrade pip setuptools absl-py
-pip --version
+pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
 pip install .
-pip install .[jax]
-pip install .[tf]
-pip install .[reverb]
-pip install .[envs]
-pip install .[testing]
-pip install .[launchpad]
 
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
 
