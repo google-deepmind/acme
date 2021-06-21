@@ -18,7 +18,7 @@
 from absl import app
 from absl import flags
 from acme.agents.tf import d4pg
-from . import helpers
+import helpers
 
 from acme.utils import lp_utils
 

@@ -21,7 +21,7 @@ import acme
 from acme import specs
 from acme.agents.tf import actors
 from acme.agents.tf import d4pg
-from . import helpers
+import helpers
 import sonnet as snt
 
 FLAGS = flags.FLAGS

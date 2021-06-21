@@ -19,7 +19,7 @@ from absl import app
 from absl import flags
 import acme
 from acme.agents.tf import dqn
-from . import helpers
+import helpers
 from acme.tf import networks
 
 flags.DEFINE_string('level', 'PongNoFrameskip-v4', 'Which Atari level to play.')

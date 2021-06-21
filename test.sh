@@ -31,9 +31,12 @@ pip install -r requirements.txt
 pip install .
 
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
+EXAMPLES=$(find examples/ -mindepth 1 -type d -not -path examples/offline -not -path examples/open_spiel)
 
 # Run static type-checking.
-pytype -k -j "${N_CPU}" `find . -maxdepth 1 -mindepth 1 -type d` -x 'examples/open_spiel examples/offline acme_testing'
+for TESTDIR in acme ${EXAMPLES}; do
+  pytype -k -j "${N_CPU}" "${TESTDIR}"
+done
 
 # Run all tests.
 pytest --ignore-glob="*/agent_test.py" --ignore-glob="*/agent_distributed_test.py" --durations=10 -n "${N_CPU}" acme
