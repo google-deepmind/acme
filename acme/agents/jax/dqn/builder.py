@@ -19,8 +19,8 @@ from acme import adders
 from acme import core
 from acme import specs
 from acme.adders import reverb as adders_reverb
-from acme.agents import builders
 from acme.agents.jax import actors
+from acme.agents.jax import builders
 from acme.agents.jax.dqn import config as dqn_config
 from acme.agents.jax.dqn import learning_lib
 from acme.datasets import reverb as datasets
@@ -144,4 +144,3 @@ class DQNBuilder(builders.ActorLearnerBuilder):
         client=replay_client,
         n_step=self._config.n_step,
         discount=self._config.discount)
-

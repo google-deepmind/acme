@@ -23,7 +23,7 @@ from acme import adders
 from acme import core
 from acme import specs
 from acme import types
-from acme.agents import builders
+from acme.agents.jax import builders
 from acme.jax import running_statistics
 from acme.jax import variable_utils
 from acme.utils import counting
