@@ -74,40 +74,40 @@ novel implementation.
 
 ## Installation
 
-We have tested `acme` on Python 3.6, 3.7 & 3.8.
+We have tested Acme on Python 3.6, 3.7 & 3.8. To get up and running quickly just
+follow the steps below:
 
-1.  **Optional**: We strongly recommend using a
+1.  While you can install Acme in your standard python environment, we
+    *strongly* recommend using a
     [Python virtual environment](https://docs.python.org/3/tutorial/venv.html)
-    to manage your dependencies in order to avoid version conflicts:
+    to manage your dependencies. This should help to avoid version conflicts and
+    just generally make the installation process easier.
 
     ```bash
     python3 -m venv acme
     source acme/bin/activate
-    pip install --upgrade pip setuptools
+    pip install --upgrade pip setuptools wheel
     ```
 
-1.  To install the core libraries (including [Reverb], our storage backend):
+1.  While the core `dm-acme` library can be installed directly, the set of
+    dependencies included for installation is minimal. In particular, to run any
+    of the included agents you will also need either [JAX] or [TensorFlow]
+    depending on the agent. As a result we recommend installing these components
+    as well, i.e.
 
     ```bash
-    pip install dm-acme
-    pip install dm-acme[reverb]
+    pip install dm-acme dm-acme[jax] dm-acme[tensorflow]
     ```
 
-1.  To install dependencies for our [JAX]- or [TensorFlow]-based agents:
-
-    ```bash
-    pip install dm-acme[tf]
-    # and/or
-    pip install dm-acme[jax]
-    ```
-
-1.  To install support for distributed agents:
+1.  Additionally, in order to support distributed agents Acme relies on
+    [Launchpad] which can be installed with
 
     ```bash
     pip install dm-acme[launchpad]
     ```
 
-    See [here](/../../acme/examples/control/lp_local_d4pg.py)
+    See
+    [here](/../../acme/examples/control/lp_local_d4pg.py)
     for an example of an agent using launchpad. More to come soon!
 
 1.  Finally, to install a few example environments (including [gym],
@@ -115,6 +115,15 @@ We have tested `acme` on Python 3.6, 3.7 & 3.8.
 
     ```bash
     pip install dm-acme[envs]
+    ```
+
+1.  **Installing from github**: if you're interested in running the
+    bleeding-edge version of Acme from our github repository you can also
+    install the precise set of dependencies used in our tests (e.g. `test.sh`)
+    by running:
+
+    ```bash
+    pip install -r requirements.txt
     ```
 
 ## Citing Acme
@@ -151,3 +160,4 @@ If you use Acme in your work, please cite the accompanying
 [dm_control]: https://github.com/deepmind/dm_env
 [dm_env]: https://github.com/deepmind/dm_env
 [bsuite]: https://github.com/deepmind/bsuite
+[Launchpad]: https://github.com/deepmind/launchpad

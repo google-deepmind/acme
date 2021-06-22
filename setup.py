@@ -28,33 +28,36 @@ spec.loader.exec_module(_metadata)
 
 # TODO(b/184148890): Add a release flag
 
-reverb_requirements = [
-    'dm-reverb-nightly',
-]
-
-tf_requirements = [
-    'tf-nightly',
-    'tfp-nightly',
-    'dm-sonnet',
-    'trfl',
-    'tensorflow_datasets',
-]
+core_requirements = [
+    'absl-py',
+    'dm_env',
+    'dm-tree',
+    'numpy',
+    'pillow',
+],
 
 jax_requirements = [
     'jax',
     'jaxlib',
     'dm-haiku',
+    'dm-reverb-nightly',
     'optax',
     'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
     'dataclasses',  # Back-port for Python 3.6.
+    'tf-nightly',
     'typing-extensions',
 ]
 
-env_requirements = [
-    'bsuite',
-    'dm-control',
-    'gym',
-    'gym[atari]',
+tf_requirements = [
+    'dm-reverb-nightly',
+    'dm-sonnet',
+    'trfl',
+    'tf-nightly',
+    'tfp-nightly',
+]
+
+launchpad_requirements = [
+    'dm-launchpad-nightly',
 ]
 
 testing_requirements = [
@@ -62,8 +65,12 @@ testing_requirements = [
     'pytest-xdist',
 ]
 
-launchpad_requirements = [
-    'dm-launchpad-nightly',
+envs_requirements = [
+    'bsuite',
+    'dm-control',
+    'gym',
+    'gym[atari]',
+    'tensorflow_datasets',
 ]
 
 long_description = """Acme is a library of reinforcement learning (RL) agents
@@ -93,20 +100,13 @@ setup(
     license='Apache License, Version 2.0',
     keywords='reinforcement-learning python machine learning',
     packages=find_packages(),
-    install_requires=[
-        'absl-py',
-        'dm_env',
-        'dm-tree',
-        'numpy',
-        'pillow',
-    ],
+    install_requires=core_requirements,
     extras_require={
         'jax': jax_requirements,
         'tf': tf_requirements,
-        'envs': env_requirements,
-        'reverb': reverb_requirements,
-        'testing': testing_requirements,
         'launchpad': launchpad_requirements,
+        'testing': testing_requirements,
+        'envs': envs_requirements,
     },
     classifiers=[
         'Development Status :: 3 - Alpha',
