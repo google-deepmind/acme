@@ -42,3 +42,6 @@ class ConstantLogger(base.Logger):
     # we will be writing. base.LoggingData is immutable and hence cannot be
     # updated.
     self._to.write({**self._constant_data, **data})
+
+  def close(self):
+    self._to.close()

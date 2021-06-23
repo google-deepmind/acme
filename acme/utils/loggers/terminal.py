@@ -91,3 +91,6 @@ class TerminalLogger(base.Logger):
     if (now - self._time) > self._time_delta:
       self._print_fn(f'{self._label}{self._serialize_fn(values)}')
       self._time = now
+
+  def close(self):
+    pass

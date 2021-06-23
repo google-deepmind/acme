@@ -21,7 +21,7 @@ Warning: Does not support preemption.
 import csv
 import os
 import time
-from typing import TextIO, Union
+from typing import TextIO, Tuple, Union
 
 from absl import logging
 
@@ -47,26 +47,28 @@ class CSVLogger(base.Logger):
     self._time_delta = time_delta
     self._add_uid = add_uid
     self._writer = None
-    self._file = self._create_file(directory_or_file, label)
+    self._file, self._file_owner = self._create_file(directory_or_file, label)
     logging.info('Logging to %s', self.file_path)
 
   def _create_file(self, directory_or_file: Union[str, TextIO],
-                   label: str) -> TextIO:
+                   label: str) -> Tuple[TextIO, bool]:
     """Opens a file if input is a directory or use existing file."""
     if isinstance(directory_or_file, str):
       directory = paths.process_path(
           directory_or_file, 'logs', label, add_uid=self._add_uid)
       file_path = os.path.join(directory, 'logs.csv')
       file = self._open(file_path, mode='a')
+      file_owner = True
     else:
       file = directory_or_file
+      file_owner = False
       if label:
         logging.info('File, not directory, passed to CSVLogger; label not '
                      'used.')
       if not file.mode.startswith('a'):
         raise ValueError('File must be open in append mode; instead got '
                          f'{file.mode}.')
-    return file
+    return file, file_owner
 
   def write(self, data: base.LoggingData):
     """Writes a `data` into a row of comma-separated values."""
@@ -86,6 +88,10 @@ class CSVLogger(base.Logger):
                                     extrasaction='ignore')
       self._writer.writeheader()
     self._writer.writerow(data)
+
+  def close(self):
+    if self._file_owner:
+      self._file.close()
 
   @property
   def file_path(self) -> str:

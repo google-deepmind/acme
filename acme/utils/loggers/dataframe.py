@@ -31,6 +31,9 @@ class InMemoryLogger(base.Logger):
   def write(self, data: base.LoggingData):
     self._data.append(data)
 
+  def close(self):
+    pass
+
   def to_dataframe(self):
     """Builds a Pandas DataFrame from data in memory."""
     raise NotImplementedError(

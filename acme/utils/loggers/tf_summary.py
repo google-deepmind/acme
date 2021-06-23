@@ -70,3 +70,6 @@ class TFSummaryLogger(base.Logger):
         tf.summary.scalar(
             f'{self.label}/{_format_key(key)}', data=values[key], step=step)
     self._iter += 1
+
+  def close(self):
+    self.summary.close()

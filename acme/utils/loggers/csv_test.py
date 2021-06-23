@@ -16,7 +16,6 @@
 """Tests for csv logging."""
 
 import csv
-import gc
 import os
 
 from absl.testing import absltest
@@ -45,10 +44,7 @@ class CSVLoggingTest(test_utils.TestCase):
       logger.write(inp)
     outputs = []
     file_path = logger.file_path
-
-    # Make sure logger flushed all pending writes to disk.
-    del logger
-    gc.collect()
+    logger.close()
 
     with open(file_path) as f:
       csv_reader = csv.DictReader(f)
@@ -75,6 +71,7 @@ class CSVLoggingTest(test_utils.TestCase):
       logger.write(inp)
     outputs = []
     file_path = logger.file_path
+    logger.close()
     file.close()
 
     with open(file_path) as f:
