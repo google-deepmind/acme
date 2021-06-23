@@ -29,6 +29,9 @@ class FakeLogger(base.Logger):
   def write(self, data):
     self.data.append(data)
 
+  def close(self):
+    pass
+
 
 class FiltersTest(absltest.TestCase):
 
