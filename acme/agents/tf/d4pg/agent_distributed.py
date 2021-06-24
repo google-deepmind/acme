@@ -56,6 +56,7 @@ class DistributedD4PG:
       target_update_period: int = 100,
       max_actor_steps: Optional[int] = None,
       log_every: float = 10.0,
+      checkpoint_learner: bool = True,
   ):
 
     if not environment_spec:
@@ -79,6 +80,7 @@ class DistributedD4PG:
     self._num_caches = num_caches
     self._max_actor_steps = max_actor_steps
     self._log_every = log_every
+    self._checkpoint_learner = checkpoint_learner
 
     self._builder = agent.D4PGBuilder(
         # TODO(mwhoffman): pass the config dataclass in directly.
@@ -135,6 +137,7 @@ class DistributedD4PG:
         dataset=dataset,
         counter=counter,
         logger=logger,
+        checkpoint=self._checkpoint_learner,
     )
 
   def actor(
