@@ -28,7 +28,6 @@ from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
-import jax
 import jax.numpy as jnp
 import optax
 import reverb
@@ -63,23 +62,22 @@ class DQNBuilder(builders.ActorLearnerBuilder):
       loss_fn: A loss function.
       logger_fn: a logger factory for the learner
     """
-    self._random_key = jax.random.PRNGKey(config.seed)
     self._config = config
     self._loss_fn = loss_fn
     self._logger_fn = logger_fn
 
   def make_learner(
       self,
+      random_key: networks_lib.PRNGKey,
       networks: networks_lib.FeedForwardNetwork,
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
       checkpoint: bool = False,
   ) -> core.Learner:
-    key, self._random_key = jax.random.split(self._random_key)
     return learning_lib.SGDLearner(
         network=networks,
-        random_key=key,
+        random_key=random_key,
         optimizer=optax.adam(self._config.learning_rate),
         target_update_period=self._config.target_update_period,
         data_iterator=dataset,
@@ -91,18 +89,18 @@ class DQNBuilder(builders.ActorLearnerBuilder):
 
   def make_actor(
       self,
+      random_key: networks_lib.PRNGKey,
       policy_network,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:
     assert variable_source is not None
-    key, self._random_key = jax.random.split(self._random_key)
     return actors.FeedForwardActor(
         policy=policy_network,
-        random_key=key,
+        random_key=random_key,
         # Inference happens on CPU, so it's better to move variables there too.
-        variable_client=variable_utils.VariableClient(variable_source, '',
-                                                      device='cpu'),
+        variable_client=variable_utils.VariableClient(
+            variable_source, '', device='cpu'),
         adder=adder,
     )
 

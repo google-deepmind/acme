@@ -25,6 +25,7 @@ from acme import types
 from acme.agents.jax import actors
 from acme.agents.tf.dqfd import bsuite_demonstrations
 from acme.jax import networks as networks_lib
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
@@ -141,20 +142,19 @@ def make_demonstrations(env: dm_env.Environment,
 def make_actor_evaluator(
     environment_factory: Callable[[bool], dm_env.Environment],
     evaluator_network: actors.FeedForwardPolicy,
-    random_key: networks_lib.PRNGKey,
-) -> Callable[[core.VariableSource, counting.Counter], core.Worker]:
+) -> jax_types.EvaluatorFactory:
   """Makes an evaluator that runs the agent on the environment.
 
   Args:
     environment_factory: Function that creates a dm_env.
     evaluator_network: Network to be use by the actor.
-    random_key: A random key.
 
   Returns:
     actor_evaluator: Function that returns a Worker that will be executed
       by launchpad.
   """
   def actor_evaluator(
+      random_key: networks_lib.PRNGKey,
       variable_source: core.VariableSource,
       counter: counting.Counter,
   ):

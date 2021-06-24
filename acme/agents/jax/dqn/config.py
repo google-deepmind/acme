@@ -24,6 +24,7 @@ import numpy as np
 class DQNConfig:
   """Configuration options for DQN agent."""
   epsilon: float = 0.05  # Action selection via epsilon-greedy policy.
+  # TODO(b/191706065): update all clients and remove this field.
   seed: int = 1  # Random seed.
 
   # Learning rule

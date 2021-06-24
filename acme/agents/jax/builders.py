@@ -21,6 +21,7 @@ from typing import Iterator, List, Optional
 from acme import adders
 from acme import core
 from acme import specs
+from acme.jax import networks as networks_lib
 from acme.utils import counting
 import reverb
 
@@ -62,6 +63,7 @@ class ActorLearnerBuilder(abc.ABC):
   @abc.abstractmethod
   def make_actor(
       self,
+      random_key: networks_lib.PRNGKey,
       policy_network,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
@@ -69,6 +71,7 @@ class ActorLearnerBuilder(abc.ABC):
     """Create an actor instance.
 
     Args:
+      random_key: A key for random number generation.
       policy_network: Instance of a policy network; this should be a callable
         which takes as input observations and returns actions.
       adder: How data is recorded (e.g. added to replay).
@@ -78,6 +81,7 @@ class ActorLearnerBuilder(abc.ABC):
   @abc.abstractmethod
   def make_learner(
       self,
+      random_key: networks_lib.PRNGKey,
       networks,
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
@@ -88,6 +92,7 @@ class ActorLearnerBuilder(abc.ABC):
     """Creates an instance of the learner.
 
     Args:
+      random_key: A key for random number generation.
       networks: struct describing the networks needed by the learner; this can
         be specific to the learner in question.
       dataset: iterator over samples from replay.

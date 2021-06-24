@@ -24,6 +24,7 @@ from acme import core
 from acme import specs
 from acme import types
 from acme.agents.jax import builders
+from acme.jax import networks as networks_lib
 from acme.jax import running_statistics
 from acme.jax import variable_utils
 from acme.utils import counting
@@ -190,6 +191,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
 
   def make_learner(
       self,
+      random_key: networks_lib.PRNGKey,
       networks,
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
@@ -199,6 +201,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
 
     learner_factory = functools.partial(
         self.builder.make_learner,
+        random_key,
         networks,
         replay_client=replay_client,
         counter=counter,
@@ -214,12 +217,15 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
 
   def make_actor(
       self,
+      random_key: networks_lib.PRNGKey,
       policy_network,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:
+    actor = self.builder.make_actor(random_key, policy_network, adder,
+                                    variable_source)
     return NormalizationActorWrapper(
-        self.builder.make_actor(policy_network, adder, variable_source),
+        actor,
         variable_source,
         max_abs_observation=self.max_abs_observation,
         update_period=self.statistics_update_period,
