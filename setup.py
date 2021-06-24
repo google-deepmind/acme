@@ -45,6 +45,7 @@ jax_requirements = [
     'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
     'dataclasses',  # Back-port for Python 3.6.
     'tf-nightly',
+    'tfp-nightly',
     'typing-extensions',
 ]
 
