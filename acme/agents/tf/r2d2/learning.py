@@ -112,7 +112,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
     # fill the replay buffer.
     self._timestamp = None
 
-  # @tf.function
+  @tf.function
   def _step(self) -> Dict[str, tf.Tensor]:
 
     # Draw a batch of data from replay.
