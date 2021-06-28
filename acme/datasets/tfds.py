@@ -73,17 +73,17 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
     # Read the whole dataset. We use artificially large batch_size to make sure
     # we capture the whole dataset.
     data = next(dataset.batch(1000000000).as_numpy_iterator())
-    dataset_size = jax.tree_flatten(
+    self._dataset_size = jax.tree_flatten(
         jax.tree_map(lambda x: x.shape[0], data))[0][0]
     self._jax_dataset = jax.tree_map(jnp.asarray, data)
     logging.info('Finished loading a dataset into memory. Elements: %d',
-                 dataset_size)
+                 self._dataset_size)
     self._key = key
 
     def sample(key: jnp.ndarray) -> Tuple[Any, jnp.ndarray]:
       key, key_randint = jax.random.split(key)
       indices = jax.random.randint(key_randint, (batch_size,), minval=0,
-                                   maxval=dataset_size)
+                                   maxval=self._dataset_size)
       demo_transitions = jax.tree_map(lambda d: jnp.take(d, indices, axis=0),
                                       self._jax_dataset)
       return demo_transitions, key
@@ -92,3 +92,8 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
   def __next__(self) -> Any:
     data, self._key = self._sample(self._key)
     return data
+
+  @property
+  def dataset_size(self):
+    """An integer of the dataset cardinality."""
+    return self._dataset_size
