@@ -82,5 +82,30 @@ class TimeFilterTest(absltest.TestCase):
     self.assertLen(logger.data, 2)
 
 
+class KeyFilterTest(absltest.TestCase):
+
+  def test_keep_filter(self):
+    logger = FakeLogger()
+    filtered = filters.KeyFilter(logger, keep=('foo',))
+    filtered.write({'foo': 'bar', 'baz': 12})
+    row, *_ = logger.data
+    self.assertIn('foo', row)
+    self.assertNotIn('baz', row)
+
+  def test_drop_filter(self):
+    logger = FakeLogger()
+    filtered = filters.KeyFilter(logger, drop=('foo',))
+    filtered.write({'foo': 'bar', 'baz': 12})
+    row, *_ = logger.data
+    self.assertIn('baz', row)
+    self.assertNotIn('foo', row)
+
+  def test_bad_arguments(self):
+    with self.assertRaises(ValueError):
+      filters.KeyFilter(FakeLogger())
+    with self.assertRaises(ValueError):
+      filters.KeyFilter(FakeLogger(), keep=('a',), drop=('b',))
+
+
 if __name__ == '__main__':
   absltest.main()

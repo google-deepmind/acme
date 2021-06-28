@@ -16,7 +16,7 @@
 
 import math
 import time
-from typing import Callable
+from typing import Callable, Optional, Sequence
 
 from acme.utils.loggers import base
 
@@ -64,6 +64,42 @@ class TimeFilter(base.Logger):
     if (now - self._time) > self._time_delta:
       self._to.write(values)
       self._time = now
+
+  def close(self):
+    self._to.close()
+
+
+class KeyFilter(base.Logger):
+  """Logger which filters keys in logged data."""
+
+  def __init__(
+      self,
+      to: base.Logger,
+      *,
+      keep: Optional[Sequence[str]] = None,
+      drop: Optional[Sequence[str]] = None,
+  ):
+    """Creates the filter.
+
+    Args:
+      to: A `Logger` object to which the current object will forward its writes.
+      keep: Keys that are kept by the filter. Note that `keep` and `drop` cannot
+        be both set at once.
+      drop: Keys that are dropped by the filter. Note that `keep` and `drop`
+        cannot be both set at once.
+    """
+    if bool(keep) == bool(drop):
+      raise ValueError('Exactly one of `keep` & `drop` arguments must be set.')
+    self._to = to
+    self._keep = keep
+    self._drop = drop
+
+  def write(self, data: base.LoggingData):
+    if self._keep:
+      data = {k: data[k] for k in self._keep}
+    if self._drop:
+      data = {k: v for k, v in data.items() if k not in self._drop}
+    self._to.write(data)
 
   def close(self):
     self._to.close()
