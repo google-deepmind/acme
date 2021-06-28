@@ -13,6 +13,7 @@ jax==0.2.14
 jaxlib==0.1.67
 keras-nightly==2.6.0.dev2021062100
 optax==0.0.8
+pillow==8.2.0
 pytype==2021.6.17
 pytest-xdist==2.3.0
 rlax @ git+git://github.com/deepmind/rlax.git@3566d85af6d41abba82c20828e1e50f05bc2a559
