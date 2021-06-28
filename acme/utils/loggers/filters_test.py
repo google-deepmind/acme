@@ -14,6 +14,8 @@
 
 """Tests for logging filters."""
 
+import time
+
 from absl.testing import absltest
 from acme.utils.loggers import base
 from acme.utils.loggers import filters
@@ -29,11 +31,15 @@ class FakeLogger(base.Logger):
   def write(self, data):
     self.data.append(data)
 
+  @property
+  def last_write(self):
+    return self.data[-1]
+
   def close(self):
     pass
 
 
-class FiltersTest(absltest.TestCase):
+class GatedFilterTest(absltest.TestCase):
 
   def test_logarithmic_filter(self):
     logger = FakeLogger()
@@ -50,6 +56,30 @@ class FiltersTest(absltest.TestCase):
       filtered.write({'t': t})
     rows = [row['t'] for row in logger.data]
     self.assertEqual(rows, list(range(0, 100, 10)))
+
+
+class TimeFilterTest(absltest.TestCase):
+
+  def test_delta(self):
+    logger = FakeLogger()
+    filtered = filters.TimeFilter(logger, time_delta=0.1)
+
+    # Logged.
+    filtered.write({'foo': 1})
+    self.assertIn('foo', logger.last_write)
+
+    # *Not* logged.
+    filtered.write({'bar': 2})
+    self.assertNotIn('bar', logger.last_write)
+
+    # Wait out delta.
+    time.sleep(0.11)
+
+    # Logged.
+    filtered.write({'baz': 3})
+    self.assertIn('baz', logger.last_write)
+
+    self.assertLen(logger.data, 2)
 
 
 if __name__ == '__main__':

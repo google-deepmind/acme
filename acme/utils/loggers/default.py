@@ -1,4 +1,3 @@
-# python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +34,7 @@ def make_default_logger(
     serialize_fn: Optional[Callable[[Mapping[str, Any]], str]] = base.to_numpy,
     steps_key: str = 'steps',
 ) -> base.Logger:
-  """Make a default Acme logger.
+  """Makes a default Acme logger.
 
   Args:
     label: Name to give to the logger.

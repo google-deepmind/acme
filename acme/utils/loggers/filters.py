@@ -1,4 +1,3 @@
-# python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,10 +51,13 @@ class TimeFilter(base.Logger):
       to: A `Logger` object to which the current object will forward its results
         when `write` is called.
       time_delta: How often to write values out in seconds.
+        Note that writes within `time_delta` are dropped.
     """
     self._to = to
-    self._time = time.time()
+    self._time = 0
     self._time_delta = time_delta
+    if time_delta < 0:
+      raise ValueError(f'time_delta must be greater than 0 (got {time_delta}).')
 
   def write(self, values: base.LoggingData):
     now = time.time()
@@ -67,9 +69,6 @@ class TimeFilter(base.Logger):
     self._to.close()
 
 
-_GatingFn = Callable[[int], bool]
-
-
 class GatedFilter(base.Logger):
   """Logger which writes to another logger based on a gating function.
 
@@ -77,7 +76,7 @@ class GatedFilter(base.Logger):
   a gating function on this number to decide when to write.
   """
 
-  def __init__(self, to: base.Logger, gating_fn: _GatingFn):
+  def __init__(self, to: base.Logger, gating_fn: Callable[[int], bool]):
     """Initialises the logger.
 
     Args:

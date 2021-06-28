@@ -15,6 +15,19 @@
 """Logger for writing to an in-memory list.
 
 This is convenient for e.g. interactive usage via Google Colab.
+
+For example, for usage with pandas:
+
+```python
+from acme.utils import loggers
+import pandas as pd
+
+logger = InMemoryLogger()
+# ...
+logger.write({'foo': 1.337, 'bar': 420})
+
+results = pd.DataFrame(logger.data)
+```
 """
 
 from typing import Sequence
@@ -33,12 +46,6 @@ class InMemoryLogger(base.Logger):
 
   def close(self):
     pass
-
-  def to_dataframe(self):
-    """Builds a Pandas DataFrame from data in memory."""
-    raise NotImplementedError(
-        'This method has been deprecated. '
-        'Please use pandas.DataFrame(InMemoryLogger.data) instead.')
 
   @property
   def data(self) -> Sequence[base.LoggingData]:

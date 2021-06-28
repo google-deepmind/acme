@@ -1,4 +1,3 @@
-# Lint as: python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Acme specific utils."""
+"""Logger for values that remain constant."""
+
 from acme.utils.loggers import base
 
 
@@ -25,22 +25,21 @@ class ConstantLogger(base.Logger):
   allows to group or facet plots when analysing data post-experiment.
   """
 
-  def __init__(self,
-               constant_data: base.LoggingData,
-               to: base.Logger):
+  def __init__(
+      self,
+      constant_data: base.LoggingData,
+      to: base.Logger,
+  ):
     """Initialise the extra info logger.
 
     Args:
-      constant_data: Dictionary containing the constant info to be logged.
+      constant_data: Key-value pairs containing the constant info to be logged.
       to: The logger to add these extra info to.
     """
     self._constant_data = constant_data
     self._to = to
 
   def write(self, data: base.LoggingData):
-    # Need to create a new mutable dictionary that will be updated with the data
-    # we will be writing. base.LoggingData is immutable and hence cannot be
-    # updated.
     self._to.write({**self._constant_data, **data})
 
   def close(self):
