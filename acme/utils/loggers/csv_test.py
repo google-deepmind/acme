@@ -23,61 +23,78 @@ from acme.testing import test_utils
 from acme.utils import paths
 from acme.utils.loggers import csv as csv_logger
 
+_TEST_INPUTS = [{
+    'c': 'foo',
+    'a': '1337',
+    'b': '42.0001',
+}, {
+    'c': 'foo2',
+    'a': '1338',
+    'b': '43.0001',
+}]
+
 
 class CSVLoggingTest(test_utils.TestCase):
 
   def test_logging_input_is_directory(self):
-    inputs = [{
-        'c': 'foo',
-        'a': '1337',
-        'b': '42.0001',
-    }, {
-        'c': 'foo2',
-        'a': '1338',
-        'b': '43.0001',
-    }]
+
+    # Set up logger.
     directory = self.get_tempdir()
     label = 'test'
     logger = csv_logger.CSVLogger(directory_or_file=directory, label=label)
-    for inp in inputs:
+
+    # Write data and close.
+    for inp in _TEST_INPUTS:
       logger.write(inp)
-    outputs = []
-    file_path = logger.file_path
     logger.close()
 
-    with open(file_path) as f:
+    # Read back data.
+    outputs = []
+    with open(logger.file_path) as f:
       csv_reader = csv.DictReader(f)
       for row in csv_reader:
         outputs.append(dict(row))
-    self.assertEqual(outputs, inputs)
+    self.assertEqual(outputs, _TEST_INPUTS)
 
   @parameterized.parameters(True, False)
-  def test_logging_input_is_file(self, add_uid):
-    inputs = [{
-        'c': 'foo',
-        'a': '1337',
-        'b': '42.0001',
-    }, {
-        'c': 'foo2',
-        'a': '1338',
-        'b': '43.0001',
-    }]
+  def test_logging_input_is_file(self, add_uid: bool):
+
+    # Set up logger.
     directory = paths.process_path(
         self.get_tempdir(), 'logs', 'my_label', add_uid=add_uid)
     file = open(os.path.join(directory, 'logs.csv'), 'a')
     logger = csv_logger.CSVLogger(directory_or_file=file, add_uid=add_uid)
-    for inp in inputs:
+
+    # Write data and close.
+    for inp in _TEST_INPUTS:
       logger.write(inp)
-    outputs = []
-    file_path = logger.file_path
     logger.close()
+
+    # Logger doesn't close the file; caller must do this manually.
+    self.assertFalse(file.closed)
     file.close()
 
-    with open(file_path) as f:
+    # Read back data.
+    outputs = []
+    with open(logger.file_path) as f:
       csv_reader = csv.DictReader(f)
       for row in csv_reader:
         outputs.append(dict(row))
-    self.assertEqual(outputs, inputs)
+    self.assertEqual(outputs, _TEST_INPUTS)
+
+  def test_flush(self):
+
+    logger = csv_logger.CSVLogger(self.get_tempdir(), flush_every=1)
+    for inp in _TEST_INPUTS:
+      logger.write(inp)
+
+    # Read back data.
+    outputs = []
+    with open(logger.file_path) as f:
+      csv_reader = csv.DictReader(f)
+      for row in csv_reader:
+        outputs.append(dict(row))
+    self.assertEqual(outputs, _TEST_INPUTS)
 
 
 if __name__ == '__main__':
