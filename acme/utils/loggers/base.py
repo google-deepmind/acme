@@ -45,6 +45,9 @@ class NoOpLogger(Logger):
   def write(self, data: LoggingData):
     pass
 
+  def close(self):
+    pass
+
 
 def tensor_to_numpy(value: Any):
   if hasattr(value, 'numpy'):
