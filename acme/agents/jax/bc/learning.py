@@ -55,6 +55,21 @@ class BCLearner(acme.Learner):
                num_sgd_steps_per_step: int,
                logger: Optional[loggers.Logger] = None,
                counter: Optional[counting.Counter] = None):
+    """Behavior Cloning Learner.
+
+    Args:
+      network: Networks with signature for apply:
+        (params, obs, is_training, key) -> jnp.ndarray
+        and for init:
+        (rng, is_training) -> params
+      random_key: RNG key.
+      loss_fn: BC loss to use.
+      optimizer: Optax optimizer.
+      demonstrations: Demonstrations iterator.
+      num_sgd_steps_per_step: Number of gradient updates per step.
+      logger: Logger
+      counter: Counter
+    """
     def sgd_step(
         state: TrainingState,
         transitions: types.Transition,
