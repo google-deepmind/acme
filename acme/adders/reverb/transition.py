@@ -205,6 +205,7 @@ class NStepTransitionAdder(base.ReverbAdder):
     for table, priority in table_priorities.items():
       self._writer.create_item(
           table=table, priority=priority, trajectory=transition)
+      self._writer.flush(self._max_in_flight_items)
 
   def _write_last(self):
     # Write the remaining shorter transitions by alternating writing and

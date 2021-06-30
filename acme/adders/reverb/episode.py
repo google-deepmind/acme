@@ -31,7 +31,6 @@ import reverb
 import tensorflow as tf
 import tree
 
-
 _PaddingFn = Callable[[Tuple[int, ...], np.dtype], np.ndarray]
 
 
@@ -107,10 +106,12 @@ class EpisodeAdder(base.ReverbAdder):
     # Create a prioritized item for each table.
     for table_name, priority in table_priorities.items():
       self._writer.create_item(table_name, priority, trajectory)
+      self._writer.flush(self._max_in_flight_items)
 
   # TODO(b/185309817): make this into a standalone method.
   @classmethod
-  def signature(cls, environment_spec: specs.EnvironmentSpec,
+  def signature(cls,
+                environment_spec: specs.EnvironmentSpec,
                 extras_spec: types.NestedSpec = (),
                 sequence_length: Optional[int] = None):
     """This is a helper method for generating signatures for Reverb tables.
@@ -121,11 +122,11 @@ class EpisodeAdder(base.ReverbAdder):
     Args:
       environment_spec: A `specs.EnvironmentSpec` whose fields are nested
         structures with leaf nodes that have `.shape` and `.dtype` attributes.
-        This should come from the environment that will be used to generate
-        the data inserted into the Reverb table.
+        This should come from the environment that will be used to generate the
+        data inserted into the Reverb table.
       extras_spec: A nested structure with leaf nodes that have `.shape` and
-        `.dtype` attributes. The structure (and shapes/dtypes) of this must
-        be the same as the `extras` passed into `ReverbAdder.add`.
+        `.dtype` attributes. The structure (and shapes/dtypes) of this must be
+        the same as the `extras` passed into `ReverbAdder.add`.
       sequence_length: An optional integer representing the expected length of
         sequences that will be added to replay.
 
@@ -134,9 +135,10 @@ class EpisodeAdder(base.ReverbAdder):
     """
 
     def add_time_dim(paths: Iterable[str], spec: tf.TensorSpec):
-      return tf.TensorSpec(shape=(sequence_length, *spec.shape),
-                           dtype=spec.dtype,
-                           name='/'.join(str(p) for p in paths))
+      return tf.TensorSpec(
+          shape=(sequence_length, *spec.shape),
+          dtype=spec.dtype,
+          name='/'.join(str(p) for p in paths))
 
     trajectory_env_spec, trajectory_extras_spec = tree.map_structure_with_path(
         add_time_dim, (environment_spec, extras_spec))

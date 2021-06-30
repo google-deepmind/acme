@@ -243,6 +243,7 @@ class SequenceAdder(base.ReverbAdder):
     # Create a prioritized item for each table.
     for table_name, priority in table_priorities.items():
       self._writer.create_item(table_name, priority, trajectory)
+      self._writer.flush(self._max_in_flight_items)
 
   # TODO(bshahr): make this into a standalone method. Class methods should be
   # used as alternative constructors or when modifying some global state,
