@@ -63,15 +63,16 @@ def make_reverb_prioritized_nstep_replay(
       remover=reverb.selectors.Fifo(),
       max_size=max_replay_size,
       rate_limiter=reverb.rate_limiters.MinSize(min_replay_size),
-      signature=adders.NStepTransitionAdder.signature(
-          environment_spec, extra_spec),
+      signature=adders.NStepTransitionAdder.signature(environment_spec,
+                                                        extra_spec),
   )
   server = reverb.Server([replay_table], port=None)
 
   # The adder is used to insert observations into replay.
   address = f'localhost:{server.port}'
   client = reverb.Client(address)
-  adder = adders.NStepTransitionAdder(client, n_step, discount, priority_fns)
+  adder = adders.NStepTransitionAdder(
+      client, n_step, discount, priority_fns=priority_fns)
 
   # The dataset provides an interface to sample from replay.
   data_iterator = datasets.make_reverb_dataset(
@@ -95,9 +96,7 @@ def make_reverb_online_queue(
   """Creates a single process queue from an environment spec and extra_spec."""
   signature = adders.SequenceAdder.signature(environment_spec, extra_spec)
   queue = reverb.Table.queue(
-      name=replay_table_name,
-      max_size=max_queue_size,
-      signature=signature)
+      name=replay_table_name, max_size=max_queue_size, signature=signature)
   server = reverb.Server([queue], port=None)
   can_sample = lambda: queue.can_sample(batch_size)
 
@@ -116,7 +115,7 @@ def make_reverb_online_queue(
       server_address=address,
       table=replay_table_name,
       max_in_flight_samples_per_worker=1,
-      )
+  )
   dataset = dataset.batch(batch_size, drop_remainder=True)
   data_iterator = dataset.as_numpy_iterator()
   return ReverbReplay(server, adder, data_iterator, can_sample=can_sample)
