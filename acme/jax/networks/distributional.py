@@ -15,11 +15,12 @@
 
 """Haiku modules that output tfd.Distributions."""
 
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
 import haiku as hk
 import jax
 import jax.numpy as jnp
+import numpy as np
 import tensorflow_probability
 hk_init = hk.initializers
 tfp = tensorflow_probability.experimental.substrates.jax
@@ -34,17 +35,20 @@ class CategoricalHead(hk.Module):
 
   def __init__(
       self,
-      num_values: int,
+      num_values: Union[int, List[int]],
       dtype: Optional[Any] = jnp.int32,
       w_init: Optional[Initializer] = None,
       name: Optional[str] = None,
   ):
     super().__init__(name=name)
     self._dtype = dtype
-    self._linear = hk.Linear(num_values, w_init=w_init)
+    self._logit_shape = num_values
+    self._linear = hk.Linear(np.prod(num_values), w_init=w_init)
 
   def __call__(self, inputs: jnp.ndarray) -> tfd.Distribution:
     logits = self._linear(inputs)
+    if not isinstance(self._logit_shape, int):
+      logits = hk.Reshape(self._logit_shape)(logits)
     return tfd.Categorical(logits=logits, dtype=self._dtype)
 
 
