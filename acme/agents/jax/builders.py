@@ -16,7 +16,7 @@
 """RL agent Builder interface."""
 
 import abc
-from typing import Iterator, List, Optional
+from typing import Generic, Iterator, List, Optional, TypeVar
 
 from acme import adders
 from acme import core
@@ -26,7 +26,10 @@ from acme.utils import counting
 import reverb
 
 
-class ActorLearnerBuilder(abc.ABC):
+Sample = TypeVar('Sample')
+
+
+class GenericActorLearnerBuilder(abc.ABC, Generic[Sample]):
   """Defines an interface for defining the components of an RL agent.
 
   Implementations of this interface contain a complete specification of a
@@ -46,7 +49,7 @@ class ActorLearnerBuilder(abc.ABC):
   def make_dataset_iterator(
       self,
       replay_client: reverb.Client,
-  ) -> Iterator[reverb.ReplaySample]:
+  ) -> Iterator[Sample]:
     """Create a dataset iterator to use for learning/updating the agent."""
 
   @abc.abstractmethod
@@ -83,7 +86,7 @@ class ActorLearnerBuilder(abc.ABC):
       self,
       random_key: networks_lib.PRNGKey,
       networks,
-      dataset: Iterator[reverb.ReplaySample],
+      dataset: Iterator[Sample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
       # TODO(mwhoffman): eliminate checkpoint and move it outside.
@@ -102,3 +105,7 @@ class ActorLearnerBuilder(abc.ABC):
         actor steps, etc.) distributed throughout the agent.
       checkpoint: bool controlling whether the learner checkpoints itself.
     """
+
+
+class ActorLearnerBuilder(GenericActorLearnerBuilder[reverb.ReplaySample]):
+  pass
