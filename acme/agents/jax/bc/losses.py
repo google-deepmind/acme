@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Offline losses used in variants of BC."""
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from acme import types
 from acme.jax import networks as networks_lib
@@ -101,13 +101,16 @@ def peerbc(base_loss_fn: Loss, zeta: float) -> Loss:
 
 def rcal(base_loss_fn: Loss,
          discount: float,
-         alpha: float) -> Loss:
+         alpha: float,
+         num_bins: Optional[int] = None) -> Loss:
   """https://www.cristal.univ-lille.fr/~pietquin/pdf/AAMAS_2014_BPMGOP.pdf.
 
   Args:
     base_loss_fn: the base loss to add RCAL on top of.
     discount: the gamma discount used in RCAL.
     alpha: the regularization parameter.
+    num_bins: how many bins were used for discretization. If None the
+      environment was originally discrete already.
   Returns:
     The loss function.
   """
@@ -118,6 +121,8 @@ def rcal(base_loss_fn: Loss,
 
     def logits_fn(key, observations, actions=None):
       logits = apply_fn(params, observations, key=key, is_training=True)
+      if num_bins:
+        logits = jnp.reshape(logits, list(logits.shape[:-1]) + [-1, num_bins])
       if actions is None:
         actions = jnp.argmax(logits, axis=-1)
       logits_actions = jnp.sum(
@@ -132,6 +137,8 @@ def rcal(base_loss_fn: Loss,
     # RCAL, by making a parallel between the logits of BC and Q-values,
     # defines a regularization loss that encourages the implicit reward
     # (inferred by inversing the Bellman Equation) to be sparse.
+    # NOTE: In case of discretized envs jnp.mean goes over batch and num_bins
+    # dimensions.
     regularization_loss = jnp.mean(
         jnp.abs(logits_a_tm1 - discount * logits_a_t)
         )
