@@ -186,6 +186,9 @@ class SequenceAdder(base.ReverbAdder):
       self._maybe_create_item(self._sequence_length, end_of_episode=True)
 
     elif self._end_of_episode_behavior is EndBehavior.WRITE:
+      # Drop episodes that are too short.
+      if self._writer.episode_steps < self._sequence_length:
+        return
       self._maybe_create_item(
           self._sequence_length, end_of_episode=True, force=True)
 
