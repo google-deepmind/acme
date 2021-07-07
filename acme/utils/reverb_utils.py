@@ -19,7 +19,8 @@ Contains functions manipulating reverb tables and samples.
 """
 
 from acme import types
-import jax.numpy as jnp
+import jax
+import numpy as np
 import reverb
 from reverb import item_selectors
 from reverb import rate_limiters
@@ -81,7 +82,9 @@ def _make_rate_limiter_from_rate_limiter_info(
 
 def replay_sample_to_sars_transition(
     sample: reverb.ReplaySample,
-    is_sequence: bool) -> types.Transition:
+    is_sequence: bool,
+    strip_last_transition: bool = False,
+    flatten_batch: bool = False) -> types.Transition:
   """Converts the replay sample to a types.Transition.
 
   NB: If is_sequence is True then the last next_observation of each sequence is
@@ -92,21 +95,34 @@ def replay_sample_to_sars_transition(
     is_sequence: If False we expect the sample data to match the
       types.Transition already. Otherwise we expect a batch of sequences of
       steps.
+    strip_last_transition: If True and is_sequence, the last transition will be
+      stripped as its next_observation field is incorrect.
+    flatten_batch: If True and is_sequence, the two batch dimensions will be
+      flatten to one.
 
   Returns:
-    A types.Transition built from the sample data. The number of leading
-    dimensions will be unchanged, so expect 2 for sequence based ([Batch, Time])
-    and 1 ([Batch]) otherwise.
-    NB: If is_sequence is True then the last next_observation of each sequence
-    is rubbish. Don't train on it.
+    A types.Transition built from the sample data.
+    If is_sequence and strip_last_transition are both True, the output will be
+    smaller than the output as the last transition of every sequence will have
+    been removed.
   """
   if not is_sequence:
     return types.Transition(*sample.data)
   # Note that the last next_observation is invalid.
   steps = sample.data
-  return types.Transition(
+  transitions = types.Transition(
       observation=steps.observation,
       action=steps.action,
       reward=steps.reward,
       discount=steps.discount,
-      next_observation=jnp.roll(steps.observation, shift=-1, axis=1))
+      next_observation=np.roll(steps.observation, shift=-1, axis=1))
+  if strip_last_transition:
+    # We remove the last transition as its next_observation field is incorrect.
+    # It has been obtained by rolling the observation field, such that
+    # transitions.next_observations[:, -1] is transitions.observations[:, 0]
+    transitions = jax.tree_map(lambda x: x[:, :-1, ...], transitions)
+  if flatten_batch:
+    # Merge the 2 leading batch dimensions into 1.
+    transitions = jax.tree_map(lambda x: np.reshape(x, (-1,) + x.shape[2:]),
+                               transitions)
+  return transitions
