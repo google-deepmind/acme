@@ -82,8 +82,8 @@ class BCLearner(acme.Learner):
       loss_value, gradients = loss_and_grad(network.apply, state.policy_params,
                                             key_input, transitions)
 
-      policy_update, optimizer_state = optimizer.update(gradients,
-                                                        state.optimizer_state)
+      policy_update, optimizer_state = optimizer.update(
+          gradients, state.optimizer_state, state.policy_params)
       policy_params = optax.apply_updates(state.policy_params, policy_update)
 
       new_state = TrainingState(
