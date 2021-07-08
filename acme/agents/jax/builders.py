@@ -16,20 +16,19 @@
 """RL agent Builder interface."""
 
 import abc
-from typing import Generic, Iterator, List, Optional, TypeVar
+from typing import Any, Generic, Iterator, List, Optional
 
 from acme import adders
 from acme import core
 from acme import specs
 from acme.jax import networks as networks_lib
+from acme.jax.types import Networks, PolicyNetwork, Sample  # pylint: disable=g-multiple-import
 from acme.utils import counting
 import reverb
 
 
-Sample = TypeVar('Sample')
-
-
-class GenericActorLearnerBuilder(abc.ABC, Generic[Sample]):
+class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
+                                                  Sample]):
   """Defines an interface for defining the components of an RL agent.
 
   Implementations of this interface contain a complete specification of a
@@ -67,7 +66,7 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Sample]):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: PolicyNetwork,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:
@@ -85,7 +84,7 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Sample]):
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks,
+      networks: Networks,
       dataset: Iterator[Sample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -107,5 +106,6 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Sample]):
     """
 
 
-class ActorLearnerBuilder(GenericActorLearnerBuilder[reverb.ReplaySample]):
+class ActorLearnerBuilder(GenericActorLearnerBuilder[Any, Any,
+                                                     reverb.ReplaySample]):
   pass

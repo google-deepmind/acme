@@ -15,7 +15,7 @@
 
 """Common JAX type definitions."""
 
-from typing import Callable
+from typing import Callable, TypeVar
 
 from acme import core
 from acme.jax import networks as networks_lib
@@ -23,3 +23,6 @@ from acme.utils import counting
 
 EvaluatorFactory = Callable[
     [networks_lib.PRNGKey, core.VariableSource, counting.Counter], core.Worker]
+Networks = TypeVar('Networks')
+PolicyNetwork = TypeVar('PolicyNetwork')
+Sample = TypeVar('Sample')
