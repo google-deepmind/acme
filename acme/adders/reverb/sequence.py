@@ -86,6 +86,7 @@ class SequenceAdder(base.ReverbAdder):
       chunk_length: Optional[int] = None,
       pad_end_of_episode: Optional[bool] = None,
       break_end_of_episode: Optional[bool] = None,
+      get_signature_timeout_ms: int = 300_000,
   ):
     """Makes a SequenceAdder instance.
 
@@ -111,6 +112,8 @@ class SequenceAdder(base.ReverbAdder):
         sequence in the episode may have length less than `sequence_length`.
       break_end_of_episode: If 'False' (True by default) does not break
         sequences on env reset. In this case 'pad_end_of_episode' is not used.
+      get_signature_timeout_ms: time before timeout in fetching the signature
+        from the reverb server.
     """
     del chunk_length
     super().__init__(
@@ -120,7 +123,8 @@ class SequenceAdder(base.ReverbAdder):
         max_sequence_length=sequence_length+1,
         delta_encoded=delta_encoded,
         priority_fns=priority_fns,
-        max_in_flight_items=max_in_flight_items)
+        max_in_flight_items=max_in_flight_items,
+        get_signature_timeout_ms=get_signature_timeout_ms)
 
     if pad_end_of_episode and not break_end_of_episode:
       raise ValueError(
