@@ -26,3 +26,4 @@ EvaluatorFactory = Callable[
 Networks = TypeVar('Networks')
 PolicyNetwork = TypeVar('PolicyNetwork')
 Sample = TypeVar('Sample')
+TrainingState = TypeVar('TrainingState')
