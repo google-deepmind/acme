@@ -34,8 +34,8 @@ import numpy as np
 # Internal imports.
 # Make sure you have FFMpeg configured.
 
-def _make_animation(frames: Sequence[np.ndarray], frame_rate: float,
-                    figsize: Union[float, Tuple[int, int]]) -> anim.Animation:
+def make_animation(frames: Sequence[np.ndarray], frame_rate: float,
+                   figsize: Union[float, Tuple[int, int]]) -> anim.Animation:
   """Generates an animation from a stack of frames."""
 
   # Set animation characteristics.
@@ -113,8 +113,8 @@ class VideoWrapper(base.EnvironmentWrapper):
     if self._counter % self._record_every == 0:
       path = os.path.join(self._path,
                           f'{self._filename}_{self._counter:04d}.html')
-      video = _make_animation(self._frames, self._frame_rate,
-                              self._figsize).to_html5_video()
+      video = make_animation(self._frames, self._frame_rate,
+                             self._figsize).to_html5_video()
 
       with open(path, 'w') as f:
         f.write(video)
@@ -143,8 +143,8 @@ class VideoWrapper(base.EnvironmentWrapper):
 
   def make_html_animation(self):
     if self._frames:
-      return _make_animation(self._frames, self._frame_rate,
-                             self._figsize).to_html5_video()
+      return make_animation(self._frames, self._frame_rate,
+                            self._figsize).to_html5_video()
     else:
       raise ValueError('make_html_animation should be called after running a '
                        'trajectory and before calling reset().')
