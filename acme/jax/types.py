@@ -15,15 +15,38 @@
 
 """Common JAX type definitions."""
 
-from typing import Callable, TypeVar
+from typing import Callable, Generic, Mapping, TypeVar
 
 from acme import core
-from acme.jax import networks as networks_lib
+from acme import types
 from acme.utils import counting
+import chex
+import jax.numpy as jnp
 
-EvaluatorFactory = Callable[
-    [networks_lib.PRNGKey, core.VariableSource, counting.Counter], core.Worker]
+PRNGKey = jnp.ndarray
+EvaluatorFactory = Callable[[PRNGKey, core.VariableSource, counting.Counter],
+                            core.Worker]
 Networks = TypeVar('Networks')
 PolicyNetwork = TypeVar('PolicyNetwork')
 Sample = TypeVar('Sample')
 TrainingState = TypeVar('TrainingState')
+
+TrainingMetrics = Mapping[str, jnp.ndarray]
+"""Metrics returned by the training step.
+
+Typically these are logged, so the values are expected to be scalars.
+"""
+
+Variables = Mapping[str, types.NestedArray]
+"""Mapping of variable collections.
+
+A mapping of variable collections, as defined by Learner.get_variables.
+The keys are the collection names, the values are nested arrays representing
+the values of the corresponding collection variables.
+"""
+
+
+@chex.dataclass(frozen=True, mappable_dataclass=False)
+class TrainingStepOutput(Generic[TrainingState]):
+  state: TrainingState
+  metrics: TrainingMetrics

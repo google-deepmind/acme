@@ -23,6 +23,7 @@ from typing import Callable, Iterable, Generator, NamedTuple, Optional, Sequence
 
 from absl import logging
 from acme import types
+from acme.jax.types import TrainingMetrics, TrainingStepOutput  # pylint: disable=g-multiple-import
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -335,14 +336,19 @@ def mapreduce(
 
 
 _TrainingState = TypeVar('_TrainingState')
+_TrainingData = TypeVar('_TrainingData')
 _TrainingAux = TypeVar('_TrainingAux')
 
 
+# TODO(b/192806089): migrate all callers to process_many_batches and remove this
+# method.
 def process_multiple_batches(
-    process_one_batch: Callable[[_TrainingState, _TrainingAux],
+    process_one_batch: Callable[[_TrainingState, _TrainingData],
                                 Tuple[_TrainingState, _TrainingAux]],
     num_batches: int,
-    postprocess_aux: Optional[Callable[[_TrainingAux], _TrainingAux]] = None):
+    postprocess_aux: Optional[Callable[[_TrainingAux], _TrainingAux]] = None
+) -> Callable[[_TrainingState, _TrainingData], Tuple[_TrainingState,
+                                                     _TrainingAux]]:
   """Makes 'process_one_batch' process multiple batches at once.
 
   Args:
@@ -376,6 +382,34 @@ def process_multiple_batches(
     return state, postprocess_aux(aux)
 
   return _process_multiple_batches
+
+
+def process_many_batches(
+    process_one_batch: Callable[[_TrainingState, _TrainingData],
+                                TrainingStepOutput[_TrainingState]],
+    num_batches: int,
+    postprocess_aux: Optional[Callable[[TrainingMetrics],
+                                       TrainingMetrics]] = None
+) -> Callable[[_TrainingState, _TrainingData],
+              TrainingStepOutput[_TrainingState]]:
+  """The version of 'process_multiple_batches' with stronger typing."""
+
+  def _process_one_batch(
+      state: _TrainingState,
+      data: _TrainingData) -> Tuple[_TrainingState, _TrainingAux]:
+    result = process_one_batch(state, data)
+    return result.state, result.metrics
+
+  func = process_multiple_batches(_process_one_batch, num_batches,
+                                  postprocess_aux)
+
+  def _process_many_batches(
+      state: _TrainingState,
+      data: _TrainingData) -> TrainingStepOutput[_TrainingState]:
+    state, aux = func(state, data)
+    return TrainingStepOutput(state, aux)
+
+  return _process_many_batches
 
 
 def weighted_softmax(x: jnp.ndarray, weights: jnp.ndarray, axis: int = 0):

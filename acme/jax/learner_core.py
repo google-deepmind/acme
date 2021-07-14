@@ -15,31 +15,10 @@
 
 """LearnerCore interface definition."""
 
-from typing import Callable, Generic, Mapping
+from typing import Callable, Generic
 
-from acme import types
-from acme.jax import networks as networks_lib
-from acme.jax.types import Sample, TrainingState  # pylint: disable=g-multiple-import
-import chex
+from acme.jax.types import PRNGKey, Sample, TrainingState, TrainingStepOutput, Variables  # pylint: disable=g-multiple-import
 import dataclasses
-import jax.numpy as jnp
-
-Metrics = Mapping[str, jnp.ndarray]
-
-# A mapping of variable collections, as defined by Learner.get_variables.
-# The keys are the collection names, the values are nested arrays representing
-# the values of the corresponding collection variables.
-Variables = Mapping[str, types.NestedArray]
-
-
-@chex.dataclass(frozen=True, mappable_dataclass=False)
-class StepOutput(Generic[TrainingState]):
-  state: TrainingState
-  metrics: Metrics
-  """Metrics returned by the training step.
-
-  Typically these are logged, so the values are expected to be scalars.
-  """
 
 
 # @final
@@ -47,10 +26,10 @@ class StepOutput(Generic[TrainingState]):
 class LearnerCore(Generic[Sample, TrainingState]):
   """Pure functions that define the algorithm-specific learner functionality."""
 
-  init: Callable[[networks_lib.PRNGKey], TrainingState]
+  init: Callable[[PRNGKey], TrainingState]
   """Initializes the learner state."""
 
-  step: Callable[[TrainingState, Sample], StepOutput[TrainingState]]
+  step: Callable[[TrainingState, Sample], TrainingStepOutput[TrainingState]]
   """Does one training step."""
 
   get_variables: Callable[[TrainingState], Variables]

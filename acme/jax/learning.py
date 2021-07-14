@@ -22,6 +22,7 @@ import acme
 from acme import types
 from acme.jax import learner_core as learner_core_lib
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.jax.types import Sample, TrainingState  # pylint: disable=g-multiple-import
 from acme.utils import counting
 from acme.utils import loggers
@@ -39,6 +40,7 @@ class DefaultJaxLearner(acme.Learner, Generic[Sample, TrainingState]):
       random_key: networks_lib.PRNGKey,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
+      num_sgd_steps_per_step: int = 1,
   ):
 
     # Initialise training state (parameters and optimiser state).
@@ -51,7 +53,8 @@ class DefaultJaxLearner(acme.Learner, Generic[Sample, TrainingState]):
 
     # Internalise iterator.
     self._iterator = iterator
-    self._sgd_step = jax.jit(learner_core.step)
+    self._sgd_step = jax.jit(
+        utils.process_many_batches(learner_core.step, num_sgd_steps_per_step))
     self._get_variables = learner_core.get_variables
 
     # Set up logging/counting.

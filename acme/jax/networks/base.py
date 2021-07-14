@@ -19,12 +19,16 @@ import abc
 from typing import Callable, Tuple
 
 from acme import types
+from acme.jax import types as jax_types
 import dataclasses
 import haiku as hk
 import jax.numpy as jnp
 
+# This definition is deprecated. Use jax_types.PRNGKey directly instead.
+# TODO(sinopalnikov): migrate all users and remove this definition.
+PRNGKey = jax_types.PRNGKey
+
 # Commonly-used types.
-PRNGKey = jnp.ndarray
 Observation = types.NestedArray
 Action = types.NestedArray
 Params = types.NestedArray
