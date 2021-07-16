@@ -63,8 +63,6 @@ class GenericActorLearnerCoreBuilder(
   """
 
   logger_fn: Callable[[], loggers.Logger] = lambda: None
-  """How many gradient updates to perform per step."""
-  num_sgd_steps_per_step: int = 1
 
   @abc.abstractmethod
   def make_replay_tables(
@@ -154,4 +152,4 @@ class GenericActorLearnerCoreBuilder(
     """
     return learning.DefaultJaxLearner(
         self.make_learner_core(networks), dataset, random_key, counter,
-        self.logger_fn(), self.num_sgd_steps_per_step)
+        self.logger_fn())
