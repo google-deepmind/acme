@@ -19,7 +19,7 @@ import functools
 import itertools
 import queue
 import threading
-from typing import Callable, Iterable, Generator, NamedTuple, Optional, Sequence, TypeVar, Tuple
+from typing import Callable, Generator, Iterable, NamedTuple, Optional, Sequence, Tuple, TypeVar
 
 from absl import logging
 from acme import types
@@ -396,7 +396,7 @@ def process_many_batches(
 
   def _process_one_batch(
       state: _TrainingState,
-      data: _TrainingData) -> Tuple[_TrainingState, _TrainingAux]:
+      data: _TrainingData) -> Tuple[_TrainingState, TrainingMetrics]:
     result = process_one_batch(state, data)
     return result.state, result.metrics
 
