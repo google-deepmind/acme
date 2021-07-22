@@ -20,6 +20,7 @@ Contains functions manipulating reverb tables and samples.
 
 from acme import types
 import jax
+import jax.numpy as jnp
 import numpy as np
 import reverb
 from reverb import item_selectors
@@ -110,12 +111,15 @@ def replay_sample_to_sars_transition(
     return types.Transition(*sample.data)
   # Note that the last next_observation is invalid.
   steps = sample.data
+  observation_roll_fn = (
+      jnp.roll if isinstance(steps.observation, jnp.ndarray) else np.roll)
+  next_observation = observation_roll_fn(steps.observation, shift=-1, axis=1)
   transitions = types.Transition(
       observation=steps.observation,
       action=steps.action,
       reward=steps.reward,
       discount=steps.discount,
-      next_observation=np.roll(steps.observation, shift=-1, axis=1))
+      next_observation=next_observation)
   if strip_last_transition:
     # We remove the last transition as its next_observation field is incorrect.
     # It has been obtained by rolling the observation field, such that
