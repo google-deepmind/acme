@@ -16,6 +16,7 @@
 """Tests for TF2 savers."""
 
 import os
+import re
 import signal
 import threading
 import time
@@ -165,6 +166,16 @@ class CheckpointingRunnerTest(test_utils.TestCase):
         directory=directory)
     # Check DummyVariable() was restored properly.
     np.testing.assert_array_equal(x.state['state'].numpy(), np.int32(1))
+
+  def test_checkpoint_dir(self):
+    directory = self.get_tempdir()
+    ckpt_runner = tf2_savers.CheckpointingRunner(
+        wrapped=DummySaveable(),
+        time_delta_minutes=0,
+        directory=directory)
+    expected_dir_re = f'{directory}/[a-z0-9-]*/checkpoints/default'
+    regexp = re.compile(expected_dir_re)
+    self.assertIsNotNone(regexp.fullmatch(ckpt_runner.directory))
 
 
 class SnapshotterTest(test_utils.TestCase):

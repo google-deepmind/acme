@@ -167,6 +167,10 @@ class Checkpointer:
                  checkpoint_to_restore)
     self._checkpoint.restore(checkpoint_to_restore)
 
+  @property
+  def directory(self):
+    return self._checkpoint_manager.directory
+
 
 class CheckpointingRunner(core.Worker):
   """Wrap an object and expose a run method which checkpoints periodically.
@@ -228,6 +232,10 @@ class CheckpointingRunner(core.Worker):
   def checkpoint(self):
     self._checkpointer.save()
     time.sleep(self._time_delta_minutes * 60)
+
+  @property
+  def directory(self):
+    return self._checkpointer.directory
 
 
 class Snapshotter:
