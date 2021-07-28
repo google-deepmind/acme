@@ -16,11 +16,14 @@
 """ActorCore interface definition."""
 
 import dataclasses
-from typing import Callable, Generic, Tuple, TypeVar
+from typing import Callable, Generic, Mapping, Tuple, TypeVar
+
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.jax.types import PRNGKey
+import chex
 import jax
+import jax.numpy as jnp
 
 
 NoneType = type(None)
@@ -69,6 +72,36 @@ def batched_feed_forward_to_actor_core(
 
   def get_extras(unused_rng: PRNGKey) -> NoneType:
     return None
+  return ActorCore(init=init, select_action=select_action,
+                   get_extras=get_extras)
+
+
+@chex.dataclass(frozen=True, mappable_dataclass=False)
+class SimpleActorCoreStateWithExtras:
+  rng: PRNGKey
+  extras: Mapping[str, jnp.ndarray]
+
+
+def batched_feed_forward_with_extras_to_actor_core(
+    policy: FeedForwardPolicy
+) -> ActorCore[SimpleActorCoreStateWithExtras, Mapping[str, jnp.ndarray]]:
+  """A convenience adaptor from FeedForwardPolicy to ActorCore."""
+
+  def select_action(params: networks_lib.Params,
+                    observation: networks_lib.Observation,
+                    state: SimpleActorCoreStateWithExtras):
+    rng = state.rng
+    rng1, rng2 = jax.random.split(rng)
+    observation = utils.add_batch_dim(observation)
+    action, extras = utils.squeeze_batch_dim(policy(params, rng1, observation))
+    return action, SimpleActorCoreStateWithExtras(rng2, extras)
+
+  def init(rng: PRNGKey) -> SimpleActorCoreStateWithExtras:
+    return SimpleActorCoreStateWithExtras(rng, {})
+
+  def get_extras(
+      state: SimpleActorCoreStateWithExtras) -> Mapping[str, jnp.ndarray]:
+    return state.extras
   return ActorCore(init=init, select_action=select_action,
                    get_extras=get_extras)
 
