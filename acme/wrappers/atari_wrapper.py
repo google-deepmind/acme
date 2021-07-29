@@ -27,7 +27,7 @@ from PIL import Image
 RGB_INDEX = 0  # Observation index holding the RGB data.
 LIVES_INDEX = 1  # Observation index holding the lives count.
 NUM_COLOR_CHANNELS = 3  # Number of color channels in RGB data.
-
+NOOP_ACTION_INDEX = 0  # Index of the noop-action.
 
 class AtariWrapper(base.EnvironmentWrapper):
   """Standard "Nature Atari" wrapper for Python environments.
@@ -44,6 +44,7 @@ class AtariWrapper(base.EnvironmentWrapper):
     4. Conversion to grayscale and downscaling.
     5. Reward clipping.
     6. Observation stacking.
+    7. No-op random starts.
 
   This wrapper will raise an error if the underlying Atari environment does not:
 
@@ -67,9 +68,11 @@ class AtariWrapper(base.EnvironmentWrapper):
                zero_discount_on_life_loss: bool = False,
                expose_lives_observation: bool = False,
                num_stacked_frames: int = 4,
+               noop_max: int = 30,
                max_episode_len: Optional[int] = None,
                to_float: bool = False,
-               grayscaling: bool = True):
+               grayscaling: bool = True,
+               seed: Optional[int] = None):
     """Initializes a new AtariWrapper.
 
     Args:
@@ -91,12 +94,15 @@ class AtariWrapper(base.EnvironmentWrapper):
         tuple (pixel_array, lives).
       num_stacked_frames: Number of recent (pooled) observations to stack into
         the returned observation.
+      noop_max: The maximal number of no-ops to perform at the start of an
+        episode.
       max_episode_len: Number of frames before truncating episode. By default,
         there is no maximum length.
       to_float: If `True`, rescales RGB observations to floats in [0, 1].
       grayscaling: If `True` returns a grayscale version of the observations. In
         this case, the observation is 3D (H, W, num_stacked_frames). If `False`
         the observations are RGB and have shape (H, W, C, num_stacked_frames).
+      seed: Integer used to initialise random state.
 
     Raises:
       ValueError: For various invalid inputs.
@@ -105,6 +111,14 @@ class AtariWrapper(base.EnvironmentWrapper):
       raise ValueError("pooled_frames ({}) must be between 1 and "
                        "action_repeats ({}) inclusive".format(
                            pooled_frames, action_repeats))
+    if noop_max < 0:
+      raise ValueError(
+        "Maximal number of no-ops after reset cannot be negative. "
+        f"Received noop_max={noop_max}"
+      )
+
+    if noop_max:
+      environment = _NoopReset(environment, noop_max, seed)
 
     if zero_discount_on_life_loss:
       super().__init__(_ZeroDiscountOnLifeLoss(environment))
@@ -129,6 +143,7 @@ class AtariWrapper(base.EnvironmentWrapper):
       spec = environment.observation_spec()
       self._height, self._width = spec[RGB_INDEX].shape[:2]
 
+    self._noop_max = noop_max
     self._episode_len = 0
     self._max_episode_len = max_episode_len
     self._reset_next_step = True
@@ -376,3 +391,36 @@ class _ZeroDiscountOnLifeLoss(base.EnvironmentWrapper):
     if is_life_loss:
       return timestep._replace(discount=0.0)
     return timestep
+
+class _NoopReset(base.EnvironmentWrapper):
+  """Implements random noop starts to episodes."""
+
+  def __init__(self,
+               environment: dm_env.Environment,
+               noop_max: int = 30,
+               seed: Optional[int] = None):
+    """Initializes a `_NoopReset` wrapper.
+
+    Args:
+      environment: An Atari environment.
+      noop_max: The maximal number of noop actions at the start of an episode.
+      seed: The random seed used to sample the number of noops.
+    """
+    super().__init__(environment)
+    self.np_random = np.random.RandomState(seed)
+    self._noop_max = noop_max
+
+def reset(self) -> dm_env.TimeStep:
+  """Resets environment and provides the first timestep."""
+  noops = (
+    self.np_random.randint(1, self.noop_max + 1)
+    if self._noop_max > 0
+    else 0
+  )
+  timestep = self.enviornment.reset()
+  for _ in range(noops):
+    timestep = self.environment.step(NOOP_ACTION_INDEX)
+    if timestep.last():
+      timestep = self.environment.reset()
+
+  return timestep
