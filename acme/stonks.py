@@ -59,7 +59,7 @@ reverb_replay = replay.make_reverb_prioritized_nstep_replay(
     discount=config.discount,
 )
 
-address = reverb_replay.address
+# address = reverb_replay.address
 
 
 ### NETWORK
@@ -124,7 +124,7 @@ address = reverb_replay.address
 
 # @ray.remote
 class StonksActor():
-  def __init__(self, config):
+  def __init__(self, config, address):
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
 
     client = reverb.Client(address)
@@ -197,7 +197,7 @@ def run_learner():
 if __name__ == "__main__":
   ray.init()
 
-  a = StonksActor(config)
+  a = StonksActor(config, reverb_replay.address)
   a.run()
   # a = StonksActor.remote(config)
   # ray.get(a.run.remote())
