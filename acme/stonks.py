@@ -126,6 +126,23 @@ def run_actor():
   client = reverb.Client(address)
   adder = adders.NStepTransitionAdder(client, config.n_step, config.discount)
 
+
+  def network(x):
+    model = hk.Sequential([
+        hk.Flatten(),
+        hk.nets.MLP([50, 50, spec.actions.num_values])
+    ])
+    return model(x)
+
+  # Make network purely functional
+  network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+  dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
+
+  network = networks_lib.FeedForwardNetwork(
+    init=lambda rng: network_hk.init(rng, dummy_obs),
+    apply=network_hk.apply)
+
+
   def policy(params: networks_lib.Params, key: jnp.ndarray,
              observation: jnp.ndarray) -> jnp.ndarray:
     action_values = network.apply(params, observation) # how will this work when they're on different devices?
