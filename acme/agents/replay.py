@@ -32,6 +32,7 @@ class ReverbReplay:
   data_iterator: Iterator[reverb.ReplaySample]
   client: Optional[reverb.Client] = None
   can_sample: Callable[[], bool] = lambda: True
+  address: str = None
 
 
 def make_reverb_prioritized_nstep_replay(
@@ -118,7 +119,7 @@ def make_reverb_online_queue(
   )
   dataset = dataset.batch(batch_size, drop_remainder=True)
   data_iterator = dataset.as_numpy_iterator()
-  return ReverbReplay(server, adder, data_iterator, can_sample=can_sample)
+  return ReverbReplay(server, adder, data_iterator, can_sample=can_sample, address=address)
 
 
 def make_reverb_prioritized_sequence_replay(

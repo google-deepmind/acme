@@ -59,6 +59,8 @@ reverb_replay = replay.make_reverb_prioritized_nstep_replay(
     discount=config.discount,
 )
 
+address = reverb_replay.address
+
 
 ### NETWORK
 
@@ -123,31 +125,8 @@ reverb_replay = replay.make_reverb_prioritized_nstep_replay(
 @ray.remote
 class StonksActor():
   def __init__(self):
-    # import acme
-    # from acme import specs
-    # from acme.jax import utils
-    # from acme.jax import variable_utils
-    # from acme.jax import networks as networks_lib
-    # from acme.agents import replay
-    # from acme.agents.jax import actors
-    # from acme.agents.jax.dqn import learning
-    # from acme.agents.jax.dqn import config as dqn_config
-    # from acme.testing import fakes
-
-    # from acme.adders import reverb as adders
-
-    # import ray
-    # import jax
-    # import jax.numpy as jnp
-    # import rlax
-    # import optax
-    # import reverb
-    # import numpy as np
-    # import haiku as hk
-
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
 
-    address = 'localhost:8000'
     client = reverb.Client(address)
     adder = adders.NStepTransitionAdder(client, config.n_step, config.discount)
 
@@ -191,11 +170,13 @@ def run_actor():
 
 @ray.remote
 def run_learner():
+  client = reverb.Client(address)
+
   # we just keep count of the number of steps it's trained on
   step_count = 0
 
   while not should_terminate(episode_count, step_count):
-    num_transitions = reverb_replay.client.server_info()['priority_table'].num_episodes # should be ok?
+    num_transitions = client.server_info()['priority_table'].num_episodes # should be ok?
 
     if num_episodes < MIN_OBSERVATIONS:
       sleep(0.5)
