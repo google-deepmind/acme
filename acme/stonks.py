@@ -62,54 +62,54 @@ reverb_replay = replay.make_reverb_prioritized_nstep_replay(
 
 ### NETWORK
 
-def network(x):
-  model = hk.Sequential([
-      hk.Flatten(),
-      hk.nets.MLP([50, 50, spec.actions.num_values])
-  ])
-  return model(x)
+# def network(x):
+#   model = hk.Sequential([
+#       hk.Flatten(),
+#       hk.nets.MLP([50, 50, spec.actions.num_values])
+#   ])
+#   return model(x)
 
-# Make network purely functional
-network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
-dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
+# # Make network purely functional
+# network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+# dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
 
-network = networks_lib.FeedForwardNetwork(
-  init=lambda rng: network_hk.init(rng, dummy_obs),
-  apply=network_hk.apply)
+# network = networks_lib.FeedForwardNetwork(
+#   init=lambda rng: network_hk.init(rng, dummy_obs),
+#   apply=network_hk.apply)
 
 
 
 ### LEARNER: CREATE
 
-def _calculate_num_learner_steps(num_observations: int, min_observations: int, observations_per_step: float) -> int:
-  """Calculates the number of learner steps to do at step=num_observations."""
-  n = num_observations - min_observations
-  if n < 0:
-    # Do not do any learner steps until you have seen min_observations.
-    return 0
-  if observations_per_step > 1:
-    # One batch every 1/obs_per_step observations, otherwise zero.
-    return int(n % int(observations_per_step) == 0)
-  else:
-    # Always return 1/obs_per_step batches every observation.
-    return int(1 / observations_per_step)
+# def _calculate_num_learner_steps(num_observations: int, min_observations: int, observations_per_step: float) -> int:
+#   """Calculates the number of learner steps to do at step=num_observations."""
+#   n = num_observations - min_observations
+#   if n < 0:
+#     # Do not do any learner steps until you have seen min_observations.
+#     return 0
+#   if observations_per_step > 1:
+#     # One batch every 1/obs_per_step observations, otherwise zero.
+#     return int(n % int(observations_per_step) == 0)
+#   else:
+#     # Always return 1/obs_per_step batches every observation.
+#     return int(1 / observations_per_step)
 
 
-optimizer = optax.chain(
-    optax.clip_by_global_norm(config.max_gradient_norm),
-    optax.adam(config.learning_rate),
-)
+# optimizer = optax.chain(
+#     optax.clip_by_global_norm(config.max_gradient_norm),
+#     optax.adam(config.learning_rate),
+# )
 
-learner = learning.DQNLearner(
-  network=network,# let's try having the same network
-  random_key=key_learner,
-  optimizer=optimizer,
-  discount=config.discount,
-  importance_sampling_exponent=config.importance_sampling_exponent,
-  target_update_period=config.target_update_period,
-  iterator=reverb_replay.data_iterator,
-  replay_client=reverb_replay.client
-)
+# learner = learning.DQNLearner(
+#   network=network,# let's try having the same network
+#   random_key=key_learner,
+#   optimizer=optimizer,
+#   discount=config.discount,
+#   importance_sampling_exponent=config.importance_sampling_exponent,
+#   target_update_period=config.target_update_period,
+#   iterator=reverb_replay.data_iterator,
+#   replay_client=reverb_replay.client
+# )
 
 
 
