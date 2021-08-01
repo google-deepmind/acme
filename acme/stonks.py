@@ -150,6 +150,7 @@ network = networks_lib.FeedForwardNetwork(
 
 
 
+@ray.remote
 class StonksLearner():
   def __init__(self, config, address):
     self.config = config
@@ -159,6 +160,8 @@ class StonksLearner():
         optax.adam(config.learning_rate),
     )
 
+    client = reverb.Client(address)
+
     self.learner = learning.DQNLearner(
       network=network,# let's try having the same network
       random_key=key_learner,
@@ -167,10 +170,9 @@ class StonksLearner():
       importance_sampling_exponent=config.importance_sampling_exponent,
       target_update_period=config.target_update_period,
       iterator=reverb_replay.data_iterator,
-      replay_client=reverb_replay.client
+      replay_client=client
     )
 
-    self.client = reverb.Client(address)
 
   @staticmethod
   def _calculate_num_learner_steps(num_observations: int, min_observations: int, observations_per_step: float) -> int:
@@ -187,11 +189,12 @@ class StonksLearner():
       return int(1 / observations_per_step)
 
   def run(self):
+    client = reverb.Client(address)
     # we just keep count of the number of steps it's trained on
     step_count = 0
 
     while step_count < 10:
-      num_transitions = self.client.server_info()['priority_table'].num_episodes # should be ok?
+      num_transitions = client.server_info()['priority_table'].num_episodes # should be ok?
 
       if num_episodes < MIN_OBSERVATIONS:
         print("sleeping")
