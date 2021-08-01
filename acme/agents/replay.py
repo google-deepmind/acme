@@ -82,7 +82,7 @@ def make_reverb_prioritized_nstep_replay(
       batch_size=batch_size,
       prefetch_size=prefetch_size,
   ).as_numpy_iterator()
-  return ReverbReplay(server, adder, data_iterator, client=client)
+  return ReverbReplay(server, adder, data_iterator, client=client, address=address)
 
 
 def make_reverb_online_queue(
@@ -119,7 +119,7 @@ def make_reverb_online_queue(
   )
   dataset = dataset.batch(batch_size, drop_remainder=True)
   data_iterator = dataset.as_numpy_iterator()
-  return ReverbReplay(server, adder, data_iterator, can_sample=can_sample, address=address)
+  return ReverbReplay(server, adder, data_iterator, can_sample=can_sample)
 
 
 def make_reverb_prioritized_sequence_replay(
