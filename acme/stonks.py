@@ -10,13 +10,17 @@ from acme.agents.jax.dqn import learning
 from acme.agents.jax.dqn import config as dqn_config
 from acme.testing import fakes
 
+from acme.adders import reverb as adders
+
+import ray
 import jax
 import jax.numpy as jnp
 import rlax
 import optax
+import reverb
 import numpy as np
 import haiku as hk
-import ray
+
 
 
 ### PARAMETERS:
@@ -118,6 +122,10 @@ learner = learning.DQNLearner(
 
 @ray.remote
 def run_actor():
+  address = 'localhost:8000'
+  client = reverb.Client(address)
+  adder = adders.NStepTransitionAdder(client, config.n_step, config.discount)
+
   def policy(params: networks_lib.Params, key: jnp.ndarray,
              observation: jnp.ndarray) -> jnp.ndarray:
     action_values = network.apply(params, observation) # how will this work when they're on different devices?
