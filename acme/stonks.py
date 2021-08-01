@@ -111,16 +111,6 @@ learner = learning.DQNLearner(
 
 ### ACTOR: CREATE AND START ###
 
-def policy(params: networks_lib.Params, key: jnp.ndarray,
-           observation: jnp.ndarray) -> jnp.ndarray:
-  action_values = network.apply(params, observation) # how will this work when they're on different devices?
-  return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
-
-actor = actors.FeedForwardActor(
-  policy=policy,
-  random_key=key_actor,
-  variable_client=variable_utils.VariableClient(learner, ''), # need to write a custom wrapper around learner so it calls .remote
-  adder=reverb_replay.adder)
 
 
 # we have should_update=True so that the actor updates its variables
@@ -128,6 +118,17 @@ actor = actors.FeedForwardActor(
 
 @ray.remote
 def run_actor():
+  def policy(params: networks_lib.Params, key: jnp.ndarray,
+             observation: jnp.ndarray) -> jnp.ndarray:
+    action_values = network.apply(params, observation) # how will this work when they're on different devices?
+    return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
+
+  actor = actors.FeedForwardActor(
+    policy=policy,
+    random_key=key_actor,
+    variable_client=variable_utils.VariableClient(learner, ''), # need to write a custom wrapper around learner so it calls .remote
+    adder=reverb_replay.adder)
+
   loop = acme.EnvironmentLoop(environment, actor, should_update=True)
   print("running environment loop")
   loop.run(num_steps=NUM_STEPS_ACTOR) # we'll probably want a custom environment loop which reads a sharedstorage to decide whether to terminate
