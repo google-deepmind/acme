@@ -121,43 +121,48 @@ learner = learning.DQNLearner(
 # this is to start populating the replay buffer, aka self-play
 
 @ray.remote
+class StonksActor():
+  def __init__(self):
+    address = 'localhost:8000'
+    client = reverb.Client(address)
+    adder = adders.NStepTransitionAdder(client, config.n_step, config.discount)
+
+
+    def network(x):
+      model = hk.Sequential([
+          hk.Flatten(),
+          hk.nets.MLP([50, 50, spec.actions.num_values])
+      ])
+      return model(x)
+
+    # Make network purely functional
+    network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+    dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
+
+    network = networks_lib.FeedForwardNetwork(
+      init=lambda rng: network_hk.init(rng, dummy_obs),
+      apply=network_hk.apply)
+
+
+    def policy(params: networks_lib.Params, key: jnp.ndarray,
+               observation: jnp.ndarray) -> jnp.ndarray:
+      action_values = network.apply(params, observation) # how will this work when they're on different devices?
+      return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
+
+    actor = actors.FeedForwardActor(
+      policy=policy,
+      random_key=key_actor,
+      variable_client=variable_utils.VariableClient(learner, ''), # need to write a custom wrapper around learner so it calls .remote
+      adder=reverb_replay.adder)
+
+    loop = acme.EnvironmentLoop(environment, actor, should_update=True)
+    print("running environment loop")
+    loop.run(num_steps=NUM_STEPS_ACTOR) # we'll probably want a custom environment loop which reads a sharedstorage to decide whether to terminate
+
+
+
 def run_actor():
-  address = 'localhost:8000'
-  client = reverb.Client(address)
-  adder = adders.NStepTransitionAdder(client, config.n_step, config.discount)
-
-
-  def network(x):
-    model = hk.Sequential([
-        hk.Flatten(),
-        hk.nets.MLP([50, 50, spec.actions.num_values])
-    ])
-    return model(x)
-
-  # Make network purely functional
-  network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
-  dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
-
-  network = networks_lib.FeedForwardNetwork(
-    init=lambda rng: network_hk.init(rng, dummy_obs),
-    apply=network_hk.apply)
-
-
-  def policy(params: networks_lib.Params, key: jnp.ndarray,
-             observation: jnp.ndarray) -> jnp.ndarray:
-    action_values = network.apply(params, observation) # how will this work when they're on different devices?
-    return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
-
-  actor = actors.FeedForwardActor(
-    policy=policy,
-    random_key=key_actor,
-    variable_client=variable_utils.VariableClient(learner, ''), # need to write a custom wrapper around learner so it calls .remote
-    adder=reverb_replay.adder)
-
-  loop = acme.EnvironmentLoop(environment, actor, should_update=True)
-  print("running environment loop")
-  loop.run(num_steps=NUM_STEPS_ACTOR) # we'll probably want a custom environment loop which reads a sharedstorage to decide whether to terminate
-
+  pass
 
 
 @ray.remote
@@ -184,5 +189,6 @@ def run_learner():
 if __name__ == "__main__":
   ray.init()
 
-  run_actor.remote()
+  StonksActor.remote()
+  # run_actor.remote()
   run_learner.remote()
