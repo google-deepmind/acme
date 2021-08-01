@@ -177,7 +177,7 @@ class StonksActor():
       policy=policy,
       random_key=key_actor,
       variable_client=variable_utils.VariableClient(learner, ''), # need to write a custom wrapper around learner so it calls .remote
-      adder=reverb_replay.adder)
+      adder=adder)
 
     loop = acme.EnvironmentLoop(environment, actor, should_update=True)
     print("running environment loop")
