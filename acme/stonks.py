@@ -1,6 +1,7 @@
 ### IMPORTS
 import acme
 from acme import specs
+from acme import datasets
 from acme.jax import utils
 from acme.jax import variable_utils
 from acme.jax import networks as networks_lib
@@ -162,6 +163,13 @@ class StonksLearner():
 
     client = reverb.Client(address)
 
+    data_iterator = datasets.make_reverb_dataset(
+        table="priority_table",
+        server_address=address,
+        batch_size=config.batch_size,
+        prefetch_size=4,
+    ).as_numpy_iterator()
+
     self.learner = learning.DQNLearner(
       network=network,# let's try having the same network
       random_key=key_learner,
@@ -169,7 +177,7 @@ class StonksLearner():
       discount=config.discount,
       importance_sampling_exponent=config.importance_sampling_exponent,
       target_update_period=config.target_update_period,
-      iterator=reverb_replay.data_iterator,
+      iterator=data_iterator,
       replay_client=client
     )
 
