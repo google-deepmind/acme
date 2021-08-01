@@ -122,7 +122,7 @@ address = reverb_replay.address
 # we have should_update=True so that the actor updates its variables
 # this is to start populating the replay buffer, aka self-play
 
-@ray.remote
+# @ray.remote
 class StonksActor():
   def __init__(self, config):
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
@@ -171,7 +171,7 @@ def run_actor():
   pass
 
 
-@ray.remote
+# @ray.remote
 def run_learner():
   client = reverb.Client(address)
 
@@ -197,7 +197,9 @@ def run_learner():
 if __name__ == "__main__":
   ray.init()
 
-  a = StonksActor.remote(config)
-  ray.get(a.run.remote())
+  a = StonksActor(config)
+  a.run()
+  # a = StonksActor.remote(config)
+  # ray.get(a.run.remote())
   # run_actor.remote()
   # run_learner.remote()
