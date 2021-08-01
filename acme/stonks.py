@@ -355,6 +355,9 @@ if __name__ == "__main__":
     "terminate": False
     })
 
+  # note that we use `reverb_replay.address` which isn't supported by acme 
+  # out of the box, so we'll either have to use something else or patch
+  # the source
   reverb_replay = replay.make_reverb_prioritized_nstep_replay(
       environment_spec=spec,
       n_step=config.n_step,
