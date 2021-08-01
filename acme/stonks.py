@@ -133,7 +133,7 @@ class ActorRay():
     steps = 0
     while True:
       result = self.run_episode()
-      # print("completed one epi")
+      print("completed one epi")
       steps += result["episode_length"]
       if steps == 0: self._logger.write(result)
       self.storage.set_info.remote({
@@ -312,19 +312,18 @@ class LearnerRay():
     print("IT FINALLY ESCAPED THANK OUR LORD AND SAVIOUR")
 
     while step_count < 10:
-      print("flag 1")
       num_steps = self._calculate_num_learner_steps(
         num_observations=ray.get(self.storage.get_info.remote("steps")),
         min_observations=MIN_OBSERVATIONS,
         observations_per_step=self.config.batch_size / self.config.samples_per_insert,
         )
 
-      print("flag 2")
       for _ in range(num_steps):
         self.learner.step()
-        print("flag 3")
 
       step_count += num_steps
+
+    print("learning complete...", step_count)
 
 class VariableSourceRayWrapper():
   def __init__(self, source):
@@ -358,7 +357,6 @@ if __name__ == "__main__":
   learner.run.remote()
   time.sleep(3)
   actor.run.remote()
-
 
   while True:
     time.sleep(1)
