@@ -197,7 +197,7 @@ def run_learner():
 if __name__ == "__main__":
   ray.init()
 
-  a = ray.get(StonksActor.remote())
+  a = StonksActor.remote()
   ray.get(a.remote())
   # run_actor.remote()
   # run_learner.remote()
