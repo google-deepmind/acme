@@ -33,7 +33,7 @@ import tree
 from acme.utils import counting
 from acme.utils import loggers
 
-
+print("temporarily force jax to use CPU for debugging")
 jax.config.update('jax_platform_name', "cpu")
 
 ### PARAMETERS:
@@ -50,9 +50,7 @@ print("MIN OBS:", MIN_OBSERVATIONS)
 NUM_STEPS_ACTOR = 20 # taken from agent_test
 
 
-
 ### REVERB AND ENV
-
 
 environment = fakes.DiscreteEnvironment(
     num_actions=5,
@@ -62,18 +60,14 @@ environment = fakes.DiscreteEnvironment(
     episode_length=10)
 spec = specs.make_environment_spec(environment)
 
-
-### NETWORK
-
-def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
-  return np.zeros(spec.shape, spec.dtype)
+#### ACTORS AND LEARNERS
 
 @ray.remote
 class ActorRay():
-  def __init__(self, config, address, variable_wrapper, environment, storage):
-    key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
+  def __init__(self, config, address, variable_wrapper, environment, storage, verbose=False):
+    self.verbose = verbose
 
-    print("actor addr:", address)
+    key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
 
     client = reverb.Client(address)
     adder = adders.NStepTransitionAdder(client, config.n_step, config.discount)
@@ -101,39 +95,48 @@ class ActorRay():
       return policy
     policy = create_policy()
 
+    self._variable_client = variable_utils.VariableClient(variable_wrapper, '')
+
     self._actor = actors.FeedForwardActor(
       policy=policy,
       random_key=key_actor,
-      variable_client=variable_utils.VariableClient(variable_wrapper, ''), # need to write a custom wrapper around learner so it calls .remote
+      variable_client=self._variable_client, # need to write a custom wrapper around learner so it calls .remote
       adder=adder)
-
 
     class Printer():
       def write(self, s):
         print(s)
 
-
     self._counter = counting.Counter()
     self._logger = Printer()
+    # for some reason, default logger is broken
+    # TODO: fix this
     # self._logger = loggers.make_default_logger("loop")
 
     self._environment = environment
     self._should_update = True
     self.storage = storage
 
-
-    # for some reason, default logger is broken
-    # TODO: fix this
-    # self.loop = acme.EnvironmentLoop(environment, self._actor, should_update=False, logger=logger)
     print("actor instantiated")
+
+
+  @staticmethod
+  def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
+    return np.zeros(spec.shape, spec.dtype)
+
+  # only used to "initialize" params
+  def get_params(self):
+    if self.verbose: print("getting params")
+    data = self._variable_client.params
+    if self.verbose: print("params gotten!")
+    return data
 
   def run(self):
     # need to make this just run ex infinita - perhaps just keep calling run episode myself? lol
-    print("started actor run")
+    if self.verbose: print("started actor run")
     steps = 0
     while not ray.get(self.storage.get_info.remote("terminate")):
       result = self.run_episode()
-      # print("completed one epi")
       steps += result["episode_length"]
       if steps == 0: self._logger.write(result)
       self.storage.set_info.remote({
@@ -158,7 +161,7 @@ class ActorRay():
 
     # For evaluation, this keeps track of the total undiscounted reward
     # accumulated during the episode.
-    episode_return = tree.map_structure(_generate_zeros_from_spec,
+    episode_return = tree.map_structure(self._generate_zeros_from_spec,
                                         self._environment.reward_spec())
     # print("flag 1")
     timestep = self._environment.reset()
@@ -231,13 +234,15 @@ class SharedStorage:
 
 @ray.remote
 class LearnerRay():
-  def __init__(self, config, address, storage):
+  def __init__(self, config, address, storage, verbose=False):
+    self.verbose = verbose
+
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
 
     self.config = config
     self.address = address
     self.storage = storage
-    print("learner addr", address)
+    if self.verbose: print("learner addr", address)
 
 
     def create_network():
@@ -283,7 +288,7 @@ class LearnerRay():
       iterator=data_iterator,
       replay_client=client
     )
-    print("learner instantiated")
+    if self.verbose: print("learner instantiated")
 
 
   @staticmethod
@@ -301,17 +306,18 @@ class LearnerRay():
       return int(1 / observations_per_step)
 
   def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
-      return self.learner.get_variables(names)
+    """This has to be called by a wrapper which uses the .remote postfix."""
+    return self.learner.get_variables(names)
 
   def run(self):
     # we just keep count of the number of steps it's trained on
     step_count = 0
 
     while ray.get(self.storage.get_info.remote("steps")) < MIN_OBSERVATIONS:
-      print(f"sleeping")
+      if self.verbose: print(f"sleeping")
       time.sleep(1)
 
-    print("IT FINALLY ESCAPED THANK OUR LORD AND SAVIOUR")
+    if self.verbose: print("IT FINALLY ESCAPED THANK OUR LORD AND SAVIOUR")
 
     while step_count < 10:
       num_steps = self._calculate_num_learner_steps(
@@ -341,7 +347,7 @@ class VariableSourceRayWrapper():
     return ray.get(self.source.get_variables.remote(names))
 
 if __name__ == "__main__":
-  ray.init(num_cpus=8)
+  ray.init()
 
   storage = SharedStorage.remote()
   storage.set_info.remote({
@@ -359,13 +365,15 @@ if __name__ == "__main__":
       discount=config.discount,
   )
 
-  learner = LearnerRay.options(num_cpus=2).remote(config, reverb_replay.address, storage)
+  learner = LearnerRay.options().remote(config, reverb_replay.address, storage)
   variable_wrapper = VariableSourceRayWrapper(learner)
-  # time.sleep(3)
-  actor = ActorRay.options(num_cpus=2).remote(config, reverb_replay.address, variable_wrapper, environment, storage)
+  actor = ActorRay.options().remote(config, reverb_replay.address, variable_wrapper, environment, storage)
+
+  # we need to do this because you need to make sure the learner is initialized
+  # before the actor can start self-play (it retrieves the params from learner)
+  ray.get(actor.get_params.remote())
 
   actor.run.remote()
-  time.sleep(5)
   learner.run.remote()
 
   while not ray.get(storage.get_info.remote("terminate")):
