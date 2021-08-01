@@ -123,27 +123,27 @@ reverb_replay = replay.make_reverb_prioritized_nstep_replay(
 @ray.remote
 class StonksActor():
   def __init__(self):
-    import acme
-    from acme import specs
-    from acme.jax import utils
-    from acme.jax import variable_utils
-    from acme.jax import networks as networks_lib
-    from acme.agents import replay
-    from acme.agents.jax import actors
-    from acme.agents.jax.dqn import learning
-    from acme.agents.jax.dqn import config as dqn_config
-    from acme.testing import fakes
+    # import acme
+    # from acme import specs
+    # from acme.jax import utils
+    # from acme.jax import variable_utils
+    # from acme.jax import networks as networks_lib
+    # from acme.agents import replay
+    # from acme.agents.jax import actors
+    # from acme.agents.jax.dqn import learning
+    # from acme.agents.jax.dqn import config as dqn_config
+    # from acme.testing import fakes
 
-    from acme.adders import reverb as adders
+    # from acme.adders import reverb as adders
 
-    import ray
-    import jax
-    import jax.numpy as jnp
-    import rlax
-    import optax
-    import reverb
-    import numpy as np
-    import haiku as hk
+    # import ray
+    # import jax
+    # import jax.numpy as jnp
+    # import rlax
+    # import optax
+    # import reverb
+    # import numpy as np
+    # import haiku as hk
 
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
 
