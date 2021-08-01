@@ -198,6 +198,6 @@ if __name__ == "__main__":
   ray.init()
 
   a = StonksActor.remote()
-  ray.get(a.remote())
+  ray.get(a.run.remote())
   # run_actor.remote()
   # run_learner.remote()
