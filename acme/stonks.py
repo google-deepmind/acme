@@ -170,16 +170,16 @@ class StonksLearner():
         prefetch_size=4,
     ).as_numpy_iterator()
 
-    self.learner = learning.DQNLearner(
-      network=network,# let's try having the same network
-      random_key=key_learner,
-      optimizer=optimizer,
-      discount=config.discount,
-      importance_sampling_exponent=config.importance_sampling_exponent,
-      target_update_period=config.target_update_period,
-      iterator=data_iterator,
-      replay_client=client
-    )
+    # self.learner = learning.DQNLearner(
+    #   network=network,# let's try having the same network
+    #   random_key=key_learner,
+    #   optimizer=optimizer,
+    #   discount=config.discount,
+    #   importance_sampling_exponent=config.importance_sampling_exponent,
+    #   target_update_period=config.target_update_period,
+    #   iterator=data_iterator,
+    #   replay_client=client
+    # )
 
 
   @staticmethod
@@ -197,28 +197,29 @@ class StonksLearner():
       return int(1 / observations_per_step)
 
   def run(self):
-    client = reverb.Client(address)
-    # we just keep count of the number of steps it's trained on
-    step_count = 0
+    pass
+    # client = reverb.Client(address)
+    # # we just keep count of the number of steps it's trained on
+    # step_count = 0
 
-    while step_count < 10:
-      num_transitions = client.server_info()['priority_table'].num_episodes # should be ok?
+    # while step_count < 10:
+    #   num_transitions = client.server_info()['priority_table'].num_episodes # should be ok?
 
-      if num_episodes < MIN_OBSERVATIONS:
-        print("sleeping")
-        sleep(1)
-        continue
+    #   if num_episodes < MIN_OBSERVATIONS:
+    #     print("sleeping")
+    #     sleep(1)
+    #     continue
 
-      num_steps = self._calculate_num_learner_steps(
-        num_observations=num_transitions,
-        min_observations=MIN_OBSERVATIONS,
-        observations_per_step=self.config.batch_size / self.config.samples_per_insert,
-        )
+    #   num_steps = self._calculate_num_learner_steps(
+    #     num_observations=num_transitions,
+    #     min_observations=MIN_OBSERVATIONS,
+    #     observations_per_step=self.config.batch_size / self.config.samples_per_insert,
+    #     )
 
-      for _ in range(num_steps):
-        self.learner.step()
+    #   for _ in range(num_steps):
+    #     self.learner.step()
 
-      step_count += num_steps
+    #   step_count += num_steps
 
 if __name__ == "__main__":
   ray.init()
