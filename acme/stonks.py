@@ -131,14 +131,16 @@ class ActorRay():
     # need to make this just run ex infinita - perhaps just keep calling run episode myself? lol
     print("started actor run")
     steps = 0
-    while True:
+    while not ray.get(self.storage.get_info.remote("terminate")):
       result = self.run_episode()
-      print("completed one epi")
+      # print("completed one epi")
       steps += result["episode_length"]
       if steps == 0: self._logger.write(result)
       self.storage.set_info.remote({
         "steps": steps
         })
+
+    print(f"terminate received, terminating at {steps} steps")
 
   def run_episode(self) -> loggers.LoggingData:
     """Run one episode.
@@ -323,7 +325,13 @@ class LearnerRay():
 
       step_count += num_steps
 
-    print("learning complete...", step_count)
+
+
+    print(f"learning complete ({step_count})...terminating self-play")
+    self.storage.set_info.remote({
+      "terminate": True
+      })
+
 
 class VariableSourceRayWrapper():
   def __init__(self, source):
@@ -337,7 +345,8 @@ if __name__ == "__main__":
 
   storage = SharedStorage.remote()
   storage.set_info.remote({
-    "steps": 0
+    "steps": 0,
+    "terminate": False
     })
 
   reverb_replay = replay.make_reverb_prioritized_nstep_replay(
@@ -352,13 +361,14 @@ if __name__ == "__main__":
 
   learner = LearnerRay.options(num_cpus=2).remote(config, reverb_replay.address, storage)
   variable_wrapper = VariableSourceRayWrapper(learner)
+  # time.sleep(3)
   actor = ActorRay.options(num_cpus=2).remote(config, reverb_replay.address, variable_wrapper, environment, storage)
 
-  learner.run.remote()
-  time.sleep(3)
   actor.run.remote()
+  time.sleep(5)
+  learner.run.remote()
 
-  while True:
+  while not ray.get(storage.get_info.remote("terminate")):
     time.sleep(1)
 
 
