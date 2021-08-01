@@ -34,6 +34,7 @@ from acme.utils import counting
 from acme.utils import loggers
 
 
+jax.config.update('jax_platform_name', "cpu")
 
 ### PARAMETERS:
 
@@ -43,9 +44,10 @@ config = dqn_config.DQNConfig(
   min_replay_size=10) # all the default values should be ok, some overrides to speed up testing
 
 MIN_OBSERVATIONS = max(config.batch_size, config.min_replay_size)
-NUM_STEPS_ACTOR = 20 # taken from agent_test
 
-# key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
+print("MIN OBS:", MIN_OBSERVATIONS)
+
+NUM_STEPS_ACTOR = 20 # taken from agent_test
 
 
 
@@ -61,73 +63,43 @@ environment = fakes.DiscreteEnvironment(
 spec = specs.make_environment_spec(environment)
 
 
-reverb_replay = replay.make_reverb_prioritized_nstep_replay(
-    environment_spec=spec,
-    n_step=config.n_step,
-    batch_size=config.batch_size,
-    max_replay_size=config.max_replay_size,
-    min_replay_size=config.min_replay_size,
-    priority_exponent=config.priority_exponent,
-    discount=config.discount,
-)
-
-# address = reverb_replay.address
-
-
 ### NETWORK
-
-def network(x):
-  model = hk.Sequential([
-      hk.Flatten(),
-      hk.nets.MLP([50, 50, spec.actions.num_values])
-  ])
-  return model(x)
-
-# Make network purely functional
-network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
-dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
-
-network = networks_lib.FeedForwardNetwork(
-  init=lambda rng: network_hk.init(rng, dummy_obs),
-  apply=network_hk.apply)
 
 def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
   return np.zeros(spec.shape, spec.dtype)
 
-
-
-# we have should_update=True so that the actor updates its variables
-# this is to start populating the replay buffer, aka self-play
-
 @ray.remote
-class StonksActor():
-  def __init__(self, config, address, variable_wrapper, environment):
+class ActorRay():
+  def __init__(self, config, address, variable_wrapper, environment, storage):
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
+
+    print("actor addr:", address)
 
     client = reverb.Client(address)
     adder = adders.NStepTransitionAdder(client, config.n_step, config.discount)
 
+    def create_policy():
+      def network(x):
+        model = hk.Sequential([
+            hk.Flatten(),
+            hk.nets.MLP([50, 50, spec.actions.num_values])
+        ])
+        return model(x)
 
-    def network(x):
-      model = hk.Sequential([
-          hk.Flatten(),
-          hk.nets.MLP([50, 50, spec.actions.num_values])
-      ])
-      return model(x)
+      # Make network purely functional
+      network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+      dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
 
-    # Make network purely functional
-    network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
-    dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
+      network = networks_lib.FeedForwardNetwork(
+        init=lambda rng: network_hk.init(rng, dummy_obs),
+        apply=network_hk.apply)
 
-    network = networks_lib.FeedForwardNetwork(
-      init=lambda rng: network_hk.init(rng, dummy_obs),
-      apply=network_hk.apply)
-
-
-    def policy(params: networks_lib.Params, key: jnp.ndarray,
-               observation: jnp.ndarray) -> jnp.ndarray:
-      action_values = network.apply(params, observation) # how will this work when they're on different devices?
-      return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
+      def policy(params: networks_lib.Params, key: jnp.ndarray,
+                 observation: jnp.ndarray) -> jnp.ndarray:
+        action_values = network.apply(params, observation) # how will this work when they're on different devices?
+        return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
+      return policy
+    policy = create_policy()
 
     self._actor = actors.FeedForwardActor(
       policy=policy,
@@ -136,138 +108,154 @@ class StonksActor():
       adder=adder)
 
 
-    self._counter = counting.Counter()
-    self._logger = loggers.make_default_logger("loop")
-
-    self._environment = environment
-    self._should_update = True
-
     class Printer():
       def write(self, s):
         print(s)
-    logger = Printer()
 
 
-    self.loop = acme.EnvironmentLoop(environment, self._actor, should_update=True, logger=logger)
-    # print("actor instantiated")
-    # print("running environment loop")
-    # loop.run(num_steps=NUM_STEPS_ACTOR) # we'll probably want a custom environment loop which reads a sharedstorage to decide whether to terminate
+    self._counter = counting.Counter()
+    self._logger = Printer()
+    # self._logger = loggers.make_default_logger("loop")
+
+    self._environment = environment
+    self._should_update = True
+    self.storage = storage
+
+
+    # for some reason, default logger is broken
+    # TODO: fix this
+    # self.loop = acme.EnvironmentLoop(environment, self._actor, should_update=False, logger=logger)
+    print("actor instantiated")
 
   def run(self):
-    self.loop.run(num_episodes=100)
-  # def run_episode(self) -> loggers.LoggingData:
-  #   """Run one episode.
+    # need to make this just run ex infinita - perhaps just keep calling run episode myself? lol
+    print("started actor run")
+    steps = 0
+    while True:
+      result = self.run_episode()
+      # print("completed one epi")
+      steps += result["episode_length"]
+      if steps == 0: self._logger.write(result)
+      self.storage.set_info.remote({
+        "steps": steps
+        })
 
-  #   Each episode is a loop which interacts first with the environment to get an
-  #   observation and then give that observation to the agent in order to retrieve
-  #   an action.
+  def run_episode(self) -> loggers.LoggingData:
+    """Run one episode.
 
-  #   Returns:
-  #     An instance of `loggers.LoggingData`.
-  #   """
-  #   # Reset any counts and start the environment.
-  #   start_time = time.time()
-  #   episode_steps = 0
+    Each episode is a loop which interacts first with the environment to get an
+    observation and then give that observation to the agent in order to retrieve
+    an action.
 
-  #   # For evaluation, this keeps track of the total undiscounted reward
-  #   # accumulated during the episode.
-  #   episode_return = tree.map_structure(_generate_zeros_from_spec,
-  #                                       self._environment.reward_spec())
-  #   timestep = self._environment.reset()
+    Returns:
+      An instance of `loggers.LoggingData`.
+    """
+    # Reset any counts and start the environment.
+    start_time = time.time()
+    episode_steps = 0
 
-  #   # Make the first observation.
-  #   self._actor.observe_first(timestep)
+    # For evaluation, this keeps track of the total undiscounted reward
+    # accumulated during the episode.
+    episode_return = tree.map_structure(_generate_zeros_from_spec,
+                                        self._environment.reward_spec())
+    # print("flag 1")
+    timestep = self._environment.reset()
 
-  #   # Run an episode.
-  #   while not timestep.last():
-  #     # Generate an action from the agent's policy and step the environment.
-  #     action = self._actor.select_action(timestep.observation)
-  #     timestep = self._environment.step(action)
+    # Make the first observation.
+    self._actor.observe_first(timestep)
+    # print("flag 2")
+    # Run an episode.
+    while not timestep.last():
+      # Generate an action from the agent's policy and step the environment.
+      # print("flag 2.25")
+      action = self._actor.select_action(timestep.observation)
+      # print("flag 2.5")
+      timestep = self._environment.step(action)
 
-  #     # Have the agent observe the timestep and let the actor update itself.
-  #     self._actor.observe(action, next_timestep=timestep)
-  #     if self._should_update:
-  #       self._actor.update()
+      # Have the agent observe the timestep and let the actor update itself.
+      self._actor.observe(action, next_timestep=timestep)
+      # print("flag 3")
+      if self._should_update:
+        self._actor.update()
 
-  #     # Book-keeping.
-  #     episode_steps += 1
+      # Book-keeping.
+      episode_steps += 1
 
-  #     # Equivalent to: episode_return += timestep.reward
-  #     # We capture the return value because if timestep.reward is a JAX
-  #     # DeviceArray, episode_return will not be mutated in-place. (In all other
-  #     # cases, the returned episode_return will be the same object as the
-  #     # argument episode_return.)
-  #     episode_return = tree.map_structure(operator.iadd,
-  #                                         episode_return,
-  #                                         timestep.reward)
+      # Equivalent to: episode_return += timestep.reward
+      # We capture the return value because if timestep.reward is a JAX
+      # DeviceArray, episode_return will not be mutated in-place. (In all other
+      # cases, the returned episode_return will be the same object as the
+      # argument episode_return.)
+      episode_return = tree.map_structure(operator.iadd,
+                                          episode_return,
+                                          timestep.reward)
+    # print("flag 4")
+    # Record counts.
+    counts = self._counter.increment(episodes=1, steps=episode_steps)
 
-  #   # Record counts.
-  #   counts = self._counter.increment(episodes=1, steps=episode_steps)
-
-  #   # Collect the results and combine with counts.
-  #   steps_per_second = episode_steps / (time.time() - start_time)
-  #   result = {
-  #       'episode_length': episode_steps,
-  #       'episode_return': episode_return,
-  #       'steps_per_second': steps_per_second,
-  #   }
-  #   result.update(counts)
-  #   return result
-
-  # def run(self,
-  #         num_episodes: Optional[int] = None,
-  #         num_steps: Optional[int] = None):
-  #   """Perform the run loop.
-
-  #   Run the environment loop either for `num_episodes` episodes or for at
-  #   least `num_steps` steps (the last episode is always run until completion,
-  #   so the total number of steps may be slightly more than `num_steps`).
-  #   At least one of these two arguments has to be None.
-
-  #   Upon termination of an episode a new episode will be started. If the number
-  #   of episodes and the number of steps are not given then this will interact
-  #   with the environment infinitely.
-
-  #   Args:
-  #     num_episodes: number of episodes to run the loop for.
-  #     num_steps: minimal number of steps to run the loop for.
-
-  #   Raises:
-  #     ValueError: If both 'num_episodes' and 'num_steps' are not None.
-  #   """
-
-  #   if not (num_episodes is None or num_steps is None):
-  #     raise ValueError('Either "num_episodes" or "num_steps" should be None.')
-
-  #   def should_terminate(episode_count: int, step_count: int) -> bool:
-  #     return ((num_episodes is not None and episode_count >= num_episodes) or
-  #             (num_steps is not None and step_count >= num_steps))
-
-  #   episode_count, step_count = 0, 0
-  #   while not should_terminate(episode_count, step_count):
-  #     result = self.run_episode()
-  #     episode_count += 1
-  #     step_count += result['episode_length']
-  #     # Log the given results.
-  #     print(result)
-  #     self._logger.write(result)
-
-
-class VariableSourceRayWrapper():
-  def __init__(self, source):
-    self.source = source
-
-  def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
-    return ray.get(self.source.get_variables.remote(names))
-
+    # Collect the results and combine with counts.
+    steps_per_second = episode_steps / (time.time() - start_time)
+    result = {
+        'episode_length': episode_steps,
+        'episode_return': episode_return,
+        'steps_per_second': steps_per_second,
+    }
+    result.update(counts)
+    return result
 
 @ray.remote
-class StonksLearner():
-  def __init__(self, config, address):
+class SharedStorage:
+    """
+    Class which run in a dedicated thread to store the network weights and some information.
+    """
+    def __init__(self):
+      self.current_checkpoint = {}
+
+    def get_info(self, keys):
+        if isinstance(keys, str):
+            return self.current_checkpoint[keys]
+        elif isinstance(keys, list):
+            return {key: self.current_checkpoint[key] for key in keys}
+        else:
+            raise TypeError
+
+    def set_info(self, keys, values=None):
+        if isinstance(keys, str) and values is not None:
+            self.current_checkpoint[keys] = values
+        elif isinstance(keys, dict):
+            self.current_checkpoint.update(keys)
+        else:
+            raise TypeError
+
+@ray.remote
+class LearnerRay():
+  def __init__(self, config, address, storage):
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
 
     self.config = config
     self.address = address
+    self.storage = storage
+    print("learner addr", address)
+
+
+    def create_network():
+      def network(x):
+        model = hk.Sequential([
+            hk.Flatten(),
+            hk.nets.MLP([50, 50, spec.actions.num_values])
+        ])
+        return model(x)
+
+      # Make network purely functional
+      network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+      dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
+
+      network = networks_lib.FeedForwardNetwork(
+        init=lambda rng: network_hk.init(rng, dummy_obs),
+        apply=network_hk.apply)
+      return network
+
+    network = create_network()
 
     optimizer = optax.chain(
         optax.clip_by_global_norm(config.max_gradient_norm),
@@ -284,7 +272,7 @@ class StonksLearner():
     ).as_numpy_iterator()
 
     self.learner = learning.DQNLearner(
-      network=network,# let's try having the same network
+      network=network,
       random_key=key_learner,
       optimizer=optimizer,
       discount=config.discount,
@@ -310,60 +298,69 @@ class StonksLearner():
       # Always return 1/obs_per_step batches every observation.
       return int(1 / observations_per_step)
 
-  def finished(self):
-    return True
-
   def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
       return self.learner.get_variables(names)
 
   def run(self):
-    client = reverb.Client(self.address)
     # we just keep count of the number of steps it's trained on
     step_count = 0
 
+    while ray.get(self.storage.get_info.remote("steps")) < MIN_OBSERVATIONS:
+      print(f"sleeping")
+      time.sleep(1)
+
+    print("IT FINALLY ESCAPED THANK OUR LORD AND SAVIOUR")
+
     while step_count < 10:
-      num_transitions = client.server_info()['priority_table'].num_episodes # should be ok?
-
-      if num_transitions < MIN_OBSERVATIONS:
-        print("sleeping")
-        time.sleep(1)
-        continue
-
+      print("flag 1")
       num_steps = self._calculate_num_learner_steps(
-        num_observations=num_transitions,
+        num_observations=ray.get(self.storage.get_info.remote("steps")),
         min_observations=MIN_OBSERVATIONS,
         observations_per_step=self.config.batch_size / self.config.samples_per_insert,
         )
 
+      print("flag 2")
       for _ in range(num_steps):
         self.learner.step()
+        print("flag 3")
 
       step_count += num_steps
 
+class VariableSourceRayWrapper():
+  def __init__(self, source):
+    self.source = source
+
+  def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
+    return ray.get(self.source.get_variables.remote(names))
+
 if __name__ == "__main__":
-  ray.init()
+  ray.init(num_cpus=8)
 
-  learner = StonksLearner.remote(config, reverb_replay.address)
+  storage = SharedStorage.remote()
+  storage.set_info.remote({
+    "steps": 0
+    })
 
+  reverb_replay = replay.make_reverb_prioritized_nstep_replay(
+      environment_spec=spec,
+      n_step=config.n_step,
+      batch_size=config.batch_size,
+      max_replay_size=config.max_replay_size,
+      min_replay_size=config.min_replay_size,
+      priority_exponent=config.priority_exponent,
+      discount=config.discount,
+  )
+
+  learner = LearnerRay.options(num_cpus=2).remote(config, reverb_replay.address, storage)
   variable_wrapper = VariableSourceRayWrapper(learner)
+  actor = ActorRay.options(num_cpus=2).remote(config, reverb_replay.address, variable_wrapper, environment, storage)
 
-  ray.get(learner.finished.remote())
-  print("learner should be done first! then only actor")
+  learner.run.remote()
+  time.sleep(3)
+  actor.run.remote()
 
-  actor = StonksActor.remote(config, reverb_replay.address, variable_wrapper, environment)
-  # print(ray.get(actor.run.remote(num_episodes=10)))
 
-  # logger = loggers.make_default_logger("loop")
-
-  # num_episodes = 0
-  # result = ray.get(actor.run.remote(num_episodes=100))
-  result = ray.get(actor.run.remote())
-
-  # while num_episodes < 100:
-  #   result = ray.get(actor.run_episode.remote())
-  #   print(f"episode {num_episodes} finished:", result)
-  #   num_episodes += 1
-  #   logger.write(result)
-
+  while True:
+    time.sleep(1)
 
 
