@@ -124,7 +124,7 @@ address = reverb_replay.address
 
 @ray.remote
 class StonksActor():
-  def __init__(self):
+  def __init__(self, config):
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
 
     client = reverb.Client(address)
@@ -197,7 +197,7 @@ def run_learner():
 if __name__ == "__main__":
   ray.init()
 
-  a = StonksActor.remote()
+  a = StonksActor.remote(config)
   ray.get(a.run.remote())
   # run_actor.remote()
   # run_learner.remote()
