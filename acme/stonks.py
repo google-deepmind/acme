@@ -158,9 +158,12 @@ class StonksActor():
       variable_client=variable_utils.VariableClient(learner, ''), # need to write a custom wrapper around learner so it calls .remote
       adder=adder)
 
-    loop = acme.EnvironmentLoop(environment, actor, should_update=True)
-    print("running environment loop")
-    loop.run(num_steps=NUM_STEPS_ACTOR) # we'll probably want a custom environment loop which reads a sharedstorage to decide whether to terminate
+    self.loop = acme.EnvironmentLoop(environment, actor, should_update=True)
+    # print("running environment loop")
+    # loop.run(num_steps=NUM_STEPS_ACTOR) # we'll probably want a custom environment loop which reads a sharedstorage to decide whether to terminate
+
+  def run(self):
+    self.loop.run(num_steps=10)
 
 
 
@@ -194,6 +197,7 @@ def run_learner():
 if __name__ == "__main__":
   ray.init()
 
-  StonksActor.remote()
+  a = ray.get(StonksActor.remote())
+  ray.get(a.remote())
   # run_actor.remote()
-  run_learner.remote()
+  # run_learner.remote()
