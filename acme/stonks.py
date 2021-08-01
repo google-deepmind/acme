@@ -5,14 +5,18 @@ from acme.jax import utils
 from acme.jax import variable_utils
 from acme.jax import networks as networks_lib
 from acme.agents import replay
+from acme.agents.jax import actors
+from acme.agents.jax.dqn import learning
 from acme.agents.jax.dqn import config as dqn_config
 from acme.testing import fakes
 
 import jax
+import jax.numpy as jnp
 import rlax
 import optax
 import numpy as np
 import haiku as hk
+import ray
 
 
 ### PARAMETERS:
@@ -124,7 +128,7 @@ actor = actors.FeedForwardActor(
 
 @ray.remote
 def run_actor():
-  loop = acme.EnvironmentLoop(environment, actor, should_update=True) 
+  loop = acme.EnvironmentLoop(environment, actor, should_update=True)
   print("running environment loop")
   loop.run(num_steps=NUM_STEPS_ACTOR) # we'll probably want a custom environment loop which reads a sharedstorage to decide whether to terminate
 
@@ -137,8 +141,8 @@ def run_learner():
 
   while not should_terminate(episode_count, step_count):
     num_transitions = reverb_replay.client.server_info()['priority_table'].num_episodes # should be ok?
-    
-    if num_episodes < MIN_OBSERVATIONS
+
+    if num_episodes < MIN_OBSERVATIONS:
       sleep(0.5)
       continue
 
