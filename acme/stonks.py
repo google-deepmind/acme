@@ -176,8 +176,8 @@ class ActorRay():
       if len(episode_returns) == 100:
         print("100-ep avg return: ", sum([e["episode_return"].item() for e in episode_returns])/100)
         episode_returns = []
-      if result["episodes"] % 100:
-        print(results)
+      # if result["episodes"] % 100:
+      #   print(result)
       #   episode_params.append(self.get_params())
 
       # if result["episodes"] % 30 == 0:
@@ -373,7 +373,7 @@ class LearnerRay():
 
     # save_states = []
 
-    while step_count < 1000:
+    while step_count < 2000:
 
       num_steps = self._calculate_num_learner_steps(
         num_observations=self.client.server_info()["priority_table"].current_size,
