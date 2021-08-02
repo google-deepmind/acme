@@ -22,6 +22,7 @@ from acme import specs
 from acme.agents.jax import actors
 from acme.agents.jax import bc
 from acme.examples.offline import bc_utils
+from acme.jax import learning
 from acme.jax import variable_utils
 from acme.utils import loggers
 import haiku as hk
@@ -67,13 +68,14 @@ def main(_):
 
   loss_fn = bc.logp(logp_fn=logp_fn)
 
-  learner = bc.BCLearner(
+  # The learner core is a double of functions to initialize the training state
+  # (init) and update it given a batch of data (step)
+  learner_core = bc.make_bc_learner_core(
       network=network,
-      random_key=key1,
       loss_fn=loss_fn,
-      optimizer=optax.adam(FLAGS.learning_rate),
-      demonstrations=dataset,
-      num_sgd_steps_per_step=1)
+      optimizer=optax.adam(FLAGS.learning_rate))
+
+  learner = learning.DefaultJaxLearner(learner_core, dataset, key1)
 
   def evaluator_network(params: hk.Params, key: jnp.DeviceArray,
                         observation: jnp.DeviceArray) -> jnp.DeviceArray:

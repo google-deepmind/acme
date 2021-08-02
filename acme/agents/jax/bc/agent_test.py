@@ -74,7 +74,6 @@ class BCTest(parameterized.TestCase):
       )
   def test_continuous_actions(self, loss_name):
     with chex.fake_pmap_and_jit():
-      num_sgd_steps_per_step = 1
       num_steps = 5
 
       # Create a fake environment to test with.
@@ -103,17 +102,18 @@ class BCTest(parameterized.TestCase):
       else:
         raise ValueError
 
-      learner = bc.BCLearner(
+      learner_core = bc.make_bc_learner_core(
           network=network,
-          random_key=jax.random.PRNGKey(0),
           loss_fn=loss_fn,
-          optimizer=optax.adam(0.01),
-          demonstrations=dataset_demonstration,
-          num_sgd_steps_per_step=num_sgd_steps_per_step)
+          optimizer=optax.adam(0.01))
+
+      step_fn = jax.jit(learner_core.step)
+
+      state = learner_core.init(jax.random.PRNGKey(0))
 
       # Train the agent
       for _ in range(num_steps):
-        learner.step()
+        state = step_fn(state, next(dataset_demonstration)).state
 
   @parameterized.parameters(
       ('logp',),
@@ -121,7 +121,6 @@ class BCTest(parameterized.TestCase):
   def test_discrete_actions(self, loss_name):
     with chex.fake_pmap_and_jit():
 
-      num_sgd_steps_per_step = 1
       num_steps = 5
 
       # Create a fake environment to test with.
@@ -157,17 +156,18 @@ class BCTest(parameterized.TestCase):
       else:
         raise ValueError
 
-      learner = bc.BCLearner(
+      learner_core = bc.make_bc_learner_core(
           network=network,
-          random_key=jax.random.PRNGKey(0),
           loss_fn=loss_fn,
-          optimizer=optax.adam(0.01),
-          demonstrations=dataset_demonstration,
-          num_sgd_steps_per_step=num_sgd_steps_per_step)
+          optimizer=optax.adam(0.01))
+
+      step_fn = jax.jit(learner_core.step)
+
+      state = learner_core.init(jax.random.PRNGKey(0))
 
       # Train the agent
       for _ in range(num_steps):
-        learner.step()
+        state = step_fn(state, next(dataset_demonstration)).state
 
 
 if __name__ == '__main__':
