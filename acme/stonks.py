@@ -37,24 +37,26 @@ import functools
 import dm_env
 import gym
 from acme import wrappers
+import bsuite
+import copy
 
 
-def make_environment(evaluation: bool = False,
-                     level: str = 'BreakoutNoFrameskip-v4') -> dm_env.Environment:
-  env = gym.make(level, full_action_space=True)
+# def make_environment(evaluation: bool = False,
+#                      level: str = 'BreakoutNoFrameskip-v4') -> dm_env.Environment:
+#   env = gym.make(level, full_action_space=True)
 
-  max_episode_len = 108_000 if evaluation else 50_000
+#   max_episode_len = 108_000 if evaluation else 50_000
 
-  return wrappers.wrap_all(env, [
-      wrappers.GymAtariAdapter,
-      functools.partial(
-          wrappers.AtariWrapper,
-          to_float=True,
-          max_episode_len=max_episode_len,
-          zero_discount_on_life_loss=True,
-      ),
-      wrappers.SinglePrecisionWrapper,
-  ])
+#   return wrappers.wrap_all(env, [
+#       wrappers.GymAtariAdapter,
+#       functools.partial(
+#           wrappers.AtariWrapper,
+#           to_float=True,
+#           max_episode_len=max_episode_len,
+#           zero_discount_on_life_loss=True,
+#       ),
+#       wrappers.SinglePrecisionWrapper,
+#   ])
 
 # print("temporarily force jax to use CPU for debugging")
 # jax.config.update('jax_platform_name', "cpu")
@@ -75,8 +77,16 @@ NUM_STEPS_ACTOR = 20 # taken from agent_test
 
 ### REVERB AND ENV
 
-demo_env = make_environment()
-spec = specs.make_environment_spec(demo_env)
+# demo_env = make_environment()
+# spec = specs.make_environment_spec(demo_env)
+
+def make_environment():
+
+  raw_environment = bsuite.load_from_id('catch/0')
+  return wrappers.SinglePrecisionWrapper(raw_environment)
+
+
+spec = specs.make_environment_spec(make_environment())
 
 #### ACTORS AND LEARNERS
 
@@ -139,6 +149,8 @@ class ActorRay():
     self._should_update = True
     self.storage = storage
 
+    self.old = copy.deepcopy(self.get_params())
+
     print("actor instantiated")
 
 
@@ -157,15 +169,31 @@ class ActorRay():
     # need to make this just run ex infinita - perhaps just keep calling run episode myself? lol
     if self.verbose: print("started actor run", jnp.ones(3).device_buffer.device())
     steps = 0
+    episode_returns = []
+    episode_params = []
     while not ray.get(self.storage.get_info.remote("terminate")):
       result = self.run_episode()
-      if steps % 1000 == 0:
-        print(result)
+      if len(episode_returns) == 100:
+        print("100-ep avg return: ", sum([e["episode_return"].item() for e in episode_returns])/100)
+        episode_returns = []
+      if result["episodes"] % 100:
+        print(results)
+      #   episode_params.append(self.get_params())
+
+      # if result["episodes"] % 30 == 0:
+      #   if str(episode_params[-1]) == str(episode_params[-2]):
+      #     print('you fuck')
+      #   else:
+      #     print("you ok bebe")
+
       steps += result["episode_length"]
       if steps == 0: self._logger.write(result)
+      episode_returns.append(result)
       self.storage.set_info.remote({
         "steps": steps
         })
+
+    # print(sum([e["episode_return"].item() for e in episode_returns[-100:]])/100)
 
     print(f"terminate received, terminating at {steps} steps")
 
@@ -204,8 +232,9 @@ class ActorRay():
       # Have the agent observe the timestep and let the actor update itself.
       self._actor.observe(action, next_timestep=timestep)
       # print("flag 3")
+
       if self._should_update:
-        self._actor.update()
+        self._actor.update(wait=True)
 
       # Book-keeping.
       episode_steps += 1
@@ -293,7 +322,7 @@ class LearnerRay():
         optax.adam(config.learning_rate),
     )
 
-    client = reverb.Client(address)
+    self.client = reverb.Client(address)
 
     data_iterator = datasets.make_reverb_dataset(
         table="priority_table",
@@ -310,7 +339,7 @@ class LearnerRay():
       importance_sampling_exponent=config.importance_sampling_exponent,
       target_update_period=config.target_update_period,
       iterator=data_iterator,
-      replay_client=client
+      replay_client=self.client
     )
     if self.verbose: print("learner instantiated")
 
@@ -337,25 +366,35 @@ class LearnerRay():
     # we just keep count of the number of steps it's trained on
     step_count = 0
 
-    while ray.get(self.storage.get_info.remote("steps")) < MIN_OBSERVATIONS:
-      if self.verbose: print(f"sleeping", jnp.ones(3).device_buffer.device())
-      time.sleep(1)
+    while self.client.server_info()["priority_table"].current_size < MIN_OBSERVATIONS:
+      time.sleep(0.1)
 
     if self.verbose: print("IT FINALLY ESCAPED THANK OUR LORD AND SAVIOUR")
 
+    # save_states = []
+
     while step_count < 1000:
+
       num_steps = self._calculate_num_learner_steps(
-        num_observations=ray.get(self.storage.get_info.remote("steps")),
+        num_observations=self.client.server_info()["priority_table"].current_size,
         min_observations=MIN_OBSERVATIONS,
         observations_per_step=self.config.batch_size / self.config.samples_per_insert,
         )
+
+      # if num_steps != 0:
+        # save_states.append(self.learner.save().params)
+        # print(f"stepping learner {num_steps}")
+
+      # if step_count > 50:
+      #   if str(save_states[0]) == str(save_states[1]):
+      #     print("you fuckup")
+      #   else:
+      #     print("all ok")
 
       for _ in range(num_steps):
         self.learner.step()
 
       step_count += num_steps
-
-
 
     print(f"learning complete ({step_count})...terminating self-play")
     self.storage.set_info.remote({
@@ -392,7 +431,7 @@ if __name__ == "__main__":
       discount=config.discount,
   )
 
-  learner = LearnerRay.options().remote(config, "34.136.41.200:8000", storage, verbose=True)
+  learner = LearnerRay.options(max_concurrency=2).remote(config, "34.136.41.200:8000", storage, verbose=True)
   # variable_wrapper = VariableSourceRayWrapper(learner)
   actor = ActorRay.options().remote(config, "34.136.41.200:8000", learner, make_environment, storage, verbose=True)
 

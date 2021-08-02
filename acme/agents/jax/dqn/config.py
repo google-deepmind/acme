@@ -28,7 +28,7 @@ class DQNConfig:
   seed: int = 1  # Random seed.
 
   # Learning rule
-  learning_rate: float = 1e-3  # Learning rate for Adam optimizer.
+  learning_rate: float = 5e-4  # Learning rate for Adam optimizer.
   discount: float = 0.99  # Discount rate applied to value per timestep.
   n_step: int = 5  # N-step TD learning.
   target_update_period: int = 100  # Update target network every period.
@@ -42,7 +42,7 @@ class DQNConfig:
   importance_sampling_exponent: float = 0.2  # Importance sampling for replay.
   priority_exponent: float = 0.6  # Priority exponent for replay.
   prefetch_size: int = 4  # Prefetch size for reverb replay performance.
-  samples_per_insert: float = 0.5  # Ratio of learning samples to insert.
+  samples_per_insert: float = 32  # Ratio of learning samples to insert.
   # Rate to be used for the SampleToInsertRatio rate limitter tolerance.
   # See a formula in make_replay_tables for more details.
   samples_per_insert_tolerance_rate: float = 0.1
