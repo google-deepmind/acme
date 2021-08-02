@@ -11,7 +11,7 @@ from acme.agents import replay
 from acme.agents.jax import actors
 from acme.agents.jax.dqn import learning
 from acme.agents.jax.dqn import config as dqn_config
-from acme.testing import fakes
+# from acme.testing import fakes
 
 from acme.adders import reverb as adders
 from typing import Generic, List, Optional, Sequence, TypeVar
@@ -33,6 +33,29 @@ import tree
 from acme.utils import counting
 from acme.utils import loggers
 
+import functools
+import dm_env
+import gym
+from acme import wrappers
+
+
+def make_environment(evaluation: bool = False,
+                     level: str = 'BreakoutNoFrameskip-v4') -> dm_env.Environment:
+  env = gym.make(level, full_action_space=True)
+
+  max_episode_len = 108_000 if evaluation else 50_000
+
+  return wrappers.wrap_all(env, [
+      wrappers.GymAtariAdapter,
+      functools.partial(
+          wrappers.AtariWrapper,
+          to_float=True,
+          max_episode_len=max_episode_len,
+          zero_discount_on_life_loss=True,
+      ),
+      wrappers.SinglePrecisionWrapper,
+  ])
+
 # print("temporarily force jax to use CPU for debugging")
 # jax.config.update('jax_platform_name', "cpu")
 
@@ -52,20 +75,16 @@ NUM_STEPS_ACTOR = 20 # taken from agent_test
 
 ### REVERB AND ENV
 
-environment = fakes.DiscreteEnvironment(
-    num_actions=5,
-    num_observations=10,
-    obs_shape=(10, 5),
-    obs_dtype=np.float32,
-    episode_length=10)
-spec = specs.make_environment_spec(environment)
+demo_env = make_environment()
+spec = specs.make_environment_spec(demo_env)
 
 #### ACTORS AND LEARNERS
 
 # @ray.remote
 @ray.remote(resources={"tpu": 1})
 class ActorRay():
-  def __init__(self, config, address, learner, environment, storage, verbose=False):
+  def __init__(self, config, address, learner, environment_maker, storage, verbose=False):
+    environment = environment_maker()
     self.verbose = verbose
 
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
@@ -140,6 +159,8 @@ class ActorRay():
     steps = 0
     while not ray.get(self.storage.get_info.remote("terminate")):
       result = self.run_episode()
+      if steps % 1000 == 0:
+        print(result)
       steps += result["episode_length"]
       if steps == 0: self._logger.write(result)
       self.storage.set_info.remote({
@@ -166,23 +187,23 @@ class ActorRay():
     # accumulated during the episode.
     episode_return = tree.map_structure(self._generate_zeros_from_spec,
                                         self._environment.reward_spec())
-    print("flag 1")
+    # print("flag 1")
     timestep = self._environment.reset()
-    print("flag 1.5")
+    # print("flag 1.5")
     # Make the first observation.
     self._actor.observe_first(timestep)
-    print("flag 2")
+    # print("flag 2")
     # Run an episode.
     while not timestep.last():
       # Generate an action from the agent's policy and step the environment.
-      print("flag 2.25")
+      # print("flag 2.25")
       action = self._actor.select_action(timestep.observation)
-      print("flag 2.5")
+      # print("flag 2.5")
       timestep = self._environment.step(action)
 
       # Have the agent observe the timestep and let the actor update itself.
       self._actor.observe(action, next_timestep=timestep)
-      print("flag 3")
+      # print("flag 3")
       if self._should_update:
         self._actor.update()
 
@@ -197,7 +218,7 @@ class ActorRay():
       episode_return = tree.map_structure(operator.iadd,
                                           episode_return,
                                           timestep.reward)
-    print("flag 4")
+    # print("flag 4")
     # Record counts.
     counts = self._counter.increment(episodes=1, steps=episode_steps)
 
@@ -322,7 +343,7 @@ class LearnerRay():
 
     if self.verbose: print("IT FINALLY ESCAPED THANK OUR LORD AND SAVIOUR")
 
-    while step_count < 10:
+    while step_count < 1000:
       num_steps = self._calculate_num_learner_steps(
         num_observations=ray.get(self.storage.get_info.remote("steps")),
         min_observations=MIN_OBSERVATIONS,
@@ -371,9 +392,9 @@ if __name__ == "__main__":
       discount=config.discount,
   )
 
-  learner = LearnerRay.options().remote(config, reverb_replay.address, storage, verbose=True)
+  learner = LearnerRay.options().remote(config, "34.136.41.200:8000", storage, verbose=True)
   # variable_wrapper = VariableSourceRayWrapper(learner)
-  actor = ActorRay.options().remote(config, reverb_replay.address, learner, environment, storage, verbose=True)
+  actor = ActorRay.options().remote(config, "34.136.41.200:8000", learner, make_environment, storage, verbose=True)
 
   # we need to do this because you need to make sure the learner is initialized
   # before the actor can start self-play (it retrieves the params from learner)
