@@ -15,6 +15,7 @@
 
 """Implementation of a behavior cloning (BC) agent."""
 
+from acme.agents.jax.bc import pretraining
 from acme.agents.jax.bc.learning import make_bc_learner_core
 from acme.agents.jax.bc.learning import TrainingState
 from acme.agents.jax.bc.losses import logp
