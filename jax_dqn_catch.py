@@ -95,10 +95,19 @@ agent = dqn.DQN(
 # we care about is that the agent runs without raising any errors.
 loop = acme.EnvironmentLoop(environment, agent, logger=logger, should_update=False)
 
-num_episodes=5
-loop.run(num_episodes=num_episodes)
 
-mean_sps = sum([x['steps_per_second'] for x in logger.returns])/len(logger.returns)
+jax.profiler.start_trace("/tmp/tensorboard")
+result = loop.run_episode() # is there some sort of ".block_until_ready()" we need here?
+jax.profiler.stop_trace()
 
-print(f"{num_episodes} episodes completed. average steps per second of {mean_sps}.")
+
+
+
+# commented out for profiling
+# num_episodes=5
+# loop.run(num_episodes=num_episodes)
+
+# mean_sps = sum([x['steps_per_second'] for x in logger.returns])/len(logger.returns)
+
+# print(f"{num_episodes} episodes completed. average steps per second of {mean_sps}.")
 
