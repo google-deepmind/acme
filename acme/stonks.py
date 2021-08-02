@@ -33,15 +33,15 @@ import tree
 from acme.utils import counting
 from acme.utils import loggers
 
-print("temporarily force jax to use CPU for debugging")
-jax.config.update('jax_platform_name', "cpu")
+# print("temporarily force jax to use CPU for debugging")
+# jax.config.update('jax_platform_name', "cpu")
 
 ### PARAMETERS:
 
-config = dqn_config.DQNConfig(
-  batch_size=10,
-  samples_per_insert=2,
-  min_replay_size=10) # all the default values should be ok, some overrides to speed up testing
+config = dqn_config.DQNConfig()
+  # batch_size=10,
+  # samples_per_insert=2,
+  # min_replay_size=10) # all the default values should be ok, some overrides to speed up testing
 
 MIN_OBSERVATIONS = max(config.batch_size, config.min_replay_size)
 
@@ -62,9 +62,10 @@ spec = specs.make_environment_spec(environment)
 
 #### ACTORS AND LEARNERS
 
-@ray.remote
+# @ray.remote
+@ray.remote(resources={"tpu": 1})
 class ActorRay():
-  def __init__(self, config, address, variable_wrapper, environment, storage, verbose=False):
+  def __init__(self, config, address, learner, environment, storage, verbose=False):
     self.verbose = verbose
 
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
@@ -95,13 +96,15 @@ class ActorRay():
       return policy
     policy = create_policy()
 
-    self._variable_client = variable_utils.VariableClient(variable_wrapper, '')
+    self._variable_wrapper = VariableSourceRayWrapper(learner)
+    self._variable_client = variable_utils.VariableClient(self._variable_wrapper, '')
 
     self._actor = actors.FeedForwardActor(
       policy=policy,
       random_key=key_actor,
       variable_client=self._variable_client, # need to write a custom wrapper around learner so it calls .remote
       adder=adder)
+      # backend="tpu_driver")
 
     class Printer():
       def write(self, s):
@@ -133,7 +136,7 @@ class ActorRay():
 
   def run(self):
     # need to make this just run ex infinita - perhaps just keep calling run episode myself? lol
-    if self.verbose: print("started actor run")
+    if self.verbose: print("started actor run", jnp.ones(3).device_buffer.device())
     steps = 0
     while not ray.get(self.storage.get_info.remote("terminate")):
       result = self.run_episode()
@@ -163,23 +166,23 @@ class ActorRay():
     # accumulated during the episode.
     episode_return = tree.map_structure(self._generate_zeros_from_spec,
                                         self._environment.reward_spec())
-    # print("flag 1")
+    print("flag 1")
     timestep = self._environment.reset()
-
+    print("flag 1.5")
     # Make the first observation.
     self._actor.observe_first(timestep)
-    # print("flag 2")
+    print("flag 2")
     # Run an episode.
     while not timestep.last():
       # Generate an action from the agent's policy and step the environment.
-      # print("flag 2.25")
+      print("flag 2.25")
       action = self._actor.select_action(timestep.observation)
-      # print("flag 2.5")
+      print("flag 2.5")
       timestep = self._environment.step(action)
 
       # Have the agent observe the timestep and let the actor update itself.
       self._actor.observe(action, next_timestep=timestep)
-      # print("flag 3")
+      print("flag 3")
       if self._should_update:
         self._actor.update()
 
@@ -194,7 +197,7 @@ class ActorRay():
       episode_return = tree.map_structure(operator.iadd,
                                           episode_return,
                                           timestep.reward)
-    # print("flag 4")
+    print("flag 4")
     # Record counts.
     counts = self._counter.increment(episodes=1, steps=episode_steps)
 
@@ -232,7 +235,8 @@ class SharedStorage:
         else:
             raise TypeError
 
-@ray.remote
+# @ray.remote
+@ray.remote(resources={"tpu": 1})
 class LearnerRay():
   def __init__(self, config, address, storage, verbose=False):
     self.verbose = verbose
@@ -243,7 +247,6 @@ class LearnerRay():
     self.address = address
     self.storage = storage
     if self.verbose: print("learner addr", address)
-
 
     def create_network():
       def network(x):
@@ -314,7 +317,7 @@ class LearnerRay():
     step_count = 0
 
     while ray.get(self.storage.get_info.remote("steps")) < MIN_OBSERVATIONS:
-      if self.verbose: print(f"sleeping")
+      if self.verbose: print(f"sleeping", jnp.ones(3).device_buffer.device())
       time.sleep(1)
 
     if self.verbose: print("IT FINALLY ESCAPED THANK OUR LORD AND SAVIOUR")
@@ -347,7 +350,7 @@ class VariableSourceRayWrapper():
     return ray.get(self.source.get_variables.remote(names))
 
 if __name__ == "__main__":
-  ray.init()
+  ray.init(address="auto")
 
   storage = SharedStorage.remote()
   storage.set_info.remote({
@@ -368,9 +371,9 @@ if __name__ == "__main__":
       discount=config.discount,
   )
 
-  learner = LearnerRay.options().remote(config, reverb_replay.address, storage)
-  variable_wrapper = VariableSourceRayWrapper(learner)
-  actor = ActorRay.options().remote(config, reverb_replay.address, variable_wrapper, environment, storage)
+  learner = LearnerRay.options().remote(config, reverb_replay.address, storage, verbose=True)
+  # variable_wrapper = VariableSourceRayWrapper(learner)
+  actor = ActorRay.options().remote(config, reverb_replay.address, learner, environment, storage, verbose=True)
 
   # we need to do this because you need to make sure the learner is initialized
   # before the actor can start self-play (it retrieves the params from learner)

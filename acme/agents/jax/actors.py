@@ -114,7 +114,7 @@ class FeedForwardActor(core.Actor):
       variable_client: variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
       has_extras: bool = False,
-      backend: Optional[str] = 'cpu',
+      # backend: Optional[str] = 'cpu',
   ):
     """Initializes a feed forward actor.
 
@@ -144,7 +144,7 @@ class FeedForwardActor(core.Actor):
       observation = utils.add_batch_dim(observation)
       output = policy(params, key2, observation)
       return utils.squeeze_batch_dim(output), key
-    self._policy = jax.jit(batched_policy, backend=backend)
+    self._policy = jax.jit(batched_policy)#, backend=backend)
 
     self._adder = adder
     self._client = variable_client
