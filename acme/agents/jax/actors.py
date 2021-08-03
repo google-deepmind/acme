@@ -78,8 +78,8 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
 
   def select_action(self,
                     observation: network_lib.Observation) -> types.NestedArray:
-    action, self._state = self._policy(self._client.params,
-                                       observation, self._state)
+    action, self._state = self._policy(self._client.params, observation,
+                                       self._state)
     return utils.to_numpy(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
@@ -90,8 +90,8 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
 
   def observe(self, action: network_lib.Action, next_timestep: dm_env.TimeStep):
     if self._adder:
-      self._adder.add(action, next_timestep,
-                      extras=self._get_extras(self._state))
+      self._adder.add(
+          action, next_timestep, extras=self._get_extras(self._state))
 
   def update(self, wait: bool = False):
     self._client.update(wait)
@@ -125,8 +125,8 @@ class FeedForwardActor(core.Actor):
       random_key: Random key.
       variable_client: The variable client to get policy parameters from.
       adder: An adder to add experiences to.
-      has_extras: Flag indicating whether the policy returns extra
-        information (e.g. q-values) in addition to an action.
+      has_extras: Flag indicating whether the policy returns extra information
+        (e.g. q-values) in addition to an action.
       backend: Which backend to use for running the policy.
     """
     self._random_key = random_key
@@ -144,6 +144,7 @@ class FeedForwardActor(core.Actor):
       observation = utils.add_batch_dim(observation)
       output = policy(params, key2, observation)
       return utils.squeeze_batch_dim(output), key
+
     self._policy = jax.jit(batched_policy, backend=backend)
 
     self._adder = adder
@@ -227,6 +228,7 @@ class RecurrentActor(core.Actor):
       output, new_state = recurrent_policy(params, key2, observation,
                                            core_state)
       return output, new_state, key
+
     self._recurrent_policy = jax.jit(batched_recurrent_policy, backend=backend)
 
     self._initial_state = self._prev_state = self._state = initial_core_state
@@ -245,7 +247,7 @@ class RecurrentActor(core.Actor):
 
     if self._has_extras:
       action, extras = result
-      self._extras = utils.to_numpy_squeeze(extras)   # Keep to save in replay.
+      self._extras = utils.to_numpy_squeeze(extras)  # Keep to save in replay.
     else:
       action = result
     return utils.to_numpy_squeeze(action)
@@ -258,9 +260,19 @@ class RecurrentActor(core.Actor):
 
   def observe(self, action: network_lib.Action, next_timestep: dm_env.TimeStep):
     if self._adder:
-      numpy_state = utils.to_numpy_squeeze(self._prev_state)
-      self._adder.add(
-          action, next_timestep, extras=(numpy_state,) + self._extras)
+      # Convert state to numpy array and pack it in a dictionary.
+      extras = {'core_state': utils.to_numpy_squeeze(self._prev_state)}
+
+      # Add core state to the extras dict or tuple, accordingly.
+      if self._has_extras:
+        if 'core_state' in self._extras:
+          raise ValueError(
+              'The policy network\'s extras dict already has a `core_state` '
+              'but the actor is attempting to add its own `core_state`.')
+        extras.update(self._extras)
+
+      # Add the transition to the adder.
+      self._adder.add(action, next_timestep, extras=extras)
 
   def update(self, wait: bool = False):
     self._client.update(wait)
