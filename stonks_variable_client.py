@@ -203,7 +203,10 @@ class ActorRay():
       self._actor.observe(action, next_timestep=timestep)
 
       if self._should_update:
-        self._actor.update(wait=True)
+        # Acme usually does `wait=True`, but it turns out that you can get excellent
+        # learning even when the actors' weight updates occur asynchronously (and
+        # are therefore delayed).
+        self._actor.update(wait=False)
 
       # Book-keeping.
       episode_steps += 1
