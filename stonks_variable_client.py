@@ -395,7 +395,7 @@ if __name__ == "__main__":
       learner,
       storage,
       make_environment,
-      make_policy
+      make_policy,
       verbose=True
     ) for actor_id in range(NUM_STEPS_ACTOR)
   ]
