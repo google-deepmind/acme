@@ -56,7 +56,7 @@ print("MIN OBS:", MIN_OBSERVATIONS)
 
 NUM_STEPS_ACTOR = 20 # taken from agent_test
 
-HEAD_IP = "35.223.237.60"
+HEAD_IP = "localhost"
 
 ### REVERB AND ENV
 

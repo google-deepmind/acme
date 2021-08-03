@@ -28,19 +28,19 @@ class DQNConfig:
   seed: int = 1  # Random seed.
 
   # Learning rule
-  learning_rate: float = 625e-7  # Learning rate for Adam optimizer.
+  learning_rate: float = 5e-4  # Learning rate for Adam optimizer.
   discount: float = 0.99  # Discount rate applied to value per timestep.
-  n_step: int = 3  # N-step TD learning.
-  target_update_period: int = 3.2e4 # 100  # Update target network every period.
-  max_gradient_norm: float = 10 # np.inf # For gradient clipping.
+  n_step: int = 5  # N-step TD learning.
+  target_update_period: int = 100  # Update target network every period.
+  max_gradient_norm: float = np.inf  # For gradient clipping.
 
   # Replay options
-  batch_size: int = 32 #256  # Number of transitions per batch.
+  batch_size: int = 256  # Number of transitions per batch.
   min_replay_size: int = 1_000  # Minimum replay size.
   max_replay_size: int = 1_000_000  # Maximum replay size.
   replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
-  importance_sampling_exponent: float = 0.5  # Importance sampling for replay.
-  priority_exponent: float = 0.5 #0.6 # Priority exponent for replay.
+  importance_sampling_exponent: float = 0.2  # Importance sampling for replay.
+  priority_exponent: float = 0.6  # Priority exponent for replay.
   prefetch_size: int = 4  # Prefetch size for reverb replay performance.
   samples_per_insert: float = 32  # Ratio of learning samples to insert.
   # Rate to be used for the SampleToInsertRatio rate limitter tolerance.
