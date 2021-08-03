@@ -23,7 +23,7 @@ import jax.numpy as jnp
 import numpy as np
 import tensorflow_probability
 hk_init = hk.initializers
-tfp = tensorflow_probability.experimental.substrates.jax
+tfp = tensorflow_probability.substrates.jax
 tfd = tfp.distributions
 
 _MIN_SCALE = 1e-4

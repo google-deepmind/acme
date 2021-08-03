@@ -30,8 +30,8 @@ import jax
 import jax.numpy as jnp
 import tensorflow_probability
 
-tfp = tensorflow_probability.experimental.substrates.jax
-tfd = tensorflow_probability.experimental.substrates.jax.distributions
+tfp = tensorflow_probability.substrates.jax
+tfd = tensorflow_probability.substrates.jax.distributions
 
 _MPO_FLOAT_EPSILON = 1e-8
 

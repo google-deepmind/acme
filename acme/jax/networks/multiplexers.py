@@ -22,7 +22,7 @@ import haiku as hk
 import jax.numpy as jnp
 import tensorflow_probability
 
-tfd = tensorflow_probability.experimental.substrates.jax.distributions
+tfd = tensorflow_probability.substrates.jax.distributions
 
 
 class CriticMultiplexer(hk.Module):
