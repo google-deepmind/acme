@@ -46,10 +46,9 @@ import copy
 config = dqn_config.DQNConfig()
 
 MIN_OBSERVATIONS = max(config.batch_size, config.min_replay_size)
-
-NUM_STEPS_ACTOR = 20 # taken from agent_test
-
+NUM_STEPS_ACTOR = 32 # taken from agent_test
 HEAD_IP = "localhost"
+HEAD_PORT = 8000
 
 
 ### REVERB AND ENV
@@ -74,12 +73,41 @@ demo_env = make_environment()
 spec = specs.make_environment_spec(demo_env)
 
 
+def create_network():
+  def network(x):
+    model = hk.Sequential([
+        networks_lib.AtariTorso(),
+        hk.Flatten(),
+        hk.nets.MLP([50, 50, spec.actions.num_values])
+    ])
+    return model(x)
+
+  # Make network purely functional
+  network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+  dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
+
+  network = networks_lib.FeedForwardNetwork(
+    init=lambda rng: network_hk.init(rng, dummy_obs),
+    apply=network_hk.apply)
+
+  return network
+
+def make_policy():
+  network = create_network()
+
+  def policy(params: networks_lib.Params, key: jnp.ndarray,
+             observation: jnp.ndarray) -> jnp.ndarray:
+    action_values = network.apply(params, observation) # how will this work when they're on different devices?
+    return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
+  return policy
+
+
 #### ACTORS AND LEARNERS
 
 #@ray.remote(resources={"tpu": 1})
 @ray.remote
 class ActorRay():
-  def __init__(self, config, address, learner, environment_maker, storage, verbose=False):
+  def __init__(self, config, address, learner, storage, environment_maker, policy_maker, verbose=False):
     environment = environment_maker()
     self.verbose = verbose
 
@@ -88,29 +116,7 @@ class ActorRay():
     client = reverb.Client(address)
     adder = adders.NStepTransitionAdder(client, config.n_step, config.discount)
 
-    def create_policy():
-      def network(x):
-        model = hk.Sequential([
-            networks_lib.AtariTorso(),
-            hk.Flatten(),
-            hk.nets.MLP([50, 50, spec.actions.num_values])
-        ])
-        return model(x)
-
-      # Make network purely functional
-      network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
-      dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
-
-      network = networks_lib.FeedForwardNetwork(
-        init=lambda rng: network_hk.init(rng, dummy_obs),
-        apply=network_hk.apply)
-
-      def policy(params: networks_lib.Params, key: jnp.ndarray,
-                 observation: jnp.ndarray) -> jnp.ndarray:
-        action_values = network.apply(params, observation) # how will this work when they're on different devices?
-        return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
-      return policy
-    policy = create_policy()
+    policy = policy_maker()
 
     self._variable_wrapper = VariableSourceRayWrapper(learner)
     self._variable_client = variable_utils.VariableClient(self._variable_wrapper, '')
@@ -251,10 +257,9 @@ class SharedStorage:
             raise TypeError
 
 
-# @ray.remote
 @ray.remote(num_cpus=32, resources={"tpu": 1})
 class LearnerRay():
-  def __init__(self, config, address, storage, verbose=False):
+  def __init__(self, config, address, storage, network_maker, verbose=False):
     self.verbose = verbose
 
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
@@ -264,25 +269,7 @@ class LearnerRay():
     self.storage = storage
     if self.verbose: print("learner addr", address)
 
-    def create_network():
-      def network(x):
-        model = hk.Sequential([
-            networks_lib.AtariTorso(),
-            hk.Flatten(),
-            hk.nets.MLP([50, 50, spec.actions.num_values])
-        ])
-        return model(x)
-
-      # Make network purely functional
-      network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
-      dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
-
-      network = networks_lib.FeedForwardNetwork(
-        init=lambda rng: network_hk.init(rng, dummy_obs),
-        apply=network_hk.apply)
-      return network
-
-    network = create_network()
+    network = network_maker()
 
     optimizer = optax.chain(
         optax.clip_by_global_norm(config.max_gradient_norm),
@@ -400,16 +387,17 @@ if __name__ == "__main__":
       discount=config.discount,
   )
 
-  learner = LearnerRay.options(max_concurrency=32).remote(config, f"{HEAD_IP}:8000", storage, verbose=True)
+  learner = LearnerRay.options(max_concurrency=32).remote(config, f"{HEAD_IP}:{HEAD_PORT}", storage, create_network, verbose=True)
   actors = [
     ActorRay.options().remote(
       config,
-      f"{HEAD_IP}:8000",
+      f"{HEAD_IP}:{HEAD_PORT}",
       learner,
-      make_environment,
       storage,
+      make_environment,
+      make_policy
       verbose=True
-    ) for actor_id in range(32)
+    ) for actor_id in range(NUM_STEPS_ACTOR)
   ]
 
   # we need to do this because you need to make sure the learner is initialized
