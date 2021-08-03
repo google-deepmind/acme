@@ -30,6 +30,7 @@ import optax
 import reverb
 import rlax
 import typing_extensions
+from copy import deepcopy
 
 
 class ReverbUpdate(NamedTuple):
@@ -90,36 +91,38 @@ class SGDLearner(acme.Learner):
     self._loss = jax.jit(functools.partial(loss_fn, self.network))
 
     # SGD performs the loss, optimizer update and periodic target net update.
-    def sgd_step(state: TrainingState,
-                 batch: reverb.ReplaySample) -> Tuple[TrainingState, LossExtra]:
-      next_rng_key, rng_key = jax.random.split(state.rng_key)
+    # this is a custom (non-acme) function built to support parallization
+    @functools.partial(jax.pmap, axis_name='num_devices')
+    def sgd_step(params, target_params, batch, opt_state):
+      # todo: make this use the state rng_key?
+      next_rng_key, rng_key = jax.random.split(jax.random.PRNGKey(1701))
       # Implements one SGD step of the loss and updates training state
+
       (loss, extra), grads = jax.value_and_grad(self._loss, has_aux=True)(
-          state.params, state.target_params, batch, rng_key)
+          params, params, batch, rng_key)
+
+      grads = jax.lax.pmean(grads, axis_name='num_devices')
+      loss = jax.lax.pmean(loss, axis_name='num_devices') # unnecessary for update, useful for logging
+
       extra.metrics.update({'total_loss': loss})
 
-      # Apply the optimizer updates
-      updates, new_opt_state = optimizer.update(grads, state.opt_state)
-      new_params = optax.apply_updates(state.params, updates)
+      updates, new_opt_state = optimizer.update(grads, opt_state)
+      new_params = optax.apply_updates(params, updates)
+      
+      return new_params, new_opt_state, extra
 
-      # Periodically update target networks.
-      steps = state.steps + 1
-      target_params = rlax.periodic_update(
-          new_params, state.target_params, steps, target_update_period)
-      new_training_state = TrainingState(
-          new_params, target_params, new_opt_state, steps, next_rng_key)
-      return new_training_state, extra
 
-    def postprocess_aux(extra: LossExtra) -> LossExtra:
-      reverb_update = jax.tree_map(lambda a: jnp.reshape(a, (-1, *a.shape[2:])),
-                                   extra.reverb_update)
-      return extra._replace(
-          metrics=jax.tree_map(jnp.mean, extra.metrics),
-          reverb_update=reverb_update)
+    # note that we've completely removed their postprocess_aux and manually implemented its
+    # functionality in `step()`. also means we don't call `process_multiple_batches`. adding this
+    # assertion to prevent accidental confusion later on.
+    assert num_sgd_steps_per_step == 1, "calls to `process_multiple_batches` have been removed, so \
+          `num_sgd_steps_per_step` being >1 has no effect"
 
-    sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step,
-                                              postprocess_aux)
-    self._sgd_step = jax.jit(sgd_step)
+    
+    # don't use `jit` with `sgd_step` because `jit` puts all the device data on a single device
+    # by default, which defeats the purpose of pmap. was warned by jax compiler previously.
+    # self._sgd_step = jax.jit(sgd_step)
+    self._sgd_step = sgd_step
 
     # Internalise agent components
     self._data_iterator = utils.prefetch(data_iterator)
@@ -127,16 +130,22 @@ class SGDLearner(acme.Learner):
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
 
+    self.n_devices = jax.local_device_count()
+
     # Initialize the network parameters
     key_params, key_target, key_state = jax.random.split(random_key, 3)
     initial_params = self.network.init(key_params)
     initial_target_params = self.network.init(key_target)
+
+    self.rng_key = key_state # this will only ever be `key_state`
+    # params -> [[params], [params]]
+
     self._state = TrainingState(
-        params=initial_params,
-        target_params=initial_target_params,
-        opt_state=optimizer.init(initial_params),
-        steps=0,
-        rng_key=key_state,
+      params=jax.tree_map(lambda x: jnp.array([x] * self.n_devices), initial_params),
+      target_params=jax.tree_map(lambda x: jnp.array([x] * self.n_devices), initial_target_params),
+      opt_state=jax.tree_map(lambda x: jnp.array([x] * self.n_devices), optimizer.init(initial_params)),
+      steps=0,
+      rng_key=key_state,
     )
 
     # Update replay priorities
@@ -153,10 +162,34 @@ class SGDLearner(acme.Learner):
   def step(self):
     """Takes one SGD step on the learner."""
     batch = next(self._data_iterator)
-    self._state, extra = self._sgd_step(self._state, batch)
+
+    # reshaping of batch for pmap compatibility
+    # [batchsize, ...] -> [num_devices, batchsize per device, ...]
+
+    def fix(x, n_devices=self.n_devices):
+      if len(x.shape) == 1:
+        return x.reshape((n_devices, x.shape[0] // n_devices))
+      else:
+        return x.reshape((n_devices, x.shape[0] // n_devices, *x.shape[1:])) 
+
+    fixed_batch = jax.tree_map(fix, batch)
+
+    new_params, new_opt_state, extra = self._sgd_step(self._state.params, self._state.target_params, fixed_batch, self._state.opt_state)
+
+    steps = self._state.steps + 1
+
+    # update params periodically
+    # theoretically works, but need to run it multiple steps and see if it updates
+    target_params = rlax.periodic_update(self._state.params, self._state.target_params, self._state.steps, self._target_update_period)
+
+    # reshape back to pre-pmap dimensions (otherwise not the right shape for insertion to reverb)
+    reverb_update = jax.tree_map(lambda a: jnp.reshape(a, (a.shape[0]*a.shape[1])), extra.reverb_update)
+    
+    # taken from old `postprocess_aux`
+    reverb_update = jax.tree_map(lambda a: jnp.reshape(a, (-1, *a.shape[2:])), reverb_update)
+    extra = extra._replace(metrics=jax.tree_map(jnp.mean, extra.metrics), reverb_update=reverb_update)
 
     if self._replay_client:
-      reverb_update = extra.reverb_update._replace(keys=batch.info.key)
       self._async_priority_updater.put(reverb_update)
 
     # Update our counts and record it.
@@ -164,8 +197,21 @@ class SGDLearner(acme.Learner):
     result.update(extra.metrics)
     self._logger.write(result)
 
+    # update internal state representation
+    self._state = TrainingState(
+        params=new_params,
+        target_params=target_params,
+        opt_state=new_opt_state,
+        steps=steps,
+        rng_key=self.rng_key
+    )
+
+    # print("IT WORKED BABY")
+    # import sys; sys.exit(-1)
+
   def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
-    return [self._state.params]
+    # taken from 
+    return [jax.device_get(jax.tree_map(lambda x: x[0], self._state.params))]
 
   def save(self) -> TrainingState:
     return self._state
