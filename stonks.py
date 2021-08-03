@@ -178,7 +178,7 @@ class ActorRay():
       # jax.profiler.start_trace("/tmp/tensorboard")
       result = self.run_episode()
       # jax.profiler.stop_trace()
-
+      # if result["episodes"] % 10 == 0:
       print(f"Actor #{self.actor_id}: ", result)
       # if len(episode_returns) == 10:
         # print(result)
@@ -293,7 +293,7 @@ class SharedStorage:
             raise TypeError
 
 # @ray.remote
-@ray.remote(num_cpus=64, resources={"tpu": 1})
+@ray.remote(num_cpus=20, resources={"tpu": 1})
 class LearnerRay():
   def __init__(self, config, address, storage, verbose=False):
     self.verbose = verbose
@@ -441,7 +441,7 @@ if __name__ == "__main__":
       discount=config.discount,
   )
 
-  learner = LearnerRay.options(max_concurrency=128).remote(config, f"{HEAD_IP}:8000", storage, verbose=True)
+  learner = LearnerRay.options().remote(config, f"{HEAD_IP}:8000", storage, verbose=True)
   # variable_wrapper = VariableSourceRayWrapper(learner)
   actors = [
     ActorRay.options().remote(
@@ -453,7 +453,7 @@ if __name__ == "__main__":
       actor_id,
       verbose=True
     )
-    for actor_id in range(100)
+    for actor_id in range(50)
   ]
 
   # actors.append(ActorRay.options(resources={"tpu": 1}).remote(
