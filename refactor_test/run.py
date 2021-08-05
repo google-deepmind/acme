@@ -388,7 +388,9 @@ if __name__ == '__main__':
     storage,
     verbose=True
   ) for _ in range(2)]
-  # ray.get(actor.ready.remote())
+
+  [a.run.remote() for a in actors]
+
   # actor.run.remote()
   # learner.run.remote()
 
