@@ -317,7 +317,7 @@ class LearnerRay():
     # TODO: migrate to the learner internal counter instance
     while steps_completed < total_learning_steps:
       steps = self._calculate_num_learner_steps(
-        num_observations=self.client.server_info()["priority_table"].current_size,
+        num_observations=self._client.server_info()["priority_table"].current_size,
         min_observations=max(config.batch_size, config.min_replay_size),
         observations_per_step=observations_per_step
         )
@@ -406,7 +406,7 @@ if __name__ == '__main__':
   [a.run.remote() for a in actors]
 
   # actor.run.remote()
-  learner.run.remote()
+  learner.run.remote(total_learning_steps=100)
 
   # TODO: test the learner's steps n shit
 
