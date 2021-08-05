@@ -357,7 +357,7 @@ if __name__ == '__main__':
   learner = LearnerRay.remote(
     "localhost:8000",
     storage,
-    verbose=Truestonks_variable_client.py
+    verbose=True
   )
 
   actor = ActorRay(
