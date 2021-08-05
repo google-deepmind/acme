@@ -139,7 +139,8 @@ def make_learner(network, optimizer, data_iterator, reverb_client, random_key, l
     importance_sampling_exponent=config.importance_sampling_exponent,
     target_update_period=config.target_update_period,
     iterator=data_iterator,
-    replay_client=reverb_client
+    replay_client=reverb_client,
+    logger=logger
   )
   return learner
 
@@ -283,13 +284,15 @@ class LearnerRay():
 
     print("L - flag 1")
     # todo: sort out the key
+    self._logger = ActorLogger()
     random_key = jax.random.PRNGKey(1701)
     self._learner = make_learner(
       network_factory(), 
       make_optimizer(), 
       data_iterator, 
       self._client,
-      random_key 
+      random_key,
+      logger=self._logger
     )
 
     print("L - flag 0.5")
