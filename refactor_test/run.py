@@ -382,15 +382,17 @@ if __name__ == '__main__':
     verbose=True
   )
 
-  actor = ActorRay.remote(
+  actors = [ActorRay.remote(
     "localhost:8000", 
     learner, 
     storage,
     verbose=True
-  )
+  ) for _ in range(2)]
   # ray.get(actor.ready.remote())
-  actor.run.remote()
+  # actor.run.remote()
   # learner.run.remote()
+
+  # TODO: test the learner's steps n shit
 
   while not ray.get(storage.get_info.remote("terminate")):
     time.sleep(1)
