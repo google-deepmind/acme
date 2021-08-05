@@ -56,7 +56,7 @@ class EnvironmentLoop(core.Worker):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       should_update: bool = True,
-      should_wait: bool = False
+      should_wait: bool = False,
       label: str = 'environment_loop',
   ):
     # Internalize agent and environment.
