@@ -397,6 +397,8 @@ if __name__ == '__main__':
     verbose=True
   )
 
+  ray.get(learner.get_variables.remote(""))
+
   actors = [ActorRay.remote(
     "localhost:8000", 
     learner, 
