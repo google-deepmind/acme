@@ -379,9 +379,8 @@ if __name__ == '__main__':
     storage,
     verbose=True
   )
-
-  actor.run.remote()
   ray.get(actor.ready.remote())
+  actor.run.remote()
   learner.run.remote()
 
   while not ray.get(storage.get_info.remote("terminate")):
