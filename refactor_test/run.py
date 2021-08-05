@@ -283,7 +283,9 @@ class LearnerRay():
 
     print("L - flag 1")
     # todo: sort out the key
-    self._logger = ActorLogger()
+
+    # disabled the logger because it's not toooo useful
+    # self._logger = ActorLogger()
     random_key = jax.random.PRNGKey(1701)
     self._learner = make_learner(
       network_factory(), 
@@ -291,7 +293,7 @@ class LearnerRay():
       data_iterator, 
       self._client,
       random_key,
-      logger=self._logger
+      # logger=self._logger
     )
 
     print("L - flag 0.5")
