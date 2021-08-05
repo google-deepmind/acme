@@ -212,8 +212,6 @@ class ActorRay():
     # todo: make this proper splitting and everything
     random_key=jax.random.PRNGKey(1701)
 
-    print("flag 1")
-
     self._actor = make_actor(
       policy, 
       random_key,
@@ -224,8 +222,6 @@ class ActorRay():
     self._counter = counting.Counter(prefix='actor')
     self._logger = ActorLogger() # TODO: use config for `interval` arg
 
-    print("flag 2")
-
     self._env_loop = CustomEnvironmentLoop(
       self._environment, 
       self._actor, 
@@ -234,14 +230,12 @@ class ActorRay():
       should_update=True
       )
 
-    print("flag 3")
 
     # TODO: migrate all print statements to the logger
     # or should i? logger is for the environment loop
     if self._verbose: print(f"Actor {self._id}: instantiated.")
   
   def ready(self):
-    print("absolutely smashing state rn")
     return True
 
   def run(self):
@@ -391,12 +385,12 @@ if __name__ == '__main__':
     storage,
     verbose=True
   )
-  ray.get(actor.ready.remote())
+  # ray.get(actor.ready.remote())
   actor.run.remote()
   # learner.run.remote()
 
-  # while not ray.get(storage.get_info.remote("terminate")):
-  #   time.sleep(1)
+  while not ray.get(storage.get_info.remote("terminate")):
+    time.sleep(1)
 
 
 
