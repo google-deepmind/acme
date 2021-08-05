@@ -105,7 +105,7 @@ def network_factory():
 
   return network
 
-def make_actor(policy_network: snt.Module, random_key, adder: Optional[adders.Adder] = None, variable_source: Optional[core.VariableSource] = None):
+def make_actor(policy_network, random_key, adder: Optional[adders.Adder] = None, variable_source: Optional[core.VariableSource] = None):
   """Creates an actor."""
   variable_client = RayVariableClient(
       client=variable_source,
