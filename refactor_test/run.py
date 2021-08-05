@@ -369,6 +369,7 @@ if __name__ == '__main__':
     storage,
     verbose=True
   )
+  ray.wait(actor)
   actor.run.remote()
   learner.run.remote()
 
