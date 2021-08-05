@@ -29,7 +29,6 @@ class RayVariableClient:
         don't put to device.
     """
     self._temp_client_key = temp_client_key # temporary uuid that makes prints more sensical
-    self._start_time = None
 
 
     self._num_updates = 0 # the number of times variables have been successfully updated
@@ -87,17 +86,17 @@ class RayVariableClient:
 
   def update_and_wait(self):
     """Immediately update and block until we get the result."""
-    self._start_time = datetime.datetime.now()
-    self._callback(self._request())
+    start_time = datetime.datetime.now()
+    self._callback(self._request(), start_time)
 
-  def _callback(self, params_list: List[network_types.Params]):
+  def _callback(self, params_list: List[network_types.Params], start_time):
     if self._device:
       # Move variables to a proper device.
       self._params = jax.device_put(params_list, self._device)
     else:
       self._params = params_list
 
-    duration = datetime.datetime.now() - self._start_time
+    duration = datetime.datetime.now() - start_time
     duration = duration.total_seconds()
     print(f"{self._temp_client_key}: variable updated successfully! Took {duration}")
     self._num_updates += 1
