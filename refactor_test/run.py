@@ -203,7 +203,8 @@ class ActorRay():
                observation: jnp.ndarray) -> jnp.ndarray:
       action_values = network.apply(params, observation) # how will this work when they're on different devices?
       return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
-    return policy
+    
+    # print("flag")
 
     # todo: make this proper splitting and everything
     random_key=jax.random.PRNGKey(1701)
@@ -237,6 +238,7 @@ class ActorRay():
     if self._verbose: print(f"Actor {self._id}: instantiated.")
   
   def ready(self):
+    print("absolutely smashing state rn")
     return True
 
   def run(self):
@@ -383,10 +385,10 @@ if __name__ == '__main__':
   )
   ray.get(actor.ready.remote())
   actor.run.remote()
-  learner.run.remote()
+  # learner.run.remote()
 
-  while not ray.get(storage.get_info.remote("terminate")):
-    time.sleep(1)
+  # while not ray.get(storage.get_info.remote("terminate")):
+  #   time.sleep(1)
 
   print("we out")
 
