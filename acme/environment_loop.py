@@ -56,6 +56,7 @@ class EnvironmentLoop(core.Worker):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       should_update: bool = True,
+      should_wait: bool = False
       label: str = 'environment_loop',
   ):
     # Internalize agent and environment.
@@ -64,6 +65,7 @@ class EnvironmentLoop(core.Worker):
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.make_default_logger(label)
     self._should_update = should_update
+    self._should_wait = should_wait
 
   def run_episode(self) -> loggers.LoggingData:
     """Run one episode.
@@ -97,7 +99,7 @@ class EnvironmentLoop(core.Worker):
       # Have the agent observe the timestep and let the actor update itself.
       self._actor.observe(action, next_timestep=timestep)
       if self._should_update:
-        self._actor.update()
+        self._actor.update(wait=self._should_wait)
 
       # Book-keeping.
       episode_steps += 1

@@ -42,6 +42,7 @@ class VariableClient:
       device: The name of a JAX device to put variables on. If None (default),
         don't put to device.
     """
+    self._num_updates = 0 # the number of times variables have been successfully updated
     self._update_period = update_period
     self._call_counter = 0
     self._client = client
@@ -104,6 +105,8 @@ class VariableClient:
       self._params = jax.device_put(params_list, self._device)
     else:
       self._params = params_list
+
+    self._num_updates += 1
 
   @property
   def params(self) -> Union[network_types.Params, List[network_types.Params]]:

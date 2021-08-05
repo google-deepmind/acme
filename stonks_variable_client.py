@@ -39,6 +39,7 @@ import gym
 from acme import wrappers
 import bsuite
 import copy
+import uuid
 
 
 ### PARAMETERS:
@@ -107,9 +108,13 @@ def make_policy():
 #@ray.remote(resources={"tpu": 1})
 @ray.remote
 class ActorRay():
-  def __init__(self, config, address, learner, storage, environment_maker, policy_maker, verbose=False):
-    environment = environment_maker()
+  def __init__(self, config, address, learner, storage, environment_maker, policy_maker, id=None, print_interval=100, verbose=False):
     self.verbose = verbose
+    self._should_update = True
+    self.storage = storage
+
+    environment = environment_maker()
+    self._environment = environment
 
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
 
@@ -135,12 +140,30 @@ class ActorRay():
     self._counter = counting.Counter()
     self._logger = Printer()
 
-    self._environment = environment
-    self._should_update = True
-    self.storage = storage
+    self._last_ten_episode_info = []
+    self.id = id or uuid.uuid1()
+    self.print_interval = print_interval # step interval for printing info
 
     print("actor instantiated")
 
+  @property
+  def num_updates(self):
+    return self._variable_wrapper._num_updates
+
+  @property
+  def info(self):
+    info = {
+      "id": self.id,
+      "num_updates": self.num_updates,
+      "avg_statistics": {
+        "episode_return": sum([e["episode_return"] for e in self._last_ten_episode_info])/len(self._last_ten_episode_info),
+        "episode_length": sum([e["episode_length"] for e in self._last_ten_episode_info])/len(self._last_ten_episode_info),
+        "steps_per_second": sum([e["steps_per_second"] for e in self._last_ten_episode_info])/len(self._last_ten_episode_info),
+      },
+      "total_steps": self._last_ten_episode_info[-1]["steps"],
+      "total_episodes": self._last_ten_episode_info[-1]["episodes"],
+    }
+    return info
 
   @staticmethod
   def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
@@ -153,24 +176,38 @@ class ActorRay():
     if self.verbose: print("params gotten!")
     return data
 
+  
+  # used to print the current status of the actor, optionally takes a result
+  def print_status(self, result=None):
+    data = self.info
+    if result: data["manual_result"] = result
+
+    print(data)
+
 
   def run(self):
-    if self.verbose: print("started actor run", jnp.ones(3).device_buffer.device())
+    if self.verbose: print(f"started actor {self.id} run", jnp.ones(3).device_buffer.device())
     steps = 0
 
     while not ray.get(self.storage.get_info.remote("terminate")):
       result = self.run_episode()
-      print(result)
+      # print(result)
+
+      self._last_ten_episode_info.append(result)
+      if len(self._last_ten_episode_info) > 10:
+        self._last_ten_episode_info.pop(0)
 
       steps += result["episode_length"]
       if steps == 0: self._logger.write(result)
 
-      self.storage.set_info.remote({
-        "steps": steps
-        })
+      if steps % print_interval == 0:
+        self.print_status(result)
+
+      # self.storage.set_info.remote({
+      #   "steps": steps
+      #   })
 
     print(f"terminate received, terminating at {steps} steps")
-
 
   def run_episode(self) -> loggers.LoggingData:
     """Run one episode.
@@ -232,7 +269,6 @@ class ActorRay():
     result.update(counts)
     return result
 
-
 @ray.remote
 class SharedStorage:
     """
@@ -259,10 +295,9 @@ class SharedStorage:
         else:
             raise TypeError
 
-
 @ray.remote(num_cpus=32, resources={"tpu": 1})
 class LearnerRay():
-  def __init__(self, config, address, storage, network_maker, verbose=False):
+  def __init__(self, config, address, storage, environment_maker, network_maker, policy_maker, eval_interval=None, verbose=False):
     self.verbose = verbose
 
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
@@ -298,6 +333,20 @@ class LearnerRay():
       iterator=data_iterator,
       replay_client=self.client
     )
+
+    # create an eval learner
+    self.environment_maker = environment_maker
+    self.eval_interval = eval_interval
+    adder = adders.NStepTransitionAdder(self.client, config.n_step, config.discount)
+    self._variable_wrapper = VariableSourceRayWrapper(self.learner)
+    self._variable_client = variable_utils.VariableClient(self._variable_wrapper, '')
+    policy = policy_maker()
+    self.eval_actor = actors.FeedForwardActor(
+      policy=policy,
+      random_key=key_actor,
+      variable_client=self._variable_client, # need to write a custom wrapper around learner so it calls .remote
+      adder=adder)
+
     if self.verbose: print("learner instantiated")
 
 
@@ -321,7 +370,7 @@ class LearnerRay():
     return self.learner.get_variables(names)
 
 
-  def run(self):
+  def run(self, total_learning_steps: int = 3e8):
     # we just keep count of the number of steps it's trained on
     step_count = 0
 
@@ -330,35 +379,55 @@ class LearnerRay():
 
     if self.verbose: print("IT FINALLY ESCAPED THANK OUR LORD AND SAVIOUR")
 
-    # save_states = []
-
-    while step_count < 3e8:
+    while step_count < total_learning_steps:
       num_steps = self._calculate_num_learner_steps(
         num_observations=self.client.server_info()["priority_table"].current_size,
         min_observations=MIN_OBSERVATIONS,
         observations_per_step=self.config.batch_size / self.config.samples_per_insert,
         )
 
-      # if num_steps != 0:
-        # save_states.append(self.learner.save().params)
-        # print(f"stepping learner {num_steps}")
-
-      # if step_count > 50:
-      #   if str(save_states[0]) == str(save_states[1]):
-      #     print("you fuckup")
-      #   else:
-      #     print("all ok")
-
       for _ in range(num_steps):
         self.learner.step()
+        step_count += 1
+        if self.eval_interval and (step_count % self.eval_interval == 0):
+          self.evaluate()
 
-      step_count += num_steps
+      # step_count += num_steps
 
     print(f"learning complete ({step_count})...terminating self-play")
     self.storage.set_info.remote({
       "terminate": True
       })
 
+  def evaluate(self, total_eval_episodes = 100, print_info=True):
+    class ResultStorage():
+      def __init__(self):
+        self.returns = []
+
+      def write(self, s):
+        self.returns.append(s)
+
+    results_logger = ResultStorage()
+    eval_env = self.environment_maker()
+    eval_loop = acme.EnvironmentLoop(eval_env, self.eval_actor, logger=results_logger)
+    eval_loop.run(num_episodes=total_eval_episodes)
+
+    # calculate stats and return them
+    info = {
+      "id": "eval",
+      "num_updates": self._variable_wrapper._num_updates, # across ALL evals
+      "avg_statistics": {
+        "episode_return": sum([e["episode_return"] for e in results_logger.returns])/len(results_logger.returns),
+        "episode_length": sum([e["episode_length"] for e in results_logger.returns])/len(results_logger.returns),
+        "steps_per_second": sum([e["steps_per_second"] for e in results_logger.returns])/len(results_logger.returns),
+      },
+      "total_steps": results_logger.returns[-1]["steps"],
+      "total_episodes": results_logger.returns[-1]["episodes"],
+    }
+
+    if print_info: print(info)
+
+    return info
 
 class VariableSourceRayWrapper():
   def __init__(self, source):
