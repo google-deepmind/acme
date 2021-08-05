@@ -156,7 +156,7 @@ class ActorLogger():
     self.data = []
     self.counter = 0
     self.interval = interval
-    self.disable_printing
+    self.disable_printing = disable_printing
     if self.disable_printing: print("actor logger printing temporarily disabled")
 
   def write(self, s):
@@ -231,7 +231,7 @@ class ActorRay():
     self._counter = counting.Counter() # prefix='actor'
     self._logger = ActorLogger(
       interval=10, # log every 10 steps
-      disable_print=(type(id) == int and (id % 4 == 0)) # only get every 4th actor to print shit
+      disable_printing=(type(id) == int and (id % 4 == 0)) # only get every 4th actor to print shit
     ) # TODO: use config for `interval` arg
 
     self._env_loop = CustomEnvironmentLoop(
