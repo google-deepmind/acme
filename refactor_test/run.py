@@ -223,7 +223,7 @@ class ActorRay():
       random_key,
       adder=make_adder(self._client),
       variable_source=variable_source,
-      temp_client_key=self._id
+      # temp_client_key=self._id
     )
 
     print("A - flag 2")
@@ -231,7 +231,7 @@ class ActorRay():
     self._counter = counting.Counter() # prefix='actor'
     self._logger = ActorLogger(
       interval=10, # log every 10 steps
-      disable_printing=(type(id) == int and (id % 4 == 0)) # only get every 4th actor to print shit
+      # disable_printing=(type(id) == int and (id % 4 == 0)) # only get every 4th actor to print shit
     ) # TODO: use config for `interval` arg
 
     self._env_loop = CustomEnvironmentLoop(
