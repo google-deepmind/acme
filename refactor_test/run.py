@@ -242,7 +242,7 @@ class ActorRay():
 
     # TODO: migrate all print statements to the logger
     # or should i? logger is for the environment loop
-    if self._verbose: print(f"Actor {self._id}: instantiated.")
+    if self._verbose: print(f"Actor {self._id}: instantiated on {jnp.ones(3).device_buffer.device()}.")
   
   def ready(self):
     return True
@@ -288,7 +288,7 @@ class LearnerRay():
     )
 
     print("L - flag 0.5")
-    if self._verbose: print("Learner: instantiated.")
+    if self._verbose: print(f"Learner: instantiated on {jnp.ones(3).device_buffer.device()}.")
 
   @staticmethod
   def _calculate_num_learner_steps(num_observations: int, min_observations: int, observations_per_step: float) -> int:
@@ -402,7 +402,7 @@ if __name__ == '__main__':
     storage,
     verbose=True,
     id=str(i)
-  ) for i in range(60)]
+  ) for i in range(10)]
 
   [a.run.remote() for a in actors]
 
