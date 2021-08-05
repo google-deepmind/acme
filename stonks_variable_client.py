@@ -408,6 +408,8 @@ class LearnerRay():
 
     results_logger = ResultStorage()
     eval_env = self.environment_maker()
+
+    # todo: create a custom environment loop for eval so that we can override the `wait` for self.update
     eval_loop = acme.EnvironmentLoop(eval_env, self.eval_actor, logger=results_logger)
     eval_loop.run(num_episodes=total_eval_episodes)
 
