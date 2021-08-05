@@ -293,7 +293,7 @@ class LearnerRay():
 
   def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
     """This has to be called by a wrapper which uses the .remote postfix."""
-    return self.learner.get_variables(names)
+    return self._learner.get_variables(names)
 
   def run(self, total_learning_steps: int = 2e8):
     while self._client.server_info()["priority_table"].current_size < max(config.batch_size, config.min_replay_size):
