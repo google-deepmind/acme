@@ -147,7 +147,7 @@ class ActorRay():
 
   @property
   def num_updates(self):
-    return self._variable_wrapper._num_updates
+    return self._variable_client._num_updates
 
   @property
   def info(self):
@@ -199,7 +199,7 @@ class ActorRay():
       steps += result["episode_length"]
       if steps == 0: self._logger.write(result)
 
-      if steps % print_interval == 0:
+      if steps % self.print_interval == 0:
         self.print_status(result)
 
       # self.storage.set_info.remote({
@@ -337,8 +337,7 @@ class LearnerRay():
     self.environment_maker = environment_maker
     self.eval_interval = eval_interval
     adder = adders.NStepTransitionAdder(self.client, config.n_step, config.discount)
-    self._variable_wrapper = VariableSourceRayWrapper(self.learner)
-    self._variable_client = variable_utils.VariableClient(self._variable_wrapper, '')
+    self._variable_client = variable_utils.VariableClient(self.learner, '')
     policy = policy_maker()
     self.eval_actor = actors.FeedForwardActor(
       policy=policy,
@@ -398,7 +397,8 @@ class LearnerRay():
       "terminate": True
       })
 
-  def evaluate(self, total_eval_episodes = 100, print_info=True):
+  def evaluate(self, total_eval_episodes = 1, print_info=True):
+    print("running eval")
     class ResultStorage():
       def __init__(self):
         self.returns = []
@@ -414,7 +414,7 @@ class LearnerRay():
     # calculate stats and return them
     info = {
       "id": "eval",
-      "num_updates": self._variable_wrapper._num_updates, # across ALL evals
+      "num_updates": self._variable_client._num_updates, # across ALL evals
       "avg_statistics": {
         "episode_return": sum([e["episode_return"] for e in results_logger.returns])/len(results_logger.returns),
         "episode_length": sum([e["episode_length"] for e in results_logger.returns])/len(results_logger.returns),
@@ -434,6 +434,10 @@ class VariableSourceRayWrapper():
 
   def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
     return ray.get(self.source.get_variables.remote(names))
+
+  def __getattr__(self, name: str):
+    # Expose any other attributes of the underlying environment.
+    return getattr(self._environment, name)
 
 
 if __name__ == "__main__":
@@ -457,7 +461,7 @@ if __name__ == "__main__":
       priority_exponent=config.priority_exponent,
       discount=config.discount,
   )
-config, address, storage, environment_maker, network_maker, policy_maker, eval_interval=None, verbose=False
+
   learner = LearnerRay.options(max_concurrency=32).remote(config, f"{HEAD_IP}:{HEAD_PORT}", storage, make_environment, make_network, make_policy, eval_interval=10, verbose=True)
   actors = [
     ActorRay.options().remote(
