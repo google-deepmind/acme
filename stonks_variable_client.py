@@ -73,8 +73,7 @@ def make_environment(evaluation: bool = False, level: str = 'BreakoutNoFrameskip
 demo_env = make_environment()
 spec = specs.make_environment_spec(demo_env)
 
-
-def create_network():
+def make_network():
   def network(x):
     model = hk.Sequential([
         networks_lib.AtariTorso(),
@@ -94,7 +93,7 @@ def create_network():
   return network
 
 def make_policy():
-  network = create_network()
+  network = make_network()
 
   def policy(params: networks_lib.Params, key: jnp.ndarray,
              observation: jnp.ndarray) -> jnp.ndarray:
@@ -458,8 +457,8 @@ if __name__ == "__main__":
       priority_exponent=config.priority_exponent,
       discount=config.discount,
   )
-
-  learner = LearnerRay.options(max_concurrency=32).remote(config, f"{HEAD_IP}:{HEAD_PORT}", storage, create_network, verbose=True)
+config, address, storage, environment_maker, network_maker, policy_maker, eval_interval=None, verbose=False
+  learner = LearnerRay.options(max_concurrency=32).remote(config, f"{HEAD_IP}:{HEAD_PORT}", storage, make_environment, make_network, make_policy, eval_interval=10, verbose=True)
   actors = [
     ActorRay.options().remote(
       config,
