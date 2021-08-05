@@ -66,7 +66,7 @@ config = DQNConfig(
   # samples_per_insert=0.5
 )
 
-def environment_factory():
+def environment_factory(evaluation: bool = False, level: str = 'BreakoutNoFrameskip-v4'):
   """Creates environment."""
   env = gym.make(level, full_action_space=True)
   max_episode_len = 108_000 if evaluation else 50_000
