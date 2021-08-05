@@ -226,6 +226,9 @@ class ActorRay():
     # TODO: migrate all print statements to the logger
     # or should i? logger is for the environment loop
     if self._verbose: print(f"Actor {self._id}: instantiated.")
+  
+  def ready(self):
+    return True
 
   def run(self):
     if self._verbose: print(f"Actor {self._id}: beginning training.")
@@ -369,8 +372,9 @@ if __name__ == '__main__':
     storage,
     verbose=True
   )
-  ray.wait(actor)
+
   actor.run.remote()
+  ray.get(actor.ready.remote())
   learner.run.remote()
 
   while not ray.get(storage.get_info.remote("terminate")):
