@@ -305,7 +305,7 @@ class LearnerRay():
 
 # going to leave this alone for a while i experiment with some concurrency
 # max_concurrency=2
-@ray.remote # max_concurrency = 1 + 
+@ray.remote 
 class VariableSourceCaching(): # todo: fix inheritance
   def __init__(self, source):
     self._source = source
