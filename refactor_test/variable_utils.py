@@ -6,6 +6,7 @@ from acme.jax import networks as network_types
 
 import jax
 import ray
+import datetime
 
 
 class RayVariableClient:
@@ -15,7 +16,8 @@ class RayVariableClient:
                client: core.VariableSource,
                key: Union[str, Sequence[str]],
                update_period: int = 1,
-               device: Optional[str] = None):
+               device: Optional[str] = None,
+               temp_client_key: str = None):
     """Initializes the variable client.
 
     Args:
@@ -26,6 +28,10 @@ class RayVariableClient:
       device: The name of a JAX device to put variables on. If None (default),
         don't put to device.
     """
+    self._temp_client_key = temp_client_key # temporary uuid that makes prints more sensical
+    self._start_time = None
+
+
     self._num_updates = 0 # the number of times variables have been successfully updated
     self._update_period = update_period
     self._call_counter = 0
@@ -81,6 +87,7 @@ class RayVariableClient:
 
   def update_and_wait(self):
     """Immediately update and block until we get the result."""
+    self._start_time = datetime.datetime.now()
     self._callback(self._request())
 
   def _callback(self, params_list: List[network_types.Params]):
@@ -90,8 +97,11 @@ class RayVariableClient:
     else:
       self._params = params_list
 
+    duration = datetime.datetime.now() - self._start_time
+    duration = duration.total_seconds()
+    print(f"{self._temp_client_key}: variable updated successfully! Took {duration}")
     self._num_updates += 1
-    print("variable updated successfully!")
+    self._start_time = None
 
   @property
   def params(self) -> Union[network_types.Params, List[network_types.Params]]:

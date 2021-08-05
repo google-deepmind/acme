@@ -104,14 +104,16 @@ def network_factory():
 
   return network
 
-def make_actor(policy_network, random_key, adder = None, variable_source = None):
+def make_actor(policy_network, random_key, adder = None, variable_source = None, temp_client_key=None):
   """Creates an actor."""
-  # print("make_actor variable_source:", variable_source, type(variable_source))
+  assert variable_source is not None, "make_actor doesn't support None for `variable_source` right now"
+
   variable_client = RayVariableClient(
       client=variable_source,
       key='',
       # variables={'policy': policy_network.variables},
       update_period=100,
+      temp_client_key=temp_client_key
   )
 
   variable_client.update_and_wait()
@@ -216,7 +218,8 @@ class ActorRay():
       policy, 
       random_key,
       adder=make_adder(self._client),
-      variable_source=variable_source
+      variable_source=variable_source,
+      temp_client_key=self._id
     )
     self._environment = environment_factory()
     self._counter = counting.Counter() # prefix='actor'
