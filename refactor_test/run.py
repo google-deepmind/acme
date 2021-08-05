@@ -196,6 +196,8 @@ class ActorRay():
 
     self._client = reverb.Client(reverb_address)
 
+    print("flag 0.5")
+
     network = network_factory()
     def policy(params: networks_lib.Params, key: jnp.ndarray,
                observation: jnp.ndarray) -> jnp.ndarray:
