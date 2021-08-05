@@ -360,7 +360,7 @@ if __name__ == '__main__':
     verbose=True
   )
 
-  actor = ActorRay(
+  actor = ActorRay.remote(
     "localhost:8000", 
     learner, 
     storage,
