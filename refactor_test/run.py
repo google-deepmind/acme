@@ -108,6 +108,7 @@ def make_actor(policy_network, random_key, adder = None, variable_source = None)
   """Creates an actor."""
   variable_client = RayVariableClient(
       client=variable_source,
+      key='',
       # variables={'policy': policy_network.variables},
       update_period=100,
   )
@@ -327,6 +328,7 @@ class VariableSourceCaching(): # todo: fix inheritance
     self._source = source
     self._variable_client = RayVariableClient(
       self._source, 
+      ''
     )
     self._variables = None
 
