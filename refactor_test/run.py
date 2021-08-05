@@ -156,11 +156,12 @@ class ActorLogger():
     self.data = []
     self.counter = 0
     self.interval = interval
+    print("actor logger printing temporarily disabled")
 
   def write(self, s):
     self.data.append(s)
     if self.counter % self.interval == 0:
-      print(s)
+      # print(s)
       self.counter += 1
 
 @ray.remote
@@ -387,7 +388,7 @@ if __name__ == '__main__':
     learner, 
     storage,
     verbose=True
-  ) for _ in range(2)]
+  ) for _ in range(30)]
 
   [a.run.remote() for a in actors]
 
