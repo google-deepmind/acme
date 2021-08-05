@@ -55,9 +55,9 @@ import gym
 from acme import wrappers
 import uuid
 
-import RayVariableClient
-import CustomEnvironmentLoop
-import config as dqn_config
+from variable_utils import RayVariableClient
+from environment_loop import CustomEnvironmentLoop
+from config import config as dqn_config
 
 jax.config.update('jax_platform_name', "cpu")
 
