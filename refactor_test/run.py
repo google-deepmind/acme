@@ -159,7 +159,7 @@ class ActorLogger():
     self.data.append(s)
     if self.counter % self.interval == 0:
       print(s)
-      counter += 1
+      self.counter += 1
 
 @ray.remote
 class SharedStorage():
@@ -219,7 +219,7 @@ class ActorRay():
       variable_source=variable_source
     )
     self._environment = environment_factory()
-    self._counter = counting.Counter(prefix='actor')
+    self._counter = counting.Counter() # prefix='actor'
     self._logger = ActorLogger() # TODO: use config for `interval` arg
 
     self._env_loop = CustomEnvironmentLoop(
