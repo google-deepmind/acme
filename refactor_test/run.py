@@ -411,7 +411,7 @@ if __name__ == '__main__':
   [a.run.remote() for a in actors]
 
   # actor.run.remote()
-  learner.run.remote(total_learning_steps=50)
+  learner.run.remote(total_learning_steps=200)
 
   # TODO: test the learner's steps n shit
 
