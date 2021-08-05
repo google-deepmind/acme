@@ -121,6 +121,7 @@ def make_actor(policy_network, random_key, adder = None, variable_source = None)
     random_key=random_key,
     variable_client=variable_client, # need to write a custom wrapper around learner so it calls .remote
     adder=adder)
+  return actor
 
 def make_adder(reverb_client):
   """Creates a reverb adder."""
@@ -396,8 +397,6 @@ if __name__ == '__main__':
 
   # while not ray.get(storage.get_info.remote("terminate")):
   #   time.sleep(1)
-
-  print("we out")
 
 
 
