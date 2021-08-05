@@ -66,8 +66,6 @@ config = DQNConfig(
   # samples_per_insert=0.5
 )
 
-spec = specs.make_environment_spec(make_environment())
-
 def environment_factory():
   """Creates environment."""
   env = gym.make(level, full_action_space=True)
@@ -83,6 +81,8 @@ def environment_factory():
       ),
       wrappers.SinglePrecisionWrapper,
   ])
+
+spec = specs.make_environment_spec(environment_factory())
 
 def network_factory():
   """Creates network."""
@@ -210,7 +210,7 @@ class ActorRay():
       adder=make_adder(self._client),
       variable_source=variable_source
     )
-    self._environment = make_environment()
+    self._environment = environment_factory()
     self._counter = counting.Counter(prefix='actor')
     self._logger = ActorLogger() # TODO: use config for `interval` arg
 
