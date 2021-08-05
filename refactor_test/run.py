@@ -402,7 +402,7 @@ if __name__ == '__main__':
     storage,
     verbose=True,
     id=str(i)
-  ) for i in range(10)]
+  ) for i in range(32)]
 
   [a.run.remote() for a in actors]
 
