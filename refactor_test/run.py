@@ -218,6 +218,8 @@ class ActorRay():
     self._counter = counting.Counter(prefix='actor')
     self._logger = ActorLogger() # TODO: use config for `interval` arg
 
+    print("flag 2")
+
     self._env_loop = CustomEnvironmentLoop(
       self._environment, 
       self._actor, 
@@ -225,6 +227,8 @@ class ActorRay():
       logger=self._logger,
       should_update=True
       )
+
+    print("flag 3")
 
     # TODO: migrate all print statements to the logger
     # or should i? logger is for the environment loop
