@@ -202,15 +202,16 @@ class ActorRay():
 
     self._client = reverb.Client(reverb_address)
 
-    print("flag 0.5")
+    print("A - flag 0.5")
 
     network = network_factory()
     def policy(params: networks_lib.Params, key: jnp.ndarray,
                observation: jnp.ndarray) -> jnp.ndarray:
       action_values = network.apply(params, observation) # how will this work when they're on different devices?
-      return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
-    
-    # print("flag")
+      return rlax.epsilon_greedy(config.epsilon).sample(key, action_values
+
+
+    print("A - flag 1")
 
     # todo: make this proper splitting and everything
     random_key=jax.random.PRNGKey(1701)
@@ -222,6 +223,8 @@ class ActorRay():
       variable_source=variable_source,
       temp_client_key=self._id
     )
+
+    print("A - flag 2")
     self._environment = environment_factory()
     self._counter = counting.Counter() # prefix='actor'
     self._logger = ActorLogger() # TODO: use config for `interval` arg
@@ -233,6 +236,8 @@ class ActorRay():
       logger=self._logger,
       should_update=True
       )
+
+    print("A - flag 3")
 
 
     # TODO: migrate all print statements to the logger
@@ -262,6 +267,8 @@ class LearnerRay():
     self._shared_storage = shared_storage
     self._client = reverb.Client(reverb_address)
 
+    print("L - flag 0.5")
+
     data_iterator = datasets.make_reverb_dataset(
       table="priority_table",
       server_address=reverb_address,
@@ -269,6 +276,7 @@ class LearnerRay():
       prefetch_size=4,
     ).as_numpy_iterator()
 
+    print("L - flag 1")
     # todo: sort out the key
     random_key = jax.random.PRNGKey(1701)
     self._learner = make_learner(
@@ -278,6 +286,9 @@ class LearnerRay():
       self._client,
       random_key 
     )
+
+    print("L - flag 0.5")
+    if self._verbose: print("Learner: instantiated.")
 
   @staticmethod
   def _calculate_num_learner_steps(num_observations: int, min_observations: int, observations_per_step: float) -> int:
@@ -295,6 +306,8 @@ class LearnerRay():
     return self._learner.get_variables(names)
 
   def run(self, total_learning_steps: int = 2e8):
+    if self._verbose: print("Learner: starting training.")
+    
     while self._client.server_info()["priority_table"].current_size < max(config.batch_size, config.min_replay_size):
       time.sleep(0.1)
 
