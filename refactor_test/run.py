@@ -66,6 +66,8 @@ config = DQNConfig(
   # samples_per_insert=0.5
 )
 
+spec = specs.make_environment_spec(make_environment())
+
 def environment_factory():
   """Creates environment."""
   env = gym.make(level, full_action_space=True)
@@ -84,9 +86,6 @@ def environment_factory():
 
 def network_factory():
   """Creates network."""
-  demo_env = make_environment()
-  spec = specs.make_environment_spec(demo_env)
-
   def network(x):
     model = hk.Sequential([
         networks_lib.AtariTorso(),
