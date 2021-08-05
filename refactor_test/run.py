@@ -259,6 +259,9 @@ class ActorRay():
 
     while not ray.get(self._shared_storage.get_info.remote("terminate")):
       result = self._env_loop.run_episode()
+      result.update({
+        "id": self._id
+        })
       self._logger.write(result)
       steps += result['episode_length']
 
