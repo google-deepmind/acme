@@ -152,16 +152,17 @@ def make_optimizer():
 
 
 class ActorLogger():
-  def __init__(self, interval=1):
+  def __init__(self, interval=1, disable_printing=False):
     self.data = []
     self.counter = 0
     self.interval = interval
-    # print("actor logger printing temporarily disabled")
+    self.disable_printing
+    if self.disable_printing: print("actor logger printing temporarily disabled")
 
   def write(self, s):
     self.data.append(s)
     if self.counter % self.interval == 0:
-      print(s)
+      if not self.disable_printing: print(s)
       self.counter += 1
 
 @ray.remote
@@ -196,7 +197,7 @@ class ActorRay():
   
   def __init__(self, reverb_address, variable_source, shared_storage, id=None, verbose=False):
     self._verbose = verbose
-    self._id = id or uuid.uuid1()
+    self._id = str(id) or uuid.uuid1()
 
     self._shared_storage = shared_storage
 
@@ -211,11 +212,12 @@ class ActorRay():
       return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
 
 
-    print("A - flag 1")
-
+    # print("A - flag 1")
+# 
     # todo: make this proper splitting and everything
     random_key=jax.random.PRNGKey(1701)
 
+    # temp_client_key = self._id if (type(id) == int and (id % 8 == 0)) else None
     self._actor = make_actor(
       policy, 
       random_key,
@@ -227,7 +229,10 @@ class ActorRay():
     print("A - flag 2")
     self._environment = environment_factory()
     self._counter = counting.Counter() # prefix='actor'
-    self._logger = ActorLogger() # TODO: use config for `interval` arg
+    self._logger = ActorLogger(
+      interval=10, # log every 10 steps
+      disable_print=(type(id) == int and (id % 4 == 0)) # only get every 4th actor to print shit
+    ) # TODO: use config for `interval` arg
 
     self._env_loop = CustomEnvironmentLoop(
       self._environment, 
@@ -337,42 +342,6 @@ class LearnerRay():
       "terminate": True
     })
 
-
-# going to leave this alone for a while i experiment with some concurrency
-# max_concurrency=2
-@ray.remote 
-class VariableSourceCaching(): # todo: fix inheritance
-  def __init__(self, source):
-    self._source = source
-    self._variable_client = RayVariableClient(
-      self._source, 
-      ''
-    )
-    self._variables = None
-
-    self._interval = 2 # interval for refreshes (in seconds)
-    self._last_updated = None
-  
-  def refresh(self):
-    # add some timing to check how fast the updates happen
-    t = time.time()
-    self._variable_client.update(wait=True)
-    self._variables = self._variable_client.get_variables()
-    self._last_updated = datetime.now()
-
-    print(f"variable update took {time.time() - t}")
-    
-
-  def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
-    '''
-    if time since last reset > 5s -> refresh
-    '''
-    if self._last_updated == None or \
-    (datetime.now() - self._last_update).total_seconds() > self._interval:
-      self.refresh() # blocking by default
-
-    return self._variables
-
 if __name__ == '__main__':
   ray.init(address="auto")
 
@@ -405,13 +374,14 @@ if __name__ == '__main__':
     learner, 
     storage,
     verbose=True,
-    id=str(i)
-  ) for i in range(60)]
+    id=i
+  ) for i in range(32)]
 
   [a.run.remote() for a in actors]
 
   # actor.run.remote()
-  learner.run.remote(total_learning_steps=200)
+  # learner.run.remote(total_learning_steps=200)
+  learner.run.remote()
 
   # TODO: test the learner's steps n shit
 

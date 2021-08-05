@@ -28,7 +28,7 @@ class RayVariableClient:
       device: The name of a JAX device to put variables on. If None (default),
         don't put to device.
     """
-    self._temp_client_key = temp_client_key # temporary uuid that makes prints more sensical
+    self._temp_client_key = temp_client_key # temporary uuid that enables logging the variable update timing
 
 
     self._num_updates = 0 # the number of times variables have been successfully updated
@@ -98,7 +98,11 @@ class RayVariableClient:
 
     duration = datetime.datetime.now() - start_time
     duration = duration.total_seconds()
-    print(f"{self._temp_client_key}: variable updated successfully! Took {duration}")
+    
+    if self._temp_client_key:
+      # temporary: get it to print only if it takes more than 0.5
+      if duration > 0.5:
+        print(f"{self._temp_client_key}: variable updated successfully! Took {duration}")
     self._num_updates += 1
     self._start_time = None
 
