@@ -260,7 +260,7 @@ class ActorRay():
     if self._verbose: print(f"Actor {self._id}: terminated at {steps} steps.") 
     # todo: get it to print some info here?
 
-@ray.remote # max_concurrency=1 + N(cacher nodes)
+@ray.remote(resources={"tpu": 1}) # max_concurrency=1 + N(cacher nodes)
 class LearnerRay():
   def __init__(self, reverb_address, shared_storage, verbose=False):
     self._verbose = verbose
@@ -402,7 +402,7 @@ if __name__ == '__main__':
     storage,
     verbose=True,
     id=str(i)
-  ) for i in range(10)]
+  ) for i in range(4)]
 
   [a.run.remote() for a in actors]
 
