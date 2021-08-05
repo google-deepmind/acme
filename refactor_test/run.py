@@ -106,7 +106,7 @@ def network_factory():
 
 def make_actor(policy_network, random_key, adder = None, variable_source = None):
   """Creates an actor."""
-  print("make_actor variable_source:", variable_source, type(variable_source))
+  # print("make_actor variable_source:", variable_source, type(variable_source))
   variable_client = RayVariableClient(
       client=variable_source,
       key='',

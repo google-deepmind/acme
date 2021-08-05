@@ -38,7 +38,7 @@ class RayVariableClient:
     self._executor = futures.ThreadPoolExecutor(max_workers=1)
     if isinstance(key, str):
       key = [key]
-    self._request = lambda k=key: ray.get(client.remote.get_variables(k))
+    self._request = lambda k=key: ray.get(client.get_variables.remote(k))
     self._future: Optional[futures.Future] = None
     self._async_request = lambda: self._executor.submit(self._request)
 
