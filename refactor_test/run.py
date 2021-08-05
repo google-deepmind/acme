@@ -390,7 +390,7 @@ if __name__ == '__main__':
       discount=config.discount,
   )
 
-  learner = LearnerRay.remote(
+  learner = LearnerRay.options(max_concurrency=2).remote(
     "localhost:8000",
     storage,
     verbose=True
