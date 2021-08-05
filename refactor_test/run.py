@@ -59,7 +59,7 @@ from variable_utils import RayVariableClient
 from environment_loop import CustomEnvironmentLoop
 from config import DQNConfig
 
-jax.config.update('jax_platform_name', "cpu")
+# jax.config.update('jax_platform_name', "cpu")
 
 config = DQNConfig(
   learning_rate=1e-3,
