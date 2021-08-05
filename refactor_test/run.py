@@ -218,20 +218,19 @@ class ActorRay():
     # todo: make this proper splitting and everything
     random_key=jax.random.PRNGKey(1701)
 
-    # temp_client_key = self._id if (type(id) == int and (id % 8 == 0)) else None
     self._actor = make_actor(
       policy, 
       random_key,
       adder=make_adder(self._client),
       variable_source=variable_source,
-      # temp_client_key=self._id
+      temp_client_key=self._id
     )
 
     print("A - flag 2")
     self._environment = environment_factory()
     self._counter = counting.Counter() # prefix='actor'
     self._logger = ActorLogger(
-      interval=10, # log every 10 steps
+      # interval=10, # log every 10 steps
       # disable_printing=(type(id) == int and (id % 4 == 0)) # only get every 4th actor to print shit
     ) # TODO: use config for `interval` arg
 
