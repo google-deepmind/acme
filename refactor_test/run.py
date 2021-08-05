@@ -404,7 +404,7 @@ if __name__ == '__main__':
     "localhost:8000", 
     learner, 
     storage,
-    verbose=False,
+    verbose=True,
     id=str(i)
   ) for i in range(60)]
 
