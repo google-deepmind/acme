@@ -400,8 +400,9 @@ if __name__ == '__main__':
     "localhost:8000", 
     learner, 
     storage,
-    verbose=True
-  ) for _ in range(5)]
+    verbose=True,
+    id=str(i)
+  ) for i in range(5)]
 
   [a.run.remote() for a in actors]
 
