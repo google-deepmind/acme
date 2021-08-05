@@ -208,7 +208,7 @@ class ActorRay():
     def policy(params: networks_lib.Params, key: jnp.ndarray,
                observation: jnp.ndarray) -> jnp.ndarray:
       action_values = network.apply(params, observation) # how will this work when they're on different devices?
-      return rlax.epsilon_greedy(config.epsilon).sample(key, action_values
+      return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
 
 
     print("A - flag 1")
@@ -307,7 +307,7 @@ class LearnerRay():
 
   def run(self, total_learning_steps: int = 2e8):
     if self._verbose: print("Learner: starting training.")
-    
+
     while self._client.server_info()["priority_table"].current_size < max(config.batch_size, config.min_replay_size):
       time.sleep(0.1)
 
