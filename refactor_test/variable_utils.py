@@ -91,6 +91,7 @@ class RayVariableClient:
       self._params = params_list
 
     self._num_updates += 1
+    print("variable updated successfully!")
 
   @property
   def params(self) -> Union[network_types.Params, List[network_types.Params]]:

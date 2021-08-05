@@ -281,7 +281,7 @@ class LearnerRay():
     steps_completed = 0
 
     # TODO: migrate to the learner internal counter instance
-    while steps_completed < total_learning_steps
+    while steps_completed < total_learning_steps:
       steps = self._calculate_num_learner_steps(
         num_observations=self.client.server_info()["priority_table"].current_size,
         min_observations=max(config.batch_size, config.min_replay_size),
@@ -337,7 +337,7 @@ class VariableSourceCaching(): # todo: fix inheritance
     return self._variables
 
 if __name__ == '__main__':
-  ray.init()
+  ray.init(address="auto")
 
   storage = SharedStorage.remote()
   storage.set_info.remote({
@@ -357,7 +357,7 @@ if __name__ == '__main__':
   learner = LearnerRay.remote(
     "localhost:8000",
     storage,
-    verbose=True
+    verbose=Truestonks_variable_client.py
   )
 
   actor = ActorRay(
