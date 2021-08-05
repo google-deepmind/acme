@@ -44,7 +44,10 @@ import uuid
 
 ### PARAMETERS:
 
-config = dqn_config.DQNConfig()
+config = dqn_config.DQNConfig(
+  learning_rate=1e-3,
+  samples_per_insert=0.5
+)
 
 MIN_OBSERVATIONS = max(config.batch_size, config.min_replay_size)
 NUM_STEPS_ACTOR = 32 # taken from agent_test
