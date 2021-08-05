@@ -205,6 +205,9 @@ class ActorRay():
 
     # todo: make this proper splitting and everything
     random_key=jax.random.PRNGKey(1701)
+
+    print("flag 1")
+
     self._actor = make_actor(
       policy, 
       random_key,
