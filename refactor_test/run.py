@@ -397,15 +397,16 @@ if __name__ == '__main__':
     verbose=True
   )
 
+  # important to force the learner onto TPU
   ray.get(learner.get_variables.remote(""))
 
   actors = [ActorRay.remote(
     "localhost:8000", 
     learner, 
     storage,
-    verbose=True,
+    verbose=False,
     id=str(i)
-  ) for i in range(2)]
+  ) for i in range(60)]
 
   [a.run.remote() for a in actors]
 
