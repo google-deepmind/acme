@@ -106,6 +106,7 @@ def network_factory():
 
 def make_actor(policy_network, random_key, adder = None, variable_source = None):
   """Creates an actor."""
+  print("make_actor variable_source:", variable_source, type(variable_source))
   variable_client = RayVariableClient(
       client=variable_source,
       key='',
@@ -289,6 +290,10 @@ class LearnerRay():
     else:
       # Always return 1/obs_per_step batches every observation.
       return int(1 / observations_per_step)
+
+  def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
+    """This has to be called by a wrapper which uses the .remote postfix."""
+    return self.learner.get_variables(names)
 
   def run(self, total_learning_steps: int = 2e8):
     while self._client.server_info()["priority_table"].current_size < max(config.batch_size, config.min_replay_size):
