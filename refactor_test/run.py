@@ -194,7 +194,6 @@ class ActorRay():
 
     self._shared_storage = shared_storage
 
-    # todo: add random_key
     self._client = reverb.Client(reverb_address)
 
     network = network_factory()
@@ -204,6 +203,8 @@ class ActorRay():
       return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
     return policy
 
+    # todo: make this proper splitting and everything
+    random_key=jax.random.PRNGKey(1701)
     self._actor = make_actor(
       policy, 
       random_key,
@@ -253,12 +254,14 @@ class LearnerRay():
       prefetch_size=4,
     ).as_numpy_iterator()
 
+    # todo: sort out the key
+    random_key = jax.random.PRNGKey(1701)
     self._learner = make_learner(
       network_factory(), 
       make_optimizer(), 
       data_iterator, 
       self._client,
-      random_key # todo: sort out the key
+      random_key 
     )
 
   @staticmethod
