@@ -42,7 +42,8 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
                action_repeats: int = 1, # 4
                pooled_frames: int = 1, # 2
                num_stacked_frames: int = 1, # 4
-               max_episode_len: Optional[int] = None):
+               max_episode_len: Optional[int] = None,
+               to_float: bool = False,):
     """Initializes a new AtariWrapper.
     Args:
       environment: An Atari environment.
@@ -74,6 +75,7 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
     self._action_repeats = action_repeats
     self._pooled_frames = pooled_frames
     self._max_abs_reward = max_abs_reward or np.inf
+    self._to_float = to_float
     self._num_stacked_frames = num_stacked_frames
 
     spec = environment.observation_spec()
@@ -96,7 +98,10 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
     Returns:
       An `Array` specification for the ram observations.
     """
-    ram_dtype = np.uint8
+    if self._to_float:
+      ram_dtype = np.float
+    else:
+      ram_dtype = np.uint8
 
     if self._num_stacked_frames == 1:
       ram_spec_shape = (128,)
@@ -107,9 +112,9 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
 
     ram_spec = specs.Array(
         shape=ram_spec_shape, dtype=ram_dtype, name=ram_spec_name)
+    
     # ram_spec = self._frame_stacker.update_spec(ram_spec)
-    # print(ram_spec)
-    # print(ram_spec.shape)
+    
     return ram_spec
 
   def reset(self) -> dm_env.TimeStep:
