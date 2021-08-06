@@ -283,9 +283,7 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
 
     processed_pixels = raw_pixels
     ram_dtype = np.float #if self._to_float else np.uint8
-    print("vibing", processed_pixels)
     processed_pixels = processed_pixels.astype(ram_dtype, copy=False)
-    print("vibes complete", processed_pixels)
     cast_observation = processed_pixels
 
     stacked_observation = self._frame_stacker.step(cast_observation)
