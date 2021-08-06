@@ -245,27 +245,38 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
     """Compute the observation for a stack of timesteps."""
     # We use last timestep for lives only.
     
-    
     observation = timestep_stack[-1].observation
-    if self._num_stacked_frames == 1:
-      pooled_obs = np.max(
+    pooled_obs = np.max(
         np.stack([
             s.observation
             for s in timestep_stack[-self._pooled_frames:]
         ]),
         axis=0)
-    else:
-      tempArray = []
-      for s in timestep_stack:
-        tempArray.append(s.observation)
-      
-      if len(tempArray) < self._num_stacked_frames : 
-        for i in range (self._num_stacked_frames - len(tempArray)):
-          zeroes_array = [0.0] * 128
-          tempArray.append(zeroes_array)
-      pooled_obs = np.stack(tempArray)
+    processed_pixels = self._postprocess_ram(pooled_obs)
+
+    return processed_pixels
+
     
-    return pooled_obs
+    # observation = timestep_stack[-1].observation
+    # if self._num_stacked_frames == 1:
+    #   pooled_obs = np.max(
+    #     np.stack([
+    #         s.observation
+    #         for s in timestep_stack[-self._pooled_frames:]
+    #     ]),
+    #     axis=0)
+    # else:
+    #   tempArray = []
+    #   for s in timestep_stack:
+    #     tempArray.append(s.observation)
+      
+    #   if len(tempArray) < self._num_stacked_frames : 
+    #     for i in range (self._num_stacked_frames - len(tempArray)):
+    #       zeroes_array = [0.0] * 128
+    #       tempArray.append(zeroes_array)
+    #   pooled_obs = np.stack(tempArray)
+    
+    # return pooled_obs
 
   def _postprocess_ram(self, raw_pixels: np.ndarray):
     """Grayscale, cast and normalize the pooled pixel observations."""
