@@ -106,7 +106,7 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
     if self._num_stacked_frames == 1:
       ram_spec_shape = (128,)
     else:
-      ram_spec_shape = (self._num_stacked_frames,128)
+      ram_spec_shape = (self._num_stacked_frames, 128)
     
     ram_spec_name = "RAM"
 

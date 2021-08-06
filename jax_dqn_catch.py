@@ -59,6 +59,8 @@ environment = make_environment()
 
 spec = specs.make_environment_spec(environment)
 
+print(spec)
+
 def network(x):
   model = hk.Sequential([
       hk.Flatten(),
