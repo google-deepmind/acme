@@ -40,7 +40,7 @@ import jax
 
 def make_environment(evaluation: bool = False,
                      level: str = 'BreakoutNoFrameskip-v4') -> dm_env.Environment:
-  env = gym.make(level, full_action_space=True)
+  env = gym.make(level, full_action_space=True, obs_type="ram")
 
   max_episode_len = 108_000 if evaluation else 50_000
 
