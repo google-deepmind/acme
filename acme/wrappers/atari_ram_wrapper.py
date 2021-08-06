@@ -102,14 +102,9 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
       ram_dtype = np.float
     else:
       ram_dtype = np.uint8
-
-    if self._num_stacked_frames == 1:
-      ram_spec_shape = (128,)
-    else:
-      ram_spec_shape = (self._num_stacked_frames, 128)
-    
+   
     ram_spec = specs.Array(
-        shape=ram_spec_shape, dtype=ram_dtype, name="RAM")
+        shape=(128,), dtype=ram_dtype, name="RAM")
     ram_spec = self._frame_stacker.update_spec(ram_spec)
     
     return ram_spec
