@@ -148,8 +148,7 @@ class GymAtariRAMAdapter(GymWrapper):
     """Resets the episode."""
     self._reset_next_step = False
     observation = self._environment.reset()
-    observation = tf.reshape(observation, (1,1,128))
-    # observation = np.reshape(observation, (1,1,128))
+    observation = np.reshape(observation, (1,1,128))
     return dm_env.restart(observation)
 
   def step(self, action: List[np.ndarray]) -> dm_env.TimeStep:
