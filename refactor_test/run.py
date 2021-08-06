@@ -88,7 +88,7 @@ def network_factory():
   """Creates network."""
   def network(x):
     model = hk.Sequential([
-        networks_lib.AtariTorso(),
+        # networks_lib.AtariTorso(),
         hk.Flatten(),
         hk.nets.MLP([50, 50, spec.actions.num_values])
     ])
