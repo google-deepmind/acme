@@ -157,7 +157,7 @@ class GymAtariRAMAdapter(GymWrapper):
       return self.reset()
 
     observation, reward, done, info = self._environment.step(action[0].item())
-    observation = tf.reshape(observation, (1,1,128))
+    observation = np.reshape(observation, (1,1,128))
     self._reset_next_step = done
 
     if done:
