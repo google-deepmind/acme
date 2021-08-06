@@ -62,7 +62,7 @@ from config import DQNConfig
 # jax.config.update('jax_platform_name', "cpu")
 
 config = DQNConfig(
-  learning_rate=1e-3,
+  learning_rate=5e-4,
   # samples_per_insert=0.5
 )
 

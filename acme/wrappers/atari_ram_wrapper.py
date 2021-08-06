@@ -41,7 +41,7 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
                max_abs_reward: Optional[float] = None,
                action_repeats: int = 1, # 4
                pooled_frames: int = 1, # 2
-               num_stacked_frames: int = 1, # 4
+               num_stacked_frames: int = 4,
                max_episode_len: Optional[int] = None,
                to_float: bool = True):
     """Initializes a new AtariWrapper.
@@ -98,22 +98,19 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
     Returns:
       An `Array` specification for the ram observations.
     """
-    # if self._to_float:
-    ram_dtype = np.float
-    # else:
-    #   ram_dtype = np.uint8
+    if self._to_float:
+      ram_dtype = np.float
+    else:
+      ram_dtype = np.uint8
 
     if self._num_stacked_frames == 1:
       ram_spec_shape = (128,)
     else:
       ram_spec_shape = (self._num_stacked_frames, 128)
     
-    ram_spec_name = "RAM"
-
     ram_spec = specs.Array(
-        shape=ram_spec_shape, dtype=ram_dtype, name=ram_spec_name)
-    
-    # ram_spec = self._frame_stacker.update_spec(ram_spec)
+        shape=ram_spec_shape, dtype=ram_dtype, name="RAM")
+    ram_spec = self._frame_stacker.update_spec(ram_spec)
     
     return ram_spec
 
