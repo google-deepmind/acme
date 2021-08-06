@@ -67,7 +67,7 @@ def make_reverb_prioritized_nstep_replay(
       signature=adders.NStepTransitionAdder.signature(environment_spec,
                                                         extra_spec),
   )
-  server = reverb.Server([replay_table], port=8001)
+  server = reverb.Server([replay_table], port=8000)
 
   # The adder is used to insert observations into replay.
   address = f'localhost:{server.port}'
