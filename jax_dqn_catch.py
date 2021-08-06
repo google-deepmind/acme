@@ -45,12 +45,12 @@ def make_environment(evaluation: bool = False,
   max_episode_len = 108_000 if evaluation else 50_000
 
   return wrappers.wrap_all(env, [
-      wrappers.GymAtariAdapter,
+      wrappers.GymAtariRAMAdapter,
       functools.partial(
-          wrappers.AtariWrapper,
-          to_float=True,
+          wrappers.AtariRAMWrapper,
+          # to_float=True,
           max_episode_len=max_episode_len,
-          zero_discount_on_life_loss=True,
+          # zero_discount_on_life_loss=True,
       ),
       wrappers.SinglePrecisionWrapper,
   ])
