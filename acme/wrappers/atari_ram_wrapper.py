@@ -98,10 +98,10 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
     Returns:
       An `Array` specification for the ram observations.
     """
-    if self._to_float:
-      ram_dtype = np.float
-    else:
-      ram_dtype = np.uint8
+    # if self._to_float:
+    ram_dtype = np.float
+    # else:
+    #   ram_dtype = np.uint8
 
     if self._num_stacked_frames == 1:
       ram_spec_shape = (128,)
