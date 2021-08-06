@@ -282,7 +282,7 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
     # This is useful for e.g. making videos.
 
     processed_pixels = raw_pixels
-    ram_dtype = np.float if self._to_float else np.uint8
+    ram_dtype = np.float #if self._to_float else np.uint8
     processed_pixels = processed_pixels.astype(ram_dtype, copy=False)
     cast_observation = processed_pixels
 
