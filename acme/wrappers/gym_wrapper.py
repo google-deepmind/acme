@@ -148,7 +148,8 @@ class GymAtariRAMAdapter(GymWrapper):
     """Resets the episode."""
     self._reset_next_step = False
     observation = self._environment.reset()
-    observation = np.reshape(observation, (1,128))
+    print("reset", observation)
+    observation = np.reshape(observation, (128)) # was (1, 1, 128)
     return dm_env.restart(observation)
 
   def step(self, action: List[np.ndarray]) -> dm_env.TimeStep:
@@ -157,7 +158,8 @@ class GymAtariRAMAdapter(GymWrapper):
       return self.reset()
 
     observation, reward, done, info = self._environment.step(action[0].item())
-    observation = np.reshape(observation, (1,128))
+    print("stepping", observation)
+    observation = np.reshape(observation, (128)) # was (1, 1, 128)
     self._reset_next_step = done
 
     if done:
