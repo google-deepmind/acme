@@ -43,7 +43,7 @@ class AtariRAMWrapper(base.EnvironmentWrapper):
                pooled_frames: int = 1, # 2
                num_stacked_frames: int = 1, # 4
                max_episode_len: Optional[int] = None,
-               to_float: bool = False,):
+               to_float: bool = True):
     """Initializes a new AtariWrapper.
     Args:
       environment: An Atari environment.
