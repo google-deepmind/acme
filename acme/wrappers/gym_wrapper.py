@@ -138,7 +138,7 @@ def _convert_to_spec(space: gym.Space,
     raise ValueError('Unexpected gym space: {}'.format(space))
 
 
-class GymAtariRAMAdapter(wrappers.GymWrapper):
+class GymAtariRAMAdapter(GymWrapper):
   """Specialized wrapper exposing a Gym Atari environment.
   This wraps the Gym Atari environment in the same way as GymWrapper, but
   exposes atari ram states. The resulting observations are 128 byte arrays.
