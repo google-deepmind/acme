@@ -175,7 +175,7 @@ class CheckpointingRunnerTest(test_utils.TestCase):
         directory=directory)
     expected_dir_re = f'{directory}/[a-z0-9-]*/checkpoints/default'
     regexp = re.compile(expected_dir_re)
-    self.assertIsNotNone(regexp.fullmatch(ckpt_runner.directory))
+    self.assertIsNotNone(regexp.fullmatch(ckpt_runner.get_directory()))
 
 
 class SnapshotterTest(test_utils.TestCase):

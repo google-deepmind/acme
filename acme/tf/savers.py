@@ -224,17 +224,19 @@ class CheckpointingRunner(core.Worker):
       self.step()
 
   def __dir__(self):
-    return dir(self._wrapped)
+    return dir(self._wrapped) + ['get_directory']
 
+  # TODO(b/195915583) : Throw when wrapped object has get_directory() method.
   def __getattr__(self, name):
+    if name == 'get_directory':
+      return self.get_directory
     return getattr(self._wrapped, name)
 
   def checkpoint(self):
     self._checkpointer.save()
     time.sleep(self._time_delta_minutes * 60)
 
-  @property
-  def directory(self):
+  def get_directory(self):
     return self._checkpointer.directory
 
 
