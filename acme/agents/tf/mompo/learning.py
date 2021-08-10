@@ -15,6 +15,7 @@
 
 """Multi-objective MPO learner implementation."""
 
+import dataclasses
 import time
 from typing import Callable, List, Optional, Sequence
 
@@ -26,7 +27,6 @@ from acme.tf import savers as tf2_savers
 from acme.tf import utils as tf2_utils
 from acme.utils import counting
 from acme.utils import loggers
-import dataclasses
 import numpy as np
 import sonnet as snt
 import tensorflow as tf

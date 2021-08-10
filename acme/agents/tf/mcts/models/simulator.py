@@ -16,11 +16,10 @@
 """A simulator model, which wraps a copy of the true environment."""
 
 import copy
+import dataclasses
 
 from acme.agents.tf.mcts import types
 from acme.agents.tf.mcts.models import base
-
-import dataclasses
 import dm_env
 
 

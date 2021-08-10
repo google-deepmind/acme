@@ -14,6 +14,7 @@
 
 """Common tools for reverb replay."""
 
+import dataclasses
 from typing import Any, Callable, Dict, Iterator, Optional
 
 from acme import adders as adders_lib
@@ -21,7 +22,6 @@ from acme import datasets
 from acme import specs
 from acme import types
 from acme.adders import reverb as adders
-import dataclasses
 import reverb
 
 

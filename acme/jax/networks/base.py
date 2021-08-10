@@ -16,11 +16,11 @@
 """Base interfaces for networks."""
 
 import abc
+import dataclasses
 from typing import Callable, Tuple
 
 from acme import types
 from acme.jax import types as jax_types
-import dataclasses
 import haiku as hk
 import jax.numpy as jnp
 

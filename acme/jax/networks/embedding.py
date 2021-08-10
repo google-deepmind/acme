@@ -15,10 +15,10 @@
 
 """Modules for computing custom embeddings."""
 
+import dataclasses
+
 from acme.jax.networks import base
 from acme.wrappers import observation_action_reward
-
-import dataclasses
 import haiku as hk
 import jax
 import jax.numpy as jnp

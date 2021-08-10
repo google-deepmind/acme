@@ -16,6 +16,7 @@
 """New version of the RL agent Builder interface (with LearnerCore)."""
 
 import abc
+import dataclasses
 from typing import Callable, Generic, Iterator, List, Optional
 
 from acme import adders
@@ -28,7 +29,6 @@ from acme.jax import networks as networks_lib
 from acme.jax.types import Networks, PolicyNetwork, Sample, TrainingState  # pylint: disable=g-multiple-import
 from acme.utils import counting
 from acme.utils import loggers
-import dataclasses
 import reverb
 
 # Note: we cannot just use GenericMeta, because it doesn't exist in Python 3.7.

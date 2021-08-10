@@ -16,6 +16,7 @@
 """D4PG agent implementation."""
 
 import copy
+import dataclasses
 from typing import Iterator, List, Optional, Tuple
 
 from acme import adders
@@ -32,8 +33,6 @@ from acme.tf import utils
 from acme.tf import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
-
-import dataclasses
 import reverb
 import sonnet as snt
 import tensorflow as tf

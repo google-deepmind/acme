@@ -14,12 +14,12 @@
 # limitations under the License.
 
 """DQN losses."""
+import dataclasses
 from typing import Tuple
 
 from acme import types
 from acme.agents.jax.dqn import learning_lib
 from acme.jax import networks as networks_lib
-import dataclasses
 import jax
 import jax.numpy as jnp
 import reverb

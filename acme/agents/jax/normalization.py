@@ -15,6 +15,7 @@
 
 """Utility classes for input normalization."""
 
+import dataclasses
 import functools
 from typing import Callable, Generic, Iterator, List, Mapping, Optional, Tuple
 
@@ -31,7 +32,6 @@ from acme.jax import variable_utils
 from acme.jax.types import PRNGKey, TrainingState, TrainingStepOutput  # pylint: disable=g-multiple-import
 from acme.utils import counting
 import chex
-import dataclasses
 import dm_env
 import jax
 import reverb

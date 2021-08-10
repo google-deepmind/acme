@@ -15,8 +15,9 @@
 
 """DQN config."""
 
-from acme.adders import reverb as adders_reverb
 import dataclasses
+
+from acme.adders import reverb as adders_reverb
 import numpy as np
 
 

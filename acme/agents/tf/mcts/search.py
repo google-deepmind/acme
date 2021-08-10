@@ -15,12 +15,11 @@
 
 """A Monte Carlo Tree Search implementation."""
 
+import dataclasses
 from typing import Callable, Dict
 
 from acme.agents.tf.mcts import models
 from acme.agents.tf.mcts import types
-
-import dataclasses
 import numpy as np
 
 

@@ -30,10 +30,10 @@ Tensor shapes are annotated, where helpful, as follow:
 (Abdolmaleki, Huang et al., 2020): https://arxiv.org/pdf/2005.07513.pdf
 """
 
+import dataclasses
 from typing import Dict, Sequence, Tuple, Union
 
 from acme.tf.losses import mpo
-import dataclasses
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -264,12 +264,10 @@ class MultiObjectiveMPO(snt.Module):
           fixed_mean_distribution)  # Shape [B].
 
     # Compute the alpha-weighted KL-penalty and dual losses to adapt the alphas.
-    loss_kl_mean, loss_alpha_mean = \
-        mpo.compute_parametric_kl_penalty_and_dual_loss(
-            kl_mean, alpha_mean, self._epsilon_mean)
-    loss_kl_stddev, loss_alpha_stddev = \
-        mpo.compute_parametric_kl_penalty_and_dual_loss(
-            kl_stddev, alpha_stddev, self._epsilon_stddev)
+    loss_kl_mean, loss_alpha_mean = mpo.compute_parametric_kl_penalty_and_dual_loss(
+        kl_mean, alpha_mean, self._epsilon_mean)
+    loss_kl_stddev, loss_alpha_stddev = mpo.compute_parametric_kl_penalty_and_dual_loss(
+        kl_stddev, alpha_stddev, self._epsilon_stddev)
 
     # Combine losses.
     loss_policy = loss_policy_mean + loss_policy_stddev

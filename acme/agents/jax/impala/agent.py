@@ -15,6 +15,7 @@
 
 """Importance weighted advantage actor-critic (IMPALA) agent implementation."""
 
+import dataclasses
 from typing import Callable, Optional, Union
 
 import acme
@@ -28,7 +29,6 @@ from acme.jax import networks
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
-import dataclasses
 import dm_env
 import haiku as hk
 import jax

@@ -15,10 +15,10 @@
 
 """LearnerCore interface definition."""
 
+import dataclasses
 from typing import Callable, Generic
 
 from acme.jax.types import PRNGKey, Sample, TrainingState, TrainingStepOutput, Variables  # pylint: disable=g-multiple-import
-import dataclasses
 
 
 # @final
