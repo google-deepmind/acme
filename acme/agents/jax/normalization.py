@@ -258,7 +258,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
         backend='cpu')
 
 
-# Have to disable pytype invalid-annotation error, as it fails on Kokorox with
+# Have to disable pytype invalid-annotation error, as it fails on Kokoro with
 # Invalid type annotation 'TrainingState': Appears only once in the signature.
 def wrap_learner_core(
     learner_core: learner_core_lib.LearnerCore[reverb.ReplaySample,
@@ -273,7 +273,7 @@ def wrap_learner_core(
 
   State = NormalizationLearnerWrapperState[TrainingState]  # pylint: disable=invalid-name
 
-  def init(random_key: PRNGKey) -> State:
+  def init(random_key: PRNGKey):  # Returns a State.
     return NormalizationLearnerWrapperState(
         learner_core.init(random_key),
         running_statistics.init_state(environment_spec.observations))
