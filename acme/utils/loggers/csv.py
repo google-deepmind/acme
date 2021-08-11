@@ -125,6 +125,8 @@ class CSVLogger(base.Logger):
     if self._writes % self._flush_every == 0:
       self.flush()
     self._writes += 1
+    
+    self._file.close() # Fixes the empty CSV file issue -> https://github.com/deepmind/acme/issues/70
 
   def close(self):
     self.flush()
