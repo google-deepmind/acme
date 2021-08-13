@@ -260,6 +260,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
 
 # Have to disable pytype invalid-annotation error, as it fails on Kokoro with
 # Invalid type annotation 'TrainingState': Appears only once in the signature.
+# pytype: disable=invalid-annotation
 def wrap_learner_core(
     learner_core: learner_core_lib.LearnerCore[reverb.ReplaySample,
                                                TrainingState],
@@ -268,7 +269,7 @@ def wrap_learner_core(
     batch_dims: Optional[Tuple[int, ...]],
     max_abs_observation: Optional[float],
 ) -> learner_core_lib.LearnerCore[
-    reverb.ReplaySample, NormalizationLearnerWrapperState[TrainingState]]:  # pytype: disable=invalid-annotation
+    reverb.ReplaySample, NormalizationLearnerWrapperState[TrainingState]]:
   """Returns a learner wrapper that normalizes observations."""
 
   State = NormalizationLearnerWrapperState[TrainingState]  # pylint: disable=invalid-name
@@ -305,6 +306,7 @@ def wrap_learner_core(
     return learner_variables
 
   return learner_core_lib.LearnerCore(init, step, get_variables)
+# pytype: enable=invalid-annotation
 
 
 @dataclasses.dataclass(init=False)
