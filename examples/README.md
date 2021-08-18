@@ -4,7 +4,7 @@ This directory includes a number of working examples of Acme agents. These
 examples are not meant to be comprehensive and instead show a number of common
 use cases under which Acme agents can be applied.
 
-Our [quickstart guide](quickstart) can be used to get running quickly. This
+Our [quickstart] guide can be used to get running quickly. This
 notebook will show how to instantiate a simple agent and run it on an
 environment. You can also take a look at our [tutorial], which takes a more
 in-depth look at the construction of the D4PG agent. This also highlights the
@@ -41,17 +41,15 @@ order to run. See our [tutorial] for more details or see refer to the
 
 ## Discrete agents (Atari)
 
-The development of the [Arcade Learning environment](ale) and the coinciding use
+The development of the [Arcade Learning environment] and the coinciding use
 of Atari as a benchmark has played a very prominent role in the modern usage and
 testing of reinforcement learning algorithms. As a result we've also included
 direct examples of prominent discrete-action algorithms implemented in Acme and
 running on this environment.
 
 -   [DQN](/../../blob/master/examples/atari/run_dqn.py): a "classic" benchmark agent for Atari; and
--   [R2D2](/../../blob/master/examples/atari/run_r2d2.py): a more recent Q-learning variant which includes
-    recurrence.
 
-[ale]: https://arxiv.org/abs/1207.4708
+[Arcade Learning environment]: https://arxiv.org/abs/1207.4708
 
 
 ## Offline agents
