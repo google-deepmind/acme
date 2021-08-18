@@ -42,7 +42,7 @@ jax_requirements = [
     'dm-haiku',
     'dm-reverb-nightly',
     'optax',
-    'rlax @ git+git://github.com/deepmind/rlax.git#egg=rlax',
+    'rlax',
     'dataclasses',  # Back-port for Python 3.6.
     'tf-nightly',
     'tfp-nightly',

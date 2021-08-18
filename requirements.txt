@@ -16,7 +16,7 @@ optax==0.0.8
 pillow==8.2.0
 pytype==2021.8.11
 pytest-xdist==2.3.0
-rlax @ git+git://github.com/deepmind/rlax.git@3566d85af6d41abba82c20828e1e50f05bc2a559
+rlax==0.0.4
 tensorflow-datasets==4.3.0
 tf-estimator-nightly==2.6.0.dev2021061601
 tf-nightly==2.6.0.dev20210621
