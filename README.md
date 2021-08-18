@@ -107,7 +107,7 @@ follow the steps below:
     ```
 
     See
-    [here](/../../acme/examples/control/lp_local_d4pg.py)
+    [here](/../../blob/master/examples/control/lp_local_d4pg.py)
     for an example of an agent using launchpad. More to come soon!
 
 1.  Finally, to install a few example environments (including [gym],
@@ -148,8 +148,8 @@ If you use Acme in your work, please cite the accompanying
 
 [Agents]: acme/agents/
 [Examples]: examples/
-[Tutorial]: /../../acme/examples/tutorial.ipynb
-[Quickstart]: /../../acme/examples/quickstart.ipynb
+[Tutorial]: /../../blob/master/examples/tutorial.ipynb
+[Quickstart]: /../../blob/master/examples/quickstart.ipynb
 [Documentation]: docs/index.md
 [Paper]: https://arxiv.org/abs/2006.00979
 [Blog post]: https://deepmind.com/research/publications/Acme

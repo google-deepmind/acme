@@ -180,7 +180,7 @@ agent = dmpo.DMPO(
 In this case, the `policy_` and `critic_network` act as heads on top of the
 shared visual torso.
 
-[networks]: /../../acme/tf/networks/
+[networks]: /../../blob/master/acme/tf/networks/
 [sonnet]: https://github.com/deepmind/sonnet/
 
 ## Internal components
@@ -308,13 +308,13 @@ experiences to a Reverb table. The `ReverbAdder`s provided include:
     sequences can be overlapping (if `period < sequence_length`) or
     non-overlapping (if `period >= sequence_length`)
 
-### [Loggers](/../../acme/utils/loggers/)
+### [Loggers](/../../blob/master/acme/utils/loggers/)
 
 Acme contains several loggers for writing out data to common places,
 based on the abstract `Logger` class, all with `write()` methods.<br><br>
 NOTE: By default, loggers will immediately output all data passed through `write()` unless given a nonzero value for the `time_delta` argument when constructing a logger representing the number of seconds between logger outputs. <br>
 
-#### [Terminal Logger](/../../acme/utils/loggers/terminal.py)
+#### [Terminal Logger](/../../blob/master/acme/utils/loggers/terminal.py)
 
 Logs data directly to the terminal.<br><br>
 Example:<br>
@@ -326,7 +326,7 @@ terminal_logger.write({'step': 0, 'reward': 0.0})
 >> TRAINING: step: 0, reward: 0.0
 ```
 
-#### [CSV Logger](/../../acme/utils/loggers/csv.py)
+#### [CSV Logger](/../../blob/master/acme/utils/loggers/csv.py)
 
 Logs to specified CSV file.<Br><br>
 Example:<br>
@@ -336,7 +336,7 @@ csv_logger = loggers.CSVLogger(logdir='logged_data', label='my_csv_file')
 csv_logger.write({'step': 0, 'reward': 0.0})
 ```
 
-### [Tensorflow savers](/../../acme/tf/savers.py)
+### [Tensorflow savers](/../../blob/master/acme/tf/savers.py)
 
 To save trained TensorFlow models, we can *checkpoint* or *snapshot*
 them. <br>
