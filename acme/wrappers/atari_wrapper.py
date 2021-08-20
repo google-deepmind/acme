@@ -423,4 +423,4 @@ def reset(self) -> dm_env.TimeStep:
     if timestep.last():
       timestep = self.environment.reset()
 
-  return timestep
+  return timestep._replace(step_type=dm_env.StepType.FIRST)
