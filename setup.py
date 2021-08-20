@@ -40,20 +40,20 @@ jax_requirements = [
     'jax',
     'jaxlib',
     'dm-haiku',
-    'dm-reverb-nightly',
+    'dm-reverb',
     'optax',
     'rlax',
     'dataclasses',  # Back-port for Python 3.6.
-    'tf-nightly',
+    'tensorflow',
     'tfp-nightly',
     'typing-extensions',
 ]
 
 tf_requirements = [
-    'dm-reverb-nightly',
+    'dm-reverb',
     'dm-sonnet',
     'trfl',
-    'tf-nightly',
+    'tensorflow',
     'tfp-nightly',
 ]
 
