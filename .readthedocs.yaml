@@ -1,0 +1,8 @@
+# Read the Docs configuration.
+version: 2
+mkdocs:
+  configuration: mkdocs.yml
+python:
+   install:
+   - requirements: requirements-docs.txt
+
