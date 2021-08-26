@@ -15,25 +15,6 @@ starting block for novel research. Finally, the building blocks of Acme are
 designed in such a way that the agents can be written at multiple scales (e.g.
 single-stream vs. distributed agents).
 
-<div align="center" style="display: grid; grid-template-columns: auto auto;">
-  <div>
-    <video width="25%" autoplay loop muted>
-      <source src="https://storage.googleapis.com/dm-acme/videos/d4pg_humanoid_run_features_short.webm" type="video/webm">
-    </video>
-    <video width="25%" autoplay loop muted>
-      <source src="https://storage.googleapis.com/dm-acme/videos/d4pg_acrobot_swingup_features_short.webm" type="video/webm">
-    </video>
-  </div>
-  <div>
-    <video width="25%" autoplay loop muted>
-      <source src="https://storage.googleapis.com/dm-acme/videos/r2d2_breakout.webm" type="video/webm">
-    </video>
-    <video width="25%" autoplay loop muted>
-      <source src="https://storage.googleapis.com/dm-acme/videos/r2d2_ms_pacman.webm" type="video/webm">
-    </video>
-  </div>
-</div>
-
 ## Getting started
 
 The quickest way to get started is to take a look at the detailed working code
@@ -55,7 +36,7 @@ in our [technical report][Paper].
 [examples]: examples/
 [tutorial]: https://github.com/deepmind/acme/blob/master/examples/tutorial.ipynb
 [quickstart]: https://github.com/deepmind/acme/blob/master/examples/quickstart.ipynb
-[documentation]: docs/index.md
+[documentation]: https://dm-acme.readthedocs.io/
 [paper]: https://arxiv.org/abs/2006.00979
 
 ## Installation
