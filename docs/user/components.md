@@ -2,12 +2,12 @@
 
 ## Environments
 
-Acme is designed to work with environments which implement the [dm_env
-environment interface][dm_env]. This provides a common API for interacting with
-an environment in order to take actions and receive observations.  This
-environment API also provides a standard way for environments to specify the
-input and output spaces relevant to that environment via methods like
-`environment.action_spec()`. Note that Acme also exposes these spec types
+Acme is designed to work with environments which implement the
+[dm_env environment interface][dm_env]. This provides a common API for
+interacting with an environment in order to take actions and receive
+observations. This environment API also provides a standard way for environments
+to specify the input and output spaces relevant to that environment via methods
+like `environment.action_spec()`. Note that Acme also exposes these spec types
 directly via `acme.specs`. However, it is also common for Acme agents to require
 a _full environment spec_ which can be obtained by making use of
 `acme.make_environment_spec(environment)`.
@@ -25,11 +25,12 @@ where additional parameters may be passed to the wrapper to control its behavior
 (see individual implementations for more details). Wrappers exposed directly
 include
 
-- `SinglePrecisionWrapper`: converts any double-precision `float` and `int`
-  components returned by the environment to single-precision.
-- `AtariWrapper`: converts a standard ALE Atari environment using a stack of
-  wrappers corresponding to the modifications used in the "[Human Level Control
-  Through Deep Reinforcement Learning][nature-atari]" publication.
+-   `SinglePrecisionWrapper`: converts any double-precision `float` and `int`
+    components returned by the environment to single-precision.
+-   `AtariWrapper`: converts a standard ALE Atari environment using a stack of
+    wrappers corresponding to the modifications used in the
+    "[Human Level Control Through Deep Reinforcement Learning][nature-atari]"
+    publication.
 
 Acme also includes the `acme.wrappers.gym_wrapper` module which can be used to
 interact with [OpenAI Gym][gym] environments. This includes a general
@@ -73,7 +74,7 @@ tfd = tfp.distributions
 
 While custom Sonnet modules can be implemented and used directly, Acme also
 provides a number of useful network primitives which are tailored to RL tasks;
-these can be imported from `acme.tf.networks`, see [networks] for more details.
+these can be imported from `acme.tf.networks`, see [networks] for more examples.
 These primitives can be combined using `snt.Sequential`, or `snt.DeepRNN` when
 stacking network modules with state.
 
@@ -180,7 +181,7 @@ agent = dmpo.DMPO(
 In this case, the `policy_` and `critic_network` act as heads on top of the
 shared visual torso.
 
-[networks]: /../../blob/master/acme/tf/networks/
+[networks]: https://github.com/deepmind/acme/blob/master/acme/tf/networks/
 [sonnet]: https://github.com/deepmind/sonnet/
 
 ## Internal components
@@ -200,22 +201,21 @@ TensorFlow 2.
 
 RL-specific losses implemented include:
 
--   a [distributional TD loss](distributional) for categorical distributions;
+-   a [distributional TD loss][distributional] for categorical distributions;
     see [Bellemare et al., 2017].
--   the Deterministic Policy Gradient [(DPG) loss](dpg); see
+-   the Deterministic Policy Gradient [(DPG) loss][dpg]; see
     [Silver et al., 2014].
--   the Maximum a posteriori Policy Optimization [(MPO) loss](mpo); see
+-   the Maximum a posteriori Policy Optimization [(MPO) loss][mpo]; see
     [Abdolmaleki et al., 2018].
 
 Also implemented (and useful within the losses mentioned above) are:
 
-- the [Huber loss](huber) for robust regression.
+-   the [Huber loss][huber] for robust regression.
 
-[distributional]: distributional.py
-[dpg]: dpg.py
-[mpo]: mpo.py
-[huber]: huber.py
-
+[distributional]: https://github.com/deepmind/acme/blob/master/acme/tf/losses/distributional.py
+[dpg]: https://github.com/deepmind/acme/blob/master/acme/tf/losses/dpg.py
+[mpo]: https://github.com/deepmind/acme/blob/master/acme/tf/losses/mpo.py
+[huber]: https://github.com/deepmind/acme/blob/master/acme/tf/losses/huber.py
 [Abdolmaleki et al., 2018]: https://arxiv.org/abs/1806.06920
 [Bellemare et al., 2017]: https://arxiv.org/abs/1707.06887
 [Silver et al., 2014]: http://proceedings.mlr.press/v32/silver14
@@ -256,7 +256,7 @@ while not timestep.last():
 
 ### ReverbAdders
 
-Acme uses [Reverb](http://github.com/deepmind/reverb) for creating data structures like 
+Acme uses [Reverb](http://github.com/deepmind/reverb) for creating data structures like
 *replay buffers* to store RL experiences.
 
 For convenience, Acme provides several `ReverbAdders` for adding actor
@@ -308,13 +308,13 @@ experiences to a Reverb table. The `ReverbAdder`s provided include:
     sequences can be overlapping (if `period < sequence_length`) or
     non-overlapping (if `period >= sequence_length`)
 
-### [Loggers](/../../blob/master/acme/utils/loggers/)
+### [Loggers](https://github.com/deepmind/acme/blob/master/acme/utils/loggers/)
 
 Acme contains several loggers for writing out data to common places,
 based on the abstract `Logger` class, all with `write()` methods.<br><br>
 NOTE: By default, loggers will immediately output all data passed through `write()` unless given a nonzero value for the `time_delta` argument when constructing a logger representing the number of seconds between logger outputs. <br>
 
-#### [Terminal Logger](/../../blob/master/acme/utils/loggers/terminal.py)
+#### [Terminal Logger](https://github.com/deepmind/acme/blob/master/acme/utils/loggers/terminal.py)
 
 Logs data directly to the terminal.<br><br>
 Example:<br>
@@ -326,7 +326,7 @@ terminal_logger.write({'step': 0, 'reward': 0.0})
 >> TRAINING: step: 0, reward: 0.0
 ```
 
-#### [CSV Logger](/../../blob/master/acme/utils/loggers/csv.py)
+#### [CSV Logger](https://github.com/deepmind/acme/blob/master/acme/utils/loggers/csv.py)
 
 Logs to specified CSV file.<Br><br>
 Example:<br>
@@ -336,7 +336,7 @@ csv_logger = loggers.CSVLogger(logdir='logged_data', label='my_csv_file')
 csv_logger.write({'step': 0, 'reward': 0.0})
 ```
 
-### [Tensorflow savers](/../../blob/master/acme/tf/savers.py)
+### [Tensorflow savers](https://github.com/deepmind/acme/blob/master/acme/tf/savers.py)
 
 To save trained TensorFlow models, we can *checkpoint* or *snapshot*
 them. <br>
@@ -364,4 +364,3 @@ Acme provides Checkpointer and Snapshotter classes to checkpoint and snapshot
    checkpointer.save()
    snapshotter.save()
 ```
-

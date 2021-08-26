@@ -1,21 +1,19 @@
-<img src="docs/logos/acme.png" width="50%">
+<img src="docs/imgs/acme.png" width="50%">
 
 # Acme: a research framework for reinforcement learning
-
-**[Overview](#overview)** | **[Installation](#installation)** |
-**[Documentation]** | **[Agents]** | **[Examples]** | **[Paper]** |
-**[Blog post]**
 
 ![PyPI Python Version](https://img.shields.io/pypi/pyversions/dm-acme)
 ![PyPI version](https://badge.fury.io/py/dm-acme.svg)
 ![acme-tests](https://github.com/deepmind/acme/workflows/acme-tests/badge.svg)
 
-Acme is a library of reinforcement learning (RL) agents and agent building
-blocks. Acme strives to expose simple, efficient, and readable agents, that
-serve both as reference implementations of popular algorithms and as strong
-baselines, while still providing enough flexibility to do novel research. The
-design of Acme also attempts to provide multiple points of entry to the RL
-problem at differing levels of complexity.
+Acme is a library of reinforcement learning (RL) building blocks that strives to
+expose simple, efficient, and readable agents. These agents first and foremost
+serve both as reference implementations as well as providing strong baselines
+for algorithm performance. However, the baseline agents exposed by Acme should
+also provide enough flexibility and simplicity that they can be used as a
+starting block for novel research. Finally, the building blocks of Acme are
+designed in such a way that the agents can be written at multiple scales (e.g.
+single-stream vs. distributed agents).
 
 <div align="center" style="display: grid; grid-template-columns: auto auto;">
   <div>
@@ -36,41 +34,29 @@ problem at differing levels of complexity.
   </div>
 </div>
 
-## Overview
+## Getting started
 
-If you just want to get started using Acme quickly, the main thing to know about
-the library is that we expose a number of agent implementations and an
-`EnvironmentLoop` primitive that can be used as follows:
+The quickest way to get started is to take a look at the detailed working code
+examples found in the [examples] subdirectory. These show how to instantiate a a
+number of different agents and run them within a variety of environments. See
+the [quickstart notebook][Quickstart] for an even quicker dive into using a
+single agent. Even more detail on the internal construction of an agent can be
+found inside our [tutorial notebook][Tutorial]. Finally, a full description Acme
+and its underlying components can be found by referring to the [documentation].
+More background information and details behind the design decisions can be found
+in our [technical report][Paper].
 
-```python
-loop = acme.EnvironmentLoop(environment, agent)
-loop.run()
-```
-
-This will run a simple loop in which the given agent interacts with its
-environment and learns from this interaction. This assumes an `agent` instance
-(implementations of which you can find [here][Agents]) and an `environment`
-instance which implements the [DeepMind Environment API][dm_env]. Each
-individual agent also includes a `README.md` file describing the implementation
-in more detail. Of course, these two lines of code definitely simplify the
-picture. To actually get started, take a look at the detailed working code
-examples found in our [examples] subdirectory which show how to instantiate a
-few agents and environments. We also include a
-[quickstart notebook][Quickstart].
-
-Acme also tries to maintain this level of simplicity while either diving deeper
-into the agent algorithms or by using them in more complicated settings. An
-overview of Acme along with more detailed descriptions of its underlying
-components can be found by referring to the [documentation]. And we also include
-a [tutorial notebook][Tutorial] which describes in more detail the underlying
-components behind a typical Acme agent and how these can be combined to form a
-novel implementation.
-
-> :information_source: Acme is first and foremost a framework for RL research written by
+> NOTE: Acme is first and foremost a framework for RL research written by
 > researchers, for researchers. We use it for our own work on a daily basis. So
 > with that in mind, while we will make every attempt to keep everything in good
 > working order, things may break occasionally. But if so we will make our best
 > effort to fix them as quickly as possible!
+
+[examples]: examples/
+[tutorial]: https://github.com/deepmind/acme/blob/master/examples/tutorial.ipynb
+[quickstart]: https://github.com/deepmind/acme/blob/master/examples/quickstart.ipynb
+[documentation]: docs/index.md
+[paper]: https://arxiv.org/abs/2006.00979
 
 ## Installation
 
@@ -107,7 +93,7 @@ follow the steps below:
     ```
 
     See
-    [here](/../../blob/master/examples/control/lp_local_d4pg.py)
+    [here](https://github.com/deepmind/acme/blob/master/examples/control/lp_local_d4pg.py)
     for an example of an agent using launchpad. More to come soon!
 
 1.  Finally, to install a few example environments (including [gym],
@@ -129,7 +115,7 @@ follow the steps below:
 ## Citing Acme
 
 If you use Acme in your work, please cite the accompanying
-[technical report][Paper]:
+[technical report][paper]:
 
 ```bibtex
 @article{hoffman2020acme,
@@ -146,14 +132,6 @@ If you use Acme in your work, please cite the accompanying
 }
 ```
 
-[Agents]: acme/agents/
-[Examples]: examples/
-[Tutorial]: /../../blob/master/examples/tutorial.ipynb
-[Quickstart]: /../../blob/master/examples/quickstart.ipynb
-[Documentation]: docs/index.md
-[Paper]: https://arxiv.org/abs/2006.00979
-[Blog post]: https://deepmind.com/research/publications/Acme
-[Reverb]: https://github.com/deepmind/reverb
 [JAX]: https://github.com/google/jax
 [TensorFlow]: https://tensorflow.org
 [gym]: https://github.com/openai/gym

@@ -11,7 +11,7 @@
     interface. See e.g. the `acme.wrappers.gym_wrapper` module which can be used
     to interact with [OpenAI Gym][gym] environments.
 
-    Note: Follow the instructions [here](atari) to install ROMs for Atari
+    Note: Follow the instructions [here][atari] to install ROMs for Atari
     environments.
 
     Similarly, _learners_ in Acme are designed to consume dataset iterators

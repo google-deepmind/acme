@@ -1,0 +1,10 @@
+site_name: Acme
+theme:
+  name: readthedocs
+  logo: logos/acme.png
+nav:
+    - Home: 'index.md'
+    - Overview: 'user/overview.md'
+    - Agents: 'user/agents.md'
+    - Components: 'user/components.md'
+    - FAQ: 'faq.md'
