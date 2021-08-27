@@ -1,8 +1,8 @@
 # Read the Docs configuration.
 version: 2
-mkdocs:
-  configuration: mkdocs.yml
+sphinx:
+   configuration: docs/conf.py
 python:
    install:
-   - requirements: requirements-docs.txt
+   - requirements: docs/requirements.txt
 

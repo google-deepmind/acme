@@ -1,4 +1,5 @@
-# Acme
+Welcome to Acme
+---------------
 
 Acme is a library of reinforcement learning (RL) building blocks that strives to
 expose simple, efficient, and readable agents. These agents first and foremost
@@ -9,9 +10,17 @@ starting block for novel research. Finally, the building blocks of Acme are
 designed in such a way that the agents can be written at multiple scales (e.g.
 single-stream vs. distributed agents).
 
-## Documentation
+.. toctree::
+   :hidden:
+   :titlesonly:
 
-*   [Overview](user/overview.md)
-*   [Agents](user/agents.md)
-*   [Components](user/components.md)
-*   [FAQ](faq.md)
+   self
+
+
+.. toctree:: :caption: Getting started
+   :titlesonly:
+
+   user/overview
+   user/agents
+   user/components
+   faq
