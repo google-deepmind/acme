@@ -2,9 +2,17 @@
 
 # Acme: a research framework for reinforcement learning
 
-![PyPI Python Version](https://img.shields.io/pypi/pyversions/dm-acme)
-![PyPI version](https://badge.fury.io/py/dm-acme.svg)
-![acme-tests](https://github.com/deepmind/acme/workflows/acme-tests/badge.svg)
+[![PyPI Python Version][pypi-versions-badge]][pypi]
+[![PyPI version][pypi-badge]][pypi]
+[![acme-tests][tests-badge]][tests]
+[![Documentation Status][rtd-badge]][documentation]
+
+[pypi-versions-badge]: https://img.shields.io/pypi/pyversions/dm-acme
+[pypi-badge]: https://badge.fury.io/py/dm-acme.svg
+[pypi]: https://pypi.org/project/dm-acme/
+[tests-badge]: https://github.com/deepmind/acme/workflows/acme-tests/badge.svg
+[tests]: https://github.com/deepmind/acme/actions/workflows/ci.yml
+[rtd-badge]: https://readthedocs.org/projects/dm-acme/badge/?version=latest
 
 Acme is a library of reinforcement learning (RL) building blocks that strives to
 expose simple, efficient, and readable agents. These agents first and foremost
