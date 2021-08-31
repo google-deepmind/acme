@@ -34,8 +34,19 @@ class ReverbUtilsTest(absltest.TestCase):
         remover=reverb.selectors.Fifo(),
         max_size=10,
         rate_limiter=limiter)
-    table_from_info = reverb_utils.make_replay_table_from_info(table.info)
-    self.assertEqual(table_from_info.info, table.info)
+    new_table = reverb_utils.make_replay_table_from_info(table.info)
+    new_info = new_table.info
+
+    # table_worker_time is not set by the above utility since this is meant to
+    # be monitoring information about any given table. So instead we copy this
+    # so that the assertion below checks that everything else matches.
+
+    # TODO(b/198297886): eliminate hasattr which exists for backwards compat.
+    if hasattr(table.info, 'table_worker_time'):
+      new_info.table_worker_time.sleeping_ms = (
+          table.info.table_worker_time.sleeping_ms)
+
+    self.assertEqual(new_info, table.info)
 
   _EMPTY_INFO = reverb.SampleInfo((), (), (), ())
   _DUMMY_OBS = np.array([[[0], [1], [2]]])
