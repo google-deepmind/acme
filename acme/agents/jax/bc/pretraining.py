@@ -42,19 +42,16 @@ def train_with_bc(make_demonstrations: Callable[[int],
   """
   demonstration_iterator = make_demonstrations(256)
 
-  learner_core = learning.make_bc_learner_core(
-      network=networks, loss_fn=loss, optimizer=optax.adam(1e-4))
-
-  step_fn = jax.jit(learner_core.step)
-
-  # Note: this training is deterministic. Consider proper seeding.
-  state = learner_core.init(jax.random.PRNGKey(0))
+  learner = learning.BCLearner(
+      network=networks, random_key=jax.random.PRNGKey(0), loss_fn=loss,
+      demonstrations=demonstration_iterator, optimizer=optax.adam(1e-4),
+      num_sgd_steps_per_step=1)
 
   # Train the agent
   for _ in range(num_steps):
-    state = step_fn(state, next(demonstration_iterator)).state
+    learner.step()
 
-  return state.policy_params
+  return learner.get_variables(['policy'])[0]
 
 
 def convert_to_bc_network(
