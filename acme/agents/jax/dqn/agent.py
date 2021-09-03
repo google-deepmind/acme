@@ -20,7 +20,8 @@ from acme.agents import agent
 from acme.agents import replay
 from acme.agents.jax import actors
 from acme.agents.jax.dqn import config as dqn_config
-from acme.agents.jax.dqn import learning
+from acme.agents.jax.dqn import learning_lib
+from acme.agents.jax.dqn import losses
 from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
 import jax
@@ -63,14 +64,17 @@ class DQNFromConfig(agent.Agent):
     )
     key_learner, key_actor = jax.random.split(jax.random.PRNGKey(config.seed))
     # The learner updates the parameters (and initializes them).
-    learner = learning.DQNLearner(
-        network=network,
-        random_key=key_learner,
-        optimizer=optimizer,
+    loss_fn = losses.PrioritizedDoubleQLearning(
         discount=config.discount,
         importance_sampling_exponent=config.importance_sampling_exponent,
+    )
+    learner = learning_lib.SGDLearner(
+        network=network,
+        loss_fn=loss_fn,
+        data_iterator=reverb_replay.data_iterator,
+        optimizer=optimizer,
         target_update_period=config.target_update_period,
-        iterator=reverb_replay.data_iterator,
+        random_key=key_learner,
         replay_client=reverb_replay.client,
     )
 

@@ -20,3 +20,5 @@ from acme.agents.jax.dqn.builder import default_behavior_policy
 from acme.agents.jax.dqn.builder import DQNBuilder
 from acme.agents.jax.dqn.config import DQNConfig
 from acme.agents.jax.dqn.learning import DQNLearner
+from acme.agents.jax.dqn.learning_lib import SGDLearner
+from acme.agents.jax.dqn.losses import PrioritizedDoubleQLearning
