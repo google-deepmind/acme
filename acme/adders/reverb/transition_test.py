@@ -93,6 +93,33 @@ TEST_CASES = [
             types.Transition(3, 0, 1.0, 0.0, 4, {'state': 2}),
         )),
     dict(
+        testcase_name='OneStepExtrasZeroes',
+        n_step=1,
+        additional_discount=1.0,
+        first=dm_env.restart(1),
+        steps=(
+            (
+                0,
+                dm_env.transition(reward=0.0, observation=2),
+                np.zeros(1),
+            ),
+            (
+                0,
+                dm_env.transition(reward=0.0, observation=3),
+                np.zeros(1),
+            ),
+            (
+                0,
+                dm_env.termination(reward=1.0, observation=4),
+                np.zeros(1),
+            ),
+        ),
+        expected_transitions=(
+            types.Transition(1, 0, 0.0, 1.0, 2, np.zeros(1)),
+            types.Transition(2, 0, 0.0, 1.0, 3, np.zeros(1)),
+            types.Transition(3, 0, 1.0, 0.0, 4, np.zeros(1)),
+        )),
+    dict(
         testcase_name='TwoStep',
         n_step=2,
         additional_discount=1.0,

@@ -16,7 +16,7 @@
 """Adders that use Reverb (github.com/deepmind/reverb) as a backend."""
 
 import abc
-from typing import Callable, Iterable, Mapping, NamedTuple, Optional, Union, Tuple
+from typing import Callable, Iterable, Mapping, NamedTuple, Optional, Sized, Union, Tuple
 
 from absl import logging
 from acme import specs
@@ -176,13 +176,15 @@ class ReverbAdder(base.Adder):
       raise ValueError('adder.add_first must be called before adder.add.')
 
     # Add the timestep to the buffer.
+    has_extras = (len(extras) > 0 if isinstance(extras, Sized)  # pylint: disable=g-explicit-length-test
+                  else extras is not None)
     current_step = dict(
         # Observation was passed at the previous add call.
         action=action,
         reward=next_timestep.reward,
         discount=next_timestep.discount,
         # Start of episode indicator was passed at the previous add call.
-        **({'extras': extras} if extras else {})
+        **({'extras': extras} if has_extras else {})
     )
     self._writer.append(current_step)
 
