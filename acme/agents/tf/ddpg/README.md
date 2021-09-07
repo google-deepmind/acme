@@ -1,9 +1,8 @@
 # Deep Deterministic Policy Gradient (DDPG)
 
 This folder contains an implementation of the DDPG agent introduced in (
-[Lillicrap et al., 2015]),
-which extends the Deterministic Policy Gradient (DPG) algorithm (introduced
-in [Silver et al., 2014]) to the realm of deep learning.
+[Lillicrap et al., 2015]), which extends the Deterministic Policy Gradient (DPG)
+algorithm (introduced in [Silver et al., 2014]) to the realm of deep learning.
 
 DDPG is an off-policy [actor-critic algorithm]. In this algorithm, critic is a
 network that takes an observation and an action and outputs a value estimate
