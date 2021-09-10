@@ -292,14 +292,15 @@ def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
     array will be copied to the host machine and converted into a `np.ndarray`.
   """
 
-  def _slice_and_maybe_to_numpy(x):
+  def _check_type_and_slice(x):
     if not isinstance(x, jax.pxla.ShardedDeviceArray):
       raise ValueError('get_from_first_device should only be used with '
                        f'{jax.pxla.ShardedDeviceArray}, passed {type(x)}.')
-    x = x[0]
-    return _fetch_devicearray(x) if as_numpy else x
+    return x[0]
 
-  return jax.tree_map(_slice_and_maybe_to_numpy, nest)
+  zeroth_nest = jax.tree_map(_check_type_and_slice, nest)
+
+  return jax.device_get(zeroth_nest) if as_numpy else zeroth_nest
 
 
 def mapreduce(

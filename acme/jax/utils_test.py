@@ -18,8 +18,12 @@
 from absl.testing import absltest
 from acme.jax import utils
 
+import chex
 import jax
 import jax.numpy as jnp
+import numpy as np
+
+chex.set_n_cpu_devices(4)
 
 
 class JaxUtilsTest(absltest.TestCase):
@@ -48,6 +52,41 @@ class JaxUtilsTest(absltest.TestCase):
     z = f(jnp.ones(shape=(32,)), jnp.ones(shape=(32,)))
     z = jax.device_get(z)
     self.assertEqual(z, 4)
+
+  def test_get_from_first_device(self):
+    sharded = {
+        'a':
+            jax.device_put_sharded(
+                list(jnp.arange(16).reshape([jax.local_device_count(), 4])),
+                jax.local_devices()),
+        'b':
+            jax.device_put_sharded(
+                list(jnp.arange(8).reshape([jax.local_device_count(), 2])),
+                jax.local_devices(),
+            ),
+    }
+
+    want = {
+        'a': jnp.arange(4),
+        'b': jnp.arange(2),
+    }
+
+    # Get zeroth device content as DeviceArray.
+    device_arrays = utils.get_from_first_device(sharded, as_numpy=False)
+    jax.tree_map(
+        lambda x: self.assertIsInstance(x, jax.xla.DeviceArray),
+        device_arrays)
+    jax.tree_map(np.testing.assert_array_equal, want, device_arrays)
+
+    # Get the zeroth device content as numpy arrays.
+    numpy_arrays = utils.get_from_first_device(sharded, as_numpy=True)
+    jax.tree_map(lambda x: self.assertIsInstance(x, np.ndarray), numpy_arrays)
+    jax.tree_map(np.testing.assert_array_equal, want, numpy_arrays)
+
+  def test_get_from_first_device_fails_if_sda_not_provided(self):
+    with self.assertRaises(ValueError):
+      utils.get_from_first_device({'a': np.arange(jax.local_device_count())})
+
 
 if __name__ == '__main__':
   absltest.main()
