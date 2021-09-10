@@ -274,7 +274,7 @@ def replicate_in_all_devices(nest: N,
                             ) -> N:
   """Replicate array nest in all available devices."""
   devices = devices or jax.local_devices()
-  return jax.api.device_put_sharded([nest] * len(devices), devices)
+  return jax.device_put_sharded([nest] * len(devices), devices)
 
 
 def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
