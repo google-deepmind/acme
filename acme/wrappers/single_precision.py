@@ -57,6 +57,9 @@ def _convert_spec(nested_spec: types.NestedSpec) -> types.NestedSpec:
 
   def _convert_single_spec(spec: specs.Array):
     """Convert a single spec."""
+    if spec.dtype == 'O':
+      # Pass StringArray objects through unmodified.
+      return spec
     if np.issubdtype(spec.dtype, np.float64):
       dtype = np.float32
     elif np.issubdtype(spec.dtype, np.int64):
