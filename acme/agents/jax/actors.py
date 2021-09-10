@@ -74,12 +74,12 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
 
     self._adder = adder
     self._state = None
-    self._client = variable_client
+    self._variable_client = variable_client
 
   def select_action(self,
                     observation: network_lib.Observation) -> types.NestedArray:
-    action, self._state = self._policy(self._client.params, observation,
-                                       self._state)
+    action, self._state = self._policy(self._variable_client.params,
+                                       observation, self._state)
     return utils.to_numpy(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
@@ -94,7 +94,7 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
           action, next_timestep, extras=self._get_extras(self._state))
 
   def update(self, wait: bool = False):
-    self._client.update(wait)
+    self._variable_client.update(wait)
 
 
 # TODO(raveman): Migrate all users of FeedForwardActor to GenericActor and
@@ -148,11 +148,11 @@ class FeedForwardActor(core.Actor):
     self._policy = jax.jit(batched_policy, backend=backend)
 
     self._adder = adder
-    self._client = variable_client
+    self._variable_client = variable_client
 
   def select_action(self,
                     observation: network_lib.Observation) -> types.NestedArray:
-    result, self._random_key = self._policy(self._client.params,
+    result, self._random_key = self._policy(self._variable_client.params,
                                             self._random_key, observation)
     if self._has_extras:
       action, self._extras = result
@@ -169,7 +169,7 @@ class FeedForwardActor(core.Actor):
       self._adder.add(action, next_timestep, extras=self._extras)
 
   def update(self, wait: bool = False):
-    self._client.update(wait)
+    self._variable_client.update(wait)
 
 
 # TODO(raveman): Migrate all users of RecurrentActor to GenericActor and
@@ -233,12 +233,12 @@ class RecurrentActor(core.Actor):
 
     self._initial_state = self._prev_state = self._state = initial_core_state
     self._adder = adder
-    self._client = variable_client
+    self._variable_client = variable_client
 
   def select_action(self,
                     observation: network_lib.Observation) -> network_lib.Action:
     result, new_state, self._random_key = self._recurrent_policy(
-        self._client.params,
+        self._variable_client.params,
         key=self._random_key,
         observation=observation,
         core_state=self._state)
@@ -275,4 +275,4 @@ class RecurrentActor(core.Actor):
       self._adder.add(action, next_timestep, extras=extras)
 
   def update(self, wait: bool = False):
-    self._client.update(wait)
+    self._variable_client.update(wait)
