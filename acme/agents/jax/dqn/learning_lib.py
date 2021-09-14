@@ -141,16 +141,15 @@ class SGDLearner(acme.Learner):
     )
 
     # Update replay priorities
-    def update_priorities(reverb_update: Optional[ReverbUpdate]) -> None:
-      if reverb_update is None or replay_client is None:
+    def update_priorities(reverb_update: ReverbUpdate) -> None:
+      if replay_client is None:
         return
-      else:
-        keys, priorities = tree.map_structure(
-            utils.fetch_devicearray,
-            (reverb_update.keys, reverb_update.priorities))
-        replay_client.mutate_priorities(
-            table=adders.DEFAULT_PRIORITY_TABLE,
-            updates=dict(zip(keys, priorities)))
+      keys, priorities = tree.map_structure(
+          utils.fetch_devicearray,
+          (reverb_update.keys, reverb_update.priorities))
+      replay_client.mutate_priorities(
+          table=adders.DEFAULT_PRIORITY_TABLE,
+          updates=dict(zip(keys, priorities)))
     self._replay_client = replay_client
     self._async_priority_updater = async_utils.AsyncExecutor(update_priorities)
 
@@ -159,7 +158,7 @@ class SGDLearner(acme.Learner):
     batch = next(self._data_iterator)
     self._state, extra = self._sgd_step(self._state, batch)
 
-    if self._replay_client:
+    if self._replay_client and extra.reverb_update:
       reverb_update = extra.reverb_update._replace(keys=batch.info.key)
       self._async_priority_updater.put(reverb_update)
 
