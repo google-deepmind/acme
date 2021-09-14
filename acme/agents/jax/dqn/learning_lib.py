@@ -29,6 +29,7 @@ import jax.numpy as jnp
 import optax
 import reverb
 import rlax
+import tree
 import typing_extensions
 
 
@@ -144,9 +145,12 @@ class SGDLearner(acme.Learner):
       if reverb_update is None or replay_client is None:
         return
       else:
+        keys, priorities = tree.map_structure(
+            utils.fetch_devicearray,
+            (reverb_update.keys, reverb_update.priorities))
         replay_client.mutate_priorities(
             table=adders.DEFAULT_PRIORITY_TABLE,
-            updates=dict(zip(reverb_update.keys, reverb_update.priorities)))
+            updates=dict(zip(keys, priorities)))
     self._replay_client = replay_client
     self._async_priority_updater = async_utils.AsyncExecutor(update_priorities)
 

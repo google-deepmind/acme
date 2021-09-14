@@ -82,7 +82,7 @@ class DQNBuilder(builders.ActorLearnerBuilder):
         target_update_period=self._config.target_update_period,
         data_iterator=dataset,
         loss_fn=self._loss_fn,
-        replay_client=None,
+        replay_client=replay_client,
         counter=counter,
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
         logger=self._logger_fn())
