@@ -85,7 +85,6 @@ def stack_sequence_fields(sequence: Sequence[ElementType]) -> ElementType:
 
   # Default to asarray when arrays don't have the same shape to be compatible
   # with old behaviour.
-  # TODO(b/169306678) make this more elegant.
   try:
     return fast_map_structure(lambda *values: np.stack(values), *sequence)
   except ValueError:
