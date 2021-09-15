@@ -55,6 +55,7 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
       random_key: network_lib.PRNGKey,
       variable_client: variable_utils.VariableClient,
       adder: Optional[adders.Adder] = None,
+      jit: bool = True,
       backend: Optional[str] = 'cpu',
   ):
     """Initializes a feed forward actor.
@@ -64,17 +65,22 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
       random_key: Random key.
       variable_client: The variable client to get policy parameters from.
       adder: An adder to add experiences to.
-      backend: Which backend to use for running the policy.
+      jit: Whether or not to jit the passed ActorCore's pure functions.
+      backend: Which backend to use when jitting the policy.
     """
     self._random_key = random_key
-
-    self._init = jax.jit(actor.init)
-    self._policy = jax.jit(actor.select_action, backend=backend)
-    self._get_extras = actor.get_extras
-
+    self._variable_client = variable_client
     self._adder = adder
     self._state = None
-    self._variable_client = variable_client
+
+    # Unpack ActorCore, jitting if requested.
+    if jit:
+      self._init = jax.jit(actor.init, backend=backend)
+      self._policy = jax.jit(actor.select_action, backend=backend)
+    else:
+      self._init = actor.init
+      self._policy = actor.select_action
+    self._get_extras = actor.get_extras
 
   def select_action(self,
                     observation: network_lib.Observation) -> types.NestedArray:
