@@ -298,9 +298,19 @@ class MPO(snt.Module):
       stats["penalty_kl_q_rel"] = tf.reduce_mean(
           penalty_kl_nonparametric) / self._epsilon_penalty
 
-    stats["kl_mean_rel"] = tf.reduce_mean(kl_mean, axis=0) / self._epsilon_mean
-    stats["kl_stddev_rel"] = tf.reduce_mean(
-        kl_stddev, axis=0) / self._epsilon_stddev
+    stats["kl_mean_rel"] = tf.reduce_mean(kl_mean) / self._epsilon_mean
+    stats["kl_stddev_rel"] = tf.reduce_mean(kl_stddev) / self._epsilon_stddev
+    if self._per_dim_constraining:
+      # When KL is constrained per-dimension, we also log per-dimension min and
+      # max of mean/std of the realized KL costs.
+      stats["kl_mean_rel_min"] = tf.reduce_min(tf.reduce_mean(
+          kl_mean, axis=0)) / self._epsilon_mean
+      stats["kl_mean_rel_max"] = tf.reduce_max(tf.reduce_mean(
+          kl_mean, axis=0)) / self._epsilon_mean
+      stats["kl_stddev_rel_min"] = tf.reduce_min(
+          tf.reduce_mean(kl_stddev, axis=0)) / self._epsilon_stddev
+      stats["kl_stddev_rel_max"] = tf.reduce_max(
+          tf.reduce_mean(kl_stddev, axis=0)) / self._epsilon_stddev
     # Q measurements.
     stats["q_min"] = tf.reduce_mean(tf.reduce_min(q_values, axis=0))
     stats["q_max"] = tf.reduce_mean(tf.reduce_max(q_values, axis=0))
