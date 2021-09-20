@@ -22,6 +22,7 @@ from acme import core
 from acme import environment_loop
 from acme import specs
 from acme import types
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.tf.dqfd import bsuite_demonstrations
 from acme.jax import networks as networks_lib
@@ -160,12 +161,13 @@ def make_actor_evaluator(
   ):
     """The evaluation process."""
     # Create the actor loading the weights from variable source.
-    actor = actors.FeedForwardActor(
-        policy=evaluator_network,
-        random_key=random_key,
-        # Inference happens on CPU, so it's better to move variables there too.
-        variable_client=variable_utils.VariableClient(
-            variable_source, 'policy', device='cpu'))
+    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
+        evaluator_network)
+    # Inference happens on CPU, so it's better to move variables there too.
+    variable_client = variable_utils.VariableClient(variable_source, 'policy',
+                                                    device='cpu')
+    actor = actors.GenericActor(
+        actor_core, random_key, variable_client, backend='cpu')
 
     # Logger.
     logger = loggers.make_default_logger(
