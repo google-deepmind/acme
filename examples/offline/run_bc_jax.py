@@ -19,6 +19,7 @@ from absl import app
 from absl import flags
 import acme
 from acme import specs
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax import bc
 from acme.examples.offline import bc_utils
@@ -81,12 +82,12 @@ def main(_):
     return rlax.epsilon_greedy(FLAGS.evaluation_epsilon).sample(
         key, dist_params)
 
-  evaluator = actors.FeedForwardActor(
-      policy=evaluator_network,
-      random_key=key,
-      # Inference happens on CPU, so it's better to move variables there too.
-      variable_client=variable_utils.VariableClient(
-          learner, 'policy', device='cpu'))
+  actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
+      evaluator_network)
+  variable_client = variable_utils.VariableClient(
+      learner, 'policy', device='cpu')
+  evaluator = actors.GenericActor(
+      actor_core, key, variable_client, backend='cpu')
 
   eval_loop = acme.EnvironmentLoop(
       environment=environment,
