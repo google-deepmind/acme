@@ -36,14 +36,18 @@ import rlax
 
 
 def default_behavior_policy(network: networks_lib.FeedForwardNetwork,
-                            epsilon: float,
-                            params: networks_lib.Params,
-                            key: networks_lib.PRNGKey,
-                            observation: networks_lib.Observation):
-  """Returns an action for the given observation."""
-  action_values = network.apply(params, observation)
-  actions = rlax.epsilon_greedy(epsilon).sample(key, action_values)
-  return actions.astype(jnp.int32)
+                            epsilon: float) -> actors.FeedForwardPolicy:
+  """Returns the feed-forward policy with epsilon-greedy exploration."""
+  def apply_and_sample(params: networks_lib.Params,
+                       key: networks_lib.PRNGKey,
+                       observation: networks_lib.Observation
+                       ) -> networks_lib.Action:
+    """Returns an action for the given observation."""
+    action_values = network.apply(params, observation)
+    actions = rlax.epsilon_greedy(epsilon).sample(key, action_values)
+    return actions.astype(jnp.int32)
+
+  return apply_and_sample
 
 
 class DQNBuilder(builders.ActorLearnerBuilder):
