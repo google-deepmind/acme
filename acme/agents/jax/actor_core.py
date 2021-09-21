@@ -34,6 +34,7 @@ NoneType = type(None)
 State = TypeVar('State')
 # The extras to be passed to the observe method.
 Extras = TypeVar('Extras')
+RecurrentState = TypeVar('RecurrentState')
 
 
 @dataclasses.dataclass
@@ -105,3 +106,44 @@ def batched_feed_forward_with_extras_to_actor_core(
   return ActorCore(init=init, select_action=select_action,
                    get_extras=get_extras)
 
+
+RecurrentPolicy = Callable[[
+    networks_lib.Params, PRNGKey, networks_lib
+    .Observation, RecurrentState
+], Tuple[networks_lib.Action, RecurrentState]]
+
+
+@chex.dataclass(frozen=True, mappable_dataclass=False)
+class SimpleActorCoreRecurrentState(Generic[RecurrentState]):
+  rng: PRNGKey
+  recurrent_state: RecurrentState
+
+
+def batched_recurrent_to_actor_core(
+    recurrent_policy: RecurrentPolicy, initial_core_state: RecurrentState
+) -> ActorCore[SimpleActorCoreRecurrentState[RecurrentState], Mapping[
+    str, jnp.ndarray]]:
+  """Returns ActorCore for a recurrent policy."""
+  def select_action(params: networks_lib.Params,
+                    observation: networks_lib.Observation,
+                    state: SimpleActorCoreRecurrentState[RecurrentState]):
+    # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
+    rng = state.rng
+    rng, policy_rng = jax.random.split(rng)
+    observation = utils.add_batch_dim(observation)
+    recurrent_state = utils.add_batch_dim(state.recurrent_state)
+    action, new_recurrent_state = utils.squeeze_batch_dim(recurrent_policy(
+        params, policy_rng, observation, recurrent_state))
+    return action, SimpleActorCoreRecurrentState(rng, new_recurrent_state)
+
+  initial_core_state = utils.squeeze_batch_dim(initial_core_state)
+  def init(rng: PRNGKey) -> SimpleActorCoreRecurrentState[RecurrentState]:
+    return SimpleActorCoreRecurrentState(rng, initial_core_state)
+
+  def get_extras(
+      state: SimpleActorCoreRecurrentState[RecurrentState]
+  ) -> Mapping[str, jnp.ndarray]:
+    return {'core_state': state.recurrent_state}
+
+  return ActorCore(init=init, select_action=select_action,
+                   get_extras=get_extras)
