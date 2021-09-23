@@ -78,7 +78,6 @@ class DQNBuilder(builders.ActorLearnerBuilder):
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
-      checkpoint: bool = False,
   ) -> core.Learner:
     return learning_lib.SGDLearner(
         network=networks,

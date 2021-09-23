@@ -196,7 +196,6 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
-      checkpoint: bool = False,
   ) -> core.Learner:
 
     learner_factory = functools.partial(
@@ -204,8 +203,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
         random_key,
         networks,
         replay_client=replay_client,
-        counter=counter,
-        checkpoint=checkpoint)
+        counter=counter)
 
     return NormalizationLearnerWrapper(
         learner_factory=learner_factory,
