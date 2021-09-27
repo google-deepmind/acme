@@ -15,7 +15,7 @@
 
 """Simple JAX actors."""
 
-from typing import Callable, Generic, Optional, Tuple, TypeVar, Union
+from typing import Callable, Generic, Optional, Tuple, Union
 
 from acme import adders
 from acme import core
@@ -27,18 +27,11 @@ from acme.jax import variable_utils
 import dm_env
 import jax
 
-# Useful type aliases.
-RecurrentState = TypeVar('RecurrentState')
 
 # Signatures for functions that sample from parameterised stochastic policies.
 FeedForwardPolicy = Callable[
     [network_lib.Params, network_lib.PRNGKey, network_lib.Observation],
     Union[network_lib.Action, Tuple[network_lib.Action, types.NestedArray]]]
-RecurrentPolicy = Callable[[
-    network_lib.Params, network_lib.PRNGKey, network_lib
-    .Observation, RecurrentState
-], Tuple[Union[network_lib.Action, Tuple[network_lib.Action,
-                                         types.NestedArray]], RecurrentState]]
 
 
 class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
