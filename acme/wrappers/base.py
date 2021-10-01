@@ -24,7 +24,7 @@ class EnvironmentWrapper(dm_env.Environment):
   """Environment that wraps another environment.
 
   This exposes the wrapped environment with the `.environment` property and also
-  defines `__getattr__` so that attributes are invisible forwarded to the
+  defines `__getattr__` so that attributes are invisibly forwarded to the
   wrapped environment (and hence enabling duck-typing).
   """
 
@@ -36,6 +36,16 @@ class EnvironmentWrapper(dm_env.Environment):
   def __getattr__(self, attr: str):
     # Delegates attribute calls to the wrapped environment.
     return getattr(self._environment, attr)
+
+  # Getting/setting of state is necessary so that getattr doesn't delegate them
+  # to the wrapped environment. This makes sure pickling a wrapped environment
+  # works as expected.
+
+  def __getstate__(self):
+    return self.__dict__
+
+  def __setstate__(self, state):
+    self.__dict__.update(state)
 
   @property
   def environment(self) -> dm_env.Environment:
