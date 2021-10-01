@@ -37,7 +37,7 @@ import rlax
 
 
 def default_behavior_policy(network: networks_lib.FeedForwardNetwork,
-                            epsilon: float) -> actors.FeedForwardPolicy:
+                            epsilon: float) -> actor_core_lib.FeedForwardPolicy:
   """Returns the feed-forward policy with epsilon-greedy exploration."""
   def apply_and_sample(params: networks_lib.Params,
                        key: networks_lib.PRNGKey,

@@ -15,7 +15,7 @@
 
 """Simple JAX actors."""
 
-from typing import Callable, Generic, Optional, Tuple, Union
+from typing import Generic, Optional
 
 from acme import adders
 from acme import core
@@ -26,12 +26,6 @@ from acme.jax import utils
 from acme.jax import variable_utils
 import dm_env
 import jax
-
-
-# Signatures for functions that sample from parameterised stochastic policies.
-FeedForwardPolicy = Callable[
-    [network_lib.Params, network_lib.PRNGKey, network_lib.Observation],
-    Union[network_lib.Action, Tuple[network_lib.Action, types.NestedArray]]]
 
 
 class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):

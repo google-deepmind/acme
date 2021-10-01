@@ -16,8 +16,9 @@
 """ActorCore interface definition."""
 
 import dataclasses
-from typing import Callable, Generic, Mapping, Tuple, TypeVar
+from typing import Callable, Generic, Mapping, Tuple, TypeVar, Union
 
+from acme import types
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.jax.types import PRNGKey
@@ -53,6 +54,17 @@ FeedForwardPolicy = Callable[
     [networks_lib.Params, PRNGKey, networks_lib.Observation],
     networks_lib.Action]
 
+FeedForwardPolicyWithExtra = Callable[
+    [networks_lib.Params, PRNGKey, networks_lib.Observation],
+    Tuple[networks_lib.Action, types.NestedArray]]
+
+RecurrentPolicy = Callable[[
+    networks_lib.Params, PRNGKey, networks_lib
+    .Observation, RecurrentState
+], Tuple[networks_lib.Action, RecurrentState]]
+
+Policy = Union[FeedForwardPolicy, FeedForwardPolicyWithExtra, RecurrentPolicy]
+
 
 def batched_feed_forward_to_actor_core(
     policy: FeedForwardPolicy
@@ -84,7 +96,7 @@ class SimpleActorCoreStateWithExtras:
 
 
 def batched_feed_forward_with_extras_to_actor_core(
-    policy: FeedForwardPolicy
+    policy: FeedForwardPolicyWithExtra
 ) -> ActorCore[SimpleActorCoreStateWithExtras, Mapping[str, jnp.ndarray]]:
   """A convenience adaptor from FeedForwardPolicy to ActorCore."""
 
@@ -105,12 +117,6 @@ def batched_feed_forward_with_extras_to_actor_core(
     return state.extras
   return ActorCore(init=init, select_action=select_action,
                    get_extras=get_extras)
-
-
-RecurrentPolicy = Callable[[
-    networks_lib.Params, PRNGKey, networks_lib
-    .Observation, RecurrentState
-], Tuple[networks_lib.Action, RecurrentState]]
 
 
 @chex.dataclass(frozen=True, mappable_dataclass=False)

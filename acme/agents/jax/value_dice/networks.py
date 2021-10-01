@@ -20,7 +20,7 @@ import dataclasses
 from typing import Callable, Optional, Tuple
 
 from acme import specs
-from acme.agents.jax import actors
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 import haiku as hk
@@ -45,7 +45,7 @@ class ValueDiceNetworks:
 
 def apply_policy_and_sample(
     networks: ValueDiceNetworks,
-    eval_mode: bool = False) -> actors.FeedForwardPolicy:
+    eval_mode: bool = False) -> actor_core_lib.FeedForwardPolicy:
   """Returns a function that computes actions."""
   sample_fn = networks.sample if not eval_mode else networks.sample_eval
   if not sample_fn:

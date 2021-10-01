@@ -142,7 +142,7 @@ def make_demonstrations(env: dm_env.Environment,
 
 def make_actor_evaluator(
     environment_factory: Callable[[bool], dm_env.Environment],
-    evaluator_network: actors.FeedForwardPolicy,
+    evaluator_network: actor_core_lib.FeedForwardPolicy,
 ) -> jax_types.EvaluatorFactory:
   """Makes an evaluator that runs the agent on the environment.
 
