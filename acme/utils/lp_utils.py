@@ -97,4 +97,7 @@ class StepsLimiter:
         lp.stop()
 
       # Don't spam the counter.
-      time.sleep(10.)
+      for _ in range(10):
+        # Do not sleep for a long period of time to avoid LaunchPad program
+        # termination hangs (time.sleep is not interruptible).
+        time.sleep(1)

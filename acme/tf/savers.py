@@ -234,7 +234,10 @@ class CheckpointingRunner(core.Worker):
 
   def checkpoint(self):
     self._checkpointer.save()
-    time.sleep(self._time_delta_minutes * 60)
+    # Do not sleep for a long period of time to avoid LaunchPad program
+    # termination hangs (time.sleep is not interruptible).
+    for _ in range(self._time_delta_minutes * 60):
+      time.sleep(1)
 
   def get_directory(self):
     return self._checkpointer.directory
