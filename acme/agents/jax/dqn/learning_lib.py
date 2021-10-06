@@ -81,6 +81,7 @@ class SGDLearner(acme.Learner):
                target_update_period: int,
                random_key: networks_lib.PRNGKey,
                replay_client: Optional[reverb.Client] = None,
+               replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
                counter: Optional[counting.Counter] = None,
                logger: Optional[loggers.Logger] = None,
                num_sgd_steps_per_step: int = 1):
@@ -148,7 +149,7 @@ class SGDLearner(acme.Learner):
           utils.fetch_devicearray,
           (reverb_update.keys, reverb_update.priorities))
       replay_client.mutate_priorities(
-          table=adders.DEFAULT_PRIORITY_TABLE,
+          table=replay_table_name,
           updates=dict(zip(keys, priorities)))
     self._replay_client = replay_client
     self._async_priority_updater = async_utils.AsyncExecutor(update_priorities)

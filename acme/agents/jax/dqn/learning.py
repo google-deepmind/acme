@@ -17,6 +17,7 @@
 
 from typing import Iterator, Optional
 
+from acme.adders import reverb as adders
 from acme.agents.jax.dqn import learning_lib
 from acme.agents.jax.dqn import losses
 from acme.jax import networks as networks_lib
@@ -44,6 +45,7 @@ class DQNLearner(learning_lib.SGDLearner):
                max_abs_reward: float = 1.,
                huber_loss_parameter: float = 1.,
                replay_client: Optional[reverb.Client] = None,
+               replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
                counter: Optional[counting.Counter] = None,
                logger: Optional[loggers.Logger] = None):
     """Initializes the learner."""
@@ -61,6 +63,7 @@ class DQNLearner(learning_lib.SGDLearner):
         target_update_period=target_update_period,
         random_key=random_key,
         replay_client=replay_client,
+        replay_table_name=replay_table_name,
         counter=counter,
         logger=logger,
     )

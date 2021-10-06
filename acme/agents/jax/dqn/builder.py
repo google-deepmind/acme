@@ -87,6 +87,7 @@ class DQNBuilder(builders.ActorLearnerBuilder):
         data_iterator=dataset,
         loss_fn=self._loss_fn,
         replay_client=replay_client,
+        replay_table_name=self._config.replay_table_name,
         counter=counter,
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
         logger=self._logger_fn())
