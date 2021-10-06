@@ -135,6 +135,7 @@ class DistributedD4PG:
         dataset=dataset,
         counter=counter,
         logger=logger,
+        checkpoint=True,
     )
 
   def actor(
