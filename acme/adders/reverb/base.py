@@ -16,6 +16,7 @@
 """Adders that use Reverb (github.com/deepmind/reverb) as a backend."""
 
 import abc
+import time
 from typing import Callable, Iterable, Mapping, NamedTuple, Optional, Sized, Union, Tuple
 
 from absl import logging
@@ -29,6 +30,7 @@ import tensorflow as tf
 import tree
 
 DEFAULT_PRIORITY_TABLE = 'priority_table'
+_MIN_WRITER_LIFESPAN_SECONDS = 60
 StartOfEpisodeType = Union[bool, specs.Array, tf.Tensor, tf.TensorSpec,
                            Tuple[()]]
 
@@ -135,6 +137,7 @@ class ReverbAdder(base.Adder):
       self.__writer = self._client.trajectory_writer(
           num_keep_alive_refs=self._max_sequence_length,
           get_signature_timeout_ms=self._get_signature_timeout_ms)
+      self._writer_created_timestamp = time.time()
     return self.__writer
 
   def add_priority_table(self, table_name: str,
@@ -151,6 +154,12 @@ class ReverbAdder(base.Adder):
     if self.__writer:
       # Flush all appended data and clear the buffers.
       self.__writer.end_episode(clear_buffers=True, timeout_ms=timeout_ms)
+
+      # Create a new writer unless the current one is too young.
+      # This is to reduce the relative overhead of creating a new Reverb writer.
+      if (time.time() - self._writer_created_timestamp >
+          _MIN_WRITER_LIFESPAN_SECONDS):
+        self.__writer = None
     self._add_first_called = False
 
   def add_first(self, timestep: dm_env.TimeStep):
