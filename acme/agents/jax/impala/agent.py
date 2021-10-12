@@ -15,7 +15,6 @@
 
 """Importance weighted advantage actor-critic (IMPALA) agent implementation."""
 
-import dataclasses
 from typing import Callable, Optional, Union
 
 import acme
@@ -23,9 +22,11 @@ from acme import specs
 from acme import types
 from acme.agents import replay
 from acme.agents.jax.impala import acting
+from acme.agents.jax.impala import config as impala_config
 from acme.agents.jax.impala import learning
+from acme.agents.jax.impala import networks as impala_networks
 from acme.agents.jax.impala import types as impala_types
-from acme.jax import networks
+from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
@@ -34,34 +35,6 @@ import haiku as hk
 import jax
 import numpy as np
 import optax
-
-
-@dataclasses.dataclass
-class IMPALAConfig:
-  """Configuration options for IMPALA."""
-  seed: int = 0
-
-  # Loss options
-  batch_size: int = 16
-  sequence_length: int = 20
-  sequence_period: int = 20
-  discount: float = 0.99
-  entropy_cost: float = 0.01
-  baseline_cost: float = 0.5
-  max_abs_reward: float = np.inf
-  max_gradient_norm: float = np.inf
-
-  # Optimizer options
-  learning_rate: float = 1e-4
-  adam_momentum_decay: float = 0.0
-  adam_variance_decay: float = 0.99
-
-  # Replay options
-  max_queue_size: Union[int, types.Batches] = types.Batches(10)
-
-  def __post_init__(self):
-    if isinstance(self.max_queue_size, types.Batches):
-      self.max_queue_size *= self.batch_size
 
 
 class IMPALAFromConfig(acme.Actor):
@@ -75,10 +48,17 @@ class IMPALAFromConfig(acme.Actor):
       unroll_fn: impala_types.PolicyValueFn,
       initial_state_init_fn: impala_types.RecurrentStateInitFn,
       initial_state_fn: impala_types.RecurrentStateFn,
-      config: IMPALAConfig,
+      config: impala_config.IMPALAConfig,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
   ):
+    networks = impala_networks.IMPALANetworks(
+        forward_fn=forward_fn,
+        unroll_init_fn=unroll_init_fn,
+        unroll_fn=unroll_fn,
+        initial_state_init_fn=initial_state_init_fn,
+        initial_state_fn=initial_state_fn,
+    )
 
     self._config = config
 
@@ -112,11 +92,8 @@ class IMPALAFromConfig(acme.Actor):
     )
     key_learner, key_actor = jax.random.split(key)
     self._learner = learning.IMPALALearner(
+        networks=networks,
         obs_spec=environment_spec.observations,
-        unroll_init_fn=unroll_init_fn,
-        unroll_fn=unroll_fn,
-        initial_state_init_fn=initial_state_init_fn,
-        initial_state_fn=initial_state_fn,
         iterator=reverb_queue.data_iterator,
         random_key=key_learner,
         counter=counter,
@@ -173,8 +150,8 @@ class IMPALA(IMPALAFromConfig):
   def __init__(
       self,
       environment_spec: specs.EnvironmentSpec,
-      forward_fn: networks.PolicyValueRNN,
-      unroll_fn: networks.PolicyValueRNN,
+      forward_fn: networks_lib.PolicyValueRNN,
+      unroll_fn: networks_lib.PolicyValueRNN,
       initial_state_fn: Callable[[], hk.LSTMState],
       sequence_length: int,
       sequence_period: int,
@@ -201,7 +178,7 @@ class IMPALA(IMPALAFromConfig):
         initial_state_fn,
         apply_rng=True))
 
-    config = IMPALAConfig(
+    config = impala_config.IMPALAConfig(
         sequence_length=sequence_length,
         sequence_period=sequence_period,
         discount=discount,
