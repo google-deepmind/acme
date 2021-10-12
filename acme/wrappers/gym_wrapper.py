@@ -57,6 +57,8 @@ class GymWrapper(dm_env.Environment):
     observation, reward, done, info = self._environment.step(action)
     self._reset_next_step = done
 
+    reward = np.asarray(reward, dtype=self.reward_spec().dtype)
+
     if done:
       truncated = info.get('TimeLimit.truncated', False)
       if truncated:
