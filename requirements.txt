@@ -1,7 +1,6 @@
 absl-py==0.12.0
 atari-py==0.2.9
 bsuite==0.3.5
-dataclasses==0.8;python_version=="3.6"
 dm-control==0.0.364896371
 dm-env==1.5
 dm-haiku==0.0.4
@@ -9,10 +8,8 @@ dm-launchpad-nightly==0.3.0.dev20210818
 dm-reverb==0.4.0
 dm-sonnet==2.0.0
 dm-tree==0.1.6
-jax==0.2.17;python_version=="3.6"
-jaxlib==0.1.68;python_version=="3.6"
-jax==0.2.19;python_version>"3.6"
-jaxlib==0.1.70;python_version>"3.6"
+jax==0.2.19
+jaxlib==0.1.70
 keras==2.6.0
 optax==0.0.9
 Pillow==8.3.2
