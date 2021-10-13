@@ -22,6 +22,7 @@ from acme.wrappers.canonical_spec import CanonicalSpecWrapper
 from acme.wrappers.frame_stacking import FrameStackingWrapper
 from acme.wrappers.gym_wrapper import GymAtariAdapter
 from acme.wrappers.gym_wrapper import GymWrapper
+from acme.wrappers.noop_starts import NoopStartsWrapper
 from acme.wrappers.observation_action_reward import ObservationActionRewardWrapper
 from acme.wrappers.single_precision import SinglePrecisionWrapper
 from acme.wrappers.step_limit import StepLimitWrapper

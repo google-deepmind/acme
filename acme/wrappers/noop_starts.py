@@ -6,7 +6,7 @@ from acme.wrappers import base
 import dm_env
 import numpy as np
 
-class NoopResetWrapper(base.EnvironmentWrapper):
+class NoopStartsWrapper(base.EnvironmentWrapper):
   """Implements random noop starts to episodes."""
 
   def __init__(self,
@@ -40,7 +40,7 @@ class NoopResetWrapper(base.EnvironmentWrapper):
       if self._noop_max > 0
       else 0
     )
-    timestep = self.enviornment.reset()
+    timestep = self.environment.reset()
     for _ in range(noops):
       timestep = self.environment.step(self._noop_action)
       if timestep.last():
