@@ -28,6 +28,7 @@ RGB_INDEX = 0  # Observation index holding the RGB data.
 LIVES_INDEX = 1  # Observation index holding the lives count.
 NUM_COLOR_CHANNELS = 3  # Number of color channels in RGB data.
 
+
 class AtariWrapper(base.EnvironmentWrapper):
   """Standard "Nature Atari" wrapper for Python environments.
 

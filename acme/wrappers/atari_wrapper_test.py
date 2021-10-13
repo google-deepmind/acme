@@ -57,7 +57,7 @@ else:
 class AtariWrapperTest(parameterized.TestCase):
 
   @parameterized.parameters(True, False)
-  def test_pong(self, zero_discount_on_life_loss: bool, noop_max: int):
+  def test_pong(self, zero_discount_on_life_loss: bool):
     env = gym.make('PongNoFrameskip-v4', full_action_space=True)
     env = gym_wrapper.GymAtariAdapter(env)
     env = atari_wrapper.AtariWrapper(
