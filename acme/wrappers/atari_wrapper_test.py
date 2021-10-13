@@ -56,18 +56,12 @@ else:
 @unittest.skipIf(SKIP_GYM_TESTS, SKIP_GYM_MESSAGE)
 class AtariWrapperTest(parameterized.TestCase):
 
-  @parameterized.product(
-    zero_discount_on_life_loss=(True, False),
-    noop_max=(0, 30),
-  )
+  @parameterized.parameters(True, False)
   def test_pong(self, zero_discount_on_life_loss: bool, noop_max: int):
     env = gym.make('PongNoFrameskip-v4', full_action_space=True)
     env = gym_wrapper.GymAtariAdapter(env)
     env = atari_wrapper.AtariWrapper(
-        env,
-        zero_discount_on_life_loss=zero_discount_on_life_loss,
-        noop_max=noop_max
-    )
+        env, zero_discount_on_life_loss=zero_discount_on_life_loss)
 
     # Test converted observation spec.
     observation_spec = env.observation_spec()
