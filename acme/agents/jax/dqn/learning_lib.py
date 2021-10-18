@@ -15,6 +15,7 @@
 """SgdLearner takes steps of SGD on a LossFn."""
 
 import functools
+import time
 from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
 
 import acme
@@ -119,6 +120,7 @@ class SGDLearner(acme.Learner):
           metrics=jax.tree_map(jnp.mean, extra.metrics),
           reverb_update=reverb_update)
 
+    self._num_sgd_steps_per_step = num_sgd_steps_per_step
     sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step,
                                               postprocess_aux)
     self._sgd_step = jax.jit(sgd_step)
@@ -128,6 +130,11 @@ class SGDLearner(acme.Learner):
     self._target_update_period = target_update_period
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
+
+    # Do not record timestamps until after the first learning step is done.
+    # This is to avoid including the time it takes for actors to come online and
+    # fill the replay buffer.
+    self._timestamp = None
 
     # Initialize the network parameters
     key_params, key_target, key_state = jax.random.split(random_key, 3)
@@ -156,17 +163,28 @@ class SGDLearner(acme.Learner):
 
   def step(self):
     """Takes one SGD step on the learner."""
-    batch = next(self._data_iterator)
-    self._state, extra = self._sgd_step(self._state, batch)
+    with jax.profiler.StepTraceAnnotation('step',
+                                          step_num=self._state.steps):
+      batch = next(self._data_iterator)
+      self._state, extra = self._sgd_step(self._state, batch)
 
-    if self._replay_client and extra.reverb_update:
-      reverb_update = extra.reverb_update._replace(keys=batch.info.key)
-      self._async_priority_updater.put(reverb_update)
+      # Compute elapsed time.
+      timestamp = time.time()
+      elapsed = timestamp - self._timestamp if self._timestamp else 0
+      self._timestamp = timestamp
 
-    # Update our counts and record it.
-    result = self._counter.increment(steps=1)
-    result.update(extra.metrics)
-    self._logger.write(result)
+      if self._replay_client and extra.reverb_update:
+        reverb_update = extra.reverb_update._replace(keys=batch.info.key)
+        self._async_priority_updater.put(reverb_update)
+
+      steps_per_sec = (self._num_sgd_steps_per_step / elapsed) if elapsed else 0
+      extra.metrics['steps_per_second'] = steps_per_sec
+
+      # Update our counts and record it.
+      result = self._counter.increment(
+          steps=self._num_sgd_steps_per_step, walltime=elapsed)
+      result.update(extra.metrics)
+      self._logger.write(result)
 
   def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
     return [self._state.params]
