@@ -15,6 +15,7 @@ class NoopStartsTest(absltest.TestCase):
     """Ensure that resetting with noop starts steps the environment a random number of times."""
     noop_action = 0
     noop_max = 10
+    seed = 24
 
     base_env = fakes.DiscreteEnvironment(
       action_dtype=np.int64,
@@ -22,14 +23,14 @@ class NoopStartsTest(absltest.TestCase):
       reward_spec=specs.Array(dtype=np.float64, shape=())
     )
     mock_step_fn = mock.MagicMock()
-    expected_num_step_calls = np.random.RandomState(24).randint(noop_max+1)
+    expected_num_step_calls = np.random.RandomState(seed).randint(noop_max+1)
 
     with mock.patch.object(base_env, "step", mock_step_fn):
       env = NoopStartsWrapper(
         base_env,
         noop_action=noop_action,
         noop_max=noop_max,
-        seed=24,
+        seed=seed,
       )
       env.reset()
 
