@@ -7,17 +7,23 @@ import dm_env
 import numpy as np
 
 class NoopStartsWrapper(base.EnvironmentWrapper):
-  """Implements random noop starts to episodes."""
+  """Implements random noop starts to episodes.
+
+  This introduces randomness into an otherwise deterministic environment.
+
+  Note that the base environment must support a no-op action and the value
+  of this action must be known and provided to this wrapper.
+  """
 
   def __init__(self,
                environment: dm_env.Environment,
                noop_action: int = 0,
                noop_max: int = 30,
                seed: Optional[int] = None):
-    """Initializes a `_NoopReset` wrapper.
+    """Initializes a `NoopStartsWrapper` wrapper.
 
     Args:
-      environment: An Atari environment.
+      environment: An environment conforming to the dm_env.Environment interface.
       noop_action: The noop action used to step the environment for random initialisation.
       noop_max: The maximal number of noop actions at the start of an episode.
       seed: The random seed used to sample the number of noops.
