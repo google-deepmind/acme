@@ -8,6 +8,7 @@ dm-launchpad-nightly==0.3.0.dev20210818
 dm-reverb==0.4.0
 dm-sonnet==2.0.0
 dm-tree==0.1.6
+flax==0.3.5
 jax==0.2.19
 jaxlib==0.1.70
 keras==2.6.0

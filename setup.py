@@ -41,6 +41,7 @@ jax_requirements = [
     'jaxlib',
     'dm-haiku',
     'dm-reverb',
+    'flax',
     'optax',
     'rlax',
     'tensorflow',
