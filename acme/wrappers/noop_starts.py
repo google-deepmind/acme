@@ -35,11 +35,7 @@ class NoopStartsWrapper(base.EnvironmentWrapper):
 
   def reset(self) -> dm_env.TimeStep:
     """Resets environment and provides the first timestep."""
-    noops = (
-      self.np_random.randint(self._noop_max + 1)
-      if self._noop_max > 0
-      else 0
-    )
+    noops = self.np_random.randint(self._noop_max + 1)
     timestep = self.environment.reset()
     for _ in range(noops):
       timestep = self.environment.step(self._noop_action)
