@@ -1,10 +1,14 @@
-"""NoOp Starts wrapper to allow stochastic initial state for deterministic Python environments."""
+"""
+NoOp Starts wrapper to allow stochastic initial state for deterministic
+Python environments.
+"""
 
 from typing import Optional
 
-from acme.wrappers import base
 import dm_env
 import numpy as np
+
+from acme.wrappers import base
 
 class NoopStartsWrapper(base.EnvironmentWrapper):
   """Implements random noop starts to episodes.
@@ -23,8 +27,10 @@ class NoopStartsWrapper(base.EnvironmentWrapper):
     """Initializes a `NoopStartsWrapper` wrapper.
 
     Args:
-      environment: An environment conforming to the dm_env.Environment interface.
-      noop_action: The noop action used to step the environment for random initialisation.
+      environment: An environment conforming to the dm_env.Environment
+        interface.
+      noop_action: The noop action used to step the environment for
+        random initialisation.
       noop_max: The maximal number of noop actions at the start of an episode.
       seed: The random seed used to sample the number of noops.
     """

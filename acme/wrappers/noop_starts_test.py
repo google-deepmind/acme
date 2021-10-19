@@ -1,18 +1,21 @@
 """Tests for the noop starts wrapper."""
 
-from absl.testing import absltest
 from unittest import mock
+
+from absl.testing import absltest
+from dm_env import specs
+import numpy as np
 
 from acme.wrappers import NoopStartsWrapper
 from acme.testing import fakes
-from dm_env import specs
-import numpy as np
 
 
 class NoopStartsTest(absltest.TestCase):
 
   def test_reset(self):
-    """Ensure that resetting with noop starts steps the environment a random number of times."""
+    """
+    Ensure that noop starts `reset` steps the environment possibly many times.
+    """
     noop_action = 0
     noop_max = 10
     seed = 24
