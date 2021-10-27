@@ -141,7 +141,10 @@ class DistributedLayout:
       kwargs['directory'] = self._workdir
       kwargs['add_uid'] = False
     return savers.CheckpointingRunner(
-        counting.Counter(), subdirectory='counter', time_delta_minutes=5,
+        counting.Counter(),
+        key='counter',
+        subdirectory='counter',
+        time_delta_minutes=5,
         **kwargs)
 
   def learner(
@@ -183,7 +186,11 @@ class DistributedLayout:
       kwargs['add_uid'] = False
     # Return the learning agent.
     return savers.CheckpointingRunner(
-        learner, subdirectory='learner', time_delta_minutes=5, **kwargs)
+        learner,
+        key='learner',
+        subdirectory='learner',
+        time_delta_minutes=5,
+        **kwargs)
 
   def actor(self, random_key: networks_lib.PRNGKey, replay: reverb.Client,
             variable_source: core.VariableSource, counter: counting.Counter,

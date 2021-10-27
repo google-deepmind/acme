@@ -183,6 +183,7 @@ class CheckpointingRunner(core.Worker):
   def __init__(
       self,
       wrapped: Union[Checkpointable, core.Saveable, TFSaveable],
+      key: str = 'wrapped',
       *,
       time_delta_minutes: int = 30,
       **kwargs,
@@ -198,7 +199,7 @@ class CheckpointingRunner(core.Worker):
     self._wrapped = wrapped
     self._time_delta_minutes = time_delta_minutes
     self._checkpointer = Checkpointer(
-        objects_to_save={'wrapped': objects_to_save},
+        objects_to_save={key: objects_to_save},
         time_delta_minutes=time_delta_minutes,
         **kwargs)
 
