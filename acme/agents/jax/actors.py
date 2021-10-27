@@ -40,7 +40,7 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
       self,
       actor: actor_core.ActorCore[actor_core.State, actor_core.Extras],
       random_key: network_lib.PRNGKey,
-      variable_client: variable_utils.VariableClient,
+      variable_client: Optional[variable_utils.VariableClient],
       adder: Optional[adders.Adder] = None,
       jit: bool = True,
       backend: Optional[str] = 'cpu',
@@ -73,10 +73,13 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
     self._get_extras = actor.get_extras
     self._per_episode_update = per_episode_update
 
+  @property
+  def _params(self):
+    return self._variable_client.params if self._variable_client else []
+
   def select_action(self,
                     observation: network_lib.Observation) -> types.NestedArray:
-    action, self._state = self._policy(self._variable_client.params,
-                                       observation, self._state)
+    action, self._state = self._policy(self._params, observation, self._state)
     return utils.to_numpy(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):
@@ -84,7 +87,7 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
     self._state = self._init(key)
     if self._adder:
       self._adder.add_first(timestep)
-    if self._per_episode_update:
+    if self._variable_client and self._per_episode_update:
       self._variable_client.update_and_wait()
 
   def observe(self, action: network_lib.Action, next_timestep: dm_env.TimeStep):
@@ -93,5 +96,5 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
           action, next_timestep, extras=self._get_extras(self._state))
 
   def update(self, wait: bool = False):
-    if not self._per_episode_update:
+    if self._variable_client and not self._per_episode_update:
       self._variable_client.update(wait)
