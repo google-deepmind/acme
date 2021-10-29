@@ -55,6 +55,7 @@ class MPOLearner(acme.Learner):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
+      save_directory: str = '~/acme/',
   ):
 
     self._counter = counter or counting.Counter()
@@ -111,6 +112,7 @@ class MPOLearner(acme.Learner):
 
     if checkpoint:
       self._checkpointer = tf2_savers.Checkpointer(
+          directory=save_directory,
           subdirectory='mpo_learner',
           objects_to_save={
               'counter': self._counter,
@@ -128,6 +130,7 @@ class MPOLearner(acme.Learner):
           })
 
       self._snapshotter = tf2_savers.Snapshotter(
+          directory=save_directory,
           objects_to_save={
               'policy':
                   snt.Sequential([

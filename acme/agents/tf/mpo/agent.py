@@ -67,6 +67,7 @@ class MPO(agent.Agent):
       logger: Optional[loggers.Logger] = None,
       counter: Optional[counting.Counter] = None,
       checkpoint: bool = True,
+      save_directory: str = '~/acme/',
       replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
   ):
     """Initialize the agent.
@@ -89,8 +90,8 @@ class MPO(agent.Agent):
       samples_per_insert: number of samples to take from replay for every insert
         that is made.
       policy_loss_module: configured MPO loss function for the policy
-        optimization; defaults to sensible values on the control suite.
-        See `acme/tf/losses/mpo.py` for more details.
+        optimization; defaults to sensible values on the control suite. See
+        `acme/tf/losses/mpo.py` for more details.
       policy_optimizer: optimizer to be used on the policy.
       critic_optimizer: optimizer to be used on the critic.
       n_step: number of steps to squash into a single transition.
@@ -100,6 +101,8 @@ class MPO(agent.Agent):
       logger: logging object used to write to logs.
       counter: counter object used to keep track of steps.
       checkpoint: boolean indicating whether to checkpoint the learner.
+      save_directory: string indicating where the learner should save
+        checkpoints and snapshots.
       replay_table_name: string indicating what name to give the replay table.
     """
 
@@ -116,9 +119,7 @@ class MPO(agent.Agent):
     # The adder is used to insert observations into replay.
     address = f'localhost:{self._server.port}'
     adder = adders.NStepTransitionAdder(
-        client=reverb.Client(address),
-        n_step=n_step,
-        discount=discount)
+        client=reverb.Client(address), n_step=n_step, discount=discount)
 
     # The dataset object to learn from.
     dataset = datasets.make_reverb_dataset(
@@ -181,7 +182,8 @@ class MPO(agent.Agent):
         dataset=dataset,
         logger=logger,
         counter=counter,
-        checkpoint=checkpoint)
+        checkpoint=checkpoint,
+        save_directory=save_directory)
 
     super().__init__(
         actor=actor,
