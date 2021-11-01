@@ -55,6 +55,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
+      save_directory: str = '~/acme/',
       max_gradient_norm: Optional[float] = None,
   ):
     """Initializes the learner.
@@ -75,6 +76,8 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       counter: Counter object for (potentially distributed) counting.
       logger: Logger object for writing logs to.
       checkpoint: boolean indicating whether to checkpoint the learner.
+      save_directory: string indicating where the learner should save
+        checkpoints and snapshots.
       max_gradient_norm: used for gradient clipping.
     """
 
@@ -120,7 +123,9 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     # Create a snapshotter object.
     if checkpoint:
       self._snapshotter = tf2_savers.Snapshotter(
-          objects_to_save={'network': network}, time_delta_minutes=60.)
+          objects_to_save={'network': network},
+          directory=save_directory,
+          time_delta_minutes=60.)
     else:
       self._snapshotter = None
 
