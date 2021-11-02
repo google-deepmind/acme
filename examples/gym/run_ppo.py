@@ -30,7 +30,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_steps', 4000000,
                      'Number of env steps to run training for.')
 flags.DEFINE_integer('eval_every', 10000, 'How often to run evaluation')
-flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'What environment to run')
+flags.DEFINE_string('env_name', 'MountainCarContinuous-v0',
+                    'What environment to run')
 
 # PPO agent configuration flags.
 flags.DEFINE_integer('unroll_length', 16, 'Unroll length.')

@@ -24,7 +24,8 @@ import helpers
 import launchpad as lp
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'GYM environment task (str).')
+flags.DEFINE_string('env_name', 'MountainCarContinuous-v0',
+                    'GYM environment task (str).')
 flags.DEFINE_string('dataset_name', 'd4rl_mujoco_halfcheetah/v0-medium',
                     'What dataset to use. '
                     'See the TFDS catalog for possible values.')

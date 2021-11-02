@@ -29,7 +29,8 @@ import haiku as hk
 import launchpad as lp
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('task', 'HalfCheetah-v2', 'GYM environment task (str).')
+flags.DEFINE_string('task', 'MountainCarContinuous-v0',
+                    'GYM environment task (str).')
 flags.DEFINE_string(
     'dataset_name', 'd4rl_mujoco_halfcheetah/v0-medium', 'What dataset to use. '
     'See the TFDS catalog for possible values.')

@@ -22,7 +22,8 @@ import helpers
 import launchpad as lp
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('task', 'HalfCheetah-v2', 'GYM environment task (str).')
+flags.DEFINE_string('task', 'MountainCarContinuous-v0',
+                    'GYM environment task (str).')
 
 
 def main(_):
