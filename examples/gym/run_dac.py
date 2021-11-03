@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example running AIL+SAC on the OpenAI Gym."""
+"""Example running AIL+TD3 on the OpenAI Gym."""
 import dataclasses
 import functools
 
@@ -22,7 +22,7 @@ import acme
 from acme import specs
 from acme.agents.jax import ail
 from acme.agents.jax import bc
-from acme.agents.jax import sac
+from acme.agents.jax import td3
 from absl import app
 import helpers
 from acme.jax import networks as networks_lib
@@ -33,56 +33,56 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_steps', 1000000,
                      'Number of env steps to run training for.')
 flags.DEFINE_integer('eval_every', 10000, 'How often to run evaluation')
-flags.DEFINE_string('env_name', 'MountainCarContinuous-v0',
-                    'What environment to run')
+flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'What environment to run')
 flags.DEFINE_string(
     'dataset_name', 'd4rl_mujoco_halfcheetah/v0-medium', 'What dataset to use. '
     'See the TFDS catalog for possible values.')
 flags.DEFINE_integer('num_sgd_steps_per_step', 1,
                      'Number of SGD steps per learner step().')
 flags.DEFINE_integer('seed', 0, 'Random seed.')
+flags.DEFINE_bool('pretrain', True, 'Whether to do BC pre-training.')
 
 
-def add_bc_pretraining(sac_networks: sac.SACNetworks) -> sac.SACNetworks:
-  """Augments `sac_networks` to run BC pretraining in policy_network.init."""
+def add_bc_pretraining(td3_networks: td3.TD3Networks) -> td3.TD3Networks:
+  """Augments `td3_networks` to run BC pretraining in policy_network.init."""
 
   make_demonstrations = functools.partial(
       helpers.make_demonstration_iterator, dataset_name=FLAGS.dataset_name)
-  bc_network = bc.pretraining.convert_to_bc_network(sac_networks.policy_network)
-  loss = bc.logp(sac_networks.log_prob)
+  bc_network = bc.pretraining.convert_to_bc_network(td3_networks.policy_network)
+  # TODO(lukstafi): consider passing noised policy.
+  loss = bc.mse(lambda x, key: x)
 
   def bc_init(*unused_args):
     return bc.pretraining.train_with_bc(make_demonstrations, bc_network, loss)
 
   return dataclasses.replace(
-      sac_networks,
+      td3_networks,
       policy_network=networks_lib.FeedForwardNetwork(
-          bc_init, sac_networks.policy_network.apply))
+          bc_init, td3_networks.policy_network.apply))
 
 
 def main(_):
   # Create an environment, grab the spec, and use it to create networks.
   environment = helpers.make_environment(task=FLAGS.env_name)
   environment_spec = specs.make_environment_spec(environment)
-  agent_networks = sac.make_networks(environment_spec)
 
   # Construct the agent.
   # Local layout makes sure that we populate the buffer with min_replay_size
   # initial transitions and that there's no need for tolerance_rate. In order
   # for deadlocks not to happen we need to disable rate limiting that heppens
-  # inside the SACBuilder. This is achieved by the min_replay_size and
+  # inside the TD3Builder. This is achieved by the min_replay_size and
   # samples_per_insert_tolerance_rate arguments.
-  sac_config = sac.SACConfig(
-      target_entropy=sac.target_entropy_from_env_spec(environment_spec),
+  td3_config = td3.TD3Config(
       num_sgd_steps_per_step=FLAGS.num_sgd_steps_per_step,
       min_replay_size=1,
       samples_per_insert_tolerance_rate=float('inf'))
-  sac_builder = sac.SACBuilder(sac_config)
-  sac_networks = sac.make_networks(environment_spec)
-  sac_networks = add_bc_pretraining(sac_networks)
+  td3_networks = td3.make_networks(environment_spec)
+  if FLAGS.pretrain:
+    td3_networks = add_bc_pretraining(td3_networks)
 
-  ail_config = ail.AILConfig(direct_rl_batch_size=sac_config.batch_size *
-                             sac_config.num_sgd_steps_per_step)
+  ail_config = ail.AILConfig(direct_rl_batch_size=td3_config.batch_size *
+                             td3_config.num_sgd_steps_per_step)
+  dac_config = ail.DACConfig(ail_config, td3_config)
 
   def discriminator(*args, **kwargs) -> networks_lib.Logits:
     return ail.DiscriminatorModule(
@@ -97,27 +97,28 @@ def main(_):
   ail_network = ail.AILNetworks(
       ail.make_discriminator(environment_spec, discriminator_transformed),
       imitation_reward_fn=ail.rewards.gail_reward(),
-      direct_rl_networks=sac_networks)
+      direct_rl_networks=td3_networks)
 
-  agent = ail.AIL(
+  agent = ail.DAC(
       spec=environment_spec,
-      rl_agent=sac_builder,
       network=ail_network,
-      config=ail_config,
+      config=dac_config,
       seed=FLAGS.seed,
-      batch_size=sac_config.batch_size * sac_config.num_sgd_steps_per_step,
+      batch_size=td3_config.batch_size * td3_config.num_sgd_steps_per_step,
       make_demonstrations=functools.partial(
           helpers.make_demonstration_iterator, dataset_name=FLAGS.dataset_name),
-      policy_network=sac.apply_policy_and_sample(sac_networks),
-      discriminator_loss=ail.losses.gail_loss())
+      policy_network=td3.get_default_behavior_policy(
+          td3_networks, action_specs=environment_spec.actions,
+          sigma=td3_config.sigma))
 
   # Create the environment loop used for training.
   train_loop = acme.EnvironmentLoop(environment, agent, label='train_loop')
   # Create the evaluation actor and loop.
+  # TODO(lukstafi): sigma=0 for eval?
   eval_actor = agent.builder.make_actor(
       random_key=jax.random.PRNGKey(FLAGS.seed),
-      policy_network=sac.apply_policy_and_sample(
-          agent_networks, eval_mode=True),
+      policy_network=td3.get_default_behavior_policy(
+          td3_networks, action_specs=environment_spec.actions, sigma=0.),
       variable_source=agent)
   eval_env = helpers.make_environment(task=FLAGS.env_name)
   eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop')

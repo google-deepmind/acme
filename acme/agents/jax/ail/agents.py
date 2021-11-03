@@ -106,12 +106,12 @@ class AIL(local_layout.LocalLayout):
                make_demonstrations: Callable[[int], Iterator[types.Transition]],
                policy_network: Any,
                samples_per_insert: float = 256,
-               loss: Optional[losses.Loss] = None,
+               discriminator_loss: Optional[losses.Loss] = None,
                counter: Optional[counting.Counter] = None):
     self.builder = builder.AILBuilder(
         rl_agent=rl_agent,
         config=config,
-        discriminator_loss=loss,
+        discriminator_loss=discriminator_loss,
         make_demonstrations=make_demonstrations)
     super().__init__(
         seed=seed,

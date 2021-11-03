@@ -60,7 +60,8 @@ def convert_to_bc_network(
   """Converts a policy_network from SAC/TD3/D4PG/.. into a BC policy network.
 
   Args:
-    policy_network: FeedForwardNetwork taking the observation as input.
+    policy_network: FeedForwardNetwork taking the observation as input and
+      returning action representation compatible with one of the BC losses.
 
   Returns:
     The BC policy network taking observation, is_training, key as input.

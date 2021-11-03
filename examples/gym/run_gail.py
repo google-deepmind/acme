@@ -13,16 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example running AIL+SAC on the OpenAI Gym."""
-import dataclasses
+"""Example running AIL+PPO on the OpenAI Gym."""
 import functools
 
 from absl import flags
 import acme
 from acme import specs
 from acme.agents.jax import ail
-from acme.agents.jax import bc
-from acme.agents.jax import sac
+from acme.agents.jax import ppo
 from absl import app
 import helpers
 from acme.jax import networks as networks_lib
@@ -32,64 +30,49 @@ import jax
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_steps', 1000000,
                      'Number of env steps to run training for.')
+flags.DEFINE_integer('transition_batch_size', 2048,
+                     'Number of transitions in a batch.')
+flags.DEFINE_integer('unroll_length', 16,
+                     'Number of transitions per single gradient.')
 flags.DEFINE_integer('eval_every', 10000, 'How often to run evaluation')
-flags.DEFINE_string('env_name', 'MountainCarContinuous-v0',
-                    'What environment to run')
+flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'What environment to run')
 flags.DEFINE_string(
     'dataset_name', 'd4rl_mujoco_halfcheetah/v0-medium', 'What dataset to use. '
     'See the TFDS catalog for possible values.')
-flags.DEFINE_integer('num_sgd_steps_per_step', 1,
-                     'Number of SGD steps per learner step().')
 flags.DEFINE_integer('seed', 0, 'Random seed.')
-
-
-def add_bc_pretraining(sac_networks: sac.SACNetworks) -> sac.SACNetworks:
-  """Augments `sac_networks` to run BC pretraining in policy_network.init."""
-
-  make_demonstrations = functools.partial(
-      helpers.make_demonstration_iterator, dataset_name=FLAGS.dataset_name)
-  bc_network = bc.pretraining.convert_to_bc_network(sac_networks.policy_network)
-  loss = bc.logp(sac_networks.log_prob)
-
-  def bc_init(*unused_args):
-    return bc.pretraining.train_with_bc(make_demonstrations, bc_network, loss)
-
-  return dataclasses.replace(
-      sac_networks,
-      policy_network=networks_lib.FeedForwardNetwork(
-          bc_init, sac_networks.policy_network.apply))
 
 
 def main(_):
   # Create an environment, grab the spec, and use it to create networks.
   environment = helpers.make_environment(task=FLAGS.env_name)
   environment_spec = specs.make_environment_spec(environment)
-  agent_networks = sac.make_networks(environment_spec)
+  agent_networks = ppo.make_gym_networks(environment_spec)
 
   # Construct the agent.
-  # Local layout makes sure that we populate the buffer with min_replay_size
-  # initial transitions and that there's no need for tolerance_rate. In order
-  # for deadlocks not to happen we need to disable rate limiting that heppens
-  # inside the SACBuilder. This is achieved by the min_replay_size and
-  # samples_per_insert_tolerance_rate arguments.
-  sac_config = sac.SACConfig(
-      target_entropy=sac.target_entropy_from_env_spec(environment_spec),
-      num_sgd_steps_per_step=FLAGS.num_sgd_steps_per_step,
-      min_replay_size=1,
-      samples_per_insert_tolerance_rate=float('inf'))
-  sac_builder = sac.SACBuilder(sac_config)
-  sac_networks = sac.make_networks(environment_spec)
-  sac_networks = add_bc_pretraining(sac_networks)
+  ppo_config = ppo.PPOConfig(
+      unroll_length=FLAGS.unroll_length,
+      num_minibatches=32,
+      num_epochs=10,
+      batch_size=FLAGS.transition_batch_size // FLAGS.unroll_length)
+  ppo_networks = ppo.make_gym_networks(environment_spec)
 
-  ail_config = ail.AILConfig(direct_rl_batch_size=sac_config.batch_size *
-                             sac_config.num_sgd_steps_per_step)
+  ail_config = ail.AILConfig(
+      direct_rl_batch_size=ppo_config.batch_size * ppo_config.unroll_length,
+      discriminator_batch_size=FLAGS.transition_batch_size,
+      is_sequence_based=True,
+      num_sgd_steps_per_step=1,
+      share_iterator=True,
+  )
 
   def discriminator(*args, **kwargs) -> networks_lib.Logits:
+    # Note: observation embedding does not seem needed.
+    # embedding = lambda x: jnp.reshape(x, list(x.shape[:-2]) + [-1])
     return ail.DiscriminatorModule(
         environment_spec=environment_spec,
         use_action=True,
         use_next_obs=True,
-        network_core=ail.DiscriminatorMLP([4, 4],))(*args, **kwargs)
+        network_core=ail.DiscriminatorMLP([4, 4],),
+    )(*args, **kwargs)
 
   discriminator_transformed = hk.without_apply_rng(
       hk.transform_with_state(discriminator))
@@ -97,27 +80,24 @@ def main(_):
   ail_network = ail.AILNetworks(
       ail.make_discriminator(environment_spec, discriminator_transformed),
       imitation_reward_fn=ail.rewards.gail_reward(),
-      direct_rl_networks=sac_networks)
+      direct_rl_networks=ppo_networks)
 
-  agent = ail.AIL(
+  agent = ail.GAIL(
       spec=environment_spec,
-      rl_agent=sac_builder,
       network=ail_network,
-      config=ail_config,
+      config=ail.GAILConfig(ail_config, ppo_config),
       seed=FLAGS.seed,
-      batch_size=sac_config.batch_size * sac_config.num_sgd_steps_per_step,
+      batch_size=ppo_config.batch_size,
       make_demonstrations=functools.partial(
           helpers.make_demonstration_iterator, dataset_name=FLAGS.dataset_name),
-      policy_network=sac.apply_policy_and_sample(sac_networks),
-      discriminator_loss=ail.losses.gail_loss())
+      policy_network=ppo.make_inference_fn(ppo_networks))
 
   # Create the environment loop used for training.
   train_loop = acme.EnvironmentLoop(environment, agent, label='train_loop')
   # Create the evaluation actor and loop.
   eval_actor = agent.builder.make_actor(
       random_key=jax.random.PRNGKey(FLAGS.seed),
-      policy_network=sac.apply_policy_and_sample(
-          agent_networks, eval_mode=True),
+      policy_network=ppo.make_inference_fn(agent_networks, evaluation=True),
       variable_source=agent)
   eval_env = helpers.make_environment(task=FLAGS.env_name)
   eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop')
