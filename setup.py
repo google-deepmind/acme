@@ -45,7 +45,7 @@ jax_requirements = [
     'optax',
     'rlax',
     'tensorflow',
-    'tfp-nightly',
+    'tensorflow_probability',
     'typing-extensions',
 ]
 
@@ -54,7 +54,7 @@ tf_requirements = [
     'dm-sonnet',
     'trfl',
     'tensorflow',
-    'tfp-nightly',
+    'tensorflow_probability',
 ]
 
 launchpad_requirements = [
