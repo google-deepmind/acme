@@ -117,6 +117,7 @@ class D4PG(local_layout.LocalLayout):
       config: builder.D4PGConfig,
       random_seed: int,
       counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
   ):
     # In the case of a synchronous agent, we do not use Reverb's built-in rate
     # limitation to avoid deadlocks; so rather than using the Builder's min
@@ -131,7 +132,7 @@ class D4PG(local_layout.LocalLayout):
     # This is achieved by setting the rate tolerance to be infinite.
     config.samples_per_insert_tolerance_rate = float('inf')
 
-    self.builder = builder.D4PGBuilder(config)
+    self.builder = builder.D4PGBuilder(config, logger_fn=lambda: logger)
     super().__init__(
         seed=random_seed,
         environment_spec=spec,

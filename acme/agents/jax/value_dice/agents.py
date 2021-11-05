@@ -97,6 +97,7 @@ class ValueDice(local_layout.LocalLayout):
       make_demonstrations: Callable[[int], Iterator[types.Transition]],
       seed: int,
       counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
   ):
     min_replay_size = config.min_replay_size
     # Local layout (actually agent.Agent) makes sure that we populate the
@@ -107,7 +108,10 @@ class ValueDice(local_layout.LocalLayout):
     config.samples_per_insert_tolerance_rate = float('inf')
     config.min_replay_size = 1
     self.builder = builder.ValueDiceBuilder(
-        config=config, make_demonstrations=make_demonstrations)
+        config=config,
+        make_demonstrations=make_demonstrations,
+        logger_fn=lambda: logger,
+    )
     super().__init__(
         seed=seed,
         environment_spec=spec,

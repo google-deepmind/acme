@@ -102,6 +102,7 @@ class SAC(local_layout.LocalLayout):
       seed: int,
       normalize_input: bool = True,
       counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
   ):
     min_replay_size = config.min_replay_size
     # Local layout (actually agent.Agent) makes sure that we populate the
@@ -111,7 +112,7 @@ class SAC(local_layout.LocalLayout):
     # by the following two lines.
     config.samples_per_insert_tolerance_rate = float('inf')
     config.min_replay_size = 1
-    sac_builder = builder.SACBuilder(config)
+    sac_builder = builder.SACBuilder(config, logger_fn=lambda: logger)
     if normalize_input:
       # One batch dimension: [batch_size, ...]
       batch_dims = (0,)

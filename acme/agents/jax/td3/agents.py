@@ -98,6 +98,7 @@ class TD3(local_layout.LocalLayout):
       config: td3_config.TD3Config,
       seed: int,
       counter: Optional[counting.Counter] = None,
+      logger: Optional[loggers.Logger] = None,
   ):
     min_replay_size = config.min_replay_size
     # Local layout (actually agent.Agent) makes sure that we populate the
@@ -113,7 +114,7 @@ class TD3(local_layout.LocalLayout):
         action_specs=spec.actions,
         sigma=config.sigma)
 
-    self.builder = builder.TD3Builder(config)
+    self.builder = builder.TD3Builder(config, logger_fn=lambda: logger)
     super().__init__(
         seed=seed,
         environment_spec=spec,
