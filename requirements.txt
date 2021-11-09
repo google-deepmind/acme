@@ -4,7 +4,7 @@ bsuite==0.3.5
 dm-control==0.0.364896371
 dm-env==1.5
 dm-haiku==0.0.4
-dm-launchpad-nightly==0.3.0.dev20210818
+dm-launchpad==0.3.2
 dm-reverb==0.4.0
 dm-sonnet==2.0.0
 dm-tree==0.1.6
