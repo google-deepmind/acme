@@ -21,8 +21,11 @@ _Handler = Callable[[], Any]
 
 
 def add_handler(signo: signal.Signals, fn: _Handler):
-  def _wrapped(signo: signal.Signals, frame: types.FrameType):
+
+  # The function signal.signal expects the handler to take an int rather than a
+  # signal.Signals.
+  def _wrapped(signo: int, frame: types.FrameType):
     del signo, frame
     return fn()
 
-  signal.signal(signo, _wrapped)
+  signal.signal(signo.value, _wrapped)
