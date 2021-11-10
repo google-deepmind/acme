@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example running D4PG on the control suite."""
+"""Example running D4PG on the control suite.
+
+It runs the distributed agent using Launchpad runtime specified by
+--lp_launch_type flag.
+"""
 
 from absl import app
 from absl import flags
@@ -38,7 +42,7 @@ def main(_):
       network_factory=lp_utils.partial_kwargs(d4pg.make_default_networks),
       num_actors=2).build()
 
-  lp.launch(program, lp.LaunchType.LOCAL_MULTI_PROCESSING)
+  lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
 
 
 if __name__ == '__main__':

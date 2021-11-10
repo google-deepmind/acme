@@ -15,13 +15,15 @@
 
 """Example running PPO in JAX on the OpenAI Gym.
 
-It runs the distributed agent in the single-machine multi-process setup.
+It runs the distributed agent using Launchpad runtime specified by
+--lp_launch_type flag.
 """
-
 from absl import app
 from absl import flags
 from acme.agents.jax import ppo
 import helpers
+from acme.utils import lp_utils
+
 import launchpad as lp
 
 FLAGS = flags.FLAGS
@@ -44,10 +46,10 @@ def main(_):
       config=config,
       seed=FLAGS.seed,
       num_actors=4,
-      max_number_of_steps=4000000).build()
+      max_number_of_steps=1000).build()
 
   # Launch experiment.
-  lp.launch(program, lp.LaunchType.LOCAL_MULTI_PROCESSING)
+  lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
 
 
 if __name__ == '__main__':

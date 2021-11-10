@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example running SAC in JAX on the OpenAI Gym."""
+"""Example running SAC in JAX on the OpenAI Gym.
+
+It runs the distributed agent using Launchpad runtime specified by
+--lp_launch_type flag.
+"""
 
 from absl import app
 from absl import flags
 from acme.agents.jax import sac
 import helpers
+from acme.utils import lp_utils
 import launchpad as lp
 
 FLAGS = flags.FLAGS
@@ -37,7 +42,7 @@ def main(_):
       max_number_of_steps=1000000).build()
 
   # Launch experiment.
-  lp.launch(program, lp.LaunchType.LOCAL_MULTI_PROCESSING)
+  lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
 
 
 if __name__ == '__main__':

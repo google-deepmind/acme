@@ -22,3 +22,4 @@ tensorflow-estimator==2.6.0
 tensorflow==2.6.0
 tfp-nightly==0.14.0.dev20210818
 trfl==1.2.0
+xmanager

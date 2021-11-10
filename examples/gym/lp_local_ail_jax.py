@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example running AIL+SAC in JAX on the OpenAI Gym."""
+"""Example running AIL+SAC in JAX on the OpenAI Gym.
+
+It runs the distributed agent using Launchpad runtime specified by
+--lp_launch_type flag.
+"""
 
 import functools
 
@@ -25,6 +29,7 @@ from acme.agents.jax import ail
 from acme.agents.jax import sac
 import helpers
 from acme.jax import networks as networks_lib
+from acme.utils import lp_utils
 import haiku as hk
 import launchpad as lp
 
@@ -84,7 +89,7 @@ def main(_):
       discriminator_loss=ail.losses.gail_loss()).build()
 
   # Launch experiment.
-  lp.launch(program, lp.LaunchType.LOCAL_MULTI_PROCESSING)
+  lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
 
 
 if __name__ == '__main__':

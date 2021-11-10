@@ -13,13 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example running TD3 in JAX on the OpenAI Gym."""
+"""Example running TD3 in JAX on the OpenAI Gym.
+
+It runs the distributed agent using Launchpad runtime specified by
+--lp_launch_type flag.
+"""
 
 from absl import app
 from absl import flags
 from acme import specs
 from acme.agents.jax import td3
 import helpers
+from acme.utils import lp_utils
 import launchpad as lp
 
 FLAGS = flags.FLAGS
@@ -40,7 +45,7 @@ def main(_):
       num_actors=4,
       max_number_of_steps=1000000).build()
 
-  lp.launch(program, lp.LaunchType.LOCAL_MULTI_PROCESSING)
+  lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
 
 
 if __name__ == '__main__':
