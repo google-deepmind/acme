@@ -41,7 +41,7 @@ class TD3Builder(builders.ActorLearnerBuilder):
   def __init__(
       self,
       config: td3_config.TD3Config,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
+      logger_fn: Callable[[], Optional[loggers.Logger]] = lambda: None,
   ):
     """Creates a TD3 learner, a behavior policy and an eval actor.
 

@@ -31,6 +31,7 @@ import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.TD3Networks]
+LoggerFactory = Callable[[], Optional[loggers.Logger]]
 
 
 class DistributedTD3(distributed_layout.DistributedLayout):
@@ -97,7 +98,9 @@ class TD3(local_layout.LocalLayout):
       network: networks.TD3Networks,
       config: td3_config.TD3Config,
       seed: int,
+      workdir: Optional[str] = '~/acme',
       counter: Optional[counting.Counter] = None,
+      logger_fn: LoggerFactory = lambda: None,
   ):
     min_replay_size = config.min_replay_size
     # Local layout (actually agent.Agent) makes sure that we populate the
@@ -113,7 +116,7 @@ class TD3(local_layout.LocalLayout):
         action_specs=spec.actions,
         sigma=config.sigma)
 
-    self.builder = builder.TD3Builder(config)
+    self.builder = builder.TD3Builder(config, logger_fn=logger_fn)
     super().__init__(
         seed=seed,
         environment_spec=spec,
@@ -124,5 +127,6 @@ class TD3(local_layout.LocalLayout):
         samples_per_insert=config.samples_per_insert,
         min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
+        workdir=workdir,
         counter=counter,
     )

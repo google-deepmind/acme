@@ -29,6 +29,7 @@ import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], builder.D4PGNetworks]
+LoggerFactory = Callable[[], Optional[loggers.Logger]]
 
 
 class DistributedD4PG(distributed_layout.DistributedLayout):
@@ -116,7 +117,9 @@ class D4PG(local_layout.LocalLayout):
       network: builder.D4PGNetworks,
       config: builder.D4PGConfig,
       random_seed: int,
+      workdir: Optional[str] = '~/acme',
       counter: Optional[counting.Counter] = None,
+      logger_fn: LoggerFactory = lambda: None,
   ):
     # In the case of a synchronous agent, we do not use Reverb's built-in rate
     # limitation to avoid deadlocks; so rather than using the Builder's min
@@ -131,7 +134,7 @@ class D4PG(local_layout.LocalLayout):
     # This is achieved by setting the rate tolerance to be infinite.
     config.samples_per_insert_tolerance_rate = float('inf')
 
-    self.builder = builder.D4PGBuilder(config)
+    self.builder = builder.D4PGBuilder(config, logger_fn=logger_fn)
     super().__init__(
         seed=random_seed,
         environment_spec=spec,
@@ -142,5 +145,6 @@ class D4PG(local_layout.LocalLayout):
         samples_per_insert=config.samples_per_insert,
         min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
+        workdir=workdir,
         counter=counter,
     )

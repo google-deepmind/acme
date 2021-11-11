@@ -34,6 +34,7 @@ import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], ail_networks.AILNetworks]
+LoggerFactory = Callable[[], Optional[loggers.Logger]]
 
 
 class DistributedAIL(distributed_layout.DistributedLayout):
@@ -96,23 +97,29 @@ class DistributedAIL(distributed_layout.DistributedLayout):
 class AIL(local_layout.LocalLayout):
   """Local agent for AIL."""
 
-  def __init__(self,
-               spec: specs.EnvironmentSpec,
-               rl_agent: builders.GenericActorLearnerBuilder,
-               network: ail_networks.AILNetworks,
-               config: ail_config.AILConfig,
-               seed: int,
-               batch_size: int,
-               make_demonstrations: Callable[[int], Iterator[types.Transition]],
-               policy_network: Any,
-               samples_per_insert: float = 256,
-               discriminator_loss: Optional[losses.Loss] = None,
-               counter: Optional[counting.Counter] = None):
+  def __init__(
+      self,
+      spec: specs.EnvironmentSpec,
+      rl_agent: builders.GenericActorLearnerBuilder,
+      network: ail_networks.AILNetworks,
+      config: ail_config.AILConfig,
+      seed: int,
+      batch_size: int,
+      make_demonstrations: Callable[[int], Iterator[types.Transition]],
+      policy_network: Any,
+      samples_per_insert: float = 256,
+      discriminator_loss: Optional[losses.Loss] = None,
+      workdir: Optional[str] = '~/acme',
+      counter: Optional[counting.Counter] = None,
+      logger_fn: LoggerFactory = lambda: None,
+  ):
     self.builder = builder.AILBuilder(
         rl_agent=rl_agent,
         config=config,
         discriminator_loss=discriminator_loss,
-        make_demonstrations=make_demonstrations)
+        make_demonstrations=make_demonstrations,
+        logger_fn=logger_fn,
+    )
     super().__init__(
         seed=seed,
         environment_spec=spec,
@@ -123,5 +130,6 @@ class AIL(local_layout.LocalLayout):
         samples_per_insert=samples_per_insert,
         min_replay_size=config.min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
+        workdir=workdir,
         counter=counter,
     )

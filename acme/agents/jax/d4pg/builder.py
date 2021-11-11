@@ -98,7 +98,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder):
   def __init__(
       self,
       config: D4PGConfig,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
+      logger_fn: Callable[[], Optional[loggers.Logger]] = lambda: None,
   ):
     """Creates a D4PG learner, a behavior policy and an eval actor.
 

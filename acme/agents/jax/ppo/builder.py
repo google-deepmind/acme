@@ -40,7 +40,7 @@ class PPOBuilder(builders.ActorLearnerBuilder):
   def __init__(
       self,
       config: ppo_config.PPOConfig,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
+      logger_fn: Callable[[], Optional[loggers.Logger]] = lambda: None,
   ):
     """Creates PPO builder."""
     self._config = config

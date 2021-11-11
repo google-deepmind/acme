@@ -43,7 +43,7 @@ class SACBuilder(builders.ActorLearnerBuilder):
   def __init__(
       self,
       config: sac_config.SACConfig,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
+      logger_fn: Callable[[], Optional[loggers.Logger]] = lambda: None,
   ):
     """Creates a SAC learner, a behavior policy and an eval actor.
 

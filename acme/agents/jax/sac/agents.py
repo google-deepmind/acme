@@ -32,6 +32,7 @@ import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.SACNetworks]
+LoggerFactory = Callable[[], Optional[loggers.Logger]]
 
 
 class DistributedSAC(distributed_layout.DistributedLayout):
@@ -101,7 +102,9 @@ class SAC(local_layout.LocalLayout):
       config: sac_config.SACConfig,
       seed: int,
       normalize_input: bool = True,
+      workdir: Optional[str] = '~/acme',
       counter: Optional[counting.Counter] = None,
+      logger_fn: LoggerFactory = lambda: None,
   ):
     min_replay_size = config.min_replay_size
     # Local layout (actually agent.Agent) makes sure that we populate the
@@ -111,7 +114,7 @@ class SAC(local_layout.LocalLayout):
     # by the following two lines.
     config.samples_per_insert_tolerance_rate = float('inf')
     config.min_replay_size = 1
-    sac_builder = builder.SACBuilder(config)
+    sac_builder = builder.SACBuilder(config, logger_fn=logger_fn)
     if normalize_input:
       # One batch dimension: [batch_size, ...]
       batch_dims = (0,)
@@ -128,5 +131,6 @@ class SAC(local_layout.LocalLayout):
         samples_per_insert=config.samples_per_insert,
         min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
+        workdir=workdir,
         counter=counter,
     )

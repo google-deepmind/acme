@@ -154,14 +154,16 @@ class AILBuilder(builders.GenericActorLearnerBuilder[ail_networks.AILNetworks,
                  Generic[ail_networks.DirectRLNetworks, DirectPolicyNetwork]):
   """AIL Builder."""
 
-  def __init__(self,
-               rl_agent: builders.GenericActorLearnerBuilder[
-                   ail_networks.DirectRLNetworks, DirectPolicyNetwork,
-                   reverb.ReplaySample],
-               config: ail_config.AILConfig,
-               discriminator_loss: losses.Loss,
-               make_demonstrations: Callable[[int], Iterator[types.Transition]],
-               logger_fn: Callable[[], loggers.Logger] = lambda: None):
+  def __init__(
+      self,
+      rl_agent: builders.GenericActorLearnerBuilder[
+          ail_networks.DirectRLNetworks, DirectPolicyNetwork,
+          reverb.ReplaySample],
+      config: ail_config.AILConfig,
+      discriminator_loss: losses.Loss,
+      make_demonstrations: Callable[[int], Iterator[types.Transition]],
+      logger_fn: Callable[[], Optional[loggers.Logger]] = lambda: None,
+  ):
     """Implements a builder for AIL using rl_agent as forward RL algorithm.
 
     Args:

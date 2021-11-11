@@ -32,6 +32,7 @@ import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.ValueDiceNetworks]
+LoggerFactory = Callable[[], Optional[loggers.Logger]]
 
 
 class DistributedValueDice(distributed_layout.DistributedLayout):
@@ -96,7 +97,9 @@ class ValueDice(local_layout.LocalLayout):
       config: value_dice_config.ValueDiceConfig,
       make_demonstrations: Callable[[int], Iterator[types.Transition]],
       seed: int,
+      workdir: Optional[str] = '~/acme',
       counter: Optional[counting.Counter] = None,
+      logger_fn: LoggerFactory = lambda: None,
   ):
     min_replay_size = config.min_replay_size
     # Local layout (actually agent.Agent) makes sure that we populate the
@@ -107,7 +110,9 @@ class ValueDice(local_layout.LocalLayout):
     config.samples_per_insert_tolerance_rate = float('inf')
     config.min_replay_size = 1
     self.builder = builder.ValueDiceBuilder(
-        config=config, make_demonstrations=make_demonstrations)
+        config=config,
+        make_demonstrations=make_demonstrations,
+        logger_fn=logger_fn)
     super().__init__(
         seed=seed,
         environment_spec=spec,
@@ -118,5 +123,6 @@ class ValueDice(local_layout.LocalLayout):
         samples_per_insert=config.samples_per_insert,
         min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
+        workdir=workdir,
         counter=counter,
     )

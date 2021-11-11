@@ -32,6 +32,7 @@ import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], ppo_networks.PPONetworks]
+LoggerFactory = Callable[[], Optional[loggers.Logger]]
 
 
 class DistributedPPO(distributed_layout.DistributedLayout):
@@ -101,11 +102,12 @@ class PPO(local_layout.LocalLayout):
       networks: ppo_networks.PPONetworks,
       config: ppo_config.PPOConfig,
       seed: int,
-      workdir: Optional[str] = '~/acme',
       normalize_input: bool = False,
+      workdir: Optional[str] = '~/acme',
       counter: Optional[counting.Counter] = None,
+      logger_fn: LoggerFactory = lambda: None,
   ):
-    ppo_builder = builder.PPOBuilder(config)
+    ppo_builder = builder.PPOBuilder(config, logger_fn=logger_fn)
     if normalize_input:
       # Two batch dimensions: [num_sequences, num_steps, ...]
       batch_dims = (0, 1)
