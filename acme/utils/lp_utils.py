@@ -15,13 +15,10 @@
 
 """Utility function for building and launching launchpad programs."""
 
-import atexit
 import functools
 import inspect
 import os
-import shutil
 import sys
-import tempfile
 import time
 from typing import Any, Callable
 
@@ -126,15 +123,21 @@ def make_xm_docker_resources(program: lp.Program):
 
   xm_resources = {}
 
-  # Build a temp directory containing Acme codebase, so that local changes
-  # to the code are reflected in the Docker image.
-  tmp_dir = tempfile.mkdtemp()
-  atexit.register(shutil.rmtree, tmp_dir, ignore_errors=True)
-  acme_location = os.path.dirname(
-      os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-  os.symlink(acme_location + '/acme', os.path.join(tmp_dir, 'acme'))
-  os.symlink(acme_location + '/examples', os.path.join(tmp_dir, 'examples'))
+  # Try to find location of GitHub-fetched Acme sources from which agent is
+  # being launched. This is needed to determine packages to be installed inside
+  # the Docker image and to copy the right version of Acme source code.
 
+  acme_location = os.path.dirname(
+      inspect.getframeinfo(sys._getframe(1)).filename)  # pylint: disable=protected-access
+  while not os.path.exists(os.path.join(acme_location, 'setup.py')):
+    acme_location = os.path.dirname(acme_location)
+    if acme_location == '/':
+      raise ValueError(
+          'Failed to find Acme''s setup.py (needed to determine '
+          'required packages to install inside Docker). Are you calling '
+          'make_xm_docker_resources from within checked-out Acme repository?')
+
+  tmp_dir = acme_location
   docker_requirements = os.path.join(acme_location, 'requirements.txt')
 
   # Extend PYTHONPATH with paths used by the launcher.
