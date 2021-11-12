@@ -85,9 +85,9 @@ class FeedForwardActor(core.Actor):
     if self._adder:
       self._adder.add_first(timestep)
 
-  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
+  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep, extras: types.NestedArray=()):
     if self._adder:
-      self._adder.add(action, next_timestep)
+      self._adder.add(action, next_timestep, extras)
 
   def update(self, wait: bool = False):
     if self._variable_client:
