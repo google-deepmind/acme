@@ -18,4 +18,6 @@
 
 from acme.agents.jax.impala.agent import IMPALA
 from acme.agents.jax.impala.agent import IMPALAFromConfig
+from acme.agents.jax.impala.config import IMPALAConfig
 from acme.agents.jax.impala.learning import IMPALALearner
+from acme.agents.jax.impala.networks import IMPALANetworks

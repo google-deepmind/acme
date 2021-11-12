@@ -1,4 +1,3 @@
-# python3
 # Copyright 2018 DeepMind Technologies Limited. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utilities for reverb-based adders."""
+"""Utilities for Reverb-based adders."""
 
 from typing import Dict, Union
 

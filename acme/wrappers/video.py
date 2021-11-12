@@ -180,11 +180,11 @@ class MujocoVideoWrapper(VideoWrapper):
     if frame_rate is None:
       try:
         control_timestep = getattr(environment, 'control_timestep')()
-      except AttributeError:
+      except AttributeError as e:
         raise AttributeError('MujocoVideoWrapper expects an environment which '
                              'exposes a control_timestep method, like '
                              'dm_control environments, or frame_rate '
-                             'to be specified.')
+                             'to be specified.') from e
       frame_rate = int(round(playback_speed / control_timestep))
 
     super().__init__(environment, frame_rate=frame_rate, **kwargs)

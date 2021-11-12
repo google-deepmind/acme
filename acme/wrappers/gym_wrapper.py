@@ -24,6 +24,7 @@ import dm_env
 import gym
 from gym import spaces
 import numpy as np
+import tree
 
 
 class GymWrapper(dm_env.Environment):
@@ -56,6 +57,9 @@ class GymWrapper(dm_env.Environment):
 
     observation, reward, done, info = self._environment.step(action)
     self._reset_next_step = done
+
+    reward = tree.map_structure(lambda x, t: np.asarray(x, dtype=t.dtype),
+                                reward, self.reward_spec())
 
     if done:
       truncated = info.get('TimeLimit.truncated', False)

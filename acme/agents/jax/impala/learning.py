@@ -21,7 +21,7 @@ from typing import Dict, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 from absl import logging
 import acme
 from acme import specs
-from acme.agents.jax.impala import types
+from acme.agents.jax.impala import networks as impala_networks
 from acme.jax import losses
 from acme.jax import networks as networks_lib
 from acme.jax import utils
@@ -47,11 +47,8 @@ class IMPALALearner(acme.Learner):
 
   def __init__(
       self,
+      networks: impala_networks.IMPALANetworks,
       obs_spec: specs.Array,
-      unroll_init_fn: types.PolicyValueInitFn,
-      unroll_fn: types.PolicyValueFn,
-      initial_state_init_fn: types.RecurrentStateInitFn,
-      initial_state_fn: types.RecurrentStateFn,
       iterator: Iterator[reverb.ReplaySample],
       optimizer: optax.GradientTransformation,
       random_key: networks_lib.PRNGKey,
@@ -65,7 +62,7 @@ class IMPALALearner(acme.Learner):
       prefetch_size: int = 2,
       num_prefetch_threads: Optional[int] = None,
   ):
-
+    # TODO(lukstafi): remove obs_spec, prepare networks accordingly.
     local_devices = jax.local_devices()
     process_id = jax.process_index()
     logging.info('Learner process id: %s. Devices passed: %s', process_id,
@@ -76,7 +73,7 @@ class IMPALALearner(acme.Learner):
     self._local_devices = [d for d in self._devices if d in local_devices]
 
     loss_fn = losses.impala_loss(
-        unroll_fn,
+        networks.unroll_fn,
         discount=discount,
         max_abs_reward=max_abs_reward,
         baseline_cost=baseline_cost,
@@ -115,12 +112,12 @@ class IMPALALearner(acme.Learner):
       dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
 
       key, key_initial_state = jax.random.split(key)
-      params = initial_state_init_fn(key_initial_state)
+      params = networks.initial_state_init_fn(key_initial_state)
       # TODO(jferret): as it stands, we do not yet support
       # training the initial state params.
-      initial_state = initial_state_fn(params)
+      initial_state = networks.initial_state_fn(params)
 
-      initial_params = unroll_init_fn(key, dummy_obs, initial_state)
+      initial_params = networks.unroll_init_fn(key, dummy_obs, initial_state)
       initial_opt_state = optimizer.init(initial_params)
       return TrainingState(
           params=initial_params, opt_state=initial_opt_state)

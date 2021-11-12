@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        docker-image: ["python:3.6", "python:3.7", "python:3.8"]
+        docker-image: ["python:3.7", "python:3.8", "python:3.9"]
     steps:
     - name: Checkout acme
       uses: actions/checkout@v2

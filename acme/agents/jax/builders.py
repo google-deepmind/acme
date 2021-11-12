@@ -88,8 +88,6 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
       dataset: Iterator[Sample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
-      # TODO(mwhoffman): eliminate checkpoint and move it outside.
-      checkpoint: bool = False,
   ) -> core.Learner:
     """Creates an instance of the learner.
 
@@ -102,7 +100,6 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
         order to update priorities.
       counter: a Counter which allows for recording of counts (learner steps,
         actor steps, etc.) distributed throughout the agent.
-      checkpoint: bool controlling whether the learner checkpoints itself.
     """
 
 

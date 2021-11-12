@@ -19,6 +19,7 @@ from acme import adders
 from acme import core
 from acme import specs
 from acme.adders import reverb as adders_reverb
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax import builders
 from acme.agents.jax.dqn import config as dqn_config
@@ -36,14 +37,18 @@ import rlax
 
 
 def default_behavior_policy(network: networks_lib.FeedForwardNetwork,
-                            epsilon: float,
-                            params: networks_lib.Params,
-                            key: networks_lib.PRNGKey,
-                            observation: networks_lib.Observation):
-  """Returns an action for the given observation."""
-  action_values = network.apply(params, observation)
-  actions = rlax.epsilon_greedy(epsilon).sample(key, action_values)
-  return actions.astype(jnp.int32)
+                            epsilon: float) -> actor_core_lib.FeedForwardPolicy:
+  """Returns the feed-forward policy with epsilon-greedy exploration."""
+  def apply_and_sample(params: networks_lib.Params,
+                       key: networks_lib.PRNGKey,
+                       observation: networks_lib.Observation
+                       ) -> networks_lib.Action:
+    """Returns an action for the given observation."""
+    action_values = network.apply(params, observation)
+    actions = rlax.epsilon_greedy(epsilon).sample(key, action_values)
+    return actions.astype(jnp.int32)
+
+  return apply_and_sample
 
 
 class DQNBuilder(builders.ActorLearnerBuilder):
@@ -73,7 +78,6 @@ class DQNBuilder(builders.ActorLearnerBuilder):
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
-      checkpoint: bool = False,
   ) -> core.Learner:
     return learning_lib.SGDLearner(
         network=networks,
@@ -83,6 +87,7 @@ class DQNBuilder(builders.ActorLearnerBuilder):
         data_iterator=dataset,
         loss_fn=self._loss_fn,
         replay_client=replay_client,
+        replay_table_name=self._config.replay_table_name,
         counter=counter,
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
         logger=self._logger_fn())
@@ -95,14 +100,13 @@ class DQNBuilder(builders.ActorLearnerBuilder):
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:
     assert variable_source is not None
-    return actors.FeedForwardActor(
-        policy=policy_network,
-        random_key=random_key,
-        # Inference happens on CPU, so it's better to move variables there too.
-        variable_client=variable_utils.VariableClient(
-            variable_source, '', device='cpu'),
-        adder=adder,
-    )
+    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
+        policy_network)
+    # Inference happens on CPU, so it's better to move variables there too.
+    variable_client = variable_utils.VariableClient(variable_source, '',
+                                                    device='cpu')
+    return actors.GenericActor(
+        actor_core, random_key, variable_client, adder, backend='cpu')
 
   def make_replay_tables(
       self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:

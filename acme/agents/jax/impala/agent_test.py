@@ -22,7 +22,6 @@ from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import impala
-from acme.agents.jax.impala import agent as impala_agent
 from acme.jax import networks
 from acme.testing import fakes
 
@@ -89,7 +88,7 @@ class IMPALATest(absltest.TestCase):
         apply_rng=True))
 
     # Construct the agent.
-    config = impala_agent.IMPALAConfig(
+    config = impala.IMPALAConfig(
         sequence_length=3,
         sequence_period=3,
         batch_size=6,

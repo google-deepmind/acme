@@ -23,12 +23,13 @@ import gym
 
 
 def make_environment(evaluation: bool = False,
-                     level: str = 'PongNoFrameskip-v4') -> dm_env.Environment:
+                     level: str = 'PongNoFrameskip-v4',
+                     oar_wrapper: bool = False) -> dm_env.Environment:
+  """Loads the Atari environment."""
   env = gym.make(level, full_action_space=True)
 
   max_episode_len = 108_000 if evaluation else 50_000
-
-  return wrappers.wrap_all(env, [
+  wrapper_list = [
       wrappers.GymAtariAdapter,
       functools.partial(
           wrappers.AtariWrapper,
@@ -36,5 +37,10 @@ def make_environment(evaluation: bool = False,
           max_episode_len=max_episode_len,
           zero_discount_on_life_loss=True,
       ),
-      wrappers.SinglePrecisionWrapper,
-  ])
+  ]
+  if oar_wrapper:
+    # E.g. IMPALA and R2D2 use this particular variant.
+    wrapper_list.append(wrappers.ObservationActionRewardWrapper)
+  wrapper_list.append(wrappers.SinglePrecisionWrapper)
+
+  return wrappers.wrap_all(env, wrapper_list)

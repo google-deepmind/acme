@@ -41,11 +41,11 @@ jax_requirements = [
     'jaxlib',
     'dm-haiku',
     'dm-reverb',
+    'flax',
     'optax',
     'rlax',
-    'dataclasses',  # Back-port for Python 3.6.
     'tensorflow',
-    'tfp-nightly',
+    'tensorflow_probability',
     'typing-extensions',
 ]
 
@@ -54,7 +54,7 @@ tf_requirements = [
     'dm-sonnet',
     'trfl',
     'tensorflow',
-    'tfp-nightly',
+    'tensorflow_probability',
 ]
 
 launchpad_requirements = [
@@ -116,9 +116,9 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
 )

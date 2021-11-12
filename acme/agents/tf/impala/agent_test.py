@@ -36,6 +36,8 @@ def _make_network(action_spec: specs.DiscreteArray) -> snt.RNNCore:
 
 class IMPALATest(absltest.TestCase):
 
+  # TODO(b/200509080): This test case is timing out.
+  @absltest.SkipTest
   def test_impala(self):
     # Create a fake environment to test with.
     environment = fakes.DiscreteEnvironment(

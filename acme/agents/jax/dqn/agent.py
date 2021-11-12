@@ -18,6 +18,7 @@
 from acme import specs
 from acme.agents import agent
 from acme.agents import replay
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax.dqn import config as dqn_config
 from acme.agents.jax.dqn import learning_lib
@@ -83,11 +84,10 @@ class DQNFromConfig(agent.Agent):
                observation: jnp.ndarray) -> jnp.ndarray:
       action_values = network.apply(params, observation)
       return rlax.epsilon_greedy(config.epsilon).sample(key, action_values)
-    actor = actors.FeedForwardActor(
-        policy=policy,
-        random_key=key_actor,
-        variable_client=variable_utils.VariableClient(learner, ''),
-        adder=reverb_replay.adder)
+    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(policy)
+    variable_client = variable_utils.VariableClient(learner, '')
+    actor = actors.GenericActor(
+        actor_core, key_actor, variable_client, reverb_replay.adder)
 
     super().__init__(
         actor=actor,

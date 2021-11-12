@@ -118,7 +118,9 @@ class CSVLogger(base.Logger):
       fields = sorted(data.keys())
       self._writer = csv.DictWriter(self._file, fieldnames=fields,
                                     extrasaction='ignore')
-      self._writer.writeheader()
+      # Write header only if the file is empty.
+      if not self._file.tell():
+        self._writer.writeheader()
     self._writer.writerow(data)
 
     # Flush every `flush_every` writes.

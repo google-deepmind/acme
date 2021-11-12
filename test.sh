@@ -18,7 +18,7 @@
 set -e
 set -x
 
-# Python must be 3.6 or higher.
+# Python must be 3.7 or higher.
 python --version
 
 # Set up a virtual environment.

@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example running SVG0 on the control suite."""
+"""Example running SVG0 on the control suite.
+
+It runs the distributed agent using Launchpad runtime specified by
+--lp_launch_type flag.
+"""
 
 from absl import app
 from absl import flags
@@ -51,7 +55,7 @@ def main(_):
       target_update_period=250,
       num_actors=num_actors).build()
 
-  lp.launch(program, lp.LaunchType.LOCAL_MULTI_PROCESSING)
+  lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
 
 
 if __name__ == '__main__':

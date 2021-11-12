@@ -25,6 +25,7 @@ import reverb
 from reverb import item_selectors
 from reverb import rate_limiters
 from reverb import reverb_types
+import tree
 
 
 def make_replay_table_from_info(
@@ -110,12 +111,14 @@ def replay_sample_to_sars_transition(
     return types.Transition(*sample.data)
   # Note that the last next_observation is invalid.
   steps = sample.data
+  def roll(observation):
+    return np.roll(observation, shift=-1, axis=1)
   transitions = types.Transition(
       observation=steps.observation,
       action=steps.action,
       reward=steps.reward,
       discount=steps.discount,
-      next_observation=np.roll(steps.observation, shift=-1, axis=1))
+      next_observation=tree.map_structure(roll, steps.observation))
   if strip_last_transition:
     # We remove the last transition as its next_observation field is incorrect.
     # It has been obtained by rolling the observation field, such that

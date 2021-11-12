@@ -2,11 +2,15 @@
 
 Acme includes a number of pre-built agents listed below. All are provided as
 single-process agents, but we also include a distributed implementation using
-[Launchpad](https://github.com/deepmind/launchpad), with more examples coming
-soon. Distributed agents share the exact same learning and acting code as their
-single-process counterparts.
+[Launchpad](https://github.com/deepmind/launchpad). Distributed agents share
+the exact same learning and acting code as their single-process counterparts
+and can be executed either on a single machine
+(--lp_launch_type=[local_mt|local_mp] command line flag for multi-threaded or
+multi-process execution) or multi machine setup on GCP
+(--lp_launch_type=vertex_ai). For details please refer to
+[Launchpad documentation](https://github.com/deepmind/launchpad/search?q=%22class+LaunchType%22).
 
-We've also listed the agents below in separate sections based on their different
+We've listed the agents below in separate sections based on their different
 use cases, however these distinction are often subtle. For more information on
 each implementation see the relevant agent-specific README.
 

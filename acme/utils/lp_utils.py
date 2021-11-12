@@ -17,6 +17,8 @@
 
 import functools
 import inspect
+import os
+import sys
 import time
 from typing import Any, Callable
 
@@ -97,4 +99,107 @@ class StepsLimiter:
         lp.stop()
 
       # Don't spam the counter.
-      time.sleep(10.)
+      for _ in range(10):
+        # Do not sleep for a long period of time to avoid LaunchPad program
+        # termination hangs (time.sleep is not interruptible).
+        time.sleep(1)
+
+
+# Resources for each individual instance of the program.
+def make_xm_docker_resources(program: lp.Program):
+  """Creates a dictionary containing Docker XManager resource requirements."""
+  if (FLAGS.lp_launch_type != 'vertex_ai' and
+      FLAGS.lp_launch_type != 'local_docker'):
+    # Avoid importing 'xmanager' for local runs.
+    return None
+
+  # Reference lp.DockerConfig to force lazy import of xmanager by Launchpad and
+  # then import it. It is done this way to avoid heavy imports by default.
+  lp.DockerConfig  # pylint: disable=pointless-statement
+  from xmanager import xm  # pylint: disable=g-import-not-at-top
+
+  # Get number of each type of node.
+  num_nodes = {k: len(v) for k, v in program.groups.items()}
+
+  xm_resources = {}
+
+  # Try to find location of GitHub-fetched Acme sources from which agent is
+  # being launched. This is needed to determine packages to be installed inside
+  # the Docker image and to copy the right version of Acme source code.
+
+  acme_location = os.path.dirname(
+      inspect.getframeinfo(sys._getframe(1)).filename)  # pylint: disable=protected-access
+  while not os.path.exists(os.path.join(acme_location, 'setup.py')):
+    acme_location = os.path.dirname(acme_location)
+    if acme_location == '/':
+      raise ValueError(
+          'Failed to find Acme''s setup.py (needed to determine '
+          'required packages to install inside Docker). Are you calling '
+          'make_xm_docker_resources from within checked-out Acme repository?')
+
+  tmp_dir = acme_location
+  docker_requirements = os.path.join(acme_location, 'requirements.txt')
+
+  # Extend PYTHONPATH with paths used by the launcher.
+  python_path = []
+  for path in sys.path:
+    if path.startswith(acme_location) and acme_location != path:
+      python_path.append(path[len(acme_location):])
+
+  if 'replay' in num_nodes:
+    replay_cpu = 6 + num_nodes.get('actor', 0) * 0.01
+    replay_cpu = min(40, replay_cpu)
+
+    xm_resources['replay'] = lp.DockerConfig(
+        tmp_dir,
+        docker_requirements,
+        hw_requirements=xm.JobRequirements(cpu=replay_cpu, ram=10 * xm.GiB),
+        python_path=python_path)
+
+  if 'evaluator' in num_nodes:
+    xm_resources['evaluator'] = lp.DockerConfig(
+        tmp_dir,
+        docker_requirements,
+        hw_requirements=xm.JobRequirements(cpu=2, ram=4 * xm.GiB),
+        python_path=python_path)
+
+  if 'actor' in num_nodes:
+    xm_resources['actor'] = lp.DockerConfig(
+        tmp_dir,
+        docker_requirements,
+        hw_requirements=xm.JobRequirements(cpu=2, ram=4 * xm.GiB),
+        python_path=python_path)
+
+  if 'learner' in num_nodes:
+    learner_cpu = 6 + num_nodes.get('actor', 0) * 0.01
+    learner_cpu = min(40, learner_cpu)
+    xm_resources['learner'] = lp.DockerConfig(
+        tmp_dir,
+        docker_requirements,
+        hw_requirements=xm.JobRequirements(
+            cpu=learner_cpu, ram=6 * xm.GiB, P100=1),
+        python_path=python_path)
+
+  if 'environment_loop' in num_nodes:
+    xm_resources['environment_loop'] = lp.DockerConfig(
+        tmp_dir,
+        docker_requirements,
+        hw_requirements=xm.JobRequirements(
+            cpu=6, ram=6 * xm.GiB, P100=1),
+        python_path=python_path)
+
+  if 'counter' in num_nodes:
+    xm_resources['counter'] = lp.DockerConfig(
+        tmp_dir,
+        docker_requirements,
+        hw_requirements=xm.JobRequirements(cpu=3, ram=4 * xm.GiB),
+        python_path=python_path)
+
+  if 'cacher' in num_nodes:
+    xm_resources['cacher'] = lp.DockerConfig(
+        tmp_dir,
+        docker_requirements,
+        hw_requirements=xm.JobRequirements(cpu=3, ram=6 * xm.GiB),
+        python_path=python_path)
+
+  return xm_resources

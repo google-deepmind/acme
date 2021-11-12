@@ -31,7 +31,7 @@ class VariableClient:
                client: core.VariableSource,
                key: Union[str, Sequence[str]],
                update_period: int = 1,
-               device: Optional[str] = None):
+               device: Optional[Union[str, jax.xla.Device]] = None):
     """Initializes the variable client.
 
     Args:
@@ -46,13 +46,17 @@ class VariableClient:
     self._call_counter = 0
     self._client = client
     self._params: Sequence[network_types.Params] = None
-    self._device = None
-    if device:
+
+    self._device = device
+    if isinstance(self._device, str):
       self._device = jax.devices(device)[0]
 
     self._executor = futures.ThreadPoolExecutor(max_workers=1)
+
     if isinstance(key, str):
       key = [key]
+
+    self._key = key
     self._request = lambda k=key: client.get_variables(k)
     self._future: Optional[futures.Future] = None
     self._async_request = lambda: self._executor.submit(self._request)
@@ -104,6 +108,10 @@ class VariableClient:
       self._params = jax.device_put(params_list, self._device)
     else:
       self._params = params_list
+
+  @property
+  def device(self) -> Optional[jax.xla.Device]:
+    return self._device
 
   @property
   def params(self) -> Union[network_types.Params, List[network_types.Params]]:

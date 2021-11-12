@@ -20,6 +20,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 from acme import environment_loop
 from acme import specs
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.jax import utils
 from acme.jax import variable_utils
@@ -72,9 +73,16 @@ class ActorTest(parameterized.TestCase):
     variable_source = fakes.VariableSource(params)
     variable_client = variable_utils.VariableClient(variable_source, 'policy')
 
-    actor = actors.FeedForwardActor(
-        policy.apply, random_key=jax.random.PRNGKey(1),
-        variable_client=variable_client, has_extras=has_extras)
+    if has_extras:
+      actor_core = actor_core_lib.batched_feed_forward_with_extras_to_actor_core(
+          policy.apply)
+    else:
+      actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
+          policy.apply)
+    actor = actors.GenericActor(
+        actor_core,
+        random_key=jax.random.PRNGKey(1),
+        variable_client=variable_client)
 
     loop = environment_loop.EnvironmentLoop(environment, actor)
     loop.run(20)
@@ -84,12 +92,9 @@ def _transform_without_rng(f):
   return hk.without_apply_rng(hk.transform(f, apply_rng=True))
 
 
-class RecurrentActorTest(parameterized.TestCase):
+class RecurrentActorTest(absltest.TestCase):
 
-  @parameterized.named_parameters(
-      ('policy', False),
-      ('policy_with_extras', True))
-  def test_recurrent(self, has_extras):
+  def test_recurrent(self):
     environment = _make_fake_env()
     env_spec = specs.make_environment_spec(environment)
     output_size = env_spec.actions.num_values
@@ -119,17 +124,15 @@ class RecurrentActorTest(parameterized.TestCase):
       del key  # Unused for test-case deterministic policy.
       action_values, core_state = network.apply(params, observation, core_state)
       actions = jnp.argmax(action_values, axis=-1)
-      if has_extras:
-        return (actions, (action_values,)), core_state
-      else:
-        return actions, core_state
+      return actions, core_state
 
     variable_source = fakes.VariableSource(params)
     variable_client = variable_utils.VariableClient(variable_source, 'policy')
 
-    actor = actors.RecurrentActor(
-        policy, jax.random.PRNGKey(1), initial_state, variable_client,
-        has_extras=has_extras)
+    actor_core = actor_core_lib.batched_recurrent_to_actor_core(
+        policy, initial_state)
+    actor = actors.GenericActor(actor_core, jax.random.PRNGKey(1),
+                                variable_client)
 
     loop = environment_loop.EnvironmentLoop(environment, actor)
     loop.run(20)
