@@ -26,9 +26,9 @@ python -m venv acme_testing
 source acme_testing/bin/activate
 
 # Install dependencies.
-pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
-pip install .
+pip install --upgrade pip setuptools wheel xmanager
+pip install .[jax,tf,launchpad,testing,envs]
+
 
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
 EXAMPLES=$(find examples/ -mindepth 1 -type d -not -path examples/offline -not -path examples/open_spiel)

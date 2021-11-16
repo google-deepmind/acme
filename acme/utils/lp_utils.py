@@ -138,7 +138,18 @@ def make_xm_docker_resources(program: lp.Program):
           'make_xm_docker_resources from within checked-out Acme repository?')
 
   tmp_dir = acme_location
-  docker_requirements = os.path.join(acme_location, 'requirements.txt')
+  # Generate requirements.txt file and install specified packages in the Docker.
+  import importlib.util  # pylint: disable=g-import-not-at-top
+  spec = importlib.util.spec_from_file_location('setup',
+                                                acme_location + '/setup.py')
+  setup = importlib.util.module_from_spec(spec)
+  try:
+    spec.loader.exec_module(setup)  # pytype: disable=attribute-error
+  except SystemExit:
+    pass
+  requirements = os.path.join(tmp_dir, 'acme/requirements.txt')
+  setup.generate_requirements_file(requirements)
+  docker_requirements = os.path.join(acme_location, requirements)
 
   # Extend PYTHONPATH with paths used by the launcher.
   python_path = []

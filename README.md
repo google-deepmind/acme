@@ -71,7 +71,7 @@ follow the steps below:
     as well, i.e.
 
     ```bash
-    pip install dm-acme dm-acme[jax] dm-acme[tensorflow]
+    pip install dm-acme[jax,tensorflow]
     ```
 
 1.  Additionally, in order to support distributed agents Acme relies on
@@ -93,12 +93,12 @@ follow the steps below:
     ```
 
 1.  **Installing from github**: if you're interested in running the
-    bleeding-edge version of Acme from our github repository you can also
-    install the precise set of dependencies used in our tests (e.g. `test.sh`)
-    by running:
+    bleeding-edge version of Acme, you can do so by cloning the Acme GitHub
+    repository and then executing following command from the main directory
+    (where `setup.py` is located):
 
     ```bash
-    pip install -r requirements.txt
+    pip install .[jax,tf,launchpad,testing,envs]
     ```
 
 ## Citing Acme

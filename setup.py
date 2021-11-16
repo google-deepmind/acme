@@ -28,51 +28,76 @@ spec.loader.exec_module(_metadata)
 
 # TODO(b/184148890): Add a release flag
 
+
+tensorflow = [
+    'dm-reverb==0.4.0',
+    'tensorflow-datasets==4.4.0',
+    'tensorflow-estimator==2.6.0',
+    'tensorflow==2.6.0',
+    'tfp-nightly==0.14.0.dev20210818',
+    'tensorflow_probability'
+]
+
 core_requirements = [
-    'absl-py',
-    'dm_env',
-    'dm-tree',
+    'absl-py==0.12.0',
+    'dm-env==1.5',
+    'dm-tree==0.1.6',
     'numpy',
-    'pillow',
-],
+    'pillow==8.3.2',
+]
 
 jax_requirements = [
-    'jax',
-    'jaxlib',
-    'dm-haiku',
-    'dm-reverb',
-    'flax',
-    'optax',
-    'rlax',
-    'tensorflow',
-    'tensorflow_probability',
+    'jax==0.2.19',
+    'jaxlib==0.1.70',
+    'dm-haiku==0.0.4',
+    'flax==0.3.5',
+    'optax==0.0.9',
+    'rlax==0.0.4',
+    'keras==2.6.0',
     'typing-extensions',
-]
+] + tensorflow
 
 tf_requirements = [
-    'dm-reverb',
-    'dm-sonnet',
-    'trfl',
-    'tensorflow',
-    'tensorflow_probability',
-]
+    'bsuite==0.3.5',
+    'dm-sonnet==2.0.0',
+    'trfl==1.2.0',
+] + tensorflow
 
 launchpad_requirements = [
-    'dm-launchpad-nightly',
+    'dm-launchpad==0.3.2',
 ]
 
 testing_requirements = [
-    'pytype',
-    'pytest-xdist',
+    'pytype==2021.8.11',
+    'pytest-xdist==2.3.0',
 ]
 
 envs_requirements = [
-    'bsuite',
-    'dm-control',
+    'atari-py==0.2.9',
+    'bsuite==0.3.5',
+    'dm-control==0.0.364896371',
     'gym',
     'gym[atari]',
     'tensorflow_datasets',
 ]
+
+
+def generate_requirements_file(path):
+  """Generates requirements.txt file with the Acme's dependencies.
+
+  It is used by Launchpad GCP runtime to generate Acme requirements to be
+  installed inside the docker image. Acme itself is not installed from pypi,
+  but instead sources are copied over to reflect any local changes made to
+  the codebase.
+
+  Args:
+    path: path to the requirements.txt file to generate.
+  """
+  with open(path, 'w') as f:
+    for package in set(core_requirements + jax_requirements + tf_requirements +
+                       launchpad_requirements + envs_requirements):
+      f.write(f'{package}\n')
+
 
 long_description = """Acme is a library of reinforcement learning (RL) agents
 and agent building blocks. Acme strives to expose simple, efficient,
