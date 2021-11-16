@@ -107,6 +107,7 @@ class ReverbAdder(base.Adder):
     self._priority_fns = priority_fns
     self._max_sequence_length = max_sequence_length
     self._delta_encoded = delta_encoded
+    # TODO(b/206629159): Remove this.
     self._max_in_flight_items = max_in_flight_items
     self._add_first_called = False
 
@@ -124,7 +125,7 @@ class ReverbAdder(base.Adder):
       timeout_ms = 10_000
       # Try flush all appended data before closing to avoid loss of experience.
       try:
-        self.__writer.flush(self._max_in_flight_items, timeout_ms=timeout_ms)
+        self.__writer.flush(0, timeout_ms=timeout_ms)
       except reverb.DeadlineExceededError as e:
         logging.error(
             'Timeout (%d ms) exceeded when flushing the writer before '
