@@ -82,8 +82,8 @@ follow the steps below:
     ```
 
     See
-    [here](https://github.com/deepmind/acme/blob/master/examples/control/lp_local_d4pg.py)
-    for an example of an agent using launchpad. More to come soon!
+    [here](https://github.com/deepmind/acme/blob/master/examples/control/lp_d4pg.py)
+    for an example of an agent using launchpad.
 
 1.  Finally, to install a few example environments (including [gym],
     [dm_control], and [bsuite]):
