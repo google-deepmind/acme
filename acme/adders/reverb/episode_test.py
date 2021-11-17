@@ -37,7 +37,8 @@ class EpisodeAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):
         adder=adder,
         first=first,
         steps=steps,
-        expected_items=[expected_episode])
+        expected_items=[expected_episode],
+        signature=adder.signature(*test_utils.get_specs(steps[0])))
 
   @parameterized.parameters(2, 10, 50)
   def test_max_sequence_length(self, max_sequence_length):
@@ -51,7 +52,7 @@ class EpisodeAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):
     # We should have max_sequence_length-1 timesteps that have been written,
     # where the -1 is due to the dangling observation (ie we have actually
     # seen max_sequence_length observations).
-    self.assertEqual(self.client.writer.episode_steps, max_sequence_length - 1)
+    self.assertEqual(self.num_items(), 0)
 
     # Adding one more step should raise an error.
     with self.assertRaises(ValueError):
@@ -59,7 +60,7 @@ class EpisodeAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):
       adder.add(action, step)
 
     # Since the last insert failed it should not affect the internal state.
-    self.assertEqual(self.client.writer.episode_steps, max_sequence_length - 1)
+    self.assertEqual(self.num_items(), 0)
 
   @parameterized.parameters((2, 1), (10, 2), (50, 5))
   def test_padding(self, max_sequence_length, padding):
@@ -80,7 +81,8 @@ class EpisodeAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):
         adder=adder,
         first=first,
         steps=steps,
-        expected_items=[expected_episode])
+        expected_items=[expected_episode],
+        signature=adder.signature(*test_utils.get_specs(steps[0])))
 
   @parameterized.parameters((2, 1), (10, 2), (50, 5))
   def test_nonzero_padding(self, max_sequence_length, padding):
@@ -101,7 +103,8 @@ class EpisodeAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):
         adder=adder,
         first=first,
         steps=steps,
-        expected_items=[expected_episode])
+        expected_items=[expected_episode],
+        signature=adder.signature(*test_utils.get_specs(steps[0])))
 
 
 if __name__ == '__main__':

@@ -14,10 +14,11 @@
 
 """Utilities for testing Reverb adders."""
 
-from typing import Any, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Any, Callable, Optional, Sequence, Tuple, TypeVar, Union
 
 from absl.testing import absltest
 from acme import specs
+from acme import types
 from acme.adders import reverb as adders
 from acme.adders.reverb import base
 from acme.utils import tree_utils
@@ -30,71 +31,6 @@ import tree
 StepWithExtra = Tuple[Any, dm_env.TimeStep, Any]
 StepWithoutExtra = Tuple[Any, dm_env.TimeStep]
 Step = TypeVar('Step', StepWithExtra, StepWithoutExtra)
-
-
-# TODO(b/185308702): consider replacing with a mock-like object.
-class FakeWriter(reverb.TrajectoryWriter):
-  """Fake writer for testing."""
-
-  def __init__(self, writer: reverb.TrajectoryWriter):
-    self._writer = writer
-    self.num_episodes = 0
-
-    self.priorities = []
-    self.appends = []
-    self.closed = False
-
-  @property
-  def episode_steps(self):
-    return self._writer.episode_steps
-
-  @property
-  def history(self) -> Step:
-    return self._writer.history
-
-  def append(self, timestep: Step, partial_step: bool = False):
-    assert not self.closed, 'Trying to use closed Writer'
-    self.appends.append(timestep)
-    self._writer.append(timestep, partial_step=partial_step)
-
-  def create_item(self, table: str, priority: float, trajectory: Step):
-    assert not self.closed, 'Trying to use closed Writer'
-    trajectory_np = tree.map_structure(lambda x: x.numpy(), trajectory)
-    self.priorities.append((table, priority, trajectory_np))
-    self._writer.create_item(table, priority, trajectory)
-
-  def close(self):
-    assert not self.closed, 'Trying to use closed Writer'
-    self.closed = True
-    self._writer.close()
-
-  def end_episode(self,
-                  clear_buffers: bool = False,
-                  timeout_ms: Optional[int] = None):
-    assert not self.closed, 'Trying to use closed Writer'
-    self.num_episodes += 1
-    self._writer.end_episode(clear_buffers=clear_buffers, timeout_ms=timeout_ms)
-
-  def flush(self,
-            block_until_num_items: int = 0,
-            timeout_ms: Optional[int] = None):
-    assert not self.closed, 'Trying to use closed Writer'
-    self._writer.flush(block_until_num_items=block_until_num_items,
-                       timeout_ms=timeout_ms)
-
-
-class FakeClient(reverb.Client):
-  """Fake client for testing."""
-
-  def __init__(self, server_address: str):
-    super().__init__(server_address)
-    self.writer = None
-
-  def trajectory_writer(self,
-                        num_keep_alive_refs: int,
-                        get_signature_timeout_ms: Optional[int] = 3000):
-    self.writer = FakeWriter(super().trajectory_writer(num_keep_alive_refs))
-    return self.writer
 
 
 def make_trajectory(observations):
@@ -140,6 +76,25 @@ def _numeric_to_spec(x: Union[float, int, np.ndarray]):
     raise ValueError(f'Unsupported numeric: {type(x)}')
 
 
+def get_specs(step):
+  """Infer spec from an example step."""
+  env_spec = tree.map_structure(
+      _numeric_to_spec,
+      specs.EnvironmentSpec(
+          observations=step[1].observation,
+          actions=step[0],
+          rewards=step[1].reward,
+          discounts=step[1].discount))
+
+  has_extras = len(step) == 3
+  if has_extras:
+    extras_spec = tree.map_structure(_numeric_to_spec, step[2])
+  else:
+    extras_spec = ()
+
+  return env_spec, extras_spec
+
+
 class AdderTestMixin(absltest.TestCase):
   """A helper mixin for testing Reverb adders.
 
@@ -154,25 +109,33 @@ class AdderTestMixin(absltest.TestCase):
   def setUpClass(cls):
     super().setUpClass()
 
-    replay_table = reverb.Table(
-        name=adders.DEFAULT_PRIORITY_TABLE,
-        sampler=reverb.selectors.Uniform(),
-        remover=reverb.selectors.Fifo(),
-        max_size=1000,
-        rate_limiter=reverb.rate_limiters.MinSize(1),
-    )
+    replay_table = reverb.Table.queue(adders.DEFAULT_PRIORITY_TABLE, 1000)
     cls.server = reverb.Server([replay_table])
+    cls.client = reverb.Client(f'localhost:{cls.server.port}')
 
-  def setUp(self):
-    super().setUp()
-    # The adder is used to insert observations into replay.
-    address = f'localhost:{self.server.port}'
-    self.client = FakeClient(address)
+  def tearDown(self):
+    self.client.reset(adders.DEFAULT_PRIORITY_TABLE)
+    super().tearDown()
 
   @classmethod
   def tearDownClass(cls):
-    super().tearDownClass()
     cls.server.stop()
+    super().tearDownClass()
+
+  def num_episodes(self):
+    info = self.client.server_info(1)[adders.DEFAULT_PRIORITY_TABLE]
+    return info.num_episodes
+
+  def num_items(self):
+    info = self.client.server_info(1)[adders.DEFAULT_PRIORITY_TABLE]
+    return info.rate_limiter_info.insert_stats.completed
+
+  def items(self):
+    sampler = self.client.sample(
+        table=adders.DEFAULT_PRIORITY_TABLE,
+        num_samples=self.num_items(),
+        emit_timesteps=False)
+    return [sample.data for sample in sampler]  # pytype: disable=attribute-error
 
   def run_test_adder(
       self,
@@ -180,10 +143,12 @@ class AdderTestMixin(absltest.TestCase):
       first: dm_env.TimeStep,
       steps: Sequence[Step],
       expected_items: Sequence[Any],
+      signature: types.NestedSpec,
       pack_expected_items: bool = False,
       stack_sequence_fields: bool = True,
       repeat_episode_times: int = 1,
-      end_behavior: adders.EndBehavior = adders.EndBehavior.ZERO_PAD):
+      end_behavior: adders.EndBehavior = adders.EndBehavior.ZERO_PAD,
+      item_transform: Optional[Callable[[Sequence[np.ndarray]], Any]] = None):
     """Runs a unit test case for the adder.
 
     Args:
@@ -195,6 +160,7 @@ class AdderTestMixin(absltest.TestCase):
       expected_items: The sequence of items that are expected to be created
         by calling the adder's `add_first()` method on `first` and `add()` on
         all of the elements in `steps`.
+      signature: Signature that written items must be compatible with.
       pack_expected_items: Deprecated and not used. If true the expected items
         are given unpacked and need to be packed in a list before comparison.
       stack_sequence_fields: Whether to stack the sequence fields of the
@@ -202,6 +168,8 @@ class AdderTestMixin(absltest.TestCase):
         for transition adders and True for both episode and sequence adders.
       repeat_episode_times: How many times to run an episode.
       end_behavior: How end of episode should be handled.
+      item_transform: Transformation of item simulating the work done by the
+        dataset pipeline on the learner in a real setup.
     """
 
     del pack_expected_items
@@ -210,19 +178,6 @@ class AdderTestMixin(absltest.TestCase):
       raise ValueError('At least one step must be given.')
 
     has_extras = len(steps[0]) == 3
-    env_spec = tree.map_structure(
-        _numeric_to_spec,
-        specs.EnvironmentSpec(
-            observations=steps[0][1].observation,
-            actions=steps[0][0],
-            rewards=steps[0][1].reward,
-            discounts=steps[0][1].discount))
-    if has_extras:
-      extras_spec = tree.map_structure(_numeric_to_spec, steps[0][2])
-    else:
-      extras_spec = ()
-    signature = adder.signature(env_spec, extras_spec=extras_spec)
-
     for episode_id in range(repeat_episode_times):
       # Add all the data up to the final step.
       adder.add_first(first)
@@ -239,13 +194,16 @@ class AdderTestMixin(absltest.TestCase):
       # Add the final step.
       adder.add(*steps[-1])
 
+    # Force run the destructor to trigger the flushing of all pending items.
+    adder.__del__()
+
     # Ending the episode should close the writer. No new writer should yet have
     # been created as it is constructed lazily.
     if end_behavior is not adders.EndBehavior.CONTINUE:
-      self.assertEqual(self.client.writer.num_episodes, repeat_episode_times)
+      self.assertEqual(self.num_episodes(), repeat_episode_times)
 
     # Make sure our expected and observed data match.
-    observed_items = [p[2] for p in self.client.writer.priorities]
+    observed_items = self.items()
 
     # Check matching number of items.
     self.assertEqual(len(expected_items), len(observed_items))
@@ -255,16 +213,20 @@ class AdderTestMixin(absltest.TestCase):
       if stack_sequence_fields:
         expected_item = tree_utils.stack_sequence_fields(expected_item)
 
-      # Set check_types=False because we check them below.
-      tree.map_structure(
-          np.testing.assert_array_almost_equal,
-          expected_item,
-          tuple(observed_item),
-          check_types=False)
+      # Apply the transformation which would be done by the dataset in a real
+      # setup.
+      if item_transform:
+        observed_item = item_transform(observed_item)
+
+      tree.map_structure(np.testing.assert_array_almost_equal,
+                         tree.flatten(expected_item),
+                         tree.flatten(observed_item))
 
     # Make sure the signature matches was is being written by Reverb.
     def _check_signature(spec: tf.TensorSpec, value: np.ndarray):
       self.assertTrue(spec.is_compatible_with(tf.convert_to_tensor(value)))
 
-    # Check the last transition's signature.
-    tree.map_structure(_check_signature, signature, observed_items[-1])
+    # Check that it is possible to unpack observed using the signature.
+    for item in observed_items:
+      tree.map_structure(_check_signature, tree.flatten(signature),
+                         tree.flatten(item))
