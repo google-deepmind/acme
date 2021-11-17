@@ -19,8 +19,8 @@ from typing import Any, Callable, Optional, Sequence, Tuple, TypeVar, Union
 from absl.testing import absltest
 from acme import specs
 from acme import types
+from acme.adders import base as adders_base
 from acme.adders import reverb as adders
-from acme.adders.reverb import base
 from acme.utils import tree_utils
 import dm_env
 import numpy as np
@@ -139,7 +139,7 @@ class AdderTestMixin(absltest.TestCase):
 
   def run_test_adder(
       self,
-      adder: base.ReverbAdder,
+      adder: adders_base.Adder,
       first: dm_env.TimeStep,
       steps: Sequence[Step],
       expected_items: Sequence[Any],
@@ -152,11 +152,11 @@ class AdderTestMixin(absltest.TestCase):
     """Runs a unit test case for the adder.
 
     Args:
-      adder: The instance of `base.ReverbAdder` that is being tested.
+      adder: The instance of `Adder` that is being tested.
       first: The first `dm_env.TimeStep` that is used to call
-        `base.ReverbAdder.add_first()`.
+        `Adder.add_first()`.
       steps: A sequence of (action, timestep) tuples that are passed to
-        `base.ReverbAdder.add()`.
+        `Adder.add()`.
       expected_items: The sequence of items that are expected to be created
         by calling the adder's `add_first()` method on `first` and `add()` on
         all of the elements in `steps`.
@@ -195,7 +195,7 @@ class AdderTestMixin(absltest.TestCase):
       adder.add(*steps[-1])
 
     # Force run the destructor to trigger the flushing of all pending items.
-    adder.__del__()
+    getattr(adder, '__del__', lambda: None)()
 
     # Ending the episode should close the writer. No new writer should yet have
     # been created as it is constructed lazily.
