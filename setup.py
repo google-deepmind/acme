@@ -35,7 +35,7 @@ tensorflow = [
     'tensorflow-estimator==2.6.0',
     'tensorflow==2.6.0',
     'tfp-nightly==0.14.0.dev20210818',
-    'tensorflow_probability'
+    'tensorflow_probability==0.14.1',
 ]
 
 core_requirements = [

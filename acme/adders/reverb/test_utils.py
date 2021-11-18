@@ -128,7 +128,7 @@ class AdderTestMixin(absltest.TestCase):
 
   def num_items(self):
     info = self.client.server_info(1)[adders.DEFAULT_PRIORITY_TABLE]
-    return info.rate_limiter_info.insert_stats.completed
+    return info.current_size
 
   def items(self):
     sampler = self.client.sample(
