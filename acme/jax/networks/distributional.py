@@ -199,6 +199,13 @@ class TanhTransformedDistribution(tfd.TransformedDistribution):
   def mode(self):
     return self.bijector.forward(self.distribution.mode())
 
+  @classmethod
+  def _parameter_properties(cls, dtype: Optional[Any], num_classes=None):
+    td_properties = super()._parameter_properties(dtype,
+                                                  num_classes=num_classes)
+    del td_properties['bijector']
+    return td_properties
+
 
 class NormalTanhDistribution(hk.Module):
   """Module that produces a TanhTransformedDistribution distribution."""
