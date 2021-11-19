@@ -32,53 +32,57 @@ spec.loader.exec_module(_metadata)
 # TODO(b/184148890): Add a release flag
 
 
+# Any particular version of reverb needs to be pinned against a particular
+# version of TF due to how it is built. While the versions below should be the
+# most recent stable versions of each library we'll be explicit just make make
+# sure this constraint is upheld.
 tensorflow = [
-    'dm-reverb==0.4.0',
+    'dm-reverb==0.6.1',
+    'keras==2.7.0',
     'tensorflow-datasets==4.4.0',
-    'tensorflow-estimator==2.6.0',
-    'tensorflow==2.6.0',
-    'tfp-nightly==0.14.0.dev20210818',
-    'tensorflow_probability==0.14.1',
+    'tensorflow-estimator==2.7.0',
+    'tensorflow==2.7.0',
+    'tensorflow_probability==0.15.0',
 ]
 
 core_requirements = [
-    'absl-py==0.12.0',
-    'dm-env==1.5',
-    'dm-tree==0.1.6',
+    'absl-py',
+    'dm-env',
+    'dm-tree',
     'numpy',
-    'pillow==8.3.2',
+    'pillow',
+    'typing-extensions',
 ]
 
 jax_requirements = [
-    'jax==0.2.19',
-    'jaxlib==0.1.70',
-    'dm-haiku==0.0.4',
-    'flax==0.3.5',
-    'optax==0.0.9',
-    'rlax==0.0.4',
-    'keras==2.6.0',
-    'typing-extensions',
+    'jax',
+    'jaxlib',
+    'dm-haiku',
+    'flax',
+    'optax',
+    'rlax',
 ] + tensorflow
 
 tf_requirements = [
-    'bsuite==0.3.5',
-    'dm-sonnet==2.0.0',
-    'trfl==1.2.0',
+    'dm-sonnet',
+    'trfl',
 ] + tensorflow
 
+# This is the version of launchpad that works with the version of reverb/TF
+# specified above.
 launchpad_requirements = [
     'dm-launchpad==0.3.2',
 ]
 
 testing_requirements = [
-    'pytype==2021.8.11',
-    'pytest-xdist==2.3.0',
+    'pytype==2021.8.11',  # TODO(b/206926677): update to new version.
+    'pytest-xdist',
 ]
 
 envs_requirements = [
-    'atari-py==0.2.9',
-    'bsuite==0.3.5',
-    'dm-control==0.0.364896371',
+    'atari-py',
+    'bsuite',
+    'dm-control==0.0.364896371',  # TODO(b/206925413): update to new version.
     'gym',
     'gym[atari]',
     'tensorflow_datasets',
