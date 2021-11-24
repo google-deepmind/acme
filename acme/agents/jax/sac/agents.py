@@ -125,6 +125,7 @@ class SAC(local_layout.LocalLayout):
         networks=network,
         policy_network=networks.apply_policy_and_sample(network),
         batch_size=config.batch_size,
+        prefetch_size=config.prefetch_size,
         samples_per_insert=config.samples_per_insert,
         min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
