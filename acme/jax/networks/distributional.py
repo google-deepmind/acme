@@ -61,6 +61,7 @@ class GaussianMixture(hk.Module):
                multivariate: bool,
                init_scale: Optional[float] = None,
                append_singleton_event_dim: bool = False,
+               reinterpreted_batch_ndims: Optional[int] = None,
                name: str = 'GaussianMixture'):
     """Initialization.
 
@@ -71,6 +72,8 @@ class GaussianMixture(hk.Module):
       init_scale: the initial scale for the Gaussian mixture components.
       append_singleton_event_dim: (univariate only) Whether to add an extra
         singleton dimension to the event shape.
+      reinterpreted_batch_ndims: (univariate only) Number of batch dimensions to
+        reinterpret as event dimensions.
       name: name of the module passed to snt.Module parent class.
     """
     super().__init__(name=name)
@@ -79,6 +82,7 @@ class GaussianMixture(hk.Module):
     self._num_components = num_components
     self._multivariate = multivariate
     self._append_singleton_event_dim = append_singleton_event_dim
+    self._reinterpreted_batch_ndims = reinterpreted_batch_ndims
 
     if init_scale is not None:
       self._scale_factor = init_scale / jax.nn.softplus(0.)
@@ -150,7 +154,9 @@ class GaussianMixture(hk.Module):
         components_distribution=components_class(loc=locs, scale=scales))
 
     if not self._multivariate:
-      distribution = tfd.Independent(distribution)
+      distribution = tfd.Independent(
+          distribution,
+          reinterpreted_batch_ndims=self._reinterpreted_batch_ndims)
 
     return distribution
 
