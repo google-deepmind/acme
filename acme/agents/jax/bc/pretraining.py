@@ -72,3 +72,23 @@ def convert_to_bc_network(
     return policy_network.apply(params, obs)
 
   return networks_lib.FeedForwardNetwork(policy_network.init, apply)
+
+
+def convert_policy_value_to_bc_network(
+    policy_value_network: networks_lib.FeedForwardNetwork
+) -> networks_lib.FeedForwardNetwork:
+  """Converts a network from e.g. PPO into a BC policy network.
+
+  Args:
+    policy_value_network: FeedForwardNetwork taking the observation as input.
+
+  Returns:
+    The BC policy network taking observation, is_training, key as input.
+  """
+
+  def apply(params, obs, is_training=False, key=None):
+    del is_training, key
+    actions, _ = policy_value_network.apply(params, obs)
+    return actions
+
+  return networks_lib.FeedForwardNetwork(policy_value_network.init, apply)

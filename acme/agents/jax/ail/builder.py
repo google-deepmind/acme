@@ -273,11 +273,12 @@ class AILBuilder(builders.GenericActorLearnerBuilder[ail_networks.AILNetworks,
 
     is_sequence_based = self._config.is_sequence_based
 
+    # Don't flatten the discriminator batch if the iterator is not shared.
     process_discriminator_sample = functools.partial(
         reverb_utils.replay_sample_to_sars_transition,
-        is_sequence=is_sequence_based,
-        strip_last_transition=True,
-        flatten_batch=True)
+        is_sequence=is_sequence_based and self._config.share_iterator,
+        flatten_batch=is_sequence_based and self._config.share_iterator,
+        strip_last_transition=is_sequence_based and self._config.share_iterator)
 
     discriminator_iterator = (
         process_discriminator_sample(sample)

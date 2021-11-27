@@ -14,12 +14,14 @@
 # limitations under the License.
 
 """Example running AIL+PPO on the OpenAI Gym."""
+import dataclasses
 import functools
 
 from absl import flags
 import acme
 from acme import specs
 from acme.agents.jax import ail
+from acme.agents.jax import bc
 from acme.agents.jax import ppo
 from absl import app
 import helpers
@@ -30,16 +32,47 @@ import jax
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_steps', 1000000,
                      'Number of env steps to run training for.')
-flags.DEFINE_integer('transition_batch_size', 2048,
+flags.DEFINE_integer('num_discriminator_steps_per_step', 32,
+                     'Number of discriminator training steps to balance it '
+                     'against generation.')
+flags.DEFINE_integer('ppo_num_minibatches', 32,
+                     'Number of PPO minibatches per batch.')
+flags.DEFINE_integer('ppo_num_epochs', 10,
+                     'Number of PPO batch epochs per step.')
+flags.DEFINE_integer('transition_batch_size', 512,
                      'Number of transitions in a batch.')
-flags.DEFINE_integer('unroll_length', 16,
+flags.DEFINE_integer('unroll_length', 2,
                      'Number of transitions per single gradient.')
-flags.DEFINE_integer('eval_every', 10000, 'How often to run evaluation')
+flags.DEFINE_integer('eval_every', 40000, 'How often to run evaluation')
 flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'What environment to run')
 flags.DEFINE_string(
     'dataset_name', 'd4rl_mujoco_halfcheetah/v0-medium', 'What dataset to use. '
     'See the TFDS catalog for possible values.')
 flags.DEFINE_integer('seed', 0, 'Random seed.')
+flags.DEFINE_bool('pretrain', True, 'Whether to do BC pre-training.')
+flags.DEFINE_bool('share_iterator', True,
+                  'Whether to use a single Reverb iterator for the '
+                  'discirminator and the RL policy learner.')
+
+
+def add_bc_pretraining(ppo_networks: ppo.PPONetworks) -> ppo.PPONetworks:
+  """Augments `ppo_networks` to run BC pretraining in policy_network.init."""
+
+  make_demonstrations = functools.partial(
+      helpers.make_demonstration_iterator, dataset_name=FLAGS.dataset_name)
+  bc_network = bc.pretraining.convert_policy_value_to_bc_network(
+      ppo_networks.network)
+  loss = bc.logp(ppo_networks.log_prob)
+
+  # Note: despite only training the policy network, this will also include the
+  # initial value network params.
+  def bc_init(*unused_args):
+    return bc.pretraining.train_with_bc(make_demonstrations, bc_network, loss)
+
+  return dataclasses.replace(
+      ppo_networks,
+      network=networks_lib.FeedForwardNetwork(
+          bc_init, ppo_networks.network.apply))
 
 
 def main(_):
@@ -51,22 +84,28 @@ def main(_):
   # Construct the agent.
   ppo_config = ppo.PPOConfig(
       unroll_length=FLAGS.unroll_length,
-      num_minibatches=32,
-      num_epochs=10,
-      batch_size=FLAGS.transition_batch_size // FLAGS.unroll_length)
+      num_minibatches=FLAGS.ppo_num_minibatches,
+      num_epochs=FLAGS.ppo_num_epochs,
+      batch_size=FLAGS.transition_batch_size // FLAGS.unroll_length,
+      learning_rate=0.0003,
+      entropy_cost=0,
+      gae_lambda=0.8,
+      value_cost=0.25)
   ppo_networks = ppo.make_gym_networks(environment_spec)
+  if FLAGS.pretrain:
+    ppo_networks = add_bc_pretraining(ppo_networks)
 
+  discriminator_batch_size = FLAGS.transition_batch_size
   ail_config = ail.AILConfig(
       direct_rl_batch_size=ppo_config.batch_size * ppo_config.unroll_length,
-      discriminator_batch_size=FLAGS.transition_batch_size,
+      discriminator_batch_size=discriminator_batch_size,
       is_sequence_based=True,
-      num_sgd_steps_per_step=1,
-      share_iterator=True,
+      num_sgd_steps_per_step=FLAGS.num_discriminator_steps_per_step,
+      share_iterator=FLAGS.share_iterator,
   )
 
   def discriminator(*args, **kwargs) -> networks_lib.Logits:
-    # Note: observation embedding does not seem needed.
-    # embedding = lambda x: jnp.reshape(x, list(x.shape[:-2]) + [-1])
+    # Note: observation embedding is not needed for e.g. Mujoco.
     return ail.DiscriminatorModule(
         environment_spec=environment_spec,
         use_action=True,
