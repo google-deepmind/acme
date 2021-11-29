@@ -199,6 +199,15 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     with self.assertRaises(AssertionError):
       update_and_validate(state, x, axis=())
 
+  def test_int_not_normalized(self):
+    state = running_statistics.init_state(specs.Array((), jnp.int32))
+
+    x = jnp.arange(5, dtype=jnp.int32)
+
+    state = update_and_validate(state, x)
+    normalized = running_statistics.normalize(x, state)
+
+    self.assertArraysEqual(normalized, x)
 
 if __name__ == '__main__':
   absltest.main()

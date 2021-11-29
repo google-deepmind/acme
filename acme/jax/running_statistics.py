@@ -186,6 +186,9 @@ def normalize(batch: types.NestedArray,
 
   def normalize_leaf(data: jnp.ndarray, mean: jnp.ndarray,
                      std: jnp.ndarray) -> jnp.ndarray:
+    # Only normalize inexact types.
+    if not jnp.issubdtype(data.dtype, jnp.inexact):
+      return data
     data = (data - mean) / std
     if max_abs_value is not None:
       # TODO(b/124318564): remove pylint directive
