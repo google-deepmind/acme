@@ -54,7 +54,7 @@ class OfflineDistributedLayout:
       save_logs: bool = False,
       log_every: float = 10.0,
       max_number_of_steps: Optional[int] = None,
-      workdir: Optional[str] = None,
+      workdir: str = '~/acme',
   ):
 
     self._seed = seed
@@ -67,10 +67,7 @@ class OfflineDistributedLayout:
     self._workdir = workdir
 
   def counter(self):
-    kwargs = {}
-    if self._workdir is not None:
-      kwargs['directory'] = self._workdir
-      kwargs['add_uid'] = False
+    kwargs = {'directory': self._workdir, 'add_uid': self._workdir == '~/acme'}
     return savers.CheckpointingRunner(
         counting.Counter(), subdirectory='counter', time_delta_minutes=5,
         **kwargs)
@@ -92,10 +89,7 @@ class OfflineDistributedLayout:
     networks = self._network_factory()
     learner = self._make_learner(random_key, networks, counter, logger)
 
-    kwargs = {}
-    if self._workdir is not None:
-      kwargs['directory'] = self._workdir
-      kwargs['add_uid'] = False
+    kwargs = {'directory': self._workdir, 'add_uid': self._workdir == '~/acme'}
     # Return the learning agent.
     return savers.CheckpointingRunner(
         learner, subdirectory='learner', time_delta_minutes=5, **kwargs)

@@ -55,7 +55,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
-      save_directory: str = '~/acme/',
+      save_directory: str = '~/acme',
       max_gradient_norm: Optional[float] = None,
   ):
     """Initializes the learner.

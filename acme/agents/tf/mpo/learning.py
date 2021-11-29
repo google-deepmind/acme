@@ -55,7 +55,7 @@ class MPOLearner(acme.Learner):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
-      save_directory: str = '~/acme/',
+      save_directory: str = '~/acme',
   ):
 
     self._counter = counter or counting.Counter()

@@ -85,7 +85,7 @@ class Checkpointer(tf_savers.Checkpointer):
   def __init__(
       self,
       object_to_save: core.Saveable,
-      directory: str = '~/acme/',
+      directory: str = '~/acme',
       subdirectory: str = 'default',
       **tf_checkpointer_kwargs):
     super().__init__(dict(saveable=object_to_save),

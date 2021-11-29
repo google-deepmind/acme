@@ -60,7 +60,7 @@ class DQN(agent.Agent):
       discount: float = 0.99,
       logger: Optional[loggers.Logger] = None,
       checkpoint: bool = True,
-      checkpoint_subpath: str = '~/acme/',
+      checkpoint_subpath: str = '~/acme',
       policy_network: Optional[snt.Module] = None,
       max_gradient_norm: Optional[float] = None,
   ):

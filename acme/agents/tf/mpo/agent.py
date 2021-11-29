@@ -67,7 +67,7 @@ class MPO(agent.Agent):
       logger: Optional[loggers.Logger] = None,
       counter: Optional[counting.Counter] = None,
       checkpoint: bool = True,
-      save_directory: str = '~/acme/',
+      save_directory: str = '~/acme',
       replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
   ):
     """Initialize the agent.
