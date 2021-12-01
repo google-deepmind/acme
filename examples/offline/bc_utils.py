@@ -54,7 +54,7 @@ def make_network(
          hk.nets.MLP([64, 64, num_actions])])
     return mlp(obs)
 
-  policy = hk.without_apply_rng(hk.transform(actor_fn, apply_rng=True))
+  policy = hk.without_apply_rng(hk.transform(actor_fn))
 
   # Create dummy observations to create network parameters.
   dummy_obs = utils.zeros_like(spec.observations)

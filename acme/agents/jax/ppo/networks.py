@@ -100,7 +100,7 @@ def make_atari_networks(
     ])
     return policy_value_network(inputs)
 
-  forward_fn = hk.without_apply_rng(hk.transform(forward_fn, apply_rng=True))
+  forward_fn = hk.without_apply_rng(hk.transform(forward_fn))
   dummy_obs = utils.zeros_like(environment_spec.observations)
   dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
   network = networks_lib.FeedForwardNetwork(
@@ -138,7 +138,7 @@ def make_gym_networks(
     return (action_distribution, value)
 
   # Transform into pure functions.
-  forward_fn = hk.without_apply_rng(hk.transform(forward_fn, apply_rng=True))
+  forward_fn = hk.without_apply_rng(hk.transform(forward_fn))
 
   dummy_obs = utils.zeros_like(environment_spec.observations)
   dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.

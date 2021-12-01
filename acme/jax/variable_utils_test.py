@@ -33,7 +33,7 @@ class VariableClientTest(absltest.TestCase):
 
   def test_update(self):
     init_fn, _ = hk.without_apply_rng(
-        hk.transform(dummy_network, apply_rng=True))
+        hk.transform(dummy_network))
     params = init_fn(jax.random.PRNGKey(1), jnp.zeros(shape=(1, 32)))
     variable_source = fakes.VariableSource(params)
     variable_client = variable_utils.VariableClient(
@@ -44,7 +44,7 @@ class VariableClientTest(absltest.TestCase):
 
   def test_multiple_keys(self):
     init_fn, _ = hk.without_apply_rng(
-        hk.transform(dummy_network, apply_rng=True))
+        hk.transform(dummy_network))
     params = init_fn(jax.random.PRNGKey(1), jnp.zeros(shape=(1, 32)))
     steps = jnp.zeros(shape=1)
     variables = {'network': params, 'steps': steps}

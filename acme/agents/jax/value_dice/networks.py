@@ -83,8 +83,8 @@ def make_networks(
     ])
     return network(jnp.concatenate([obs, action], axis=-1))
 
-  policy = hk.without_apply_rng(hk.transform(_actor_fn, apply_rng=True))
-  nu = hk.without_apply_rng(hk.transform(_nu_fn, apply_rng=True))
+  policy = hk.without_apply_rng(hk.transform(_actor_fn))
+  nu = hk.without_apply_rng(hk.transform(_nu_fn))
 
   # Create dummy observations and actions to create network parameters.
   dummy_action = utils.zeros_like(spec.actions)

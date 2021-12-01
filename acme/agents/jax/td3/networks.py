@@ -97,8 +97,8 @@ def make_networks(
     value = network1(input_)
     return jnp.squeeze(value)
 
-  policy = hk.without_apply_rng(hk.transform(_actor_fn, apply_rng=True))
-  critic = hk.without_apply_rng(hk.transform(_critic_fn, apply_rng=True))
+  policy = hk.without_apply_rng(hk.transform(_actor_fn))
+  critic = hk.without_apply_rng(hk.transform(_critic_fn))
 
   # Create dummy observations and actions to create network parameters.
   dummy_action = utils.zeros_like(spec.actions)

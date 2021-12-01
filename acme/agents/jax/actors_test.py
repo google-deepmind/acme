@@ -64,7 +64,7 @@ class ActorTest(parameterized.TestCase):
       else:
         return action
 
-    policy = hk.transform(policy, apply_rng=True)
+    policy = hk.transform(policy)
 
     rng = hk.PRNGSequence(1)
     dummy_obs = utils.add_batch_dim(utils.zeros_like(env_spec.observations))
@@ -89,7 +89,7 @@ class ActorTest(parameterized.TestCase):
 
 
 def _transform_without_rng(f):
-  return hk.without_apply_rng(hk.transform(f, apply_rng=True))
+  return hk.without_apply_rng(hk.transform(f))
 
 
 class RecurrentActorTest(absltest.TestCase):

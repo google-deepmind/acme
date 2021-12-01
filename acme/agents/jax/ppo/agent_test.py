@@ -57,7 +57,7 @@ def make_haiku_networks(
     return (action_distribution, value)
 
   # Transform into pure functions.
-  forward_fn = hk.without_apply_rng(hk.transform(forward_fn, apply_rng=True))
+  forward_fn = hk.without_apply_rng(hk.transform(forward_fn))
 
   dummy_obs = utils.zeros_like(spec.observations)
   dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.

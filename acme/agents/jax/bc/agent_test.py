@@ -55,7 +55,7 @@ def make_networks(
       ])
     return network(obs)
 
-  policy = hk.without_apply_rng(hk.transform(_actor_fn, apply_rng=True))
+  policy = hk.without_apply_rng(hk.transform(_actor_fn))
 
   # Create dummy observations and actions to create network parameters.
   dummy_obs = utils.zeros_like(spec.observations)

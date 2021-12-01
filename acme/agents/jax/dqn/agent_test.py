@@ -46,7 +46,7 @@ class DQNTest(absltest.TestCase):
       return model(x)
 
     # Make network purely functional
-    network_hk = hk.without_apply_rng(hk.transform(network, apply_rng=True))
+    network_hk = hk.without_apply_rng(hk.transform(network))
     dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
 
     network = networks_lib.FeedForwardNetwork(

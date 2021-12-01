@@ -96,7 +96,7 @@ def make_ppo_networks(
   forward_fn = functools.partial(ppo_forward_fn, num_actions=num_actions)
 
   # Transform into pure functions.
-  forward_fn = hk.without_apply_rng(hk.transform(forward_fn, apply_rng=True))
+  forward_fn = hk.without_apply_rng(hk.transform(forward_fn))
 
   dummy_obs = utils.zeros_like(spec.observations)
   dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
