@@ -22,12 +22,19 @@ import dm_env
 
 def make_environment(evaluation: bool = False,
                      domain_name: str = 'cartpole',
-                     task_name: str = 'balance') -> dm_env.Environment:
+                     task_name: str = 'balance',
+                     concatenate_observations: bool = False
+                     ) -> dm_env.Environment:
   """Implements a control suite environment factory."""
   # Nothing special to be done for evaluation environment.
   del evaluation
 
   environment = suite.load(domain_name, task_name)
   environment = wrappers.SinglePrecisionWrapper(environment)
-
+  timestep = environment.reset()
+  obs_names = list(timestep.observation.keys())
+  if concatenate_observations:
+    environment = wrappers.ConcatObservationWrapper(environment, obs_names)
   return environment
+
+
