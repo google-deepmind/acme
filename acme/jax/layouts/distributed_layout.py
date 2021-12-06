@@ -248,7 +248,6 @@ class DistributedLayout:
             lp.CourierNode(evaluator, evaluator_key, learner, counter))
 
     with program.group('actor'):
-      # Add actors which pull round-robin from our variable sources.
       for actor_id in range(self._num_actors):
         actor_key, key = jax.random.split(key)
         program.add_node(
