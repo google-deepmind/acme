@@ -101,7 +101,7 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
     ) -> Tuple[running_statistics.RunningStatisticsState, reverb.ReplaySample]:
       observation = sample.data.observation
       observation_statistics = running_statistics.update(
-          observation_statistics, observation, axis=batch_dims)
+          observation_statistics, observation)
       observation = running_statistics.normalize(
           observation,
           observation_statistics,

@@ -27,17 +27,17 @@ import numpy as np
 import tree
 
 
-@chex.dataclass
+@chex.dataclass(frozen=True, mappable_dataclass=False)
 class NestedMeanStd:
   """A container for running statistics (mean, std) of possibly nested data."""
   mean: types.NestedArray
   std: types.NestedArray
 
 
-@chex.dataclass
+@chex.dataclass(frozen=True, mappable_dataclass=False)
 class RunningStatisticsState(NestedMeanStd):
   """Full state of running statistics computation."""
-  count: int
+  count: Union[int, jnp.ndarray]
   summed_variance: types.NestedArray
 
 
@@ -87,7 +87,6 @@ def _validate_batch_shapes(batch: types.NestedArray,
 
 def update(state: RunningStatisticsState,
            batch: types.NestedArray,
-           axis: Optional[Union[int, Tuple[int, ...]]] = None,
            std_min_value: float = 1e-6,
            std_max_value: float = 1e6,
            validate_shapes: bool = True) -> RunningStatisticsState:
@@ -103,10 +102,6 @@ def update(state: RunningStatisticsState,
   Arguments:
     state: The running statistics before the update.
     batch: The data to be used to update the running statistics.
-    axis: Axis or axes along which the aggregation is performed. The default,
-      axis=None, will aggregate along all dimensions. The semantics is identical
-      to that of the `axis` argument of Numpy aggregation functions, such as
-      `numpy.sum`.
     std_min_value: Minimum value for the standard deviation.
     std_max_value: Maximum value for the standard deviation.
     validate_shapes: If true, the shapes of all leaves of the batch will be
@@ -116,19 +111,14 @@ def update(state: RunningStatisticsState,
     Updated running statistics.
   """
   batch_shape = tree.flatten(batch)[0].shape
-  # If None, all dimensions are treated as batch dimensions.
-  batch_dims = tuple(range(len(batch_shape))) if axis is None else axis
-  batch_dims = ((batch_dims,) if isinstance(batch_dims, int) else batch_dims)
-  # We use the original Numpy for all shape-related computations, as data volume
-  # is very low here, no effect on performance when jitted, but larger set of
-  # available operations compared to jax.numpy.
-  # All other computations are done in jax.numpy for performance.
+  # We assume the batch dimensions always go first.
+  batch_dims = range(len(batch_shape) - tree.flatten(state.mean)[0].ndim)
   batch_size = np.prod(np.take(batch_shape, batch_dims))
   count = state.count + batch_size
 
   # Validation is important. If the shapes don't match exactly, but are
   # compatible, arrays will be silently broadcasted resulting in incorrect
-  # statistics. Disabled by default to not affect performance.
+  # statistics.
   if validate_shapes:
     _validate_batch_shapes(batch, state.mean, batch_dims)
 

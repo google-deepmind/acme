@@ -44,14 +44,14 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     x = jnp.arange(200, dtype=jnp.float32).reshape(20, 2, 5)
     x1, x2, x3, x4 = jnp.split(x, 4, axis=0)
 
-    state = update_and_validate(state, x1, axis=(0, 1))
-    state = update_and_validate(state, x2, axis=(0, 1))
-    state = update_and_validate(state, x3, axis=(0, 1))
-    state = update_and_validate(state, x4, axis=(0, 1))
+    state = update_and_validate(state, x1)
+    state = update_and_validate(state, x2)
+    state = update_and_validate(state, x3)
+    state = update_and_validate(state, x4)
     normalized = running_statistics.normalize(x, state)
 
-    mean = jnp.mean(normalized, axis=(0, 1))
-    std = jnp.std(normalized, axis=(0, 1))
+    mean = jnp.mean(normalized)
+    std = jnp.std(normalized)
     self.assertAllClose(mean, jnp.zeros_like(mean))
     self.assertAllClose(std, jnp.ones_like(std))
 
@@ -63,38 +63,12 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     self.assertAllClose(normalized, x)
 
-  def test_axis_none(self):
-    state = running_statistics.init_state(specs.Array((), jnp.float32))
-
-    x = jnp.arange(5, dtype=jnp.float32)
-
-    state = update_and_validate(state, x)
-    normalized = running_statistics.normalize(x, state)
-
-    mean = jnp.mean(normalized)
-    std = jnp.std(normalized)
-    self.assertAllClose(mean, jnp.zeros_like(mean))
-    self.assertAllClose(std, jnp.ones_like(std))
-
-  def test_axis_empty(self):
-    state = running_statistics.init_state(specs.Array((5,), jnp.float32))
-
-    x = jnp.arange(5, dtype=jnp.float32)
-
-    state = update_and_validate(state, x, axis=())
-    normalized = running_statistics.normalize(x, state)
-
-    mean = jnp.mean(normalized, axis=())
-    std = jnp.std(normalized, axis=())
-    self.assertAllClose(mean, jnp.zeros_like(mean))
-    self.assertAllClose(std, jnp.zeros_like(std))
-
   def test_one_batch_dim(self):
     state = running_statistics.init_state(specs.Array((5,), jnp.float32))
 
     x = jnp.arange(10, dtype=jnp.float32).reshape(2, 5)
 
-    state = update_and_validate(state, x, axis=0)
+    state = update_and_validate(state, x)
     normalized = running_statistics.normalize(x, state)
 
     mean = jnp.mean(normalized, axis=0)
@@ -123,7 +97,7 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     batch = utils.tile_array(x, 65536)
 
     update = jax.jit(
-        functools.partial(update_and_validate, axis=(0, 1)), backend='cpu')
+        functools.partial(update_and_validate), backend='cpu')
 
     for _ in range(16383):
       state = update(state, batch)
@@ -145,7 +119,7 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     # it should work correctly if recompiled in 64-bit mode.
     jax_config.update('jax_enable_x64', True)
     update = jax.jit(
-        functools.partial(update_and_validate, axis=(0, 1)), backend='cpu')
+        functools.partial(update_and_validate), backend='cpu')
     state = update(state, batch)
     # With jax_enable_x64, the the count is promoted to int64s, so we can safely
     # add one more batch without overflow.
@@ -177,9 +151,9 @@ class RunningStatisticsTest(jtu.JaxTestCase):
         'b': jnp.arange(16, dtype=jnp.float32).reshape(4, 2, 2)
     }
 
-    state = update_and_validate(state, x1, axis=(0, 1))
-    state = update_and_validate(state, x2, axis=(0, 1))
-    state = update_and_validate(state, x3, axis=(0, 1))
+    state = update_and_validate(state, x1)
+    state = update_and_validate(state, x2)
+    state = update_and_validate(state, x3)
     normalized = running_statistics.normalize(x3, state)
 
     mean = tree.map_structure(lambda x: jnp.mean(x, axis=(0, 1)), normalized)
@@ -193,11 +167,11 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     x = jnp.arange(12, dtype=jnp.float32).reshape(2, 2, 3)
     with self.assertRaises(AssertionError):
-      update_and_validate(state, x, axis=())
+      update_and_validate(state, x)
 
     x = jnp.arange(3, dtype=jnp.float32).reshape(1, 1, 3)
     with self.assertRaises(AssertionError):
-      update_and_validate(state, x, axis=())
+      update_and_validate(state, x)
 
   def test_int_not_normalized(self):
     state = running_statistics.init_state(specs.Array((), jnp.int32))
