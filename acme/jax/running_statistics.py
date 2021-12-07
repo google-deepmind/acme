@@ -89,6 +89,7 @@ def update(state: RunningStatisticsState,
            batch: types.NestedArray,
            std_min_value: float = 1e-6,
            std_max_value: float = 1e6,
+           pmap_axis_name: Optional[str] = None,
            validate_shapes: bool = True) -> RunningStatisticsState:
   """Updates the running statistics with the given batch of data.
 
@@ -104,6 +105,7 @@ def update(state: RunningStatisticsState,
     batch: The data to be used to update the running statistics.
     std_min_value: Minimum value for the standard deviation.
     std_max_value: Maximum value for the standard deviation.
+    pmap_axis_name: Name of the pmapped axis, if any.
     validate_shapes: If true, the shapes of all leaves of the batch will be
       validated. Enabled by default. Doesn't impact performance when jitted.
 
@@ -131,11 +133,15 @@ def update(state: RunningStatisticsState,
     # algorithm using batches (see https://stackoverflow.com/q/56402955).
     diff_to_old_mean = batch - mean
     mean_update = jnp.sum(diff_to_old_mean, axis=batch_dims) / count
+    if pmap_axis_name is not None:
+      mean_update = jax.lax.pmean(mean_update, axis_name=pmap_axis_name)
     mean = mean + mean_update
 
     diff_to_new_mean = batch - mean
     variance_update = diff_to_old_mean * diff_to_new_mean
     variance_update = jnp.sum(variance_update, axis=batch_dims)
+    if pmap_axis_name is not None:
+      variance_update = jax.lax.psum(variance_update, axis_name=pmap_axis_name)
     summed_variance = summed_variance + variance_update
     return mean, summed_variance
 
@@ -154,6 +160,11 @@ def update(state: RunningStatisticsState,
             state.mean, lambda s, i=idx: s[i], updated_stats)
         for idx in range(2)
     ]
+
+  # We use per-shard count to compute mean and summed variance.
+  # For std we use the total count.
+  if pmap_axis_name is not None:
+    count = state.count + jax.lax.psum(batch_size, axis_name=pmap_axis_name)
 
   def compute_std(summed_variance: jnp.ndarray) -> jnp.ndarray:
     assert isinstance(summed_variance, jnp.ndarray)

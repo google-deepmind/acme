@@ -96,8 +96,7 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     x = jnp.arange(4, dtype=jnp.float32).reshape(2, 2)
     batch = utils.tile_array(x, 65536)
 
-    update = jax.jit(
-        functools.partial(update_and_validate), backend='cpu')
+    update = jax.jit(functools.partial(update_and_validate), backend='cpu')
 
     for _ in range(16383):
       state = update(state, batch)
@@ -118,8 +117,7 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     # it should work correctly if recompiled in 64-bit mode.
     jax_config.update('jax_enable_x64', True)
-    update = jax.jit(
-        functools.partial(update_and_validate), backend='cpu')
+    update = jax.jit(functools.partial(update_and_validate), backend='cpu')
     state = update(state, batch)
     # With jax_enable_x64, the the count is promoted to int64s, so we can safely
     # add one more batch without overflow.
@@ -182,6 +180,39 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     normalized = running_statistics.normalize(x, state)
 
     self.assertArraysEqual(normalized, x)
+
+  def test_pmap_update_nested(self):
+    local_device_count = jax.local_device_count()
+    assert local_device_count > 1
+    state = running_statistics.init_state({
+        'a': specs.Array((5,), jnp.float32),
+        'b': specs.Array((2,), jnp.float32)
+    })
+
+    x = {
+        'a': (jnp.arange(15 * local_device_count,
+                         dtype=jnp.float32)).reshape(local_device_count, 3, 5),
+        'b': (jnp.arange(6 * local_device_count,
+                         dtype=jnp.float32)).reshape(local_device_count, 3, 2),
+    }
+
+    devices = jax.local_devices()
+    state = jax.device_put_replicated(state, devices)
+    pmap_axis_name = 'i'
+    state = jax.pmap(
+        functools.partial(update_and_validate, pmap_axis_name=pmap_axis_name),
+        pmap_axis_name)(state, x)
+    state = jax.pmap(
+        functools.partial(update_and_validate, pmap_axis_name=pmap_axis_name),
+        pmap_axis_name)(state, x)
+    normalized = jax.pmap(running_statistics.normalize)(x, state)
+
+    mean = tree.map_structure(lambda x: jnp.mean(x, axis=(0, 1)), normalized)
+    std = tree.map_structure(lambda x: jnp.std(x, axis=(0, 1)), normalized)
+    tree.map_structure(lambda x: self.assertAllClose(x, jnp.zeros_like(x)),
+                       mean)
+    tree.map_structure(lambda x: self.assertAllClose(x, jnp.ones_like(x)), std)
+
 
 if __name__ == '__main__':
   absltest.main()
