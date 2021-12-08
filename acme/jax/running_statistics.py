@@ -27,14 +27,14 @@ import numpy as np
 import tree
 
 
-@chex.dataclass(frozen=True, mappable_dataclass=False)
+@chex.dataclass
 class NestedMeanStd:
   """A container for running statistics (mean, std) of possibly nested data."""
   mean: types.NestedArray
   std: types.NestedArray
 
 
-@chex.dataclass(frozen=True, mappable_dataclass=False)
+@chex.dataclass
 class RunningStatisticsState(NestedMeanStd):
   """Full state of running statistics computation."""
   count: Union[int, jnp.ndarray]
