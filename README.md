@@ -26,7 +26,7 @@ single-stream vs. distributed agents).
 ## Getting started
 
 The quickest way to get started is to take a look at the detailed working code
-examples found in the [examples] subdirectory. These show how to instantiate a a
+examples found in the [examples] subdirectory. These show how to instantiate a
 number of different agents and run them within a variety of environments. See
 the [quickstart notebook][Quickstart] for an even quicker dive into using a
 single agent. Even more detail on the internal construction of an agent can be
