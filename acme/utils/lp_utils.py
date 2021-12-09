@@ -21,12 +21,11 @@ import inspect
 import os
 import sys
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from absl import flags
 from absl import logging
 from acme.utils import counting
-import launchpad as lp
 
 FLAGS = flags.FLAGS
 
@@ -97,6 +96,8 @@ class StepsLimiter:
       if num_steps > self._max_steps:
         logging.info('StepsLimiter: Max steps of %d was reached, terminating',
                      self._max_steps)
+        # Avoid importing Launchpad until it is actually used.
+        import launchpad as lp  # pylint: disable=g-import-not-at-top
         lp.stop()
 
       # Don't spam the counter.
@@ -107,8 +108,7 @@ class StepsLimiter:
 
 
 # Resources for each individual instance of the program.
-def make_xm_docker_resources(program: lp.Program,
-                             requirements: Optional[str] = None):
+def make_xm_docker_resources(program, requirements):
   """Returns Docker XManager resources for each program's node.
 
   For each node of the Launchpad's program appropriate hardware requirements are
@@ -125,6 +125,8 @@ def make_xm_docker_resources(program: lp.Program,
     # Avoid importing 'xmanager' for local runs.
     return None
 
+  # Avoid importing Launchpad until it is actually used.
+  import launchpad as lp  # pylint: disable=g-import-not-at-top
   # Reference lp.DockerConfig to force lazy import of xmanager by Launchpad and
   # then import it. It is done this way to avoid heavy imports by default.
   lp.DockerConfig  # pylint: disable=pointless-statement
