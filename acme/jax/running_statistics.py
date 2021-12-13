@@ -45,7 +45,7 @@ def init_state(nest: types.Nest) -> RunningStatisticsState:
   """Initializes the running statistics for the given nested structure."""
   dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
   return RunningStatisticsState(
-      count=0,
+      count=0.,
       mean=utils.zeros_like(nest, dtype=dtype),
       summed_variance=utils.zeros_like(nest, dtype=dtype),
       # Initialize with ones to make sure normalization works correctly
@@ -53,10 +53,9 @@ def init_state(nest: types.Nest) -> RunningStatisticsState:
       std=utils.ones_like(nest, dtype=dtype))
 
 
-# TODO(b/187374660): annotate `batch_dims`.
 def _validate_batch_shapes(batch: types.NestedArray,
                            reference_sample: types.NestedArray,
-                           batch_dims) -> None:
+                           batch_dims: Tuple[int, ...]) -> None:
   """Verifies shapes of the batch leaves against the reference sample.
 
   Checks that batch dimensions are the same in all leaves in the batch.
@@ -71,15 +70,9 @@ def _validate_batch_shapes(batch: types.NestedArray,
   Returns:
     None.
   """
-  batch_shape = tree.flatten(batch)[0].shape
-  batch_dims = np.sort(np.array(batch_dims, dtype=np.int32))
-  batch_shapes = np.take(batch_shape, batch_dims)
-  shape_indices = batch_dims - np.arange(len(batch_dims))
-
   def validate_node_shape(reference_sample: jnp.ndarray,
                           batch: jnp.ndarray) -> None:
-    expected_shape = tuple(
-        np.insert(reference_sample.shape, shape_indices, batch_shapes))
+    expected_shape = batch_dims + reference_sample.shape
     assert batch.shape == expected_shape, f'{batch.shape} != {expected_shape}'
 
   tree_utils.fast_map_structure(validate_node_shape, reference_sample, batch)
@@ -87,6 +80,7 @@ def _validate_batch_shapes(batch: types.NestedArray,
 
 def update(state: RunningStatisticsState,
            batch: types.NestedArray,
+           weights: Optional[jnp.ndarray] = None,
            std_min_value: float = 1e-6,
            std_max_value: float = 1e6,
            pmap_axis_name: Optional[str] = None,
@@ -105,6 +99,9 @@ def update(state: RunningStatisticsState,
   Arguments:
     state: The running statistics before the update.
     batch: The data to be used to update the running statistics.
+    weights: Weights of the batch data. Should match the batch dimensions.
+      Passing a weight of 2. should be equivalent to updating on the
+      corresponding data point twice.
     std_min_value: Minimum value for the standard deviation.
     std_max_value: Maximum value for the standard deviation.
     pmap_axis_name: Name of the pmapped axis, if any.
@@ -119,14 +116,23 @@ def update(state: RunningStatisticsState,
   tree.assert_same_structure(batch, state.mean)
   batch_shape = tree.flatten(batch)[0].shape
   # We assume the batch dimensions always go first.
-  batch_dims = range(len(batch_shape) - tree.flatten(state.mean)[0].ndim)
-  batch_size = np.prod(np.take(batch_shape, batch_dims))
-  count = state.count + batch_size
+  batch_dims = batch_shape[:len(batch_shape) - tree.flatten(state.mean)[0].ndim]
+  batch_axis = range(len(batch_dims))
+  if weights is None:
+    step_increment = np.prod(batch_dims)
+  else:
+    step_increment = jnp.sum(weights)
+  if pmap_axis_name is not None:
+    step_increment = jax.lax.psum(step_increment, axis_name=pmap_axis_name)
+  count = state.count + step_increment
 
   # Validation is important. If the shapes don't match exactly, but are
   # compatible, arrays will be silently broadcasted resulting in incorrect
   # statistics.
   if validate_shapes:
+    if weights is not None:
+      if weights.shape != batch_dims:
+        raise ValueError(f'{weights.shape} != {batch_dims}')
     _validate_batch_shapes(batch, state.mean, batch_dims)
 
   def _compute_node_statistics(
@@ -137,14 +143,20 @@ def update(state: RunningStatisticsState,
     # The mean and the sum of past variances are updated with Welford's
     # algorithm using batches (see https://stackoverflow.com/q/56402955).
     diff_to_old_mean = batch - mean
-    mean_update = jnp.sum(diff_to_old_mean, axis=batch_dims) / count
+    if weights is not None:
+      expanded_weights = jnp.reshape(
+          weights,
+          list(weights.shape) + [1] * (batch.ndim - weights.ndim))
+      diff_to_old_mean = diff_to_old_mean * expanded_weights
+    mean_update = jnp.sum(diff_to_old_mean, axis=batch_axis) / count
     if pmap_axis_name is not None:
-      mean_update = jax.lax.pmean(mean_update, axis_name=pmap_axis_name)
+      mean_update = jax.lax.psum(
+          mean_update, axis_name=pmap_axis_name)
     mean = mean + mean_update
 
     diff_to_new_mean = batch - mean
     variance_update = diff_to_old_mean * diff_to_new_mean
-    variance_update = jnp.sum(variance_update, axis=batch_dims)
+    variance_update = jnp.sum(variance_update, axis=batch_axis)
     if pmap_axis_name is not None:
       variance_update = jax.lax.psum(variance_update, axis_name=pmap_axis_name)
     summed_variance = summed_variance + variance_update
@@ -165,11 +177,6 @@ def update(state: RunningStatisticsState,
             state.mean, lambda s, i=idx: s[i], updated_stats)
         for idx in range(2)
     ]
-
-  # We use per-shard count to compute mean and summed variance.
-  # For std we use the total count.
-  if pmap_axis_name is not None:
-    count = state.count + jax.lax.psum(batch_size, axis_name=pmap_axis_name)
 
   def compute_std(summed_variance: jnp.ndarray) -> jnp.ndarray:
     assert isinstance(summed_variance, jnp.ndarray)

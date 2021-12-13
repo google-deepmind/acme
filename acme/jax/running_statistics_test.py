@@ -22,7 +22,6 @@ from typing import NamedTuple
 from absl.testing import absltest
 from acme import specs
 from acme.jax import running_statistics
-from acme.jax import utils
 import jax
 from jax import test_util as jtu
 from jax.config import config as jax_config
@@ -95,47 +94,6 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     std = jnp.std(normalized)
     self.assertAllClose(mean, jnp.zeros_like(mean))
     self.assertAllClose(std, jnp.ones_like(std) * math.sqrt(0.6))
-
-  def test_int32_overflow(self):
-    state = running_statistics.init_state(specs.Array((2,), jnp.float32))
-
-    # Batch size is 2 * 65536.
-    x = jnp.arange(4, dtype=jnp.float32).reshape(2, 2)
-    batch = utils.tile_array(x, 65536)
-
-    update = jax.jit(functools.partial(update_and_validate), backend='cpu')
-
-    for _ in range(16383):
-      state = update(state, batch)
-
-    normalized = running_statistics.normalize(x, state)
-
-    # We added 16383 batches, so the count is 2*65536*16383 = 2147352576.
-    # This fits in int32s.
-    mean = jnp.mean(normalized, axis=0)
-    std = jnp.std(normalized, axis=0)
-    self.assertAllClose(mean, jnp.zeros_like(mean))
-    self.assertAllClose(std, jnp.ones_like(std))
-
-    overflow_state = update(state, batch)
-    # Added one more batch, now the count value is 2*65536*16384 = 2147483648,
-    # which is max_int32s+1. Expecting overflow.
-    self.assertLess(overflow_state.count, 0)
-
-    # it should work correctly if recompiled in 64-bit mode.
-    jax_config.update('jax_enable_x64', True)
-    update = jax.jit(functools.partial(update_and_validate), backend='cpu')
-    state = update(state, batch)
-    # With jax_enable_x64, the the count is promoted to int64s, so we can safely
-    # add one more batch without overflow.
-    self.assertEqual(state.count, 2 * 65536 * 16384)
-    normalized = running_statistics.normalize(x, state)
-
-    mean = jnp.mean(normalized, axis=0)
-    std = jnp.std(normalized, axis=0)
-    self.assertAllClose(mean, jnp.zeros_like(mean))
-    self.assertAllClose(std, jnp.ones_like(std))
-    jax_config.update('jax_enable_x64', False)
 
   def test_nested_normalize(self):
     state = running_statistics.init_state({
@@ -232,6 +190,24 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     with self.assertRaises(TypeError):
       state = update_and_validate(state, x)
+
+  def test_weights(self):
+    state = running_statistics.init_state(specs.Array((), jnp.float32))
+
+    x = jnp.arange(5, dtype=jnp.float32)
+    x_weights = jnp.ones_like(x)
+    y = 2 * x + 5
+    y_weights = 2 * x_weights
+    z = jnp.concatenate([x, y])
+    weights = jnp.concatenate([x_weights, y_weights])
+
+    state = update_and_validate(state, z, weights)
+
+    self.assertEqual(state.mean, (jnp.mean(x) + 2 * jnp.mean(y)) / 3)
+    big_z = jnp.concatenate([x, y, y])
+    normalized = running_statistics.normalize(big_z, state)
+    self.assertAlmostEqual(jnp.mean(normalized), 0., places=6)
+    self.assertAlmostEqual(jnp.std(normalized), 1., places=6)
 
 
 if __name__ == '__main__':
