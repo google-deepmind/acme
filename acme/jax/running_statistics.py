@@ -93,6 +93,8 @@ def update(state: RunningStatisticsState,
            validate_shapes: bool = True) -> RunningStatisticsState:
   """Updates the running statistics with the given batch of data.
 
+  Note: data batch and state elements (mean, etc.) must have the same structure.
+
   Note: by default will use int32 for counts and float32 for accumulated
   variance. This results in an integer overflow after 2^31 data points and
   degrading precision after 2^24 batch updates or even earlier if variance
@@ -112,6 +114,9 @@ def update(state: RunningStatisticsState,
   Returns:
     Updated running statistics.
   """
+  # We require exactly the same structure to avoid issues when flattened
+  # batch and state have different order of elements.
+  tree.assert_same_structure(batch, state.mean)
   batch_shape = tree.flatten(batch)[0].shape
   # We assume the batch dimensions always go first.
   batch_dims = range(len(batch_shape) - tree.flatten(state.mean)[0].ndim)

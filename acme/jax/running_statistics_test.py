@@ -17,6 +17,7 @@
 
 import functools
 import math
+from typing import NamedTuple
 
 from absl.testing import absltest
 from acme import specs
@@ -30,6 +31,12 @@ import tree
 
 update_and_validate = functools.partial(
     running_statistics.update, validate_shapes=True)
+
+
+class TestNestedSpec(NamedTuple):
+  # Note: the fields are intentionally in reverse order to test ordering.
+  a: specs.Array
+  b: specs.Array
 
 
 class RunningStatisticsTest(jtu.JaxTestCase):
@@ -212,6 +219,19 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     tree.map_structure(lambda x: self.assertAllClose(x, jnp.zeros_like(x)),
                        mean)
     tree.map_structure(lambda x: self.assertAllClose(x, jnp.ones_like(x)), std)
+
+  def test_different_structure_normalize(self):
+    spec = TestNestedSpec(
+        a=specs.Array((5,), jnp.float32), b=specs.Array((2,), jnp.float32))
+    state = running_statistics.init_state(spec)
+
+    x = {
+        'a': jnp.arange(20, dtype=jnp.float32).reshape(2, 2, 5),
+        'b': jnp.arange(8, dtype=jnp.float32).reshape(2, 2, 2)
+    }
+
+    with self.assertRaises(TypeError):
+      state = update_and_validate(state, x)
 
 
 if __name__ == '__main__':
