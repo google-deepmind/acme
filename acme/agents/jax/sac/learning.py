@@ -208,19 +208,19 @@ class SACLearner(acme.Learner):
       metrics['observations_mean'] = jnp.mean(
           utils.batch_concat(
               jax.tree_map(lambda x: jnp.abs(jnp.mean(x, axis=0)),
-                           transitions.observation)))
+                           transitions.observation), num_batch_dims=0))
       metrics['observations_std'] = jnp.mean(
           utils.batch_concat(
               jax.tree_map(lambda x: jnp.std(x, axis=0),
-                           transitions.observation)))
+                           transitions.observation), num_batch_dims=0))
       metrics['next_observations_mean'] = jnp.mean(
           utils.batch_concat(
               jax.tree_map(lambda x: jnp.abs(jnp.mean(x, axis=0)),
-                           transitions.next_observation)))
+                           transitions.next_observation), num_batch_dims=0))
       metrics['next_observations_std'] = jnp.mean(
           utils.batch_concat(
               jax.tree_map(lambda x: jnp.std(x, axis=0),
-                           transitions.next_observation)))
+                           transitions.next_observation), num_batch_dims=0))
 
       return new_state, metrics
 
