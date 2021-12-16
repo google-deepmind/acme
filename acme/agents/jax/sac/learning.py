@@ -94,7 +94,7 @@ class SACLearner(acme.Learner):
         raise ValueError('target_entropy should not be set when '
                          'entropy_coefficient is provided')
 
-    def alpha_loss(alpha: jnp.ndarray,
+    def alpha_loss(log_alpha: jnp.ndarray,
                    policy_params: networks_lib.Params,
                    transitions: types.Transition,
                    key: networks_lib.PRNGKey) -> jnp.ndarray:
@@ -103,6 +103,7 @@ class SACLearner(acme.Learner):
           policy_params, transitions.observation)
       action = networks.sample(dist_params, key)
       log_prob = networks.log_prob(dist_params, action)
+      alpha = jnp.exp(log_alpha)
       alpha_loss = alpha * jax.lax.stop_gradient(-log_prob - target_entropy)
       return jnp.mean(alpha_loss)
 
@@ -153,9 +154,10 @@ class SACLearner(acme.Learner):
 
       key, key_alpha, key_critic, key_actor = jax.random.split(state.key, 4)
       if adaptive_entropy_coefficient:
+        alpha_loss, alpha_grads = alpha_grad(state.alpha_params,
+                                             state.policy_params, transitions,
+                                             key_alpha)
         alpha = jnp.exp(state.alpha_params)
-        alpha_loss, alpha_grads = alpha_grad(alpha, state.policy_params,
-                                             transitions, key_alpha)
       else:
         alpha = entropy_coefficient
       critic_loss, critic_grads = critic_grad(state.q_params,
