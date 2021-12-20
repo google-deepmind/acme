@@ -21,7 +21,7 @@ import inspect
 import os
 import sys
 import time
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from absl import flags
 from absl import logging
@@ -108,7 +108,8 @@ class StepsLimiter:
 
 
 # Resources for each individual instance of the program.
-def make_xm_docker_resources(program, requirements):
+def make_xm_docker_resources(program,
+                             requirements: Optional[str] = None):
   """Returns Docker XManager resources for each program's node.
 
   For each node of the Launchpad's program appropriate hardware requirements are
