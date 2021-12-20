@@ -211,9 +211,10 @@ class DistributedLayout:
   def coordinator(self, counter: counting.Counter, max_actor_steps: int):
     return lp_utils.StepsLimiter(counter, max_actor_steps)
 
-  def build(self, name='agent'):
+  def build(self, name='agent', program: Optional[lp.Program] = None):
     """Build the distributed agent topology."""
-    program = lp.Program(name=name)
+    if not program:
+      program = lp.Program(name=name)
 
     key = jax.random.PRNGKey(self._seed)
 
