@@ -74,17 +74,6 @@ follow the steps below:
     pip install dm-acme[jax,tensorflow]
     ```
 
-1.  Additionally, in order to support distributed agents Acme relies on
-    [Launchpad] which can be installed with
-
-    ```bash
-    pip install dm-acme[launchpad]
-    ```
-
-    See
-    [here](https://github.com/deepmind/acme/blob/master/examples/control/lp_d4pg.py)
-    for an example of an agent using launchpad.
-
 1.  Finally, to install a few example environments (including [gym],
     [dm_control], and [bsuite]):
 
@@ -98,7 +87,7 @@ follow the steps below:
     (where `setup.py` is located):
 
     ```bash
-    pip install .[jax,tf,launchpad,testing,envs]
+    pip install .[jax,tf,testing,envs]
     ```
 
 ## Citing Acme
@@ -127,4 +116,3 @@ If you use Acme in your work, please cite the accompanying
 [dm_control]: https://github.com/deepmind/dm_env
 [dm_env]: https://github.com/deepmind/dm_env
 [bsuite]: https://github.com/deepmind/bsuite
-[Launchpad]: https://github.com/deepmind/launchpad

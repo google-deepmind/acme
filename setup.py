@@ -48,6 +48,7 @@ tensorflow = [
 core_requirements = [
     'absl-py',
     'dm-env',
+    'dm-launchpad==0.3.2',
     'dm-tree',
     'numpy',
     'pillow',
@@ -68,12 +69,6 @@ tf_requirements = [
     'dm-sonnet',
     'trfl',
 ] + tensorflow
-
-# This is the version of launchpad that works with the version of reverb/TF
-# specified above.
-launchpad_requirements = [
-    'dm-launchpad==0.3.2',
-]
 
 testing_requirements = [
     'pytype==2021.8.11',  # TODO(b/206926677): update to new version.
@@ -105,7 +100,7 @@ def generate_requirements_file(path=None):
     path = os.path.join(os.path.dirname(__file__), 'acme/requirements.txt')
   with open(path, 'w') as f:
     for package in set(core_requirements + jax_requirements + tf_requirements +
-                       launchpad_requirements + envs_requirements):
+                       envs_requirements):
       f.write(f'{package}\n')
 
 
@@ -162,7 +157,6 @@ setup(
     extras_require={
         'jax': jax_requirements,
         'tf': tf_requirements,
-        'launchpad': launchpad_requirements,
         'testing': testing_requirements,
         'envs': envs_requirements,
     },
