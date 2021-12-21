@@ -14,6 +14,7 @@
 
 """Tests for base."""
 
+import copy
 import pickle
 
 from absl.testing import absltest
@@ -33,6 +34,10 @@ class BaseTest(absltest.TestCase):
         test_env_restored.observation_spec(),
     )
 
+  def test_deepcopy(self):
+    test_env = base.EnvironmentWrapper(environment=fakes.DiscreteEnvironment())
+    copied_env = copy.deepcopy(test_env)
+    del copied_env
 
 if __name__ == '__main__':
   absltest.main()

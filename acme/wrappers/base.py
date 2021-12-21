@@ -33,19 +33,11 @@ class EnvironmentWrapper(dm_env.Environment):
   def __init__(self, environment: dm_env.Environment):
     self._environment = environment
 
-  def __getattr__(self, attr: str):
-    # Delegates attribute calls to the wrapped environment.
-    return getattr(self._environment, attr)
-
-  # Getting/setting of state is necessary so that getattr doesn't delegate them
-  # to the wrapped environment. This makes sure pickling a wrapped environment
-  # works as expected.
-
-  def __getstate__(self):
-    return self.__dict__
-
-  def __setstate__(self, state):
-    self.__dict__.update(state)
+  def __getattr__(self, name):
+    if name.startswith("__"):
+      raise AttributeError(
+          "attempted to get missing private attribute '{}'".format(name))
+    return getattr(self._environment, name)
 
   @property
   def environment(self) -> dm_env.Environment:
