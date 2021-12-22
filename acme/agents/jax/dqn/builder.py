@@ -82,7 +82,8 @@ class DQNBuilder(builders.ActorLearnerBuilder):
     return learning_lib.SGDLearner(
         network=networks,
         random_key=random_key,
-        optimizer=optax.adam(self._config.learning_rate),
+        optimizer=optax.adam(self._config.learning_rate,
+                             eps=self._config.adam_eps),
         target_update_period=self._config.target_update_period,
         data_iterator=dataset,
         loss_fn=self._loss_fn,

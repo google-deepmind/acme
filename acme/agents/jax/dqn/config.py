@@ -30,6 +30,7 @@ class DQNConfig:
 
   # Learning rule
   learning_rate: float = 1e-3  # Learning rate for Adam optimizer.
+  adam_eps: float = 1e-8  # Eps for Adam optimizer.
   discount: float = 0.99  # Discount rate applied to value per timestep.
   n_step: int = 5  # N-step TD learning.
   target_update_period: int = 100  # Update target network every period.
