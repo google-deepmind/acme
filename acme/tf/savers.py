@@ -19,14 +19,13 @@ import abc
 import datetime
 import os
 import pickle
-import signal
 import time
 from typing import Mapping, Optional, Union
 
 from absl import logging
 from acme import core
-from acme.utils import paths
 from acme.utils import signals
+from acme.utils import paths
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -203,12 +202,10 @@ class CheckpointingRunner(core.Worker):
         time_delta_minutes=time_delta_minutes,
         **kwargs)
 
-    # Handle preemption signal. Note that this must happen in the main thread.
-    def _signal_handler():
-      logging.info('Caught SIGTERM: forcing a checkpoint save.')
-      self._checkpointer.save(force=True)
-
-    signals.add_handler(signal.SIGTERM, _signal_handler)
+  # Handle preemption signal. Note that this must happen in the main thread.
+  def _signal_handler(self):
+    logging.info('Caught SIGTERM: forcing a checkpoint save.')
+    self._checkpointer.save(force=True)
 
   def step(self):
     if isinstance(self._wrapped, core.Learner):
@@ -221,8 +218,9 @@ class CheckpointingRunner(core.Worker):
 
   def run(self):
     """Runs the checkpointer."""
-    while True:
-      self.step()
+    with signals.runtime_terminator(self._signal_handler):
+      while True:
+        self.step()
 
   def __dir__(self):
     return dir(self._wrapped) + ['get_directory']

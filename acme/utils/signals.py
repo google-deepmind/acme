@@ -12,20 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A thin wrapper around Python's builtin signal.signal()."""
-import signal
-import types
-from typing import Any, Callable
+"""Helper methods for handling signals."""
+
+import contextlib
+import ctypes
+import threading
+from typing import Any, Callable, Optional
+
+import launchpad
 
 _Handler = Callable[[], Any]
 
 
-def add_handler(signo: signal.Signals, fn: _Handler):
+@contextlib.contextmanager
+def runtime_terminator(callback: Optional[_Handler] = None):
+  """Runtime terminator used for stopping computation upon agent termination.
 
-  # The function signal.signal expects the handler to take an int rather than a
-  # signal.Signals.
-  def _wrapped(signo: int, frame: types.FrameType):
-    del signo, frame
-    return fn()
+    Runtime terminator optionally executed a provided `callback` and then raises
+    `SystemExit` exception in the thread performing the computation.
 
-  signal.signal(signo.value, _wrapped)
+  Args:
+    callback: callback to execute before raising exception.
+
+  Yields:
+      None.
+  """
+  worker_id = threading.get_ident()
+  def signal_handler():
+    if callback:
+      callback()
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+        ctypes.c_long(worker_id), ctypes.py_object(SystemExit))
+    assert res < 2, 'Stopping worker failed'
+  launchpad.register_stop_handler(signal_handler)
+  try:
+    yield
+  except SystemExit:
+    pass
+  finally:
+    launchpad.unregister_stop_handler(signal_handler)

@@ -22,6 +22,7 @@ from typing import Optional
 from acme import core
 from acme.utils import counting
 from acme.utils import loggers
+from acme.utils import signals
 
 import dm_env
 from dm_env import specs
@@ -154,12 +155,13 @@ class EnvironmentLoop(core.Worker):
               (num_steps is not None and step_count >= num_steps))
 
     episode_count, step_count = 0, 0
-    while not should_terminate(episode_count, step_count):
-      result = self.run_episode()
-      episode_count += 1
-      step_count += result['episode_length']
-      # Log the given results.
-      self._logger.write(result)
+    with signals.runtime_terminator():
+      while not should_terminate(episode_count, step_count):
+        result = self.run_episode()
+        episode_count += 1
+        step_count += result['episode_length']
+        # Log the given episode results.
+        self._logger.write(result)
 
 
 def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:

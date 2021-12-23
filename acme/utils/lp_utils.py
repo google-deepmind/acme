@@ -26,6 +26,7 @@ from typing import Any, Callable, Optional
 from absl import flags
 from absl import logging
 from acme.utils import counting
+from acme.utils import signals
 
 FLAGS = flags.FLAGS
 
@@ -86,25 +87,26 @@ class StepsLimiter:
 
     logging.info('StepsLimiter: Starting with max_steps = %d (%s)',
                  self._max_steps, self._steps_key)
-    while True:
-      # Update the counts.
-      counts = self._counter.get_counts()
-      num_steps = counts.get(self._steps_key, 0)
+    with signals.runtime_terminator():
+      while True:
+        # Update the counts.
+        counts = self._counter.get_counts()
+        num_steps = counts.get(self._steps_key, 0)
 
-      logging.info('StepsLimiter: Reached %d recorded steps', num_steps)
+        logging.info('StepsLimiter: Reached %d recorded steps', num_steps)
 
-      if num_steps > self._max_steps:
-        logging.info('StepsLimiter: Max steps of %d was reached, terminating',
-                     self._max_steps)
-        # Avoid importing Launchpad until it is actually used.
-        import launchpad as lp  # pylint: disable=g-import-not-at-top
-        lp.stop()
+        if num_steps > self._max_steps:
+          logging.info('StepsLimiter: Max steps of %d was reached, terminating',
+                       self._max_steps)
+          # Avoid importing Launchpad until it is actually used.
+          import launchpad as lp  # pylint: disable=g-import-not-at-top
+          lp.stop()
 
-      # Don't spam the counter.
-      for _ in range(10):
-        # Do not sleep for a long period of time to avoid LaunchPad program
-        # termination hangs (time.sleep is not interruptible).
-        time.sleep(1)
+        # Don't spam the counter.
+        for _ in range(10):
+          # Do not sleep for a long period of time to avoid LaunchPad program
+          # termination hangs (time.sleep is not interruptible).
+          time.sleep(1)
 
 
 # Resources for each individual instance of the program.

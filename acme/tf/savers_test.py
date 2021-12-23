@@ -17,8 +17,6 @@
 
 import os
 import re
-import signal
-import threading
 import time
 from unittest import mock
 
@@ -29,7 +27,7 @@ from acme.tf import networks
 from acme.tf import savers as tf2_savers
 from acme.tf import utils as tf2_utils
 from acme.utils import paths
-from acme.utils import signals
+import launchpad
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
@@ -130,32 +128,25 @@ class CheckpointingRunnerTest(test_utils.TestCase):
 
   def test_signal_handling(self):
     x = DummySaveable()
-    directory = self.get_tempdir()
-    event = threading.Event()
-
-    true_add_handler = signals.add_handler
-    # Patch signals.add_handler so the registered signal handler sets the event.
-    with mock.patch.object(signals, 'add_handler') as mock_add_handler:
-      def add_handler(signo, fn):
-        def _wrapped():
-          fn()
-          event.set()
-        true_add_handler(signo, _wrapped)
-      mock_add_handler.side_effect = add_handler
-
-      unused_runner = tf2_savers.CheckpointingRunner(
-          wrapped=x,
-          time_delta_minutes=0,
-          directory=directory)
 
     # Increment the value of DummySavable.
     x.state['state'].assign_add(1)
 
-    # Send SIGTERM, this will cause the unused_runner to checkpoint.
-    os.kill(os.getpid(), signal.SIGTERM)
+    directory = self.get_tempdir()
 
-    # Wait for the checkpoint to finalize.
-    event.wait()
+    # Patch signals.add_handler so the registered signal handler sets the event.
+    with mock.patch.object(
+        launchpad, 'register_stop_handler') as mock_register_stop_handler:
+      def add_handler(fn):
+        fn()
+      mock_register_stop_handler.side_effect = add_handler
+
+      runner = tf2_savers.CheckpointingRunner(
+          wrapped=x,
+          time_delta_minutes=0,
+          directory=directory)
+      with self.assertRaises(SystemExit):
+        runner.run()
 
     # Recreate DummySavable(), its tf.Variable is initialized to 0.
     x = DummySaveable()
