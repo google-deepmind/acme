@@ -13,15 +13,15 @@
 # limitations under the License.
 
 """DQN Builder."""
-from typing import Callable, Iterator, List, Optional
+from typing import Callable, Iterator, List, Optional, Sequence
 
 from acme import adders
 from acme import core
 from acme import specs
 from acme.adders import reverb as adders_reverb
-from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax import builders
+from acme.agents.jax.dqn import actor as dqn_actor
 from acme.agents.jax.dqn import config as dqn_config
 from acme.agents.jax.dqn import learning_lib
 from acme.datasets import reverb as datasets
@@ -29,26 +29,9 @@ from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
-import jax.numpy as jnp
 import optax
 import reverb
 from reverb import rate_limiters
-import rlax
-
-
-def default_behavior_policy(network: networks_lib.FeedForwardNetwork,
-                            epsilon: float) -> actor_core_lib.FeedForwardPolicy:
-  """Returns the feed-forward policy with epsilon-greedy exploration."""
-  def apply_and_sample(params: networks_lib.Params,
-                       key: networks_lib.PRNGKey,
-                       observation: networks_lib.Observation
-                       ) -> networks_lib.Action:
-    """Returns an action for the given observation."""
-    action_values = network.apply(params, observation)
-    actions = rlax.epsilon_greedy(epsilon).sample(key, action_values)
-    return actions.astype(jnp.int32)
-
-  return apply_and_sample
 
 
 class DQNBuilder(builders.ActorLearnerBuilder):
@@ -59,17 +42,20 @@ class DQNBuilder(builders.ActorLearnerBuilder):
       config: dqn_config.DQNConfig,
       loss_fn: learning_lib.LossFn,
       logger_fn: Callable[[], loggers.Logger] = lambda: None,
+      actor_backend: Optional[str] = 'cpu'
   ):
     """Creates DQN learner and the behavior policies.
 
     Args:
       config: DQN config.
       loss_fn: A loss function.
-      logger_fn: a logger factory for the learner
+      logger_fn: a logger factory for the learner.
+      actor_backend: Which backend to use when jitting the policy.
     """
     self._config = config
     self._loss_fn = loss_fn
     self._logger_fn = logger_fn
+    self._actor_backend = actor_backend
 
   def make_learner(
       self,
@@ -96,18 +82,23 @@ class DQNBuilder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: dqn_actor.EpsilonPolicy,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:
     assert variable_source is not None
-    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
-        policy_network)
     # Inference happens on CPU, so it's better to move variables there too.
     variable_client = variable_utils.VariableClient(variable_source, '',
                                                     device='cpu')
-    return actors.GenericActor(
-        actor_core, random_key, variable_client, adder, backend='cpu')
+    epsilon = self._config.epsilon
+    epsilons = epsilon if epsilon is Sequence else (epsilon,)
+    actor_core = dqn_actor.alternating_epsilons_actor_core(
+        policy_network, epsilons=epsilons)
+    return actors.GenericActor(actor=actor_core,
+                               random_key=random_key,
+                               variable_client=variable_client,
+                               adder=adder,
+                               backend=self._actor_backend)
 
   def make_replay_tables(
       self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:

@@ -15,6 +15,8 @@
 
 """DQN agent implementation."""
 
+from typing import Sequence
+
 from acme import specs
 from acme.agents import agent
 from acme.agents import replay
@@ -80,6 +82,7 @@ class DQNFromConfig(agent.Agent):
     )
 
     # The actor selects actions according to the policy.
+    assert config.epsilon is not Sequence
     def policy(params: networks_lib.Params, key: jnp.ndarray,
                observation: jnp.ndarray) -> jnp.ndarray:
       action_values = network.apply(params, observation)
