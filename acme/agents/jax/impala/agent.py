@@ -93,7 +93,6 @@ class IMPALAFromConfig(acme.Actor):
     key_learner, key_actor = jax.random.split(key)
     self._learner = learning.IMPALALearner(
         networks=networks,
-        obs_spec=environment_spec.observations,
         iterator=reverb_queue.data_iterator,
         random_key=key_learner,
         counter=counter,
@@ -167,16 +166,10 @@ class IMPALA(IMPALAFromConfig):
       max_abs_reward: float = np.inf,
       max_gradient_norm: float = np.inf,
   ):
-
-    forward_fn_transformed = hk.without_apply_rng(hk.transform(
-        forward_fn,
-        apply_rng=True))
-    unroll_fn_transformed = hk.without_apply_rng(hk.transform(
-        unroll_fn,
-        apply_rng=True))
-    initial_state_fn_transformed = hk.without_apply_rng(hk.transform(
-        initial_state_fn,
-        apply_rng=True))
+    networks = impala_networks.make_haiku_networks(
+        env_spec=environment_spec,
+        forward_fn=forward_fn, initial_state_fn=initial_state_fn,
+        unroll_fn=unroll_fn)
 
     config = impala_config.IMPALAConfig(
         sequence_length=sequence_length,
@@ -191,13 +184,14 @@ class IMPALA(IMPALAFromConfig):
         max_abs_reward=max_abs_reward,
         max_gradient_norm=max_gradient_norm,
     )
+
     super().__init__(
         environment_spec=environment_spec,
-        forward_fn=forward_fn_transformed.apply,
-        unroll_init_fn=unroll_fn_transformed.init,
-        unroll_fn=unroll_fn_transformed.apply,
-        initial_state_init_fn=initial_state_fn_transformed.init,
-        initial_state_fn=initial_state_fn_transformed.apply,
+        forward_fn=networks.forward_fn,
+        unroll_init_fn=networks.unroll_init_fn,
+        unroll_fn=networks.unroll_fn,
+        initial_state_init_fn=networks.initial_state_init_fn,
+        initial_state_fn=networks.initial_state_fn,
         config=config,
         counter=counter,
         logger=logger,

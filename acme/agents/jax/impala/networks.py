@@ -21,6 +21,7 @@ from typing import Any, Generic, Optional, Tuple
 from acme import specs
 from acme.agents.jax.impala import types
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 import haiku as hk
 
 
@@ -48,6 +49,7 @@ class IMPALANetworks(Generic[types.RecurrentState]):
 
 
 def make_haiku_networks(
+    env_spec: specs.EnvironmentSpec,
     forward_fn: Any,
     initial_state_fn: Any,
     unroll_fn: Any) -> IMPALANetworks[types.RecurrentState]:
@@ -60,8 +62,11 @@ def make_haiku_networks(
   # Define networks init functions.
   def initial_state_init_fn(rng: networks_lib.PRNGKey) -> hk.Params:
     return initial_state_hk.init(rng)
+  # Note: batch axis is not needed for the actors.
+  dummy_obs = utils.zeros_like(env_spec.observations)
+  dummy_obs_sequence = utils.add_batch_dim(dummy_obs)
   def unroll_init_fn(
-      rng: networks_lib.PRNGKey, dummy_obs_sequence: types.Observation,
+      rng: networks_lib.PRNGKey,
       initial_state: types.RecurrentState) -> hk.Params:
     return unroll_hk.init(rng, dummy_obs_sequence, initial_state)
 
@@ -96,5 +101,5 @@ def make_atari_networks(env_spec: specs.EnvironmentSpec
     return model.unroll(inputs, state)
 
   return make_haiku_networks(
-      forward_fn=forward_fn,
+      env_spec=env_spec, forward_fn=forward_fn,
       initial_state_fn=initial_state_fn, unroll_fn=unroll_fn)

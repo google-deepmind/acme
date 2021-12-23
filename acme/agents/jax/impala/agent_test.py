@@ -22,7 +22,7 @@ from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import impala
-from acme.jax import networks
+from acme.jax import networks as networks_lib
 from acme.testing import fakes
 
 import haiku as hk
@@ -40,7 +40,7 @@ class MyNetwork(hk.RNNCore):
         hk.nets.MLP([50, 50]),
     ])
     self._core = hk.LSTM(20)
-    self._head = networks.PolicyValueHead(num_actions)
+    self._head = networks_lib.PolicyValueHead(num_actions)
 
   def __call__(self, inputs, state):
     embeddings = self._torso(inputs)
@@ -77,15 +77,10 @@ class IMPALATest(absltest.TestCase):
       return hk.static_unroll(model, inputs, state)
 
     # We pass pure, Haiku-agnostic functions to the agent.
-    forward_fn_transformed = hk.without_apply_rng(hk.transform(
-        forward_fn,
-        apply_rng=True))
-    unroll_fn_transformed = hk.without_apply_rng(hk.transform(
-        unroll_fn,
-        apply_rng=True))
-    initial_state_fn_transformed = hk.without_apply_rng(hk.transform(
-        initial_state_fn,
-        apply_rng=True))
+    networks = impala.make_haiku_networks(
+        env_spec=spec,
+        forward_fn=forward_fn, initial_state_fn=initial_state_fn,
+        unroll_fn=unroll_fn)
 
     # Construct the agent.
     config = impala.IMPALAConfig(
@@ -95,11 +90,11 @@ class IMPALATest(absltest.TestCase):
     )
     agent = impala.IMPALAFromConfig(
         environment_spec=spec,
-        forward_fn=forward_fn_transformed.apply,
-        initial_state_init_fn=initial_state_fn_transformed.init,
-        initial_state_fn=initial_state_fn_transformed.apply,
-        unroll_init_fn=unroll_fn_transformed.init,
-        unroll_fn=unroll_fn_transformed.apply,
+        forward_fn=networks.forward_fn,
+        unroll_init_fn=networks.unroll_init_fn,
+        unroll_fn=networks.unroll_fn,
+        initial_state_init_fn=networks.initial_state_init_fn,
+        initial_state_fn=networks.initial_state_fn,
         config=config,
     )
 

@@ -20,7 +20,6 @@ from typing import Dict, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 
 from absl import logging
 import acme
-from acme import specs
 from acme.agents.jax.impala import networks as impala_networks
 from acme.jax import losses
 from acme.jax import networks as networks_lib
@@ -48,7 +47,6 @@ class IMPALALearner(acme.Learner):
   def __init__(
       self,
       networks: impala_networks.IMPALANetworks,
-      obs_spec: specs.Array,
       iterator: Iterator[reverb.ReplaySample],
       optimizer: optax.GradientTransformation,
       random_key: networks_lib.PRNGKey,
@@ -62,7 +60,6 @@ class IMPALALearner(acme.Learner):
       prefetch_size: int = 2,
       num_prefetch_threads: Optional[int] = None,
   ):
-    # TODO(lukstafi): remove obs_spec, prepare networks accordingly.
     local_devices = jax.local_devices()
     process_id = jax.process_index()
     logging.info('Learner process id: %s. Devices passed: %s', process_id,
@@ -108,16 +105,15 @@ class IMPALALearner(acme.Learner):
 
     def make_initial_state(key: jnp.ndarray) -> TrainingState:
       """Initialises the training state (parameters and optimiser state)."""
-      dummy_obs = utils.zeros_like(obs_spec)
-      dummy_obs = utils.add_batch_dim(dummy_obs)  # Dummy 'sequence' dim.
-
       key, key_initial_state = jax.random.split(key)
+      # Note: parameters do not depend on the batch size, so initial_state below
+      # does not need a batch dimension.
       params = networks.initial_state_init_fn(key_initial_state)
       # TODO(jferret): as it stands, we do not yet support
       # training the initial state params.
       initial_state = networks.initial_state_fn(params)
 
-      initial_params = networks.unroll_init_fn(key, dummy_obs, initial_state)
+      initial_params = networks.unroll_init_fn(key, initial_state)
       initial_opt_state = optimizer.init(initial_params)
       return TrainingState(
           params=initial_params, opt_state=initial_opt_state)

@@ -43,15 +43,12 @@ class IMPALABuilder(builders.ActorLearnerBuilder):
       self,
       config: impala_config.IMPALAConfig,
       core_state_spec: hk.LSTMState,
-      environment_spec: specs.EnvironmentSpec,
       logger_fn: Callable[[], loggers.Logger] = lambda: None,
       table_extension: Optional[Callable[[], Any]] = None,
   ):
     """Creates an IMPALA learner."""
-    # TODO(lukstafi): remove environment_spec.
     self._config = config
     self._core_state_spec = core_state_spec
-    self._environment_spec = environment_spec
     self._sequence_length = self._config.sequence_length
     self._num_sequences_per_batch = self._config.batch_size
     self._logger_fn = logger_fn
@@ -149,7 +146,6 @@ class IMPALABuilder(builders.ActorLearnerBuilder):
     )
 
     return learning.IMPALALearner(
-        obs_spec=self._environment_spec.observations,
         networks=networks,
         iterator=dataset,
         optimizer=optimizer,
