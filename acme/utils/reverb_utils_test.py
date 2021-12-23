@@ -41,10 +41,8 @@ class ReverbUtilsTest(absltest.TestCase):
     # be monitoring information about any given table. So instead we copy this
     # so that the assertion below checks that everything else matches.
 
-    # TODO(b/198297886): eliminate hasattr which exists for backwards compat.
-    if hasattr(table.info, 'table_worker_time'):
-      new_info.table_worker_time.sleeping_ms = (
-          table.info.table_worker_time.sleeping_ms)
+    new_info.table_worker_time.sleeping_ms = (
+        table.info.table_worker_time.sleeping_ms)
 
     self.assertEqual(new_info, table.info)
 
