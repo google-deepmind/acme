@@ -46,7 +46,7 @@ def main(_):
       config=config,
       seed=FLAGS.seed,
       num_actors=4,
-      max_number_of_steps=1000).build()
+      max_number_of_steps=100).build()
 
   # Launch experiment.
   lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))

@@ -43,7 +43,8 @@ def main(_):
       network_factory=td3.make_networks,
       config=td3.TD3Config(),
       num_actors=4,
-      max_number_of_steps=1000000).build()
+      seed=1,
+      max_number_of_steps=100).build()
 
   lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
 

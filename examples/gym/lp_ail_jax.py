@@ -85,7 +85,7 @@ def main(_):
       policy_network=policy_network,
       evaluator_policy_network=(lambda n: policy_network(n, eval_mode=True)),
       num_actors=4,
-      max_number_of_steps=1000000,
+      max_number_of_steps=100,
       discriminator_loss=ail.losses.gail_loss()).build()
 
   # Launch experiment.

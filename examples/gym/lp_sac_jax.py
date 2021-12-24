@@ -39,7 +39,8 @@ def main(_):
       network_factory=sac.make_networks,
       config=sac.SACConfig(**{'num_sgd_steps_per_step': 64}),
       num_actors=4,
-      max_number_of_steps=1000000).build()
+      seed=1,
+      max_number_of_steps=100).build()
 
   # Launch experiment.
   lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))

@@ -46,7 +46,8 @@ def main(_):
       config=config,
       num_actors=4,
       log_to_bigtable=True,
-      max_number_of_steps=1000000,
+      max_number_of_steps=100,
+      seed=1,
       make_demonstrations=functools.partial(
           helpers.make_demonstration_iterator, dataset_name=FLAGS.dataset_name))
   program = agent.build()

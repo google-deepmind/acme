@@ -41,6 +41,14 @@ done
 # Run all tests.
 pytest --ignore-glob="*/agent_test.py" --ignore-glob="*/agent_distributed_test.py" --durations=10 -n "${N_CPU}" acme
 
+# Run sample of examples.
+# For each of them make sure StepsLimiter reached the limit step count.
+cd examples/gym
+time python lp_ppo_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
+cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
+time python lp_sac_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
+cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
+
 # Clean-up.
 deactivate
 rm -rf acme_testing/
