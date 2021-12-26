@@ -32,6 +32,21 @@ def fast_map_structure(func, *structure):
   return tree.unflatten_as(structure[-1], [func(*x) for x in entries])
 
 
+def fast_map_structure_with_path(func, *structure):
+  """Faster map_structure_with_path implementation."""
+  head_entries_with_path = tree.flatten_with_path(structure[0])
+  if len(structure) > 1:
+    tail_entries = (tree.flatten(s) for s in structure[1:])
+    entries_with_path = [
+        e[0] + e[1:] for e in zip(head_entries_with_path, *tail_entries)
+    ]
+  else:
+    entries_with_path = head_entries_with_path
+  # Arbitrarily choose one of the structures of the original sequence (the last)
+  # to match the structure for the flattened sequence.
+  return tree.unflatten_as(structure[-1], [func(*x) for x in entries_with_path])
+
+
 def stack_sequence_fields(sequence: Sequence[ElementType]) -> ElementType:
   """Stacks a list of identically nested objects.
 

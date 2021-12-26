@@ -201,13 +201,94 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     z = jnp.concatenate([x, y])
     weights = jnp.concatenate([x_weights, y_weights])
 
-    state = update_and_validate(state, z, weights)
+    state = update_and_validate(state, z, weights=weights)
 
     self.assertEqual(state.mean, (jnp.mean(x) + 2 * jnp.mean(y)) / 3)
     big_z = jnp.concatenate([x, y, y])
     normalized = running_statistics.normalize(big_z, state)
     self.assertAlmostEqual(jnp.mean(normalized), 0., places=6)
     self.assertAlmostEqual(jnp.std(normalized), 1., places=6)
+
+  def test_normalize_config(self):
+    x = jnp.arange(200, dtype=jnp.float32).reshape(20, 2, 5)
+    x_split = jnp.split(x, 5, axis=0)
+
+    y = jnp.arange(160, dtype=jnp.float32).reshape(20, 2, 4)
+    y_split = jnp.split(y, 5, axis=0)
+
+    z = {'a': x, 'b': y}
+
+    z_split = [{'a': xx, 'b': yy} for xx, yy in zip(x_split, y_split)]
+
+    update = jax.jit(running_statistics.update, static_argnames=('config',))
+
+    config = running_statistics.NestStatisticsConfig((('a',),))
+    state = running_statistics.init_state({
+        'a': specs.Array((5,), jnp.float32),
+        'b': specs.Array((4,), jnp.float32)
+    })
+    # Test initialization from the first element.
+    state = update(state, z_split[0], config=config)
+    state = update(state, z_split[1], config=config)
+    state = update(state, z_split[2], config=config)
+    state = update(state, z_split[3], config=config)
+    state = update(state, z_split[4], config=config)
+
+    normalize = jax.jit(running_statistics.normalize)
+    normalized = normalize(z, state)
+
+    for key in normalized:
+      mean = jnp.mean(normalized[key], axis=(0, 1))
+      std = jnp.std(normalized[key], axis=(0, 1))
+      if key == 'a':
+        self.assertAllClose(
+            mean,
+            jnp.zeros_like(mean),
+            err_msg=f'key:{key} mean:{mean} normalized:{normalized[key]}')
+        self.assertAllClose(
+            std,
+            jnp.ones_like(std),
+            err_msg=f'key:{key} std:{std} normalized:{normalized[key]}')
+      else:
+        assert key == 'b'
+        self.assertArraysEqual(
+            normalized[key],
+            z[key],
+            err_msg=f'z:{z[key]} normalized:{normalized[key]}')
+
+  def test_clip_config(self):
+    x = jnp.arange(10, dtype=jnp.float32) - 5
+    y = jnp.arange(8, dtype=jnp.float32) - 4
+
+    z = {'x': x, 'y': y}
+
+    max_abs_x = 2
+    config = running_statistics.NestClippingConfig(((('x',), max_abs_x),))
+
+    clipped_z = running_statistics.clip(z, config)
+
+    clipped_x = jnp.clip(a=x, a_min=-max_abs_x, a_max=max_abs_x)
+    self.assertArraysEqual(clipped_z['x'], clipped_x)
+
+    self.assertArraysEqual(clipped_z['y'], z['y'])
+
+  def test_denormalize(self):
+    state = running_statistics.init_state(specs.Array((5,), jnp.float32))
+
+    x = jnp.arange(100, dtype=jnp.float32).reshape(10, 2, 5)
+    x1, x2 = jnp.split(x, 2, axis=0)
+
+    state = update_and_validate(state, x1)
+    state = update_and_validate(state, x2)
+    normalized = running_statistics.normalize(x, state)
+
+    mean = jnp.mean(normalized)
+    std = jnp.std(normalized)
+    self.assertAllClose(mean, jnp.zeros_like(mean))
+    self.assertAllClose(std, jnp.ones_like(std))
+
+    denormalized = running_statistics.denormalize(normalized, state)
+    self.assertAllClose(denormalized, x)
 
 
 if __name__ == '__main__':
