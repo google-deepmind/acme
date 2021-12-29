@@ -35,6 +35,7 @@ Params = types.NestedArray
 NetworkOutput = types.NestedArray
 QValues = jnp.ndarray
 Logits = jnp.ndarray
+LogProb = jnp.ndarray
 Value = jnp.ndarray
 
 # Commonly-used function/network signatures.
@@ -44,7 +45,7 @@ PolicyValueRNN = Callable[[Observation, hk.LSTMState], LSTMOutputs]
 RecurrentQNetwork = Callable[[Observation, hk.LSTMState],
                              Tuple[QValues, hk.LSTMState]]
 SampleFn = Callable[[NetworkOutput, PRNGKey], Action]
-LogProbFn = Callable[[NetworkOutput, Action], Logits]
+LogProbFn = Callable[[NetworkOutput, Action], LogProb]
 
 
 @dataclasses.dataclass
