@@ -48,7 +48,7 @@ tensorflow = [
 core_requirements = [
     'absl-py',
     'dm-env',
-    'dm-launchpad==0.4.0',
+    'dm-launchpad==0.4.1',
     'dm-tree',
     'numpy',
     'pillow',
