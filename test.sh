@@ -43,15 +43,11 @@ pytest --ignore-glob="*/agent_test.py" --ignore-glob="*/agent_distributed_test.p
 
 # Run sample of examples.
 # For each of them make sure StepsLimiter reached the limit step count.
-PYTHON=`python -c 'import sys; print(sys.version_info[0:2])'`
-if [[ ${PYTHON} != "(3, 9)" ]]
-then
-  cd examples/gym
-  time python lp_ppo_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
-  cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
-  time python lp_sac_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
-  cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
-fi
+cd examples/gym
+time python lp_ppo_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
+cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
+time python lp_sac_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
+cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
 
 # Clean-up.
 deactivate
