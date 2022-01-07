@@ -45,11 +45,12 @@ class DistributedPPO(distributed_layout.DistributedLayout):
       seed: int,
       num_actors: int,
       normalize_input: bool = False,
+      logger_fn: Optional[Callable[[], loggers.Logger]] = None,
       save_reverb_logs: bool = False,
       log_every: float = 10.0,
       max_number_of_steps: Optional[int] = None,
   ):
-    logger_fn = functools.partial(
+    logger_fn = logger_fn or functools.partial(
         loggers.make_default_logger,
         'learner',
         save_reverb_logs,
@@ -104,8 +105,10 @@ class PPO(local_layout.LocalLayout):
       workdir: Optional[str] = '~/acme',
       normalize_input: bool = False,
       counter: Optional[counting.Counter] = None,
+      logger_fn: Optional[Callable[[], loggers.Logger]] = None,
   ):
-    ppo_builder = builder.PPOBuilder(config)
+    logger_fn = logger_fn or (lambda: None)
+    ppo_builder = builder.PPOBuilder(config, logger_fn=logger_fn)
     if normalize_input:
       # Two batch dimensions: [num_sequences, num_steps, ...]
       batch_dims = (0, 1)

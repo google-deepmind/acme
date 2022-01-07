@@ -25,6 +25,7 @@ from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.testing import fakes
 from acme.utils import counting
+from acme.utils import loggers
 import flax
 import haiku as hk
 import jax
@@ -133,6 +134,7 @@ class PPOTest(absltest.TestCase):
     config = ppo.PPOConfig(unroll_length=4, num_epochs=2, num_minibatches=2)
     workdir = self.create_tempdir()
     counter = counting.Counter()
+    logger_fn = lambda: loggers.make_default_logger('learner')
     # Construct the agent.
     agent = ppo.PPO(
         spec=spec,
@@ -142,6 +144,7 @@ class PPOTest(absltest.TestCase):
         workdir=workdir.full_path,
         normalize_input=True,
         counter=counter,
+        logger_fn=logger_fn,
     )
 
     # Try running the environment loop. We have no assertions here because all
