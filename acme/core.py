@@ -39,7 +39,7 @@ class Actor(abc.ABC):
 
     # Make the first observation.
     timestep = env.reset()
-    actor.observe_first(timestep.observation)
+    actor.observe_first(timestep)
 
     # Take a step and observe.
     action = actor.select_action(timestep.observation)
