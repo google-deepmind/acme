@@ -15,7 +15,7 @@
 
 """Functions for making TensorFlow datasets for sampling from Reverb replay."""
 
-from typing import Optional
+from typing import Callable, Optional
 
 from acme import specs
 from acme import types
@@ -32,6 +32,8 @@ def make_reverb_dataset(
     table: str = adders.DEFAULT_PRIORITY_TABLE,
     num_parallel_calls: int = 12,
     max_in_flight_samples_per_worker: Optional[int] = None,
+    postprocess: Optional[
+        Callable[[reverb.ReplaySample], reverb.ReplaySample]] = None,
     # Deprecated kwargs.
     environment_spec: Optional[specs.EnvironmentSpec] = None,
     extra_spec: Optional[types.NestedSpec] = None,
@@ -68,6 +70,11 @@ def make_reverb_dataset(
         server_address=server_address,
         table=table,
         max_in_flight_samples_per_worker=max_in_flight_samples_per_worker)
+
+    # Post-process each element if a post-processing function is passed, e.g.
+    # observation-stacking or data augmenting transformations.
+    if postprocess:
+      dataset = dataset.map(postprocess)
 
     # Finish the pipeline: batch and prefetch.
     if batch_size:
