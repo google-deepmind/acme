@@ -71,7 +71,7 @@ follow the steps below:
     as well, i.e.
 
     ```bash
-    pip install dm-acme[jax,tensorflow]
+    pip install dm-acme [jax,tensorflow]
     ```
 
 1.  Finally, to install a few example environments (including [gym],
