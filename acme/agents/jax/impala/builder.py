@@ -104,7 +104,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder):
     """Creates a dataset."""
     # NOTE: we need TrajectoryDataset for SequenceAdder.
     # NOTE: Value for max_in_flight_samples_per_worker comes from a
-    # reverb.ReplayDataset recommendation of 2-3x batch size.
+    # reverb.TrajectoryDataset recommendation of 2-3x batch size.
     dataset = reverb.TrajectoryDataset.from_table_signature(
         server_address=replay_client.server_address,
         table=self._config.replay_table_name,
