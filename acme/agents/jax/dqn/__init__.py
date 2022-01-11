@@ -23,3 +23,4 @@ from acme.agents.jax.dqn.config import DQNConfig
 from acme.agents.jax.dqn.learning import DQNLearner
 from acme.agents.jax.dqn.learning_lib import SGDLearner
 from acme.agents.jax.dqn.losses import PrioritizedDoubleQLearning
+from acme.agents.jax.dqn.losses import QrDqn

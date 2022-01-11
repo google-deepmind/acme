@@ -77,6 +77,53 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
 
 
 @dataclasses.dataclass
+class QrDqn(learning_lib.LossFn):
+  """Quantile Regression DQN.
+
+  https://arxiv.org/abs/1710.10044
+  """
+  num_atoms: int = 51
+  huber_param: float = 1.0
+
+  def __call__(
+      self,
+      network: networks_lib.FeedForwardNetwork,
+      params: networks_lib.Params,
+      target_params: networks_lib.Params,
+      batch: reverb.ReplaySample,
+      key: networks_lib.PRNGKey,
+  ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
+    """Calculate a loss on a single batch of data."""
+    del key
+    transitions: types.Transition = batch.data
+    dist_q_tm1 = network.apply(params,
+                               transitions.observation)['q_dist']
+    dist_q_target_t = network.apply(target_params,
+                                    transitions.next_observation)['q_dist']
+    # Swap distribution and action dimension, since
+    # rlax.quantile_q_learning expects it that way.
+    dist_q_tm1 = jnp.swapaxes(dist_q_tm1, 1, 2)
+    dist_q_target_t = jnp.swapaxes(dist_q_target_t, 1, 2)
+    quantiles = (
+        (jnp.arange(self.num_atoms, dtype=jnp.float32) + 0.5) / self.num_atoms)
+    batch_quantile_q_learning = jax.vmap(
+        rlax.quantile_q_learning, in_axes=(0, None, 0, 0, 0, 0, 0, None))
+    losses = batch_quantile_q_learning(
+        dist_q_tm1,
+        quantiles,
+        transitions.action,
+        transitions.reward,
+        transitions.discount,
+        dist_q_target_t,  # No double Q-learning here.
+        dist_q_target_t,
+        self.huber_param,
+    )
+    loss = jnp.mean(losses)
+    extra = learning_lib.LossExtra(metrics={'mean_loss': loss})
+    return loss, extra
+
+
+@dataclasses.dataclass
 class PrioritizedCategoricalDoubleQLearning(learning_lib.LossFn):
   """Categorical double q learning with prioritization on TD error."""
   discount: float = 0.99
