@@ -96,8 +96,9 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
       networks: struct describing the networks needed by the learner; this can
         be specific to the learner in question.
       dataset: iterator over samples from replay.
-      replay_client: client which allows communication with replay, e.g. in
-        order to update priorities.
+      replay_client: client which allows communication with replay. Note that
+        this is only intended to be used for updating priorities. Samples should
+        be obtained from `dataset`.
       counter: a Counter which allows for recording of counts (learner steps,
         actor steps, etc.) distributed throughout the agent.
     """
