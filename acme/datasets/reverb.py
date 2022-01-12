@@ -30,7 +30,6 @@ def make_reverb_dataset(
     batch_size: Optional[int] = None,
     prefetch_size: Optional[int] = None,
     table: str = adders.DEFAULT_PRIORITY_TABLE,
-    num_parallel_calls: int = 12,
     max_in_flight_samples_per_worker: Optional[int] = None,
     postprocess: Optional[
         Callable[[reverb.ReplaySample], reverb.ReplaySample]] = None,
@@ -76,22 +75,15 @@ def make_reverb_dataset(
     if postprocess:
       dataset = dataset.map(postprocess)
 
-    # Finish the pipeline: batch and prefetch.
-    if batch_size:
-      dataset = dataset.batch(batch_size, drop_remainder=True)
-
     return dataset
 
   # Create the dataset.
-  dataset = tf.data.Dataset.range(num_parallel_calls)
-  dataset = dataset.interleave(
+  dataset = tf.data.Dataset.range(1).repeat().interleave(
       map_func=_make_dataset,
-      cycle_length=num_parallel_calls,
-      num_parallel_calls=num_parallel_calls,
+      cycle_length=tf.data.AUTOTUNE,
+      num_parallel_calls=tf.data.AUTOTUNE,
       deterministic=False)
-
-  if prefetch_size:
-    dataset = dataset.prefetch(prefetch_size)
+  dataset = dataset.batch(batch_size, drop_remainder=True)
 
   return dataset
 
