@@ -30,6 +30,7 @@ def make_reverb_dataset(
     batch_size: Optional[int] = None,
     prefetch_size: Optional[int] = None,
     table: str = adders.DEFAULT_PRIORITY_TABLE,
+    num_parallel_calls: int = 12,
     max_in_flight_samples_per_worker: Optional[int] = None,
     postprocess: Optional[
         Callable[[reverb.ReplaySample], reverb.ReplaySample]] = None,
@@ -57,6 +58,8 @@ def make_reverb_dataset(
   del convert_zero_size_to_none
   del using_deprecated_adder
   del sequence_length
+  del prefetch_size
+  del num_parallel_calls
 
   # This is the default that used to be set by reverb.TFClient.dataset().
   if max_in_flight_samples_per_worker is None and batch_size is None:
