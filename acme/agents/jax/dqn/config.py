@@ -16,7 +16,7 @@
 """DQN config."""
 
 import dataclasses
-from typing import Sequence, Union
+from typing import Callable, Sequence, Union
 
 from acme.adders import reverb as adders_reverb
 import jax.numpy as jnp
@@ -31,7 +31,8 @@ class DQNConfig:
     epsilon: for use by epsilon-greedy policies. If multiple, the epsilons are
       alternated randomly per-episode.
     seed: Random seed.
-    learning_rate: Learning rate for Adam optimizer.
+    learning_rate: Learning rate for Adam optimizer. Could be a number or a
+      function defining a schedule.
     adam_eps: Epsilon for Adam optimizer.
     discount: Discount rate applied to value per timestep.
     n_step: N-step TD learning.
@@ -56,7 +57,7 @@ class DQNConfig:
   seed: int = 1
 
   # Learning rule
-  learning_rate: float = 1e-3  # Learning rate for Adam optimizer.
+  learning_rate: Union[float, Callable[[int], float]] = 1e-3
   adam_eps: float = 1e-8  # Eps for Adam optimizer.
   discount: float = 0.99  # Discount rate applied to value per timestep.
   n_step: int = 5  # N-step TD learning.
