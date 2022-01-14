@@ -190,16 +190,6 @@ class TanhTransformedDistribution(tfd.TransformedDistribution):
         -inverse_threshold) - log_epsilon
     self._log_prob_right = self.distribution.log_survival_function(
         inverse_threshold) - log_epsilon
-    self._entropy_estimate = self._compute_entropy_estimate()
-
-  def _compute_entropy_estimate(self):
-    """Computes the estimate of the distribution entropy using three points."""
-    mean = self.distribution.mean()
-    std = self.distribution.stddev()
-    estimation_points = jnp.array([mean - std, mean, mean + std])
-    return (self.distribution.entropy() + jnp.mean(
-        self.bijector.forward_log_det_jacobian(
-            estimation_points, event_ndims=0)))
 
   def log_prob(self, event):
     # Without this clip there would be NaNs in the inner tf.where and that
@@ -215,8 +205,11 @@ class TanhTransformedDistribution(tfd.TransformedDistribution):
   def mode(self):
     return self.bijector.forward(self.distribution.mode())
 
-  def entropy(self):
-    return self._entropy_estimate
+  def entropy(self, seed=None):
+    # We return an estimation using a single sample of the log_det_jacobian.
+    # We can still do some backpropagation with this estimate.
+    return self.distribution.entropy() + self.bijector.forward_log_det_jacobian(
+        self.distribution.sample(seed=seed), event_ndims=0)
 
   @classmethod
   def _parameter_properties(cls, dtype: Optional[Any], num_classes=None):
