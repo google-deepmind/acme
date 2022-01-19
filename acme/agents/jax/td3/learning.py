@@ -149,8 +149,17 @@ class TD3Learner(acme.Learner):
       critic_updates, critic_opt_state = critic_optimizer.update(
           critic_gradients, state.critic_opt_state)
       critic_params = optax.apply_updates(state.critic_params, critic_updates)
-      target_critic_params = jax.tree_multimap(
-          polyak_averaging, state.target_critic_params, critic_params)
+
+      # In the original TD3 implementation, the target critic update
+      # is delayed at the same time as the policy target update, see
+      # https://github.com/sfujim/TD3/blob/385b33ac7de4767bab17eb02ade4a268d3e4e24f/TD3.py#L148
+      target_critic_params = jax.lax.cond(
+        state.steps % delay == 0,
+        lambda _: jax.tree_multimap(
+          polyak_averaging, state.target_critic_params, critic_params),
+        lambda _: state.target_critic_params,
+        operand=None
+      )
 
       # Updates on the twin critic: compute the gradients, and update using
       # Polyak averaging.
@@ -160,8 +169,13 @@ class TD3Learner(acme.Learner):
           twin_critic_gradients, state.twin_critic_opt_state)
       twin_critic_params = optax.apply_updates(state.twin_critic_params,
                                                twin_critic_updates)
-      target_twin_critic_params = jax.tree_multimap(
-          polyak_averaging, state.target_twin_critic_params, twin_critic_params)
+      target_twin_critic_params = jax.lax.cond(
+        state.steps % delay == 0,
+        lambda _: jax.tree_multimap(
+          polyak_averaging, state.target_twin_critic_params, twin_critic_params),
+        lambda _: state.target_twin_critic_params,
+        operand=None
+      )
 
       # Updates on the policy: compute the gradients, and update using
       # Polyak averaging (if delay enabled, the update might not be applied).
