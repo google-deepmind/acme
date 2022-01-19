@@ -188,7 +188,7 @@ class DistributedLayout:
 
   def actor(self, random_key: networks_lib.PRNGKey, replay: reverb.Client,
             variable_source: core.VariableSource, counter: counting.Counter,
-            actor_id: int) -> environment_loop.EnvironmentLoop:
+            actor_id: ActorId) -> environment_loop.EnvironmentLoop:
     """The actor process."""
     adder = self._builder.make_adder(replay)
 
