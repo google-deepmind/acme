@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utilities for logging to the terminal."""
+"""Utilities for logging to a tf.summary."""
 
 import time
 from typing import Optional
