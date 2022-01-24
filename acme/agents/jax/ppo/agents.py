@@ -16,7 +16,7 @@
 """Defines distributed and local PPO agents, using JAX."""
 
 import functools
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 from acme import specs
 from acme.agents.jax import normalization
@@ -49,6 +49,8 @@ class DistributedPPO(distributed_layout.DistributedLayout):
       save_reverb_logs: bool = False,
       log_every: float = 10.0,
       max_number_of_steps: Optional[int] = None,
+      evaluator_factories: Optional[Sequence[
+          distributed_layout.EvaluatorFactory]] = None,
   ):
     logger_fn = logger_fn or functools.partial(
         loggers.make_default_logger,
@@ -68,22 +70,23 @@ class DistributedPPO(distributed_layout.DistributedLayout):
           environment_spec,
           is_sequence_based=True,
           batch_dims=batch_dims)
-    eval_policy_factory = (
-        lambda networks: ppo_networks.make_inference_fn(networks, True))
+    if evaluator_factories is None:
+      eval_policy_factory = (
+          lambda networks: ppo_networks.make_inference_fn(networks, True))
+      evaluator_factories = [
+          distributed_layout.default_evaluator_factory(
+              environment_factory=lambda: environment_factory(True),
+              network_factory=network_factory,
+              policy_factory=eval_policy_factory,
+              log_to_bigtable=save_reverb_logs)
+      ]
     super().__init__(
         seed=seed,
         environment_factory=lambda: environment_factory(False),
         network_factory=network_factory,
         builder=ppo_builder,
         policy_network=ppo_networks.make_inference_fn,
-        evaluator_factories=[
-            distributed_layout.default_evaluator(
-                environment_factory=lambda: environment_factory(True),
-                network_factory=network_factory,
-                builder=ppo_builder,
-                policy_factory=eval_policy_factory,
-                log_to_bigtable=save_reverb_logs)
-        ],
+        evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         prefetch_size=config.prefetch_size,
         max_number_of_steps=max_number_of_steps,

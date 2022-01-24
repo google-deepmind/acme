@@ -16,7 +16,7 @@
 """Defines the D4PG agent class, using JAX."""
 
 import functools
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 from acme import specs
 from acme.agents.jax.d4pg import builder
@@ -58,6 +58,8 @@ class DistributedD4PG(distributed_layout.DistributedLayout):
       device_prefetch: bool = True,
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
+      evaluator_factories: Optional[Sequence[
+          distributed_layout.EvaluatorFactory]] = None,
   ):
     config = builder.D4PGConfig(
         discount=discount,
@@ -82,20 +84,21 @@ class DistributedD4PG(distributed_layout.DistributedLayout):
         steps_key='learner_steps')
     d4pg_builder = builder.D4PGBuilder(config, logger_fn=logger_fn)
 
+    if evaluator_factories is None:
+      evaluator_factories = [
+          distributed_layout.default_evaluator_factory(
+              environment_factory=lambda: environment_factory(True),
+              network_factory=network_factory,
+              policy_factory=builder.get_default_eval_policy,
+              log_to_bigtable=log_to_bigtable)
+      ]
     super().__init__(
         seed=random_seed,
         environment_factory=lambda: environment_factory(False),
         network_factory=network_factory,
         builder=d4pg_builder,
         policy_network=lambda n: builder.get_default_behavior_policy(n, config),
-        evaluator_factories=[
-            distributed_layout.default_evaluator(
-                environment_factory=lambda: environment_factory(True),
-                network_factory=network_factory,
-                builder=d4pg_builder,
-                policy_factory=builder.get_default_eval_policy,
-                log_to_bigtable=log_to_bigtable)
-        ],
+        evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         environment_spec=environment_spec,
         device_prefetch=device_prefetch,

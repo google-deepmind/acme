@@ -16,7 +16,7 @@
 """Defines distributed and local SAC agents, using JAX."""
 
 import functools
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 from acme import specs
 from acme.agents.jax import normalization
@@ -49,6 +49,8 @@ class DistributedSAC(distributed_layout.DistributedLayout):
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
       normalize_input: bool = True,
+      evaluator_factories: Optional[Sequence[
+          distributed_layout.EvaluatorFactory]] = None,
   ):
     logger_fn = functools.partial(loggers.make_default_logger,
                                   'learner', log_to_bigtable,
@@ -65,22 +67,23 @@ class DistributedSAC(distributed_layout.DistributedLayout):
           environment_spec,
           is_sequence_based=False,
           batch_dims=batch_dims)
-    eval_policy_factory = (
-        lambda n: networks.apply_policy_and_sample(n, True))
+    if evaluator_factories is None:
+      eval_policy_factory = (
+          lambda n: networks.apply_policy_and_sample(n, True))
+      evaluator_factories = [
+          distributed_layout.default_evaluator_factory(
+              environment_factory=lambda: environment_factory(True),
+              network_factory=network_factory,
+              policy_factory=eval_policy_factory,
+              log_to_bigtable=log_to_bigtable)
+      ]
     super().__init__(
         seed=seed,
         environment_factory=lambda: environment_factory(False),
         network_factory=network_factory,
         builder=sac_builder,
         policy_network=networks.apply_policy_and_sample,
-        evaluator_factories=[
-            distributed_layout.default_evaluator(
-                environment_factory=lambda: environment_factory(True),
-                network_factory=network_factory,
-                builder=sac_builder,
-                policy_factory=eval_policy_factory,
-                log_to_bigtable=log_to_bigtable)
-        ],
+        evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         max_number_of_steps=max_number_of_steps,
         prefetch_size=config.prefetch_size,

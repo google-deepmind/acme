@@ -33,9 +33,13 @@ NetworkFactory = Callable[[], AgentNetwork]
 # It will be treated as Dict[str, Any]. Proper support is tracked b/109648354.
 NestedLogger = Union[loggers.Logger, Dict[str, 'NestedLogger']]  # pytype: disable=not-supported-yet
 LearnerFactory = Callable[[
-    networks_lib
-    .PRNGKey, AgentNetwork, Optional[counting.Counter], Optional[NestedLogger]
+    types.PRNGKey,
+    AgentNetwork,
+    Optional[counting.Counter],
+    Optional[NestedLogger],
 ], core.Learner]
+EvaluatorFactory = Callable[
+    [types.PRNGKey, core.VariableSource, counting.Counter], core.Worker]
 
 
 class OfflineDistributedLayout:
@@ -50,7 +54,7 @@ class OfflineDistributedLayout:
       seed: int,
       network_factory: NetworkFactory,
       make_learner: LearnerFactory,
-      evaluator_factories: Sequence[types.EvaluatorFactory] = (),
+      evaluator_factories: Sequence[EvaluatorFactory] = (),
       save_logs: bool = False,
       log_every: float = 10.0,
       max_number_of_steps: Optional[int] = None,

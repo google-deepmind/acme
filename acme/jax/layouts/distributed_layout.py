@@ -37,9 +37,18 @@ import reverb
 
 ActorId = int
 AgentNetwork = Any
+PolicyNetwork = Any
 NetworkFactory = Callable[[specs.EnvironmentSpec], AgentNetwork]
-PolicyFactory = Callable[[AgentNetwork], Any]
+PolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
 EnvironmentFactory = Callable[[], dm_env.Environment]
+MakeActorFn = Callable[[types.PRNGKey, PolicyNetwork, core.VariableSource],
+                       core.Actor]
+EvaluatorFactory = Callable[[
+    types.PRNGKey,
+    core.VariableSource,
+    counting.Counter,
+    MakeActorFn,
+], core.Worker]
 
 
 def get_default_logger_fn(
@@ -56,16 +65,17 @@ def get_default_logger_fn(
   return create_logger
 
 
-def default_evaluator(environment_factory: EnvironmentFactory,
-                      network_factory: NetworkFactory,
-                      builder: builders.GenericActorLearnerBuilder,
-                      policy_factory: PolicyFactory,
-                      log_to_bigtable: bool = False) -> types.EvaluatorFactory:
+def default_evaluator_factory(
+    environment_factory: EnvironmentFactory,
+    network_factory: NetworkFactory,
+    policy_factory: PolicyFactory,
+    log_to_bigtable: bool = False) -> EvaluatorFactory:
   """Returns a default evaluator process."""
   def evaluator(
       random_key: networks_lib.PRNGKey,
       variable_source: core.VariableSource,
       counter: counting.Counter,
+      make_actor: MakeActorFn,
   ):
     """The evaluation process."""
 
@@ -73,8 +83,7 @@ def default_evaluator(environment_factory: EnvironmentFactory,
     environment = environment_factory()
     networks = network_factory(specs.make_environment_spec(environment))
 
-    actor = builder.make_actor(
-        random_key, policy_factory(networks), variable_source=variable_source)
+    actor = make_actor(random_key, policy_factory(networks), variable_source)
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'evaluator')
@@ -101,7 +110,7 @@ class DistributedLayout:
       environment_spec: Optional[specs.EnvironmentSpec] = None,
       actor_logger_fn: Callable[[ActorId],
                                 loggers.Logger] = get_default_logger_fn(),
-      evaluator_factories: Sequence[types.EvaluatorFactory] = (),
+      evaluator_factories: Sequence[EvaluatorFactory] = (),
       device_prefetch: bool = True,
       prefetch_size: int = 1,
       log_to_bigtable: bool = False,
@@ -242,11 +251,18 @@ class DistributedLayout:
       else:
         learner = program.add_node(learner_node)
 
+    def make_actor(random_key: networks_lib.PRNGKey,
+                   policy_network: PolicyNetwork,
+                   variable_source: core.VariableSource) -> core.Actor:
+      return self._builder.make_actor(
+          random_key, policy_network, variable_source=variable_source)
+
     with program.group('evaluator'):
       for evaluator in self._evaluator_factories:
         evaluator_key, key = jax.random.split(key)
         program.add_node(
-            lp.CourierNode(evaluator, evaluator_key, learner, counter))
+            lp.CourierNode(evaluator, evaluator_key, learner, counter,
+                           make_actor))
 
     with program.group('actor'):
       for actor_id in range(self._num_actors):

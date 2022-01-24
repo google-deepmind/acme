@@ -26,9 +26,9 @@ from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.tf.dqfd import bsuite_demonstrations
 from acme.jax import networks as networks_lib
-from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax import variable_utils
+from acme.jax.layouts import offline_distributed_layout
 from acme.utils import counting
 from acme.utils import loggers
 from acme.wrappers import single_precision
@@ -143,7 +143,7 @@ def make_demonstrations(env: dm_env.Environment,
 def make_actor_evaluator(
     environment_factory: Callable[[bool], dm_env.Environment],
     evaluator_network: actor_core_lib.FeedForwardPolicy,
-) -> jax_types.EvaluatorFactory:
+) -> offline_distributed_layout.EvaluatorFactory:
   """Makes an evaluator that runs the agent on the environment.
 
   Args:

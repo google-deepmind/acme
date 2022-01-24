@@ -16,7 +16,7 @@
 """Defines distributed and local R2D2 agents, using JAX."""
 
 import functools
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 from acme import specs
 from acme.agents.jax.r2d2 import builder
@@ -50,6 +50,8 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
       device_prefetch: bool = False,
       log_to_bigtable: bool = True,
       log_every: float = 10.0,
+      evaluator_factories: Optional[Sequence[
+          distributed_layout.EvaluatorFactory]] = None,
   ):
     logger_fn = functools.partial(loggers.make_default_logger,
                                   'learner', log_to_bigtable,
@@ -62,22 +64,23 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
         logger_fn=logger_fn)
     policy_network_factory = (
         lambda n: r2d2_networks.make_behavior_policy(n, config))
-    evaluator_policy_network_factory = (
-        lambda n: r2d2_networks.make_behavior_policy(n, config, True))
+    if evaluator_factories is None:
+      evaluator_policy_network_factory = (
+          lambda n: r2d2_networks.make_behavior_policy(n, config, True))
+      evaluator_factories = [
+          distributed_layout.default_evaluator_factory(
+              environment_factory=lambda: environment_factory(True),
+              network_factory=network_factory,
+              policy_factory=evaluator_policy_network_factory,
+              log_to_bigtable=log_to_bigtable)
+      ]
     super().__init__(
         seed=seed,
         environment_factory=lambda: environment_factory(False),
         network_factory=network_factory,
         builder=r2d2_builder,
         policy_network=policy_network_factory,
-        evaluator_factories=[
-            distributed_layout.default_evaluator(
-                environment_factory=lambda: environment_factory(True),
-                network_factory=network_factory,
-                builder=r2d2_builder,
-                policy_factory=evaluator_policy_network_factory,
-                log_to_bigtable=log_to_bigtable)
-        ],
+        evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         environment_spec=environment_spec,
         device_prefetch=device_prefetch,

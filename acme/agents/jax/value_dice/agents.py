@@ -16,7 +16,7 @@
 """Defines distributed and local ValueDice agents, using JAX."""
 
 import functools
-from typing import Callable, Iterator, Optional
+from typing import Callable, Iterator, Optional, Sequence
 
 from acme import specs
 from acme import types
@@ -49,6 +49,8 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
       max_number_of_steps: Optional[int] = None,
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
+      evaluator_factories: Optional[Sequence[
+          distributed_layout.EvaluatorFactory]] = None,
   ):
     logger_fn = functools.partial(loggers.make_default_logger,
                                   'learner', log_to_bigtable,
@@ -59,8 +61,16 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
     value_dice_builder = builder.ValueDiceBuilder(
         config=config, logger_fn=logger_fn,
         make_demonstrations=make_demonstrations)
-    eval_policy_factory = (
-        lambda n: networks.apply_policy_and_sample(n, True))
+    if evaluator_factories is None:
+      eval_policy_factory = (
+          lambda n: networks.apply_policy_and_sample(n, True))
+      evaluator_factories = [
+          distributed_layout.default_evaluator_factory(
+              environment_factory=lambda: environment_factory(True),
+              network_factory=network_factory,
+              policy_factory=eval_policy_factory,
+              log_to_bigtable=log_to_bigtable)
+      ]
     super().__init__(
         seed=seed,
         environment_spec=spec,
@@ -68,14 +78,7 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
         network_factory=network_factory,
         builder=value_dice_builder,
         policy_network=networks.apply_policy_and_sample,
-        evaluator_factories=[
-            distributed_layout.default_evaluator(
-                environment_factory=lambda: environment_factory(True),
-                network_factory=network_factory,
-                builder=value_dice_builder,
-                policy_factory=eval_policy_factory,
-                log_to_bigtable=log_to_bigtable)
-        ],
+        evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         max_number_of_steps=max_number_of_steps,
         prefetch_size=config.prefetch_size,

@@ -16,7 +16,7 @@
 """Defines distributed and local TD3 agents, using JAX."""
 
 import functools
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 from acme import specs
 from acme.agents.jax.td3 import builder
@@ -48,6 +48,8 @@ class DistributedTD3(distributed_layout.DistributedLayout):
       max_number_of_steps: Optional[int] = None,
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
+      evaluator_factories: Optional[Sequence[
+          distributed_layout.EvaluatorFactory]] = None,
   ):
     logger_fn = functools.partial(loggers.make_default_logger,
                                   'learner', log_to_bigtable,
@@ -61,23 +63,25 @@ class DistributedTD3(distributed_layout.DistributedLayout):
                                           action_specs=action_specs,
                                           sigma=config.sigma)
 
-    eval_network_fn = functools.partial(networks.get_default_behavior_policy,
-                                        action_specs=action_specs,
-                                        sigma=0.)
+    if evaluator_factories is None:
+      eval_network_fn = functools.partial(
+          networks.get_default_behavior_policy,
+          action_specs=action_specs,
+          sigma=0.)
+      evaluator_factories = [
+          distributed_layout.default_evaluator_factory(
+              environment_factory=lambda: environment_factory(True),
+              network_factory=network_factory,
+              policy_factory=eval_network_fn,
+              log_to_bigtable=log_to_bigtable)
+      ]
     super().__init__(
         seed=seed,
         environment_factory=lambda: environment_factory(False),
         network_factory=network_factory,
         builder=td3_builder,
         policy_network=policy_network_fn,
-        evaluator_factories=[
-            distributed_layout.default_evaluator(
-                environment_factory=lambda: environment_factory(True),
-                network_factory=network_factory,
-                builder=td3_builder,
-                policy_factory=eval_network_fn,
-                log_to_bigtable=log_to_bigtable)
-        ],
+        evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         max_number_of_steps=max_number_of_steps,
         prefetch_size=config.prefetch_size,

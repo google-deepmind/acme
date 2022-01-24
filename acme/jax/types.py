@@ -15,17 +15,13 @@
 
 """Common JAX type definitions."""
 
-from typing import Callable, Generic, Mapping, TypeVar
+from typing import Generic, Mapping, TypeVar
 
-from acme import core
 from acme import types
-from acme.utils import counting
 import chex
 import jax.numpy as jnp
 
 PRNGKey = jnp.ndarray
-EvaluatorFactory = Callable[[PRNGKey, core.VariableSource, counting.Counter],
-                            core.Worker]
 Networks = TypeVar('Networks')
 PolicyNetwork = TypeVar('PolicyNetwork')
 Sample = TypeVar('Sample')

@@ -16,7 +16,7 @@
 """Defines distributed and local AIL agents, using JAX."""
 
 import functools
-from typing import Any, Callable, Iterator, Optional
+from typing import Any, Callable, Iterator, Optional, Sequence
 
 from acme import specs
 from acme import types
@@ -39,22 +39,26 @@ NetworkFactory = Callable[[specs.EnvironmentSpec], ail_networks.AILNetworks]
 class DistributedAIL(distributed_layout.DistributedLayout):
   """Distributed program definition for AIL."""
 
-  def __init__(self,
-               environment_factory: Callable[[bool], dm_env.Environment],
-               rl_agent: builders.GenericActorLearnerBuilder,
-               config: ail_config.AILConfig,
-               network_factory: NetworkFactory,
-               seed: int,
-               batch_size: int,
-               make_demonstrations: Callable[[int], Iterator[types.Transition]],
-               policy_network: Any,
-               evaluator_policy_network: Any,
-               num_actors: int,
-               max_number_of_steps: Optional[int] = None,
-               log_to_bigtable: bool = False,
-               log_every: float = 10.0,
-               prefetch_size: int = 4,
-               discriminator_loss: Optional[losses.Loss] = None):
+  def __init__(
+      self,
+      environment_factory: Callable[[bool], dm_env.Environment],
+      rl_agent: builders.GenericActorLearnerBuilder,
+      config: ail_config.AILConfig,
+      network_factory: NetworkFactory,
+      seed: int,
+      batch_size: int,
+      make_demonstrations: Callable[[int], Iterator[types.Transition]],
+      policy_network: Any,
+      evaluator_policy_network: Any,
+      num_actors: int,
+      max_number_of_steps: Optional[int] = None,
+      log_to_bigtable: bool = False,
+      log_every: float = 10.0,
+      prefetch_size: int = 4,
+      discriminator_loss: Optional[losses.Loss] = None,
+      evaluator_factories: Optional[Sequence[
+          distributed_layout.EvaluatorFactory]] = None,
+  ):
     assert discriminator_loss is not None
     logger_fn = functools.partial(
         loggers.make_default_logger,
@@ -70,20 +74,21 @@ class DistributedAIL(distributed_layout.DistributedLayout):
         discriminator_loss=discriminator_loss,
         make_demonstrations=make_demonstrations,
         logger_fn=logger_fn)
+    if evaluator_factories is None:
+      evaluator_factories = [
+          distributed_layout.default_evaluator_factory(
+              environment_factory=lambda: environment_factory(True),
+              network_factory=network_factory,
+              policy_factory=evaluator_policy_network,
+              log_to_bigtable=log_to_bigtable)
+      ]
     super().__init__(
         seed=seed,
         environment_factory=lambda: environment_factory(False),
         network_factory=network_factory,
         builder=ail_builder,
         policy_network=policy_network,
-        evaluator_factories=[
-            distributed_layout.default_evaluator(
-                environment_factory=lambda: environment_factory(True),
-                network_factory=network_factory,
-                builder=ail_builder,
-                policy_factory=evaluator_policy_network,
-                log_to_bigtable=log_to_bigtable)
-        ],
+        evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         max_number_of_steps=max_number_of_steps,
         prefetch_size=prefetch_size,
