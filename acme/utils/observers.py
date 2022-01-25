@@ -27,6 +27,7 @@ Number = Union[int, float]
 class EnvLoopObserver(abc.ABC):
   """An interface for collecting metrics/counters in EnvironmentLoop."""
 
+  @abc.abstractmethod
   def observe_first(self, env: dm_env.Environment, timestep: dm_env.TimeStep
                     ) -> None:
     """Observes the initial state."""
