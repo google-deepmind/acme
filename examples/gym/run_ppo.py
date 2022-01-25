@@ -54,8 +54,13 @@ def main(_):
       num_minibatches=FLAGS.num_minibatches,
       num_epochs=FLAGS.num_epochs,
       batch_size=FLAGS.batch_size)
+
   agent = ppo.PPO(
-      environment_spec, agent_networks, config=config, seed=FLAGS.seed)
+      environment_spec,
+      agent_networks,
+      config=config,
+      seed=FLAGS.seed,
+      logger_fn=helpers.create_logger_fn())
 
   # Create the environment loop used for training.
   train_loop = acme.EnvironmentLoop(environment, agent, label='train_loop')
