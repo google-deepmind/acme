@@ -29,6 +29,7 @@ from acme.jax import utils
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import lp_utils
+from acme.utils import observers
 import dm_env
 import jax
 import launchpad as lp
@@ -69,6 +70,7 @@ def default_evaluator_factory(
     environment_factory: EnvironmentFactory,
     network_factory: NetworkFactory,
     policy_factory: PolicyFactory,
+    observer: Optional[observers.EnvLoopObserver] = None,
     log_to_bigtable: bool = False) -> EvaluatorFactory:
   """Returns a default evaluator process."""
   def evaluator(
@@ -92,7 +94,7 @@ def default_evaluator_factory(
 
     # Create the run loop and return it.
     return environment_loop.EnvironmentLoop(environment, actor, counter,
-                                              logger)
+                                              logger, observer=observer)
   return evaluator
 
 
@@ -115,6 +117,7 @@ class DistributedLayout:
       prefetch_size: int = 1,
       log_to_bigtable: bool = False,
       max_number_of_steps: Optional[int] = None,
+      observer: Optional[observers.EnvLoopObserver] = None,
       workdir: str = '~/acme',
       multithreading_colocate_learner_and_reverb: bool = False):
     if prefetch_size < 0:
@@ -134,6 +137,7 @@ class DistributedLayout:
     self._workdir = workdir
     self._actor_logger_fn = actor_logger_fn
     self._evaluator_factories = evaluator_factories
+    self._observer = observer
     self._multithreading_colocate_learner_and_reverb = (
         multithreading_colocate_learner_and_reverb)
 
@@ -215,7 +219,7 @@ class DistributedLayout:
     logger = self._actor_logger_fn(actor_id)
     # Create the loop to connect environment and agent.
     return environment_loop.EnvironmentLoop(environment, actor, counter,
-                                              logger)
+                                              logger, observer=self._observer)
 
   def coordinator(self, counter: counting.Counter, max_actor_steps: int):
     return lp_utils.StepsLimiter(counter, max_actor_steps)
