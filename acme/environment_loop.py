@@ -17,12 +17,12 @@
 
 import operator
 import time
-from typing import Optional
+from typing import Optional, Sequence
 
 from acme import core
 from acme.utils import counting
 from acme.utils import loggers
-from acme.utils import observers
+from acme.utils import observers as observers_lib
 from acme.utils import signals
 
 import dm_env
@@ -50,9 +50,9 @@ class EnvironmentLoop(core.Worker):
   change the label associated with the default logger; this is ignored if a
   `Logger` instance is given.
 
-  An 'Observer' instance can optionally generate additional metrics to be logged
-  by the logger. It has access to the 'Environment' instance, the current
-  timestep datastruct and the current action.
+  A list of 'Observer' instances can be specified to generate additional metrics
+  to be logged by the logger. They have access to the 'Environment' instance,
+  the current timestep datastruct and the current action.
   """
 
   def __init__(
@@ -63,7 +63,7 @@ class EnvironmentLoop(core.Worker):
       logger: Optional[loggers.Logger] = None,
       should_update: bool = True,
       label: str = 'environment_loop',
-      observer: Optional[observers.EnvLoopObserver] = None,
+      observers: Sequence[observers_lib.EnvLoopObserver] = (),
   ):
     # Internalize agent and environment.
     self._environment = environment
@@ -71,7 +71,7 @@ class EnvironmentLoop(core.Worker):
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.make_default_logger(label)
     self._should_update = should_update
-    self._observer = observer
+    self._observers = observers
 
   def run_episode(self) -> loggers.LoggingData:
     """Run one episode.
@@ -94,10 +94,10 @@ class EnvironmentLoop(core.Worker):
     timestep = self._environment.reset()
     # Make the first observation.
     self._actor.observe_first(timestep)
-    if self._observer:
+    for observer in self._observers:
       # Initialize the observer with the current state of the env after reset
       # and the initial timestep.
-      self._observer.observe_first(self._environment, timestep)
+      observer.observe_first(self._environment, timestep)
 
     # Run an episode.
     while not timestep.last():
@@ -107,10 +107,10 @@ class EnvironmentLoop(core.Worker):
 
       # Have the agent observe the timestep and let the actor update itself.
       self._actor.observe(action, next_timestep=timestep)
-      if self._observer:
+      for observer in self._observers:
         # One environment step was completed. Observe the current state of the
         # environment, the current timestep and the action.
-        self._observer.observe(self._environment, timestep, action)
+        observer.observe(self._environment, timestep, action)
       if self._should_update:
         self._actor.update()
 
@@ -137,8 +137,8 @@ class EnvironmentLoop(core.Worker):
         'steps_per_second': steps_per_second,
     }
     result.update(counts)
-    if self._observer:
-      result.update(self._observer.get_metrics())
+    for observer in self._observers:
+      result.update(observer.get_metrics())
     return result
 
   def run(self,
