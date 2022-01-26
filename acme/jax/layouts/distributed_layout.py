@@ -110,8 +110,7 @@ class DistributedLayout:
       policy_network: PolicyFactory,
       num_actors: int,
       environment_spec: Optional[specs.EnvironmentSpec] = None,
-      actor_logger_fn: Callable[[ActorId],
-                                loggers.Logger] = get_default_logger_fn(),
+      actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
       evaluator_factories: Sequence[EvaluatorFactory] = (),
       device_prefetch: bool = True,
       prefetch_size: int = 1,
@@ -120,8 +119,11 @@ class DistributedLayout:
       observers: Sequence[observers_lib.EnvLoopObserver] = (),
       workdir: str = '~/acme',
       multithreading_colocate_learner_and_reverb: bool = False):
+
     if prefetch_size < 0:
       raise ValueError(f'Prefetch size={prefetch_size} should be non negative')
+
+    actor_logger_fn = actor_logger_fn or get_default_logger_fn(log_to_bigtable)
 
     self._seed = seed
     self._builder = builder
