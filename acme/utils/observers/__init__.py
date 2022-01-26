@@ -14,4 +14,6 @@
 
 """Acme observers."""
 
+from acme.utils.observers.action_norm import ActionNormObserver
 from acme.utils.observers.base import EnvLoopObserver
+from acme.utils.observers.base import Number
