@@ -15,7 +15,7 @@
 
 """Networks used in continuous control."""
 
-from typing import Sequence
+from typing import Callable, Optional, Sequence
 
 from acme import types
 from acme.tf import utils as tf2_utils
@@ -41,25 +41,33 @@ class LayerNormMLP(snt.Module):
   first layer and non-linearities (elu) on all but the last remaining layers.
   """
 
-  def __init__(self, layer_sizes: Sequence[int], activate_final: bool = False):
+  def __init__(
+      self,
+      layer_sizes: Sequence[int],
+      w_init: Optional[snt.initializers.Initializer] = uniform_initializer,
+      activation: Callable[[tf.Tensor], tf.Tensor] = tf.nn.elu,
+      activate_final: bool = False):
     """Construct the MLP.
 
     Args:
       layer_sizes: a sequence of ints specifying the size of each layer.
+      w_init: initializer for Linear weights.
+      activation: activation function to apply between linear layers. Defaults
+        to ELU. Note! This is different from snt.nets.MLP's default.
       activate_final: whether or not to use the activation function on the final
         layer of the neural network.
     """
     super().__init__(name='feedforward_mlp_torso')
 
     self._network = snt.Sequential([
-        snt.Linear(layer_sizes[0], w_init=uniform_initializer),
+        snt.Linear(layer_sizes[0], w_init=w_init),
         snt.LayerNorm(
             axis=slice(1, None), create_scale=True, create_offset=True),
         tf.nn.tanh,
         snt.nets.MLP(
             layer_sizes[1:],
-            w_init=uniform_initializer,
-            activation=tf.nn.elu,
+            w_init=w_init,
+            activation=activation,
             activate_final=activate_final),
     ])
 
