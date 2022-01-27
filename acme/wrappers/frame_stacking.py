@@ -28,17 +28,19 @@ import tree
 class FrameStackingWrapper(base.EnvironmentWrapper):
   """Wrapper that stacks observations along a new final axis."""
 
-  def __init__(self, environment: dm_env.Environment, num_frames: int = 4):
+  def __init__(self, environment: dm_env.Environment, num_frames: int = 4,
+               flatten: bool = False):
     """Initializes a new FrameStackingWrapper.
 
     Args:
       environment: Environment.
       num_frames: Number frames to stack.
+      flatten: Whether to flatten the channel and stack dimensions together.
     """
     self._environment = environment
     original_spec = self._environment.observation_spec()
     self._stackers = tree.map_structure(
-        lambda _: FrameStacker(num_frames=num_frames),
+        lambda _: FrameStacker(num_frames=num_frames, flatten=flatten),
         self._environment.observation_spec())
     self._observation_spec = tree.map_structure(
         lambda stacker, spec: stacker.update_spec(spec),
@@ -64,8 +66,9 @@ class FrameStackingWrapper(base.EnvironmentWrapper):
 class FrameStacker:
   """Simple class for frame-stacking observations."""
 
-  def __init__(self, num_frames: int):
+  def __init__(self, num_frames: int, flatten: bool = False):
     self._num_frames = num_frames
+    self._flatten = flatten
     self.reset()
 
   @property
@@ -76,13 +79,22 @@ class FrameStacker:
     self._stack = collections.deque(maxlen=self._num_frames)
 
   def step(self, frame: np.ndarray) -> np.ndarray:
+    """Append frame to stack and return the stack."""
     if not self._stack:
       # Fill stack with blank frames if empty.
       self._stack.extend([np.zeros_like(frame)] * (self._num_frames - 1))
     self._stack.append(frame)
-    return np.stack(self._stack, axis=-1)
+    stacked_frames = np.stack(self._stack, axis=-1)
+
+    if not self._flatten:
+      return stacked_frames
+    else:
+      new_shape = stacked_frames.shape[:-2] + (-1,)
+      return stacked_frames.reshape(*new_shape)
 
   def update_spec(self, spec: dm_env_specs.Array) -> dm_env_specs.Array:
-    return dm_env_specs.Array(shape=spec.shape + (self._num_frames,),
-                              dtype=spec.dtype,
-                              name=spec.name)
+    if not self._flatten:
+      new_shape = spec.shape + (self._num_frames,)
+    else:
+      new_shape = spec.shape[:-1] + (self._num_frames * spec.shape[-1],)
+    return dm_env_specs.Array(shape=new_shape, dtype=spec.dtype, name=spec.name)
