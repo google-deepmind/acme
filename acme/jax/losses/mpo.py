@@ -34,6 +34,8 @@ tfp = tensorflow_probability.substrates.jax
 tfd = tensorflow_probability.substrates.jax.distributions
 
 _MPO_FLOAT_EPSILON = 1e-8
+_MIN_LOG_TEMPERATURE = -18.0
+_MIN_LOG_ALPHA = -18.0
 
 Shape = Tuple[int]
 DType = type(jnp.float32)  # _ScalarMeta, a private type.
@@ -138,6 +140,10 @@ class MPO:
     # Whether to ensure per-dimension KL constraint satisfication.
     self._per_dim_constraining = per_dim_constraining
 
+  @property
+  def per_dim_constraining(self):
+    return self._per_dim_constraining
+
   def init_params(self, action_dim: int, dtype: DType = jnp.float32):
     """Creates an initial set of parameters."""
 
@@ -176,7 +182,7 @@ class MPO:
                                         tfd.Independent],
       actions: jnp.ndarray,  # Shape [N, B, D].
       q_values: jnp.ndarray,  # Shape [N, B].
-  ) -> Tuple[jnp.ndarray, MPOStats, MPOParams]:
+  ) -> Tuple[jnp.ndarray, MPOStats]:
     """Computes the decoupled MPO loss.
 
     Args:
@@ -204,30 +210,11 @@ class MPO:
           tfd.Normal(online_action_distribution.mean(),
                      online_action_distribution.stddev()))
 
-    # Infer the shape and dtype of dual variables.
-    scalar_dtype = q_values.dtype
-
-    # Create dual variables for the KL constraints; only happens the first call.
-    # self.create_dual_variables_once(dual_variable_shape, scalar_dtype)
-
-    # Project dual variables to ensure they stay positive.
-    min_log_temperature = jnp.array(-18.0, scalar_dtype)
-    min_log_alpha = jnp.array(-18.0, scalar_dtype)
-
-    log_temperature = params.log_temperature
-    log_temperature = jnp.maximum(min_log_temperature, log_temperature)
-
-    log_alpha_mean = params.log_alpha_mean
-    log_alpha_mean = jnp.maximum(min_log_alpha, log_alpha_mean)
-
-    log_alpha_stddev = params.log_alpha_stddev
-    log_alpha_stddev = jnp.maximum(min_log_alpha, log_alpha_stddev)
-
     # Transform dual variables from log-space.
     # Note: using softplus instead of exponential for numerical stability.
-    temperature = jax.nn.softplus(log_temperature) + _MPO_FLOAT_EPSILON
-    alpha_mean = jax.nn.softplus(log_alpha_mean) + _MPO_FLOAT_EPSILON
-    alpha_stddev = jax.nn.softplus(log_alpha_stddev) + _MPO_FLOAT_EPSILON
+    temperature = jax.nn.softplus(params.log_temperature) + _MPO_FLOAT_EPSILON
+    alpha_mean = jax.nn.softplus(params.log_alpha_mean) + _MPO_FLOAT_EPSILON
+    alpha_stddev = jax.nn.softplus(params.log_alpha_stddev) + _MPO_FLOAT_EPSILON
 
     # Get online and target means and stddevs in preparation for decomposition.
     online_mean = online_action_distribution.distribution.mean()
@@ -247,14 +234,9 @@ class MPO:
         normalized_weights)
 
     if self._action_penalization:
-      # Project and transform action penalization temperature.
-
-      log_penalty_temperature = params.log_penalty_temperature
-      log_penalty_temperature = jnp.maximum(min_log_temperature,
-                                            log_penalty_temperature)
-
+      # Transform action penalization temperature.
       penalty_temperature = jax.nn.softplus(
-          log_penalty_temperature) + _MPO_FLOAT_EPSILON
+          params.log_penalty_temperature) + _MPO_FLOAT_EPSILON
 
       # Compute action penalization cost.
       # Note: the cost is zero in [-1, 1] and quadratic beyond.
@@ -272,8 +254,6 @@ class MPO:
       # Combine normalized weights.
       normalized_weights += penalty_normalized_weights
       loss_temperature += loss_penalty_temperature
-    else:
-      log_penalty_temperature = None
 
     # Decompose the online policy into fixed-mean & fixed-stddev distributions.
     # This has been documented as having better performance in bandit settings,
@@ -342,14 +322,7 @@ class MPO:
             jnp.max(pi_stddev, axis=-1) / jnp.min(pi_stddev, axis=-1)),
     )
 
-    # Create new state
-    state_new = MPOParams(
-        log_temperature=log_temperature,
-        log_alpha_mean=log_alpha_mean,
-        log_alpha_stddev=log_alpha_stddev,
-        log_penalty_temperature=log_penalty_temperature)
-
-    return loss, stats, state_new
+    return loss, stats
 
 
 def compute_weights_and_temperature_loss(
@@ -465,3 +438,16 @@ def compute_parametric_kl_penalty_and_dual_loss(
   loss_alpha = jnp.sum(alpha * (epsilon - jax.lax.stop_gradient(mean_kl)))
 
   return loss_kl, loss_alpha
+
+
+def clip_mpo_params(params: MPOParams, per_dim_constraining: bool) -> MPOParams:
+  clipped_params = MPOParams(
+      log_temperature=jnp.maximum(_MIN_LOG_TEMPERATURE, params.log_temperature),
+      log_alpha_mean=jnp.maximum(_MIN_LOG_ALPHA, params.log_alpha_mean),
+      log_alpha_stddev=jnp.maximum(_MIN_LOG_ALPHA, params.log_alpha_stddev))
+  if not per_dim_constraining:
+    return clipped_params
+  else:
+    return clipped_params._replace(
+        log_penalty_temperature=jnp.maximum(_MIN_LOG_TEMPERATURE,
+                                            params.log_penalty_temperature))
