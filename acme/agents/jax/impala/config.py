@@ -32,7 +32,7 @@ class IMPALAConfig:
   prefetch_size: int = 2
   sequence_length: int = 20
   sequence_period: Optional[int] = None
-  learning_rate: float = 1e-3
+  learning_rate: float = 1e-4
   adam_momentum_decay: float = 0.0
   adam_variance_decay: float = 0.99
   discount: float = 0.99
@@ -44,8 +44,8 @@ class IMPALAConfig:
   # Replay options
   replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
   num_prefetch_threads: Optional[int] = None
-  samples_per_insert: Optional[float] = None
-  max_queue_size: Union[int, types.Batches] = 10_000
+  samples_per_insert: Optional[float] = 1.0
+  max_queue_size: Union[int, types.Batches] = types.Batches(10)
 
   def __post_init__(self):
     if isinstance(self.max_queue_size, types.Batches):

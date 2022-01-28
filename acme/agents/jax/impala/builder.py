@@ -165,7 +165,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder):
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
     variable_client = variable_utils.VariableClient(
-        client=variable_source, key='network', device='cpu')
+        client=variable_source, key='network', update_period=1000, device='cpu')
     return acting.IMPALAActor(
         forward_fn=policy_network.forward_fn,
         initial_state_init_fn=policy_network.initial_state_init_fn,

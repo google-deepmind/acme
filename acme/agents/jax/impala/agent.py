@@ -159,7 +159,7 @@ class IMPALA(IMPALAFromConfig):
       discount: float = 0.99,
       max_queue_size: Union[int, types.Batches] = types.Batches(10),
       batch_size: int = 16,
-      learning_rate: float = 1e-3,
+      learning_rate: float = 1e-4,
       entropy_cost: float = 0.01,
       baseline_cost: float = 0.5,
       seed: int = 0,
