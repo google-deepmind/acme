@@ -255,6 +255,7 @@ class MultivariateNormalDiagHead(hk.Module):
 
   def __init__(self,
                num_dimensions: int,
+               init_scale: float = 0.3,
                min_scale: float = 1e-6,
                w_init: hk_init.Initializer = hk_init.VarianceScaling(1e-4),
                b_init: hk_init.Initializer = hk_init.Constant(0.)):
@@ -262,19 +263,22 @@ class MultivariateNormalDiagHead(hk.Module):
 
     Args:
       num_dimensions: Number of dimensions of MVN distribution.
+      init_scale: Initial standard deviation.
       min_scale: Minimum standard deviation.
       w_init: Initialization for linear layer weights.
       b_init: Initialization for linear layer biases.
     """
     super().__init__(name='MultivariateNormalDiagHead')
     self._min_scale = min_scale
+    self._init_scale = init_scale
     self._loc_layer = hk.Linear(num_dimensions, w_init=w_init, b_init=b_init)
     self._scale_layer = hk.Linear(num_dimensions, w_init=w_init, b_init=b_init)
 
   def __call__(self, inputs: jnp.ndarray) -> tfd.Distribution:
     loc = self._loc_layer(inputs)
-    scale = self._scale_layer(inputs)
-    scale = jax.nn.softplus(scale) + self._min_scale
+    scale = jax.nn.softplus(self._scale_layer(inputs))
+    scale *= self._init_scale / jax.nn.softplus(0.)
+    scale += self._min_scale
     return tfd.MultivariateNormalDiag(loc=loc, scale_diag=scale)
 
 
