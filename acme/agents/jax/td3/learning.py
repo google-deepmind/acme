@@ -149,6 +149,9 @@ class TD3Learner(acme.Learner):
       critic_updates, critic_opt_state = critic_optimizer.update(
           critic_gradients, state.critic_opt_state)
       critic_params = optax.apply_updates(state.critic_params, critic_updates)
+      # In the original authors' implementation the critic target update is
+      # delayed similarly to the policy update which we found empirically to
+      # perform slightly worse.
       target_critic_params = jax.tree_multimap(
           polyak_averaging, state.target_critic_params, critic_params)
 
@@ -160,6 +163,9 @@ class TD3Learner(acme.Learner):
           twin_critic_gradients, state.twin_critic_opt_state)
       twin_critic_params = optax.apply_updates(state.twin_critic_params,
                                                twin_critic_updates)
+      # In the original authors' implementation the twin critic target update is
+      # delayed similarly to the policy update which we found empirically to
+      # perform slightly worse.
       target_twin_critic_params = jax.tree_multimap(
           polyak_averaging, state.target_twin_critic_params, twin_critic_params)
 
