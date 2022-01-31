@@ -19,7 +19,9 @@ import functools
 from typing import Callable, Optional, Sequence
 
 from acme import specs
-from acme.agents.jax.d4pg import builder
+from acme.agents.jax.d4pg import builder as d4pg_builder
+from acme.agents.jax.d4pg import config as d4pg_config
+from acme.agents.jax.d4pg import networks as d4pg_networks
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
@@ -27,8 +29,7 @@ from acme.utils import counting
 from acme.utils import loggers
 import dm_env
 
-
-NetworkFactory = Callable[[specs.EnvironmentSpec], builder.D4PGNetworks]
+NetworkFactory = Callable[[specs.EnvironmentSpec], d4pg_networks.D4PGNetworks]
 
 
 class DistributedD4PG(distributed_layout.DistributedLayout):
@@ -61,7 +62,7 @@ class DistributedD4PG(distributed_layout.DistributedLayout):
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
-    config = builder.D4PGConfig(
+    config = d4pg_config.D4PGConfig(
         discount=discount,
         learning_rate=1e-4,
         batch_size=batch_size,
@@ -82,22 +83,30 @@ class DistributedD4PG(distributed_layout.DistributedLayout):
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
         steps_key='learner_steps')
-    d4pg_builder = builder.D4PGBuilder(config, logger_fn=logger_fn)
+    builder = d4pg_builder.D4PGBuilder(config, logger_fn=logger_fn)
+
+    def _policy_network(networks):
+      return d4pg_networks.get_default_behavior_policy(networks, config=config)
 
     if evaluator_factories is None:
+
+      def _eval_policy_network(networks):
+        return d4pg_networks.get_default_eval_policy(networks)
+
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
               environment_factory=lambda: environment_factory(True),
               network_factory=network_factory,
-              policy_factory=builder.get_default_eval_policy,
+              policy_factory=_eval_policy_network,
               log_to_bigtable=log_to_bigtable)
       ]
+
     super().__init__(
         seed=random_seed,
         environment_factory=lambda: environment_factory(False),
         network_factory=network_factory,
-        builder=d4pg_builder,
-        policy_network=lambda n: builder.get_default_behavior_policy(n, config),
+        builder=builder,
+        policy_network=_policy_network,
         evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         environment_spec=environment_spec,
@@ -110,14 +119,13 @@ class DistributedD4PG(distributed_layout.DistributedLayout):
 
 
 class D4PG(local_layout.LocalLayout):
-  """Local agent for D4PG.
-  """
+  """Local agent for D4PG."""
 
   def __init__(
       self,
       spec: specs.EnvironmentSpec,
-      network: builder.D4PGNetworks,
-      config: builder.D4PGConfig,
+      network: d4pg_networks.D4PGNetworks,
+      config: d4pg_config.D4PGConfig,
       random_seed: int,
       counter: Optional[counting.Counter] = None,
   ):
@@ -134,13 +142,14 @@ class D4PG(local_layout.LocalLayout):
     # This is achieved by setting the rate tolerance to be infinite.
     config.samples_per_insert_tolerance_rate = float('inf')
 
-    self.builder = builder.D4PGBuilder(config)
+    self.builder = d4pg_builder.D4PGBuilder(config)
     super().__init__(
         seed=random_seed,
         environment_spec=spec,
         builder=self.builder,
         networks=network,
-        policy_network=builder.get_default_behavior_policy(network, config),
+        policy_network=d4pg_networks.get_default_behavior_policy(
+            network, config),
         batch_size=config.batch_size,
         samples_per_insert=config.samples_per_insert,
         min_replay_size=min_replay_size,

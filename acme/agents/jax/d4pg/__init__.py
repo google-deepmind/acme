@@ -17,8 +17,10 @@
 from acme.agents.jax.d4pg.agents import D4PG
 from acme.agents.jax.d4pg.agents import DistributedD4PG
 from acme.agents.jax.d4pg.builder import D4PGBuilder
-from acme.agents.jax.d4pg.builder import D4PGConfig
-from acme.agents.jax.d4pg.builder import D4PGNetworks
-from acme.agents.jax.d4pg.builder import get_default_behavior_policy
-from acme.agents.jax.d4pg.builder import get_default_eval_policy
+from acme.agents.jax.d4pg.config import D4PGConfig
 from acme.agents.jax.d4pg.learning import D4PGLearner
+from acme.agents.jax.d4pg.networks import D4PGNetworks
+from acme.agents.jax.d4pg.networks import get_default_behavior_policy
+from acme.agents.jax.d4pg.networks import get_default_eval_policy
+from acme.agents.jax.d4pg.networks import make_networks
+

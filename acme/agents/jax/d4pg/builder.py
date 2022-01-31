@@ -14,19 +14,19 @@
 # limitations under the License.
 
 """D4PG Builder."""
-import dataclasses
 from typing import Callable, Iterator, List, Optional
 
 import acme
 from acme import adders
 from acme import core
 from acme import specs
-from acme import types
 from acme.adders import reverb as adders_reverb
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax import builders
+from acme.agents.jax.d4pg import config as d4pg_config
 from acme.agents.jax.d4pg import learning
+from acme.agents.jax.d4pg import networks as d4pg_networks
 from acme.datasets import reverb as datasets
 from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
@@ -35,61 +35,6 @@ from acme.utils import loggers
 import optax
 import reverb
 from reverb import rate_limiters
-import rlax
-
-
-@dataclasses.dataclass
-class D4PGConfig:
-  """Configuration options for D4PG."""
-  sigma: float = 0.3
-  target_update_period: int = 100
-  samples_per_insert: float = 32.0
-
-  # Loss options
-  n_step: int = 5
-  discount: float = 0.99
-  batch_size: int = 256
-  learning_rate: float = 1e-4
-  clipping: bool = True
-
-  # Replay options
-  min_replay_size: int = 1000
-  max_replay_size: int = 1000000
-  replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
-  prefetch_size: int = 4
-  # Rate to be used for the SampleToInsertRatio rate limitter tolerance.
-  # See a formula in make_replay_tables for more details.
-  samples_per_insert_tolerance_rate: float = 0.1
-
-  # How many gradient updates to perform per step.
-  num_sgd_steps_per_step: int = 1
-
-
-@dataclasses.dataclass
-class D4PGNetworks:
-  """Network and pure functions for the D4PG agent.."""
-  policy_network: networks_lib.FeedForwardNetwork
-  critic_network: networks_lib.FeedForwardNetwork
-
-
-def get_default_behavior_policy(networks: D4PGNetworks, config: D4PGConfig):
-  # Selects action according to the policy
-  def behavior_policy(params: networks_lib.Params, key: networks_lib.PRNGKey,
-                      observation: types.NestedArray):
-    action = networks.policy_network.apply(params, observation)
-    noisy_action = rlax.add_gaussian_noise(key, action, config.sigma)
-    return noisy_action
-  return behavior_policy
-
-
-def get_default_eval_policy(networks: D4PGNetworks):
-  # Selects action according to the policy
-  def behavior_policy(params: networks_lib.Params, key: networks_lib.PRNGKey,
-                      observation: types.NestedArray):
-    del key  # Evaluation policy is deterministic.
-    action = networks.policy_network.apply(params, observation)
-    return action
-  return behavior_policy
 
 
 class D4PGBuilder(builders.ActorLearnerBuilder):
@@ -97,7 +42,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder):
 
   def __init__(
       self,
-      config: D4PGConfig,
+      config: d4pg_config.D4PGConfig,
       logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):
     """Creates a D4PG learner, a behavior policy and an eval actor.
@@ -112,7 +57,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder):
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks: D4PGNetworks,
+      networks: d4pg_networks.D4PGNetworks,
       dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -195,7 +140,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder):
     actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
         policy_network)
     # Inference happens on CPU, so it's better to move variables there too.
-    variable_client = variable_utils.VariableClient(variable_source, 'policy',
-                                                    device='cpu')
+    variable_client = variable_utils.VariableClient(
+        variable_source, 'policy', device='cpu')
     return actors.GenericActor(
         actor_core, random_key, variable_client, adder, backend='cpu')
