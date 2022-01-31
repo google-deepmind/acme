@@ -72,19 +72,20 @@ def make_flax_networks(
 
   num_actions = spec.actions.num_values
 
-  class MLP(flax.nn.Module):
+  class MLP(flax.deprecated.nn.Module):
     """MLP module."""
 
     def apply(self,
               data: jnp.ndarray,
               layer_sizes: Tuple[int],
-              activation: Callable[[jnp.ndarray], jnp.ndarray] = flax.nn.relu,
+              activation: Callable[[jnp.ndarray],
+                                   jnp.ndarray] = flax.deprecated.nn.relu,
               kernel_init: object = jax.nn.initializers.lecun_uniform(),
               activate_final: bool = False,
               bias: bool = True):
       hidden = data
       for i, hidden_size in enumerate(layer_sizes):
-        hidden = flax.nn.Dense(
+        hidden = flax.deprecated.nn.Dense(
             hidden,
             hidden_size,
             name=f'hidden_{i}',
@@ -94,7 +95,7 @@ def make_flax_networks(
           hidden = activation(hidden)
       return hidden
 
-  class PolicyValueModule(flax.nn.Module):
+  class PolicyValueModule(flax.deprecated.nn.Module):
     """MLP module."""
 
     def apply(self, inputs: jnp.ndarray):
