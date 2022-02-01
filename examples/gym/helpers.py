@@ -120,12 +120,15 @@ def create_logger_fn() -> Callable[[], loggers.Logger]:
 
   def create_logger() -> loggers.Logger:
     label = 'learner'
+    # Note: we use the default steps key here, assuming that the default counter
+    # is used.
+    # TODO(sinopalnikov): make sure that the logger and counter are always
+    # in sync.
     default_learner_logger = loggers.make_default_logger(
         label=label,
-        save_data=False,
+        save_data=True,
         time_delta=10.0,
-        asynchronous=True,
-        steps_key='learner_steps')
+        asynchronous=True)
     tf_summary_logger = tf_summary.TFSummaryLogger(
         logdir=FLAGS.tfsummary_logdir, label=label)
 
