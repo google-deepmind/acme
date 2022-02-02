@@ -41,7 +41,8 @@ AgentNetwork = Any
 PolicyNetwork = Any
 NetworkFactory = Callable[[specs.EnvironmentSpec], AgentNetwork]
 PolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
-EnvironmentFactory = Callable[[], dm_env.Environment]
+Seed = int
+EnvironmentFactory = Callable[[Seed], dm_env.Environment]
 MakeActorFn = Callable[[types.PRNGKey, PolicyNetwork, core.VariableSource],
                        core.Actor]
 EvaluatorFactory = Callable[[
@@ -82,10 +83,12 @@ def default_evaluator_factory(
     """The evaluation process."""
 
     # Create environment and evaluator networks
-    environment = environment_factory()
+    environment_key, actor_key = jax.random.split(random_key)
+    # Environments normally require uint32 as a seed.
+    environment = environment_factory(utils.sample_uint32(environment_key))
     networks = network_factory(specs.make_environment_spec(environment))
 
-    actor = make_actor(random_key, policy_factory(networks), variable_source)
+    actor = make_actor(actor_key, policy_factory(networks), variable_source)
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'evaluator')
@@ -145,9 +148,10 @@ class DistributedLayout:
 
   def replay(self):
     """The replay storage."""
+    dummy_seed = 1
     environment_spec = (
         self._environment_spec or
-        specs.make_environment_spec(self._environment_factory()))
+        specs.make_environment_spec(self._environment_factory(dummy_seed)))
     return self._builder.make_replay_tables(environment_spec)
 
   def counter(self):
@@ -169,9 +173,10 @@ class DistributedLayout:
 
     iterator = self._builder.make_dataset_iterator(replay)
 
+    dummy_seed = 1
     environment_spec = (
         self._environment_spec or
-        specs.make_environment_spec(self._environment_factory()))
+        specs.make_environment_spec(self._environment_factory(dummy_seed)))
 
     # Creates the networks to optimize (online) and target networks.
     networks = self._network_factory(environment_spec)
@@ -207,12 +212,16 @@ class DistributedLayout:
     """The actor process."""
     adder = self._builder.make_adder(replay)
 
+    environment_key, actor_key = jax.random.split(random_key)
     # Create environment and policy core.
-    environment = self._environment_factory()
+
+    # Environments normally require uint32 as a seed.
+    environment = self._environment_factory(
+        utils.sample_uint32(environment_key))
 
     networks = self._network_factory(specs.make_environment_spec(environment))
     policy_network = self._policy_network(networks)
-    actor = self._builder.make_actor(random_key, policy_network, adder,
+    actor = self._builder.make_actor(actor_key, policy_network, adder,
                                      variable_source)
 
     # Create logger and counter.

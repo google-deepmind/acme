@@ -75,14 +75,14 @@ class DistributedPPO(distributed_layout.DistributedLayout):
           lambda networks: ppo_networks.make_inference_fn(networks, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda: environment_factory(True),
+              environment_factory=lambda seed: environment_factory(True),
               network_factory=network_factory,
               policy_factory=eval_policy_factory,
               log_to_bigtable=save_reverb_logs)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda: environment_factory(False),
+        environment_factory=lambda seed: environment_factory(False),
         network_factory=network_factory,
         builder=ppo_builder,
         policy_network=ppo_networks.make_inference_fn,

@@ -72,14 +72,14 @@ class DistributedSAC(distributed_layout.DistributedLayout):
           lambda n: networks.apply_policy_and_sample(n, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda: environment_factory(True),
+              environment_factory=lambda seed: environment_factory(True),
               network_factory=network_factory,
               policy_factory=eval_policy_factory,
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda: environment_factory(False),
+        environment_factory=lambda seed: environment_factory(False),
         network_factory=network_factory,
         builder=sac_builder,
         policy_network=networks.apply_policy_and_sample,

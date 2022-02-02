@@ -70,14 +70,14 @@ class DistributedTD3(distributed_layout.DistributedLayout):
           sigma=0.)
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda: environment_factory(True),
+              environment_factory=lambda seed: environment_factory(True),
               network_factory=network_factory,
               policy_factory=eval_network_fn,
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda: environment_factory(False),
+        environment_factory=lambda seed: environment_factory(False),
         network_factory=network_factory,
         builder=td3_builder,
         policy_network=policy_network_fn,

@@ -95,7 +95,7 @@ class DistributedD4PG(distributed_layout.DistributedLayout):
 
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda: environment_factory(True),
+              environment_factory=lambda seed: environment_factory(True),
               network_factory=network_factory,
               policy_factory=_eval_policy_network,
               log_to_bigtable=log_to_bigtable)
@@ -103,7 +103,7 @@ class DistributedD4PG(distributed_layout.DistributedLayout):
 
     super().__init__(
         seed=random_seed,
-        environment_factory=lambda: environment_factory(False),
+        environment_factory=lambda seed: environment_factory(False),
         network_factory=network_factory,
         builder=builder,
         policy_network=_policy_network,

@@ -66,7 +66,7 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
           lambda n: networks.apply_policy_and_sample(n, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda: environment_factory(True),
+              environment_factory=lambda seed: environment_factory(True),
               network_factory=network_factory,
               policy_factory=eval_policy_factory,
               log_to_bigtable=log_to_bigtable)
@@ -74,7 +74,7 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
     super().__init__(
         seed=seed,
         environment_spec=spec,
-        environment_factory=lambda: environment_factory(False),
+        environment_factory=lambda seed: environment_factory(False),
         network_factory=network_factory,
         builder=value_dice_builder,
         policy_network=networks.apply_policy_and_sample,
@@ -89,8 +89,7 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
 
 
 class ValueDice(local_layout.LocalLayout):
-  """Local agent for ValueDice.
-  """
+  """Local agent for ValueDice."""
 
   def __init__(
       self,

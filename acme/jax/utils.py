@@ -23,7 +23,7 @@ from typing import Callable, Generator, Iterable, NamedTuple, Optional, Sequence
 
 from absl import logging
 from acme import types
-from acme.jax.types import TrainingMetrics, TrainingStepOutput  # pylint: disable=g-multiple-import
+from acme.jax.types import PRNGKey, TrainingMetrics, TrainingStepOutput  # pylint: disable=g-multiple-import
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -417,3 +417,12 @@ def weighted_softmax(x: jnp.ndarray, weights: jnp.ndarray, axis: int = 0):
   x = x - jnp.max(x, axis=axis)
   return weights * jnp.exp(x) / jnp.sum(weights * jnp.exp(x),
                                         axis=axis, keepdims=True)
+
+
+def sample_uint32(random_key: PRNGKey) -> int:
+  """Returns an integer uniformly distributed in 0..2^32-1."""
+  iinfo = jnp.iinfo(jnp.int32)
+  # randint only accepts int32 values as min and max.
+  jax_random = jax.random.randint(
+      random_key, shape=(), minval=iinfo.min, maxval=iinfo.max, dtype=jnp.int32)
+  return np.uint32(jax_random).item()

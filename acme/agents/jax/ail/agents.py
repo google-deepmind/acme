@@ -77,14 +77,14 @@ class DistributedAIL(distributed_layout.DistributedLayout):
     if evaluator_factories is None:
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda: environment_factory(True),
+              environment_factory=lambda seed: environment_factory(True),
               network_factory=network_factory,
               policy_factory=evaluator_policy_network,
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda: environment_factory(False),
+        environment_factory=lambda seed: environment_factory(False),
         network_factory=network_factory,
         builder=ail_builder,
         policy_network=policy_network,

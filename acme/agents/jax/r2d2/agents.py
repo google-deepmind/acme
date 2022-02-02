@@ -69,14 +69,14 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
           lambda n: r2d2_networks.make_behavior_policy(n, config, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda: environment_factory(True),
+              environment_factory=lambda seed: environment_factory(True),
               network_factory=network_factory,
               policy_factory=evaluator_policy_network_factory,
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda: environment_factory(False),
+        environment_factory=lambda seed: environment_factory(False),
         network_factory=network_factory,
         builder=r2d2_builder,
         policy_network=policy_network_factory,
