@@ -21,6 +21,8 @@ from acme import specs
 from acme.agents.jax import sac
 from absl import app
 import helpers
+from acme.utils import counting
+from acme.utils import experiment_utils
 import jax
 
 FLAGS = flags.FLAGS
@@ -48,7 +50,14 @@ def main(_):
       environment_spec, agent_networks, config=config, seed=FLAGS.seed)
 
   # Create the environment loop used for training.
-  train_loop = acme.EnvironmentLoop(environment, agent, label='train_loop')
+  logger = experiment_utils.make_experiment_logger(
+      label='train_loop', steps_key='train_steps')
+  train_loop = acme.EnvironmentLoop(
+      environment,
+      agent,
+      label='train_loop',
+      counter=counting.Counter(prefix='train'),
+      logger=logger)
   # Create the evaluation actor and loop.
   eval_actor = agent.builder.make_actor(
       random_key=jax.random.PRNGKey(FLAGS.seed),
