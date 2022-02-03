@@ -118,7 +118,8 @@ def replay_sample_to_sars_transition(
       action=steps.action,
       reward=steps.reward,
       discount=steps.discount,
-      next_observation=tree.map_structure(roll, steps.observation))
+      next_observation=tree.map_structure(roll, steps.observation),
+      extras=steps.extras)
   if strip_last_transition:
     # We remove the last transition as its next_observation field is incorrect.
     # It has been obtained by rolling the observation field, such that

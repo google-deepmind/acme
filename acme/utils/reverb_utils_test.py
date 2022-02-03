@@ -52,6 +52,7 @@ class ReverbUtilsTest(absltest.TestCase):
   _DUMMY_REWARD = np.array([[6, 7, 8]])
   _DUMMY_DISCOUNT = np.array([[.99, .99, .99]])
   _DUMMY_NEXT_OBS = np.array([[[1], [2], [0]]])
+  _DUMMY_RETURN = np.array([[20.77, 14.92, 8.]])
 
   def _create_dummy_steps(self):
     return reverb_adders.Step(
@@ -60,7 +61,7 @@ class ReverbUtilsTest(absltest.TestCase):
         reward=self._DUMMY_REWARD,
         discount=self._DUMMY_DISCOUNT,
         start_of_episode=True,
-        extras=())
+        extras={'return': self._DUMMY_RETURN})
 
   def _create_dummy_transitions(self):
     return types.Transition(
@@ -68,7 +69,8 @@ class ReverbUtilsTest(absltest.TestCase):
         action=self._DUMMY_ACTION,
         reward=self._DUMMY_REWARD,
         discount=self._DUMMY_DISCOUNT,
-        next_observation=self._DUMMY_NEXT_OBS)
+        next_observation=self._DUMMY_NEXT_OBS,
+        extras={'return': self._DUMMY_RETURN})
 
   def test_replay_sample_to_sars_transition_is_sequence(self):
     fake_sample = reverb.ReplaySample(
