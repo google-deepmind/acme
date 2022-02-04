@@ -15,28 +15,19 @@
 
 """OpenAI Gym environment factory."""
 
-from typing import Callable, Mapping, Sequence
+from typing import Mapping, Sequence
 
-from absl import flags
 from acme import specs
 from acme import types
 from acme import wrappers
 from acme.datasets import tfds
-from acme.jax import utils
 from acme.tf import networks
 from acme.tf import utils as tf2_utils
-from acme.utils import loggers
-from acme.utils.loggers import tf_summary
 import dm_env
 import gym
 import jax
 import numpy as np
 import sonnet as snt
-
-FLAGS = flags.FLAGS
-# We want all examples to have this same flag defined.
-flags.DEFINE_string('tfsummary_logdir', '',
-                    'Root directory for logging tf.summary.')
 
 TASKS = {
     'debug': ['MountainCarContinuous-v0'],
@@ -109,33 +100,3 @@ def make_demonstration_iterator(batch_size: int,
   dataset = tfds.get_tfds_dataset(dataset_name)
   return tfds.JaxInMemoryRandomSampleIterator(dataset, jax.random.PRNGKey(seed),
                                               batch_size)
-
-
-# TODO(sinopalnikov): make it shareable across all examples, not only Gym ones.
-def create_logger_fn() -> Callable[[], loggers.Logger]:
-  """Returns a function that creates logger instances."""
-  if not FLAGS.tfsummary_logdir:
-    # Use default logger.
-    return lambda: None
-
-  def create_logger() -> loggers.Logger:
-    label = 'learner'
-    # Note: we use the default steps key here, assuming that the default counter
-    # is used.
-    # TODO(sinopalnikov): make sure that the logger and counter are always
-    # in sync.
-    default_learner_logger = loggers.make_default_logger(
-        label=label,
-        save_data=True,
-        time_delta=10.0,
-        asynchronous=True)
-    tf_summary_logger = tf_summary.TFSummaryLogger(
-        logdir=FLAGS.tfsummary_logdir, label=label)
-
-    # Sending logs to each of these targets.
-    destinations = [default_learner_logger, tf_summary_logger]
-    logger = loggers.aggregators.Dispatcher(
-        destinations, serialize_fn=utils.fetch_devicearray)
-    return logger
-
-  return create_logger

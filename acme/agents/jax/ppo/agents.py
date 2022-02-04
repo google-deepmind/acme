@@ -108,10 +108,9 @@ class PPO(local_layout.LocalLayout):
       workdir: Optional[str] = '~/acme',
       normalize_input: bool = False,
       counter: Optional[counting.Counter] = None,
-      logger_fn: Optional[Callable[[], loggers.Logger]] = None,
+      logger: Optional[loggers.Logger] = None,
   ):
-    logger_fn = logger_fn or (lambda: None)
-    ppo_builder = builder.PPOBuilder(config, logger_fn=logger_fn)
+    ppo_builder = builder.PPOBuilder(config, logger_fn=(lambda: logger))
     if normalize_input:
       # Two batch dimensions: [num_sequences, num_steps, ...]
       batch_dims = (0, 1)
