@@ -15,7 +15,7 @@
 
 """Networks used in continuous control."""
 
-from typing import Sequence
+from typing import Callable, Sequence
 
 import haiku as hk
 import jax
@@ -34,28 +34,41 @@ class NearZeroInitializedLinear(hk.Linear):
 class LayerNormMLP(hk.Module):
   """Simple feedforward MLP torso with initial layer-norm.
 
-  This module is an MLP which uses LayerNorm (with a tanh normalizer) on the
-  first layer and non-linearities (elu) on all but the last remaining layers.
+  This MLP's first linear layer is followed by a LayerNorm layer and a tanh
+  non-linearity; subsequent layers use `activation`, which defaults to elu.
+
+  Note! The default activation differs from the usual MLP default of ReLU for
+  legacy reasons.
   """
 
-  def __init__(self, layer_sizes: Sequence[int], activate_final: bool = False):
+  def __init__(self,
+               layer_sizes: Sequence[int],
+               w_init: hk.initializers.Initializer = uniform_initializer,
+               activation: Callable[[jnp.ndarray], jnp.ndarray] = jax.nn.elu,
+               activate_final: bool = False,
+               name: str = 'feedforward_mlp_torso'):
     """Construct the MLP.
 
     Args:
       layer_sizes: a sequence of ints specifying the size of each layer.
+      w_init: initializer for Linear layers.
+      activation: nonlinearity to use in the MLP, defaults to elu.
+        Note! The default activation differs from the usual MLP default of ReLU
+        for legacy reasons.
       activate_final: whether or not to use the activation function on the final
         layer of the neural network.
+      name: a name for the module.
     """
-    super().__init__(name='feedforward_mlp_torso')
+    super().__init__(name=name)
 
     self._network = hk.Sequential([
-        hk.Linear(layer_sizes[0], w_init=uniform_initializer),
+        hk.Linear(layer_sizes[0], w_init=w_init),
         hk.LayerNorm(axis=-1, create_scale=True, create_offset=True),
         jax.lax.tanh,
         hk.nets.MLP(
             layer_sizes[1:],
-            w_init=uniform_initializer,
-            activation=jax.nn.elu,
+            w_init=w_init,
+            activation=activation,
             activate_final=activate_final),
     ])
 
