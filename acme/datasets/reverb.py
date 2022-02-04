@@ -25,6 +25,9 @@ import reverb
 import tensorflow as tf
 
 
+Transform = Callable[[reverb.ReplaySample], reverb.ReplaySample]
+
+
 def make_reverb_dataset(
     server_address: str,
     batch_size: Optional[int] = None,
@@ -32,8 +35,7 @@ def make_reverb_dataset(
     table: str = adders.DEFAULT_PRIORITY_TABLE,
     num_parallel_calls: int = 12,
     max_in_flight_samples_per_worker: Optional[int] = None,
-    postprocess: Optional[
-        Callable[[reverb.ReplaySample], reverb.ReplaySample]] = None,
+    postprocess: Optional[Transform] = None,
     # Deprecated kwargs.
     environment_spec: Optional[specs.EnvironmentSpec] = None,
     extra_spec: Optional[types.NestedSpec] = None,
