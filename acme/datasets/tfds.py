@@ -15,7 +15,7 @@
 """Utilities related to loading TFDS datasets."""
 
 import logging
-from typing import Any, Dict, Iterator, Tuple
+from typing import Any, Dict, Iterator, Optional, Tuple
 
 from acme import types
 import jax
@@ -45,9 +45,11 @@ def _episode_steps_to_transition(episode) -> tf.data.Dataset:
   return tf.data.Dataset.from_tensor_slices(data)
 
 
-def get_tfds_dataset(dataset_name: str):
-  dataset = tfds.load(dataset_name)
-  return dataset['train'].flat_map(_episode_steps_to_transition)
+def get_tfds_dataset(dataset_name: str, num_episodes: Optional[int] = None):
+  dataset = tfds.load(dataset_name)['train']
+  if num_episodes:
+    dataset = dataset.take(num_episodes)
+  return dataset.flat_map(_episode_steps_to_transition)
 
 
 class JaxInMemoryRandomSampleIterator(Iterator[Any]):
