@@ -98,7 +98,7 @@ def default_evaluator_factory(
 
     # Create the run loop and return it.
     return environment_loop.EnvironmentLoop(environment, actor, counter,
-                                              logger, observers=observers)
+                                            logger, observers=observers)
   return evaluator
 
 
@@ -244,7 +244,7 @@ class DistributedLayout:
     logger = self._actor_logger_fn(actor_id)
     # Create the loop to connect environment and agent.
     return environment_loop.EnvironmentLoop(environment, actor, counter,
-                                              logger, observers=self._observers)
+                                            logger, observers=self._observers)
 
   def coordinator(self, counter: counting.Counter, max_actor_steps: int):
     return lp_utils.StepsLimiter(counter, max_actor_steps)
