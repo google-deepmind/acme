@@ -80,3 +80,6 @@ class Adder(abc.ABC):
   @abc.abstractmethod
   def reset(self):
     """Resets the adder's buffer."""
+
+# Placeholder for an Adder alias
+
