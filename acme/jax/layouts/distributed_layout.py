@@ -15,6 +15,7 @@
 
 """Program definition for a distributed layout based on a builder."""
 
+import dataclasses
 import logging
 from typing import Any, Callable, Optional, Sequence
 
@@ -101,6 +102,13 @@ def default_evaluator_factory(
   return evaluator
 
 
+@dataclasses.dataclass
+class CheckpointingConfig:
+  """Configuration options for learner checkpointer."""
+  # The maximum number of checkpoints to keep.
+  max_to_keep: int = 1
+
+
 class DistributedLayout:
   """Program definition for a distributed agent based on a builder."""
 
@@ -121,7 +129,8 @@ class DistributedLayout:
       max_number_of_steps: Optional[int] = None,
       observers: Sequence[observers_lib.EnvLoopObserver] = (),
       workdir: str = '~/acme',
-      multithreading_colocate_learner_and_reverb: bool = False):
+      multithreading_colocate_learner_and_reverb: bool = False,
+      checkpointing_config: Optional[CheckpointingConfig] = None):
 
     if prefetch_size < 0:
       raise ValueError(f'Prefetch size={prefetch_size} should be non negative')
@@ -145,6 +154,7 @@ class DistributedLayout:
     self._observers = observers
     self._multithreading_colocate_learner_and_reverb = (
         multithreading_colocate_learner_and_reverb)
+    self._checkpointing_config = checkpointing_config
 
   def replay(self):
     """The replay storage."""
@@ -156,6 +166,8 @@ class DistributedLayout:
 
   def counter(self):
     kwargs = {'directory': self._workdir, 'add_uid': self._workdir == '~/acme'}
+    if self._checkpointing_config:
+      kwargs = {**kwargs, **vars(self._checkpointing_config)}
     return savers.CheckpointingRunner(
         counting.Counter(),
         key='counter',
@@ -198,6 +210,8 @@ class DistributedLayout:
     learner = self._builder.make_learner(random_key, networks, iterator, replay,
                                          counter)
     kwargs = {'directory': self._workdir, 'add_uid': self._workdir == '~/acme'}
+    if self._checkpointing_config:
+      kwargs = {**kwargs, **vars(self._checkpointing_config)}
     # Return the learning agent.
     return savers.CheckpointingRunner(
         learner,
