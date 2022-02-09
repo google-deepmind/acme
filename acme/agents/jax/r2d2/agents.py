@@ -46,7 +46,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
       config: r2d2_config.R2D2Config,
       seed: int,
       num_actors: int,
-      workdir: Optional[str] = '~/acme',
+      workdir: str = '~/acme',
       device_prefetch: bool = False,
       log_to_bigtable: bool = True,
       log_every: float = 10.0,
@@ -88,7 +88,9 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
         actor_logger_fn=distributed_layout.get_default_logger_fn(
             log_to_bigtable, log_every),
         prefetch_size=config.prefetch_size,
-        workdir=workdir)
+        checkpointing_config=distributed_layout.CheckpointingConfig(
+            directory=workdir,
+            add_uid=(workdir == '~/acme')))
 
 
 class DistributedR2D2(DistributedR2D2FromConfig):

@@ -107,6 +107,11 @@ class CheckpointingConfig:
   """Configuration options for learner checkpointer."""
   # The maximum number of checkpoints to keep.
   max_to_keep: int = 1
+  # Which directory to put the checkpoint in.
+  directory: str = '~/acme'
+  # If True adds a UID to the checkpoint path, see
+  # `paths.get_unique_id()` for how this UID is generated.
+  add_uid: bool = True
 
 
 class DistributedLayout:
@@ -128,7 +133,6 @@ class DistributedLayout:
       log_to_bigtable: bool = False,
       max_number_of_steps: Optional[int] = None,
       observers: Sequence[observers_lib.EnvLoopObserver] = (),
-      workdir: str = '~/acme',
       multithreading_colocate_learner_and_reverb: bool = False,
       checkpointing_config: Optional[CheckpointingConfig] = None):
 
@@ -148,7 +152,6 @@ class DistributedLayout:
     self._log_to_bigtable = log_to_bigtable
     self._prefetch_size = prefetch_size
     self._max_number_of_steps = max_number_of_steps
-    self._workdir = workdir
     self._actor_logger_fn = actor_logger_fn
     self._evaluator_factories = evaluator_factories
     self._observers = observers
@@ -165,9 +168,9 @@ class DistributedLayout:
     return self._builder.make_replay_tables(environment_spec)
 
   def counter(self):
-    kwargs = {'directory': self._workdir, 'add_uid': self._workdir == '~/acme'}
+    kwargs = {}
     if self._checkpointing_config:
-      kwargs = {**kwargs, **vars(self._checkpointing_config)}
+      kwargs = vars(self._checkpointing_config)
     return savers.CheckpointingRunner(
         counting.Counter(),
         key='counter',
@@ -209,9 +212,9 @@ class DistributedLayout:
 
     learner = self._builder.make_learner(random_key, networks, iterator, replay,
                                          counter)
-    kwargs = {'directory': self._workdir, 'add_uid': self._workdir == '~/acme'}
+    kwargs = {}
     if self._checkpointing_config:
-      kwargs = {**kwargs, **vars(self._checkpointing_config)}
+      kwargs = vars(self._checkpointing_config)
     # Return the learning agent.
     return savers.CheckpointingRunner(
         learner,
