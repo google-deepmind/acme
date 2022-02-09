@@ -36,19 +36,20 @@ spec.loader.exec_module(_metadata)
 # version of TF due to how it is built. While the versions below should be the
 # most recent stable versions of each library we'll be explicit just make make
 # sure this constraint is upheld.
+
 tensorflow = [
-    'dm-reverb==0.6.1',
-    'keras==2.7.0',
+    'dm-reverb==0.7.0',
+    'keras==2.8.0',
     'tensorflow-datasets==4.4.0',
-    'tensorflow-estimator==2.7.0',
-    'tensorflow==2.7.0',
+    'tensorflow-estimator==2.8.0',
+    'tensorflow==2.8.0',
     'tensorflow_probability==0.15.0',
 ]
 
 core_requirements = [
     'absl-py',
     'dm-env',
-    'dm-launchpad==0.4.1',
+    'dm-launchpad==0.5.0',
     'dm-tree',
     'numpy',
     'pillow',
