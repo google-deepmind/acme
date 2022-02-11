@@ -19,7 +19,6 @@ from typing import List
 
 from acme import core
 from acme import types
-# Internal imports.
 
 import dm_env
 import numpy as np
@@ -91,6 +90,3 @@ class Agent(core.Actor, core.VariableSource):
 
   def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
     return self._learner.get_variables(names)
-
-
-# Internal class.
