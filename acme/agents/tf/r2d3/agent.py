@@ -90,7 +90,7 @@ class R2D3(agent.Agent):
         sequence_length=sequence_length,
     )
     adder = adders.SequenceAdder(client=reverb.Client(address),
-                                   **sequence_kwargs)
+                                 **sequence_kwargs)
 
     # The dataset object to learn from.
     dataset = datasets.make_reverb_dataset(

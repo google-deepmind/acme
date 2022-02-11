@@ -64,7 +64,7 @@ def make_reverb_prioritized_nstep_replay(
       max_size=max_replay_size,
       rate_limiter=reverb.rate_limiters.MinSize(min_replay_size),
       signature=adders.NStepTransitionAdder.signature(environment_spec,
-                                                        extra_spec),
+                                                      extra_spec),
   )
   server = reverb.Server([replay_table], port=None)
 
