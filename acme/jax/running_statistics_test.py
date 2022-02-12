@@ -38,6 +38,7 @@ class TestNestedSpec(NamedTuple):
   b: specs.Array
 
 
+@jtu.with_config(jax_numpy_rank_promotion='allow')
 class RunningStatisticsTest(jtu.JaxTestCase):
 
   def setUp(self):
