@@ -31,7 +31,6 @@ from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import lp_utils
 from acme.utils import observers as observers_lib
-import dm_env
 import jax
 import launchpad as lp
 import reverb
@@ -42,8 +41,6 @@ AgentNetwork = Any
 PolicyNetwork = Any
 NetworkFactory = Callable[[specs.EnvironmentSpec], AgentNetwork]
 PolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
-Seed = int
-EnvironmentFactory = Callable[[Seed], dm_env.Environment]
 MakeActorFn = Callable[[types.PRNGKey, PolicyNetwork, core.VariableSource],
                        core.Actor]
 EvaluatorFactory = Callable[[
@@ -69,7 +66,7 @@ def get_default_logger_fn(
 
 
 def default_evaluator_factory(
-    environment_factory: EnvironmentFactory,
+    environment_factory: types.EnvironmentFactory,
     network_factory: NetworkFactory,
     policy_factory: PolicyFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
@@ -117,24 +114,24 @@ class CheckpointingConfig:
 class DistributedLayout:
   """Program definition for a distributed agent based on a builder."""
 
-  def __init__(
-      self,
-      seed: int,
-      environment_factory: EnvironmentFactory,
-      network_factory: NetworkFactory,
-      builder: builders.GenericActorLearnerBuilder,
-      policy_network: PolicyFactory,
-      num_actors: int,
-      environment_spec: Optional[specs.EnvironmentSpec] = None,
-      actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
-      evaluator_factories: Sequence[EvaluatorFactory] = (),
-      device_prefetch: bool = True,
-      prefetch_size: int = 1,
-      log_to_bigtable: bool = False,
-      max_number_of_steps: Optional[int] = None,
-      observers: Sequence[observers_lib.EnvLoopObserver] = (),
-      multithreading_colocate_learner_and_reverb: bool = False,
-      checkpointing_config: Optional[CheckpointingConfig] = None):
+  def __init__(self,
+               seed: int,
+               environment_factory: types.EnvironmentFactory,
+               network_factory: NetworkFactory,
+               builder: builders.GenericActorLearnerBuilder,
+               policy_network: PolicyFactory,
+               num_actors: int,
+               environment_spec: Optional[specs.EnvironmentSpec] = None,
+               actor_logger_fn: Optional[Callable[[ActorId],
+                                                  loggers.Logger]] = None,
+               evaluator_factories: Sequence[EvaluatorFactory] = (),
+               device_prefetch: bool = True,
+               prefetch_size: int = 1,
+               log_to_bigtable: bool = False,
+               max_number_of_steps: Optional[int] = None,
+               observers: Sequence[observers_lib.EnvLoopObserver] = (),
+               multithreading_colocate_learner_and_reverb: bool = False,
+               checkpointing_config: Optional[CheckpointingConfig] = None):
 
     if prefetch_size < 0:
       raise ValueError(f'Prefetch size={prefetch_size} should be non negative')

@@ -23,12 +23,12 @@ from acme import types
 from acme.agents.jax.value_dice import builder
 from acme.agents.jax.value_dice import config as value_dice_config
 from acme.agents.jax.value_dice import networks
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
-import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.ValueDiceNetworks]
@@ -40,7 +40,7 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
 
   def __init__(
       self,
-      environment_factory: Callable[[bool], dm_env.Environment],
+      environment_factory: jax_types.EnvironmentFactory,
       network_factory: NetworkFactory,
       config: value_dice_config.ValueDiceConfig,
       make_demonstrations: Callable[[int], Iterator[types.Transition]],
@@ -57,7 +57,8 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
                                   time_delta=log_every, asynchronous=True,
                                   serialize_fn=utils.fetch_devicearray,
                                   steps_key='learner_steps')
-    spec = specs.make_environment_spec(environment_factory(False))
+    dummy_seed = 1
+    spec = specs.make_environment_spec(environment_factory(dummy_seed))
     value_dice_builder = builder.ValueDiceBuilder(
         config=config, logger_fn=logger_fn,
         make_demonstrations=make_demonstrations)
@@ -66,7 +67,7 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
           lambda n: networks.apply_policy_and_sample(n, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda seed: environment_factory(True),
+              environment_factory=environment_factory,
               network_factory=network_factory,
               policy_factory=eval_policy_factory,
               log_to_bigtable=log_to_bigtable)
@@ -74,7 +75,7 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
     super().__init__(
         seed=seed,
         environment_spec=spec,
-        environment_factory=lambda seed: environment_factory(False),
+        environment_factory=environment_factory,
         network_factory=network_factory,
         builder=value_dice_builder,
         policy_network=networks.apply_policy_and_sample,

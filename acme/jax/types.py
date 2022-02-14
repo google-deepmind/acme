@@ -15,10 +15,11 @@
 
 """Common JAX type definitions."""
 
-from typing import Generic, Mapping, TypeVar
+from typing import Callable, Generic, Mapping, TypeVar
 
 from acme import types
 import chex
+import dm_env
 import jax.numpy as jnp
 
 PRNGKey = jnp.ndarray
@@ -46,3 +47,7 @@ the values of the corresponding collection variables.
 class TrainingStepOutput(Generic[TrainingState]):
   state: TrainingState
   metrics: TrainingMetrics
+
+
+Seed = int
+EnvironmentFactory = Callable[[Seed], dm_env.Environment]
