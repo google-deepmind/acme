@@ -149,6 +149,12 @@ class VideoWrapper(base.EnvironmentWrapper):
       raise ValueError('make_html_animation should be called after running a '
                        'trajectory and before calling reset().')
 
+  def close(self):
+    if self._frames:
+      self._write_frames()
+      self._frames = []
+    self.environment.close()
+
 
 class MujocoVideoWrapper(VideoWrapper):
   """VideoWrapper which generates videos from a mujoco physics object.
