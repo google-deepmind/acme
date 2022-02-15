@@ -22,13 +22,13 @@ import dm_env
 import gym
 
 
-def make_environment(evaluation: bool = False,
-                     level: str = 'PongNoFrameskip-v4',
+def make_environment(level: str = 'PongNoFrameskip-v4',
                      oar_wrapper: bool = False) -> dm_env.Environment:
   """Loads the Atari environment."""
   env = gym.make(level, full_action_space=True)
 
-  max_episode_len = 108_000 if evaluation else 50_000
+  # Always use episodes of 108k steps as this is standard, matching the paper.
+  max_episode_len = 108_000
   wrapper_list = [
       wrappers.GymAtariAdapter,
       functools.partial(

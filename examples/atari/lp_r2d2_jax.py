@@ -33,15 +33,15 @@ def main(_):
   # Access flag value.
   level = FLAGS.task
   environment_factory = (
-      lambda: helpers.make_environment(level=level, oar_wrapper=True))
+      lambda is_eval: helpers.make_environment(level=level, oar_wrapper=True))
   config = r2d2.R2D2Config()
   def net_factory(spec: specs.EnvironmentSpec):
     return r2d2_networks.make_atari_networks(config.batch_size, env_spec=spec)
 
-  env = environment_factory()
+  env = environment_factory(False)
   env_spec = acme.make_environment_spec(env)
 
-  program = r2d2.DistributedR2D2(
+  program = r2d2.DistributedR2D2FromConfig(
       seed=0,
       environment_factory=environment_factory,
       network_factory=net_factory,
