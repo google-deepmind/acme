@@ -34,7 +34,7 @@ flags.DEFINE_integer('seed', 0, 'Random seed.')
 
 def main(_):
   task = FLAGS.task
-  environment_factory = lambda is_eval: helpers.make_environment(is_eval, task)
+  environment_factory = lambda is_eval: helpers.make_environment(task)
   config = ppo.PPOConfig(
       unroll_length=16,
       num_minibatches=32,

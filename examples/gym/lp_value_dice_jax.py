@@ -38,7 +38,7 @@ flags.DEFINE_string('dataset_name', 'd4rl_mujoco_halfcheetah/v0-medium',
 
 def main(_):
   task = FLAGS.env_name
-  environment_factory = lambda seed: helpers.make_environment(False, task)
+  environment_factory = lambda seed: helpers.make_environment(task)
   config = value_dice.ValueDiceConfig(num_sgd_steps_per_step=64)
   agent = value_dice.DistributedValueDice(
       environment_factory=environment_factory,

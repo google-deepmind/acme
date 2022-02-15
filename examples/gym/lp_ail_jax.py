@@ -43,7 +43,7 @@ flags.DEFINE_string(
 
 def main(_):
   task = FLAGS.task
-  environment_factory = lambda is_eval: helpers.make_environment(is_eval, task)
+  environment_factory = lambda is_eval: helpers.make_environment(task)
   sac_config = sac.SACConfig(num_sgd_steps_per_step=64)
   sac_builder = sac.SACBuilder(sac_config)
 

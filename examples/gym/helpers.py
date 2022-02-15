@@ -39,10 +39,8 @@ TASKS = {
 
 
 def make_environment(
-    evaluation: bool = False,
     task: str = 'MountainCarContinuous-v0') -> dm_env.Environment:
   """Creates an OpenAI Gym environment."""
-  del evaluation
 
   # Load the gym environment.
   environment = gym.make(task)
