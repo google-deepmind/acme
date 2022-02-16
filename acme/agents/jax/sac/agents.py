@@ -23,12 +23,12 @@ from acme.agents.jax import normalization
 from acme.agents.jax.sac import builder
 from acme.agents.jax.sac import config as sac_config
 from acme.agents.jax.sac import networks
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
-import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.SACNetworks]
@@ -40,7 +40,7 @@ class DistributedSAC(distributed_layout.DistributedLayout):
 
   def __init__(
       self,
-      environment_factory: Callable[[bool], dm_env.Environment],
+      environment_factory: jax_types.EnvironmentFactory,
       network_factory: NetworkFactory,
       config: sac_config.SACConfig,
       seed: int,
@@ -59,7 +59,9 @@ class DistributedSAC(distributed_layout.DistributedLayout):
                                   steps_key='learner_steps')
     sac_builder = builder.SACBuilder(config, logger_fn=logger_fn)
     if normalize_input:
-      environment_spec = specs.make_environment_spec(environment_factory(False))
+      dummy_seed = 1
+      environment_spec = specs.make_environment_spec(
+          environment_factory(dummy_seed))
       # One batch dimension: [batch_size, ...]
       batch_dims = (0,)
       sac_builder = normalization.NormalizationBuilder(
@@ -72,14 +74,14 @@ class DistributedSAC(distributed_layout.DistributedLayout):
           lambda n: networks.apply_policy_and_sample(n, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda seed: environment_factory(True),
+              environment_factory=environment_factory,
               network_factory=network_factory,
               policy_factory=eval_policy_factory,
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda seed: environment_factory(False),
+        environment_factory=environment_factory,
         network_factory=network_factory,
         builder=sac_builder,
         policy_network=networks.apply_policy_and_sample,

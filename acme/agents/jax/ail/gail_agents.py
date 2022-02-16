@@ -20,7 +20,6 @@ https://arxiv.org/pdf/1606.03476.pdf
 
 import dataclasses
 import functools
-from typing import Callable
 
 from acme import specs
 from acme.agents.jax import ppo
@@ -28,9 +27,9 @@ from acme.agents.jax.ail import agents
 from acme.agents.jax.ail import config as ail_config
 from acme.agents.jax.ail import losses
 from acme.agents.jax.ail import networks as ail_networks
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.utils import loggers
-import dm_env
 
 
 @dataclasses.dataclass
@@ -43,10 +42,8 @@ class GAILConfig:
 class DistributedGAIL(agents.DistributedAIL):
   """Distributed program definition for GAIL."""
 
-  def __init__(self,
-               environment_factory: Callable[[bool], dm_env.Environment],
-               config: GAILConfig,
-               *args, **kwargs):
+  def __init__(self, environment_factory: jax_types.EnvironmentFactory,
+               config: GAILConfig, *args, **kwargs):
     logger_fn = functools.partial(
         loggers.make_default_logger,
         'direct_learner',

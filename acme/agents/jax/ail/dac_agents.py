@@ -21,7 +21,6 @@ NOTE: The original DAC implementation uses TRPO but we use TD3 here.
 
 import dataclasses
 import functools
-from typing import Callable
 
 from acme import specs
 from acme.agents.jax import td3
@@ -29,9 +28,9 @@ from acme.agents.jax.ail import agents
 from acme.agents.jax.ail import config as ail_config
 from acme.agents.jax.ail import losses
 from acme.agents.jax.ail import networks as ail_networks
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.utils import loggers
-import dm_env
 
 
 @dataclasses.dataclass
@@ -54,10 +53,8 @@ class DACConfig:
 class DistributedDAC(agents.DistributedAIL):
   """Distributed program definition for DAC."""
 
-  def __init__(self,
-               environment_factory: Callable[[bool], dm_env.Environment],
-               config: DACConfig,
-               *args, **kwargs):
+  def __init__(self, environment_factory: jax_types.EnvironmentFactory,
+               config: DACConfig, *args, **kwargs):
     logger_fn = functools.partial(
         loggers.make_default_logger,
         'direct_learner',

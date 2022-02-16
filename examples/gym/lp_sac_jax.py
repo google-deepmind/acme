@@ -33,7 +33,7 @@ flags.DEFINE_string('task', 'MountainCarContinuous-v0',
 
 def main(_):
   task = FLAGS.task
-  environment_factory = lambda is_eval: helpers.make_environment(task)
+  environment_factory = lambda seed: helpers.make_environment(task)
   program = sac.DistributedSAC(
       environment_factory=environment_factory,
       network_factory=sac.make_networks,

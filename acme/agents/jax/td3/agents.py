@@ -22,12 +22,12 @@ from acme import specs
 from acme.agents.jax.td3 import builder
 from acme.agents.jax.td3 import config as td3_config
 from acme.agents.jax.td3 import networks
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
-import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.TD3Networks]
@@ -39,7 +39,7 @@ class DistributedTD3(distributed_layout.DistributedLayout):
 
   def __init__(
       self,
-      environment_factory: Callable[[bool], dm_env.Environment],
+      environment_factory: jax_types.EnvironmentFactory,
       environment_spec: specs.EnvironmentSpec,
       network_factory: NetworkFactory,
       config: td3_config.TD3Config,
@@ -70,14 +70,14 @@ class DistributedTD3(distributed_layout.DistributedLayout):
           sigma=0.)
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda seed: environment_factory(True),
+              environment_factory=environment_factory,
               network_factory=network_factory,
               policy_factory=eval_network_fn,
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda seed: environment_factory(False),
+        environment_factory=environment_factory,
         network_factory=network_factory,
         builder=td3_builder,
         policy_network=policy_network_fn,

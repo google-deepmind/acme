@@ -34,7 +34,7 @@ flags.DEFINE_string('task', 'MountainCarContinuous-v0',
 
 def main(_):
   task = FLAGS.task
-  env_factory = lambda is_eval: helpers.make_environment(task)
+  env_factory = lambda seed: helpers.make_environment(task)
 
   environment_spec = specs.make_environment_spec(env_factory(True))
   program = td3.DistributedTD3(

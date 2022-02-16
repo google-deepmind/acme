@@ -25,12 +25,12 @@ from acme.agents.jax.ail import builder
 from acme.agents.jax.ail import config as ail_config
 from acme.agents.jax.ail import losses
 from acme.agents.jax.ail import networks as ail_networks
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
-import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], ail_networks.AILNetworks]
@@ -41,7 +41,7 @@ class DistributedAIL(distributed_layout.DistributedLayout):
 
   def __init__(
       self,
-      environment_factory: Callable[[bool], dm_env.Environment],
+      environment_factory: jax_types.EnvironmentFactory,
       rl_agent: builders.GenericActorLearnerBuilder,
       config: ail_config.AILConfig,
       network_factory: NetworkFactory,
@@ -77,14 +77,14 @@ class DistributedAIL(distributed_layout.DistributedLayout):
     if evaluator_factories is None:
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda seed: environment_factory(True),
+              environment_factory=environment_factory,
               network_factory=network_factory,
               policy_factory=evaluator_policy_network,
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda seed: environment_factory(False),
+        environment_factory=environment_factory,
         network_factory=network_factory,
         builder=ail_builder,
         policy_network=policy_network,
