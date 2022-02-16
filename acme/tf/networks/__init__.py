@@ -50,6 +50,7 @@ from acme.tf.networks.stochastic import ExpQWeightedPolicy
 from acme.tf.networks.stochastic import StochasticMeanHead
 from acme.tf.networks.stochastic import StochasticModeHead
 from acme.tf.networks.stochastic import StochasticSamplingHead
+from acme.tf.networks.vision import DrQTorso
 from acme.tf.networks.vision import ResNetTorso
 
 # For backwards compatibility.

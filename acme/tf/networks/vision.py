@@ -157,3 +157,57 @@ def _preprocess_inputs(inputs: tf.Tensor, output_dtype: tf.DType) -> tf.Tensor:
   processed_inputs = tf.image.convert_image_dtype(
       flattened_inputs, dtype=output_dtype)
   return processed_inputs
+
+
+class DrQTorso(snt.Module):
+  """DrQ Torso inspired by the second DrQ paper [Yarats et al., 2021].
+
+  [Yarats et al., 2021] https://arxiv.org/abs/2107.09645
+  """
+
+  def __init__(
+      self,
+      data_format: str = 'NHWC',
+      activation: Callable[[tf.Tensor], tf.Tensor] = tf.nn.relu,
+      output_dtype: tf.DType = tf.float32,
+      name: str = 'resnet_torso'):
+    super().__init__(name=name)
+
+    self._output_dtype = output_dtype
+
+    # Create a Conv2D factory since we'll be making quite a few.
+    gain = 2**0.5 if activation == tf.nn.relu else 1.
+    def build_conv_layer(name: str,
+                         output_channels: int = 32,
+                         kernel_shape: Sequence[int] = (3, 3),
+                         stride: int = 1):
+      return snt.Conv2D(
+          output_channels=output_channels,
+          kernel_shape=kernel_shape,
+          stride=stride,
+          padding='SAME',
+          data_format=data_format,
+          w_init=snt.initializers.Orthogonal(gain=gain, seed=None),
+          b_init=snt.initializers.Zeros(),
+          name=name)
+
+    self._network = snt.Sequential(
+        [build_conv_layer('conv_0', stride=2),
+         activation,
+         build_conv_layer('conv_1', stride=1),
+         activation,
+         build_conv_layer('conv_2', stride=1),
+         activation,
+         build_conv_layer('conv_3', stride=1),
+         activation,
+         snt.Flatten()])
+
+  def __call__(self, inputs: tf.Tensor) -> tf.Tensor:
+    """Evaluates the ResidualPixelCore."""
+
+    # Normalize to -0.5 to 0.5
+    preprocessed_inputs = _preprocess_inputs(inputs, self._output_dtype) - 0.5
+
+    torso_output = self._network(preprocessed_inputs)
+
+    return torso_output
