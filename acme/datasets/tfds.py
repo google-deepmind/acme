@@ -15,11 +15,13 @@
 """Utilities related to loading TFDS datasets."""
 
 import logging
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Tuple, Sequence
 
 from acme import types
+from flax import jax_utils
 import jax
 import jax.numpy as jnp
+import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
@@ -52,6 +54,32 @@ def get_tfds_dataset(dataset_name: str, num_episodes: Optional[int] = None):
   return dataset.flat_map(_episode_steps_to_transition)
 
 
+# In order to avoid excessive copying on TPU one needs to make the last
+# dimension a multiple of this number.
+_BEST_DIVISOR = 128
+
+
+def _pad(x: jnp.ndarray) -> jnp.ndarray:
+  if len(x.shape) != 2:
+    return x
+  # Find a more scientific way to find this threshold (30). Depending on various
+  # conditions for low enough sizes the excessive copying is not triggered.
+  if x.shape[-1] % _BEST_DIVISOR != 0 and x.shape[-1] > 30:
+    n = _BEST_DIVISOR - (x.shape[-1] % _BEST_DIVISOR)
+    x = np.pad(x, [(0, 0)] * (x.ndim - 1) + [(0, n)], 'constant')
+  return x
+
+
+# Undo the padding.
+def _unpad(x: jnp.ndarray, shape: Sequence[int]) -> jnp.ndarray:
+  if len(shape) == 2 and x.shape[-1] != shape[-1]:
+    return x[..., :shape[-1]]
+  return x
+
+
+_PMAP_AXIS_NAME = 'data'
+
+
 class JaxInMemoryRandomSampleIterator(Iterator[Any]):
   """In memory random sample iterator implemented in JAX.
 
@@ -64,38 +92,94 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
   def __init__(self,
                dataset: tf.data.Dataset,
                key: jnp.ndarray,
-               batch_size: int):
+               batch_size: int,
+               shard_dataset_across_devices: bool = False):
     """Creates an iterator.
 
     Args:
       dataset: underlying tf Dataset
       key: a key to be used for random number generation
       batch_size: batch size
+      shard_dataset_across_devices: whether to use all available devices
+        (if > 1) for storing the underlying dataset. The upside is a larger
+        dataset capacity that fits into memory. Downsides are:
+          - execution of pmapped functions is usually slower than jitted
+          - few last elements in the dataset might be dropped (if not multiple)
+          - sampling is not 100% uniform, since each core will be doing sampling
+            only within its data chunk
+        The number of available devices must divide the batch_size evenly.
     """
     # Read the whole dataset. We use artificially large batch_size to make sure
     # we capture the whole dataset.
     data = next(dataset.batch(1000000000).as_numpy_iterator())
     self._dataset_size = jax.tree_flatten(
         jax.tree_map(lambda x: x.shape[0], data))[0][0]
-    self._jax_dataset = jax.tree_map(jnp.asarray, data)
-    logging.info('Finished loading a dataset into memory. Elements: %d',
-                 self._dataset_size)
-    self._key = key
+    device = jax_utils._pmap_device_order()
+    if not shard_dataset_across_devices:
+      device = device[:1]
+    should_pmap = len(device) > 1
+    assert batch_size % len(device) == 0
+    self._dataset_size = self._dataset_size - self._dataset_size % len(device)
+    # len(device) needs to divide self._dataset_size evenly.
+    assert self._dataset_size % len(device) == 0
+    logging.info('Trying to load %s elements to %s', self._dataset_size, device)
+    logging.info('Dataset %s %s',
+                 ('before padding' if should_pmap else ''),
+                 jax.tree_map(lambda x: x.shape, data))
+    if should_pmap:
+      shapes = jax.tree_map(lambda x: x.shape, data)
+      # Padding to a multiple of 128 is needed to avoid excessive copying on TPU
+      data = jax.tree_map(_pad, data)
+      logging.info('Dataset after padding %s',
+                   jax.tree_map(lambda x: x.shape, data))
+      def split_and_put(x: jnp.ndarray) -> jnp.ndarray:
+        return jax.device_put_sharded(
+            np.split(x[:self._dataset_size], len(device)), devices=device)
+      self._jax_dataset = jax.tree_map(split_and_put, data)
+    else:
+      self._jax_dataset = jax.tree_map(jax.device_put, data)
 
-    def sample(key: jnp.ndarray) -> Tuple[Any, jnp.ndarray]:
-      key, key_randint = jax.random.split(key)
-      indices = jax.random.randint(key_randint, (batch_size,), minval=0,
-                                   maxval=self._dataset_size)
-      demo_transitions = jax.tree_map(lambda d: jnp.take(d, indices, axis=0),
-                                      self._jax_dataset)
-      return demo_transitions, key
-    self._sample = jax.jit(sample)
+    self._key = (jnp.stack(jax.random.split(key, len(device)))
+                 if should_pmap else key)
+
+    def sample_per_shard(data: Any,
+                         key: jnp.ndarray) -> Tuple[Any, jnp.ndarray]:
+      key1, key2 = jax.random.split(key)
+      indices = jax.random.randint(
+          key1, (batch_size // len(device),),
+          minval=0,
+          maxval=self._dataset_size // len(device))
+      data_sample = jax.tree_map(lambda d: jnp.take(d, indices, axis=0), data)
+      return data_sample, key2
+
+    if should_pmap:
+      def sample(data, key):
+        data_sample, key = sample_per_shard(data, key)
+        # Gathering data on TPUs is much more efficient that doing so on a host
+        # since it avoids Host - Device communications.
+        data_sample = jax.lax.all_gather(
+            data_sample, axis_name=_PMAP_AXIS_NAME, axis=0, tiled=True)
+        data_sample = jax.tree_multimap(_unpad, data_sample, shapes)
+        return data_sample, key
+
+      pmapped_sample = jax.pmap(sample, axis_name=_PMAP_AXIS_NAME)
+
+      def sample_and_postprocess(key: jnp.ndarray) -> Tuple[Any, jnp.ndarray]:
+        data, key = pmapped_sample(self._jax_dataset, key)
+        # All pmapped devices return the same data, so we just take the one from
+        # the first device.
+        return jax.tree_map(lambda x: x[0], data), key
+      self._sample = sample_and_postprocess
+    else:
+      self._sample = jax.jit(
+          lambda key: sample_per_shard(self._jax_dataset, key))
 
   def __next__(self) -> Any:
     data, self._key = self._sample(self._key)
     return data
 
   @property
-  def dataset_size(self):
+  def dataset_size(self) -> int:
     """An integer of the dataset cardinality."""
     return self._dataset_size
+
