@@ -101,7 +101,7 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
       key: a key to be used for random number generation
       batch_size: batch size
       shard_dataset_across_devices: whether to use all available devices
-        (if > 1) for storing the underlying dataset. The upside is a larger
+        for storing the underlying dataset. The upside is a larger
         dataset capacity that fits into memory. Downsides are:
           - execution of pmapped functions is usually slower than jitted
           - few last elements in the dataset might be dropped (if not multiple)
