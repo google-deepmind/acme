@@ -281,7 +281,8 @@ class AILBuilder(builders.GenericActorLearnerBuilder[ail_networks.AILNetworks,
         strip_last_transition=is_sequence_based and self._config.share_iterator)
 
     discriminator_iterator = (
-        process_discriminator_sample(sample)
+        # Remove the extras to have the same nested structure as demonstrations.
+        process_discriminator_sample(sample)._replace(extras=())
         for sample in discriminator_iterator)
 
     return (learning.AILSample(*sample) for sample in zip(
