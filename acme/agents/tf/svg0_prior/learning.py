@@ -74,7 +74,7 @@ class SVG0Learner(acme.Learner):
       target_update_period: number of learner steps to perform before updating
         the target networks.
       dataset_iterator: dataset to learn from, whether fixed or from a replay
-        buffer (see `acme.datasets.reverb.make_dataset` documentation).
+        buffer (see `acme.datasets.reverb.make_reverb_dataset` documentation).
       prior_network: the online (optimized) prior.
       target_prior_network: the target prior (which lags behind the online
         prior).

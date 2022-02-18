@@ -72,7 +72,7 @@ class RCRRLearner(core.Learner):
         policy).
       target_critic_network: the target critic.
       dataset: dataset to learn from, whether fixed or from a replay buffer
-        (see `acme.datasets.reverb.make_dataset` documentation).
+        (see `acme.datasets.reverb.make_reverb_dataset` documentation).
       accelerator_strategy: the strategy used to distribute computation,
         whether on a single, or multiple, GPU or TPU; as supported by
         tf.distribute.

@@ -70,7 +70,7 @@ class D4PGLearner(acme.Learner):
       target_update_period: number of learner steps to perform before updating
         the target networks.
       dataset_iterator: dataset to learn from, whether fixed or from a replay
-        buffer (see `acme.datasets.reverb.make_dataset` documentation).
+        buffer (see `acme.datasets.reverb.make_reverb_dataset` documentation).
       observation_network: an optional online network to process observations
         before the policy and the critic.
       target_observation_network: the target observation network.
