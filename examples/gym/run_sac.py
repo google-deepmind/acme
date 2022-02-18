@@ -51,21 +51,27 @@ def main(_):
 
   # Create the environment loop used for training.
   logger = experiment_utils.make_experiment_logger(
-      label='train_loop', steps_key='train_steps')
+      label='train', steps_key='train_steps')
   train_loop = acme.EnvironmentLoop(
       environment,
       agent,
-      label='train_loop',
       counter=counting.Counter(prefix='train'),
       logger=logger)
+
   # Create the evaluation actor and loop.
+  eval_logger = experiment_utils.make_experiment_logger(
+      label='eval', steps_key='eval_steps')
   eval_actor = agent.builder.make_actor(
       random_key=jax.random.PRNGKey(FLAGS.seed),
       policy_network=sac.apply_policy_and_sample(
           agent_networks, eval_mode=True),
       variable_source=agent)
   eval_env = helpers.make_environment(task=FLAGS.env_name)
-  eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop')
+  eval_loop = acme.EnvironmentLoop(
+      eval_env,
+      eval_actor,
+      counter=counting.Counter(prefix='eval'),
+      logger=eval_logger)
 
   assert FLAGS.num_steps % FLAGS.eval_every == 0
   for _ in range(FLAGS.num_steps // FLAGS.eval_every):

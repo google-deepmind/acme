@@ -21,8 +21,9 @@ from acme import specs
 from acme.agents.jax import td3
 from absl import app
 import helpers
+from acme.utils import counting
+from acme.utils import experiment_utils
 import jax
-
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_steps', 1000000,
@@ -47,21 +48,35 @@ def main(_):
       environment_spec, agent_networks, config=config, seed=FLAGS.seed)
 
   # Create the environment loop used for training.
-  train_loop = acme.EnvironmentLoop(environment, agent, label='train_loop')
+  train_logger = experiment_utils.make_experiment_logger(
+      label='train', steps_key='train_steps')
+  train_loop = acme.EnvironmentLoop(
+      environment,
+      agent,
+      counter=counting.Counter(prefix='train'),
+      logger=train_logger)
+
   # Create the evaluation actor and loop.
+  eval_logger = experiment_utils.make_experiment_logger(
+      label='eval', steps_key='eval_steps')
   eval_actor = agent.builder.make_actor(
       random_key=jax.random.PRNGKey(FLAGS.seed),
       policy_network=td3.get_default_behavior_policy(
           agent_networks, environment_spec.actions, sigma=0.),
       variable_source=agent)
   eval_env = helpers.make_environment(task=FLAGS.env_name)
-  eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop')
+  eval_loop = acme.EnvironmentLoop(
+      eval_env,
+      eval_actor,
+      counter=counting.Counter(prefix='eval'),
+      logger=eval_logger)
 
   assert FLAGS.num_steps % FLAGS.eval_every == 0
   for _ in range(FLAGS.num_steps // FLAGS.eval_every):
     eval_loop.run(num_episodes=5)
     train_loop.run(num_steps=FLAGS.eval_every)
   eval_loop.run(num_episodes=5)
+
 
 if __name__ == '__main__':
   app.run(main)

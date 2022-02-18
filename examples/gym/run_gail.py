@@ -26,6 +26,8 @@ from acme.agents.jax import ppo
 from absl import app
 import helpers
 from acme.jax import networks as networks_lib
+from acme.utils import counting
+from acme.utils import experiment_utils
 import haiku as hk
 import jax
 
@@ -132,14 +134,27 @@ def main(_):
       policy_network=ppo.make_inference_fn(ppo_networks))
 
   # Create the environment loop used for training.
-  train_loop = acme.EnvironmentLoop(environment, agent, label='train_loop')
+  train_logger = experiment_utils.make_experiment_logger(
+      label='train', steps_key='train_steps')
+  train_loop = acme.EnvironmentLoop(
+      environment,
+      agent,
+      counter=counting.Counter(prefix='train'),
+      logger=train_logger)
+
   # Create the evaluation actor and loop.
+  eval_logger = experiment_utils.make_experiment_logger(
+      label='eval', steps_key='eval_steps')
   eval_actor = agent.builder.make_actor(
       random_key=jax.random.PRNGKey(FLAGS.seed),
       policy_network=ppo.make_inference_fn(agent_networks, evaluation=True),
       variable_source=agent)
   eval_env = helpers.make_environment(task=FLAGS.env_name)
-  eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop')
+  eval_loop = acme.EnvironmentLoop(
+      eval_env,
+      eval_actor,
+      counter=counting.Counter(prefix='eval'),
+      logger=eval_logger)
 
   assert FLAGS.num_steps % FLAGS.eval_every == 0
   for _ in range(FLAGS.num_steps // FLAGS.eval_every):

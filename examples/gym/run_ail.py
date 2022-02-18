@@ -26,6 +26,8 @@ from acme.agents.jax import sac
 from absl import app
 import helpers
 from acme.jax import networks as networks_lib
+from acme.utils import counting
+from acme.utils import experiment_utils
 import haiku as hk
 import jax
 
@@ -33,8 +35,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_steps', 1000000,
                      'Number of env steps to run training for.')
 flags.DEFINE_integer('eval_every', 10000, 'How often to run evaluation')
-flags.DEFINE_string('env_name', 'MountainCarContinuous-v0',
-                    'What environment to run')
+flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'What environment to run')
 flags.DEFINE_string(
     'dataset_name', 'd4rl_mujoco_halfcheetah/v0-medium', 'What dataset to use. '
     'See the TFDS catalog for possible values.')
@@ -112,15 +113,28 @@ def main(_):
       discriminator_loss=ail.losses.gail_loss())
 
   # Create the environment loop used for training.
-  train_loop = acme.EnvironmentLoop(environment, agent, label='train_loop')
+  train_logger = experiment_utils.make_experiment_logger(
+      label='train', steps_key='train_steps')
+  train_loop = acme.EnvironmentLoop(
+      environment,
+      agent,
+      counter=counting.Counter(prefix='train'),
+      logger=train_logger)
+
   # Create the evaluation actor and loop.
+  eval_logger = experiment_utils.make_experiment_logger(
+      label='eval', steps_key='eval_steps')
   eval_actor = agent.builder.make_actor(
       random_key=jax.random.PRNGKey(FLAGS.seed),
       policy_network=sac.apply_policy_and_sample(
           agent_networks, eval_mode=True),
       variable_source=agent)
   eval_env = helpers.make_environment(task=FLAGS.env_name)
-  eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop')
+  eval_loop = acme.EnvironmentLoop(
+      eval_env,
+      eval_actor,
+      counter=counting.Counter(prefix='eval'),
+      logger=eval_logger)
 
   assert FLAGS.num_steps % FLAGS.eval_every == 0
   for _ in range(FLAGS.num_steps // FLAGS.eval_every):
