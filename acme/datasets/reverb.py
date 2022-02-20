@@ -85,7 +85,7 @@ def make_reverb_dataset(
       cycle_length=tf.data.AUTOTUNE,
       num_parallel_calls=num_parallel_calls,
       deterministic=False)
-  
+
   if batch_size:
     dataset = dataset.batch(batch_size, drop_remainder=True)
 
