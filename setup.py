@@ -82,6 +82,7 @@ envs_requirements = [
     'dm-control==0.0.364896371',  # TODO(b/206925413): update to new version.
     'gym',
     'gym[atari]',
+    'pygame==2.1.0',
     'tensorflow_datasets',
 ]
 
