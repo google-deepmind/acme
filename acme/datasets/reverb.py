@@ -90,7 +90,7 @@ def make_reverb_dataset(
 
   if prefetch_size:
     dataset = dataset.prefetch(prefetch_size)
-  
+
   return dataset
 
 
