@@ -58,7 +58,6 @@ def make_reverb_dataset(
   del convert_zero_size_to_none
   del using_deprecated_adder
   del sequence_length
-  del prefetch_size
 
   # This is the default that used to be set by reverb.TFClient.dataset().
   if max_in_flight_samples_per_worker is None and batch_size is None:
@@ -89,6 +88,9 @@ def make_reverb_dataset(
   if batch_size:
     dataset = dataset.batch(batch_size, drop_remainder=True)
 
+  if prefetch_size:
+    dataset = dataset.prefetch(prefetch_size)
+  
   return dataset
 
 
