@@ -44,7 +44,33 @@ def make_reverb_dataset(
     using_deprecated_adder: bool = False,
     sequence_length: Optional[int] = None,
 ) -> tf.data.Dataset:
-  """Make a TensorFlow dataset backed by a Reverb trajectory replay service."""
+  """Make a TensorFlow dataset backed by a Reverb trajectory replay service.
+
+  Arguments:
+    server_address: Address of the Reverb server.
+    batch_size: Batch size of the returned dataset.
+    prefetch_size: The number of elements to prefetch from the original dataset.
+      Note that Reverb may do some internal prefetching in addition to this.
+    table: The name of the Reverb table to use.
+    num_parallel_calls: The parralelism to use. Setting it to `tf.data.AUTOTUNE`
+      will allow `tf.data` to automatically find a reasonable value.
+    max_in_flight_samples_per_worker: see reverb.TrajectoryDataset for details.
+    postprocess: User-specified transformation to be applied to the dataset (as
+      `ds.map(postprocess)`).
+    environment_spec: DEPRECATED! Do not use.
+    extra_spec: DEPRECATED! Do not use.
+    transition_adder: DEPRECATED! Do not use.
+    convert_zero_size_to_none: DEPRECATED! Do not use.
+    using_deprecated_adder: DEPRECATED! Do not use.
+    sequence_length: DEPRECATED! Do not use.
+
+  Returns:
+    A `tf.data.Dataset` iterating over the contents of the Reverb table.
+
+  Raises:
+    ValueError if `environment_spec` or `extra_spec` are set.
+  """
+
   if environment_spec or extra_spec:
     raise ValueError(
         'The make_reverb_dataset factory function no longer requires specs as'
@@ -78,14 +104,16 @@ def make_reverb_dataset(
     if postprocess:
       dataset = dataset.map(postprocess)
 
-    # Finish the pipeline: batch and prefetch.
     if batch_size:
       dataset = dataset.batch(batch_size, drop_remainder=True)
 
     return dataset
 
-  # Create the dataset.
-  dataset = tf.data.Dataset.range(num_parallel_calls)
+  # Create a datasets and interleaves it to create `num_parallel_calls`
+  # `TrajectoryDataset`s. The initial dataset is infinitely large in order
+  # to allow `num_parallel_calls` to be set to `tf.data.AUTOTUNE` - this ensures
+  # that the interleaved dataset is large enough.
+  dataset = tf.data.Dataset.from_tensors(0).repeat()
   dataset = dataset.interleave(
       map_func=_make_dataset,
       cycle_length=num_parallel_calls,
