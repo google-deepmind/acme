@@ -334,15 +334,9 @@ def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
   discount = environment.discount_spec().generate_value()
   data = types.Transition(observation, action, reward, discount, observation)
 
-  key = np.array(0, np.uint64)
-  probability = np.array(1.0, np.float64)
-  table_size = np.array(1, np.int64)
-  priority = np.array(1.0, np.float64)
-  info = reverb.SampleInfo(
-      key=key,
-      probability=probability,
-      table_size=table_size,
-      priority=priority)
+  info = tree.map_structure(
+      lambda tf_dtype: tf.ones([], tf_dtype.as_numpy_dtype),
+      reverb.SampleInfo.tf_dtypes())
   sample = reverb.ReplaySample(info=info, data=data)
 
   return tf.data.Dataset.from_tensors(sample).repeat()

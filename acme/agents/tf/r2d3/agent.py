@@ -214,16 +214,8 @@ def _sequence_from_episode(observations: acme_types.NestedTensor,
     return tf.zeros([sequence_length] + spec.shape, spec.dtype)
 
   e_t = tree.map_structure(_sequence_zeros, extra_spec)
-
-  key = tf.zeros([], tf.uint64)
-  probability = tf.ones([], tf.float64)
-  table_size = tf.ones([], tf.int64)
-  priority = tf.ones([], tf.float64)
-  info = reverb.SampleInfo(
-      key=key,
-      probability=probability,
-      table_size=table_size,
-      priority=priority)
+  info = tree.map_structure(lambda dtype: tf.ones([], dtype),
+                            reverb.SampleInfo.tf_dtypes())
   return reverb.ReplaySample(
       info=info,
       data=adders.Step(

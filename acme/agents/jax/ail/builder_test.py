@@ -32,8 +32,14 @@ class BuilderTest(jtu.JaxTestCase):
     data1 = types.Transition(np.array([[4], [5], [6]]), (), _REWARD, (), ())
     data2 = types.Transition(np.array([[7], [8], [9]]), (), _REWARD, (), ())
     it1 = iter([
-        reverb.ReplaySample(info=reverb.SampleInfo((), (), (), ()), data=data1),
-        reverb.ReplaySample(info=reverb.SampleInfo((), (), (), ()), data=data2)
+        reverb.ReplaySample(
+            info=reverb.SampleInfo(
+                *[() for _ in reverb.SampleInfo.tf_dtypes()]),
+            data=data1),
+        reverb.ReplaySample(
+            info=reverb.SampleInfo(
+                *[() for _ in reverb.SampleInfo.tf_dtypes()]),
+            data=data2)
     ])
 
     weighted_it = builder._generate_samples_with_demonstrations(

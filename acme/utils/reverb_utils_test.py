@@ -46,7 +46,7 @@ class ReverbUtilsTest(absltest.TestCase):
 
     self.assertEqual(new_info, table.info)
 
-  _EMPTY_INFO = reverb.SampleInfo((), (), (), ())
+  _EMPTY_INFO = reverb.SampleInfo(*[() for _ in reverb.SampleInfo.tf_dtypes()])
   _DUMMY_OBS = np.array([[[0], [1], [2]]])
   _DUMMY_ACTION = np.array([[[3], [4], [5]]])
   _DUMMY_REWARD = np.array([[6, 7, 8]])

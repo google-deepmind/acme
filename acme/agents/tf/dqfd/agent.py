@@ -206,14 +206,7 @@ def _n_step_transition_from_episode(observations: acme_types.NestedTensor,
   # g^{n-1} * d_{t} * ... * d_{t+n-1}.
   d_t = discounts[-1]
 
-  key = tf.constant(0, tf.uint64)
-  probability = tf.constant(1.0, tf.float64)
-  table_size = tf.constant(1, tf.int64)
-  priority = tf.constant(1.0, tf.float64)
-  info = reverb.SampleInfo(
-      key=key,
-      probability=probability,
-      table_size=table_size,
-      priority=priority)
+  info = tree.map_structure(lambda dtype: tf.ones([], dtype),
+                            reverb.SampleInfo.tf_dtypes())
   return reverb.ReplaySample(
       info=info, data=acme_types.Transition(o_t, a_t, r_t, d_t, o_tp1))
