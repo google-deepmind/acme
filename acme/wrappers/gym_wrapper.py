@@ -62,8 +62,14 @@ class GymWrapper(dm_env.Environment):
     self._reset_next_step = done
     self._last_info = info
 
-    reward = tree.map_structure(lambda x, t: np.asarray(x, dtype=t.dtype),
-                                reward, self.reward_spec())
+    # Convert the type of the reward based on the spec, respecting the scalar or
+    # array property.
+    reward = tree.map_structure(
+        lambda x, t: (  # pylint: disable=g-long-lambda
+            t.dtype.type(x)
+            if np.isscalar(x) else np.asarray(x, dtype=t.dtype)),
+        reward,
+        self.reward_spec())
 
     if done:
       truncated = info.get('TimeLimit.truncated', False)
@@ -147,7 +153,8 @@ def _convert_to_spec(space: gym.Space,
 
   elif isinstance(space, spaces.Dict):
     return {
-        key: _convert_to_spec(value, key) for key, value in space.spaces.items()
+        key: _convert_to_spec(value, key)
+        for key, value in space.spaces.items()
     }
 
   else:

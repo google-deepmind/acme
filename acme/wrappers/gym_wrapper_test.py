@@ -50,7 +50,6 @@ else:
   del atari_py
 
 
-@unittest.skipIf(SKIP_ATARI_TESTS, SKIP_ATARI_MESSAGE)
 @unittest.skipIf(SKIP_GYM_TESTS, SKIP_GYM_MESSAGE)
 class GymWrapperTest(absltest.TestCase):
 
@@ -79,17 +78,23 @@ class GymWrapperTest(absltest.TestCase):
     self.assertTrue(timestep.first())
     timestep = env.step(1)
     self.assertEqual(timestep.reward, 1.0)
+    self.assertTrue(np.isscalar(timestep.reward))
     self.assertEqual(timestep.observation.shape, (4,))
     env.close()
 
   def test_early_truncation(self):
-    # Pendulum has no early termination condition.
-    gym_env = gym.make('Pendulum-v0')
+    # Pendulum has no early termination condition. Recent versions of gym force
+    # to use v1. We try both in case an earlier version is installed.
+    try:
+      gym_env = gym.make('Pendulum-v1')
+    except:  # pylint: disable=bare-except
+      gym_env = gym.make('Pendulum-v0')
     env = gym_wrapper.GymWrapper(gym_env)
     ts = env.reset()
     while not ts.last():
       ts = env.step(env.action_spec().generate_value())
     self.assertEqual(ts.discount, 1.0)
+    self.assertTrue(np.isscalar(ts.reward))
     env.close()
 
   def test_multi_discrete(self):
@@ -104,7 +109,6 @@ class GymWrapperTest(absltest.TestCase):
 
 
 @unittest.skipIf(SKIP_ATARI_TESTS, SKIP_ATARI_MESSAGE)
-@unittest.skipIf(SKIP_GYM_TESTS, SKIP_GYM_MESSAGE)
 class AtariGymWrapperTest(absltest.TestCase):
 
   def test_pong(self):
