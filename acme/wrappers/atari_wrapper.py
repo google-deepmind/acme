@@ -153,7 +153,7 @@ class AtariWrapper(base.EnvironmentWrapper):
       An `Array` specification for the pixel observations.
     """
     if self._to_float:
-      pixels_dtype = np.float
+      pixels_dtype = float
     else:
       pixels_dtype = np.uint8
 
@@ -328,7 +328,7 @@ class AtariWrapper(base.EnvironmentWrapper):
     return self._observation_spec
 
   def reward_spec(self) -> specs.Array:
-    return specs.Array(shape=(), dtype=np.float)
+    return specs.Array(shape=(), dtype=float)
 
   @property
   def raw_observation(self) -> np.ndarray:
