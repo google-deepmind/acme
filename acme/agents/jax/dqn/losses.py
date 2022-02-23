@@ -176,13 +176,15 @@ class PrioritizedCategoricalDoubleQLearning(learning_lib.LossFn):
 
 @dataclasses.dataclass
 class QLearning(learning_lib.LossFn):
-  """Clipped q learning.
+  """Deep q learning.
 
   This matches the original DQN loss: https://arxiv.org/abs/1312.5602.
+  It differs by two aspects that improve it on the optimization side
+    - it uses Adam intead of RMSProp as an optimizer
+    - it uses a square loss instead of the Huber one.
   """
   discount: float = 0.99
   max_abs_reward: float = 1.
-  huber_loss_parameter: float = 1.
 
   def __call__(
       self,
@@ -208,7 +210,7 @@ class QLearning(learning_lib.LossFn):
     # Compute Q-learning TD-error.
     batch_error = jax.vmap(rlax.q_learning)
     td_error = batch_error(q_tm1, transitions.action, r_t, d_t, q_t)
-    batch_loss = rlax.huber_loss(td_error, self.huber_loss_parameter)
+    batch_loss = jnp.square(td_error)
 
     loss = jnp.mean(batch_loss)
     extra = learning_lib.LossExtra(metrics={})
