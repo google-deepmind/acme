@@ -28,7 +28,7 @@ class DistributedAgentTest(absltest.TestCase):
 
   def test_agent(self):
 
-    env_factory = lambda x: fakes.fake_atari_wrapped(oar_wrapper=True)
+    env_factory = lambda seed: fakes.fake_atari_wrapped(oar_wrapper=True)
 
     config = r2d2.R2D2Config(
         batch_size=1,
@@ -47,9 +47,10 @@ class DistributedAgentTest(absltest.TestCase):
         clip_rewards=False,
         variable_update_period=400)
 
+    dummy_seed = 1
     agent = r2d2.DistributedR2D2FromConfig(
         environment_factory=env_factory,
-        environment_spec=acme.make_environment_spec(env_factory(False)),
+        environment_spec=acme.make_environment_spec(env_factory(dummy_seed)),
         network_factory=functools.partial(r2d2.make_atari_networks,
                                           config.batch_size),
         config=config,

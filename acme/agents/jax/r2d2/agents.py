@@ -22,12 +22,12 @@ from acme import specs
 from acme.agents.jax.r2d2 import builder
 from acme.agents.jax.r2d2 import config as r2d2_config
 from acme.agents.jax.r2d2 import networks as r2d2_networks
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
-import dm_env
 import haiku as hk
 import rlax
 
@@ -40,7 +40,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
 
   def __init__(
       self,
-      environment_factory: Callable[[bool], dm_env.Environment],
+      environment_factory: jax_types.EnvironmentFactory,
       environment_spec: specs.EnvironmentSpec,
       network_factory: NetworkFactory,
       config: r2d2_config.R2D2Config,
@@ -69,14 +69,14 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
           lambda n: r2d2_networks.make_behavior_policy(n, config, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda seed: environment_factory(True),
+              environment_factory=environment_factory,
               network_factory=network_factory,
               policy_factory=evaluator_policy_network_factory,
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda seed: environment_factory(False),
+        environment_factory=environment_factory,
         network_factory=network_factory,
         builder=r2d2_builder,
         policy_network=policy_network_factory,
@@ -89,8 +89,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
             log_to_bigtable, log_every),
         prefetch_size=config.prefetch_size,
         checkpointing_config=distributed_layout.CheckpointingConfig(
-            directory=workdir,
-            add_uid=(workdir == '~/acme')))
+            directory=workdir, add_uid=(workdir == '~/acme')))
 
 
 class DistributedR2D2(DistributedR2D2FromConfig):
@@ -98,7 +97,7 @@ class DistributedR2D2(DistributedR2D2FromConfig):
 
   def __init__(
       self,
-      environment_factory: Callable[[bool], dm_env.Environment],
+      environment_factory: jax_types.EnvironmentFactory,
       environment_spec: specs.EnvironmentSpec,
       forward: hk.Transformed,
       unroll: hk.Transformed,
@@ -125,7 +124,7 @@ class DistributedR2D2(DistributedR2D2FromConfig):
       discount: float = 0.997,
       variable_update_period: int = 400,
       seed: int = 1,
-    ):
+  ):
     config = r2d2_config.R2D2Config(
         discount=discount,
         target_update_period=target_update_period,
