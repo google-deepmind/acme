@@ -26,7 +26,7 @@ class CQLTest(absltest.TestCase):
 
   def test_train(self):
     seed = 0
-    num_iterations = 5
+    num_iterations = 2
     batch_size = 64
 
     # Create a fake environment to test with.
