@@ -23,12 +23,12 @@ from acme.agents.jax import normalization
 from acme.agents.jax.ppo import builder
 from acme.agents.jax.ppo import config as ppo_config
 from acme.agents.jax.ppo import networks as ppo_networks
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
-import dm_env
 
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], ppo_networks.PPONetworks]
@@ -39,7 +39,7 @@ class DistributedPPO(distributed_layout.DistributedLayout):
 
   def __init__(
       self,
-      environment_factory: Callable[[bool], dm_env.Environment],
+      environment_factory: jax_types.EnvironmentFactory,
       network_factory: NetworkFactory,
       config: ppo_config.PPOConfig,
       seed: int,
@@ -62,7 +62,9 @@ class DistributedPPO(distributed_layout.DistributedLayout):
         steps_key='learner_steps')
     ppo_builder = builder.PPOBuilder(config, logger_fn=logger_fn)
     if normalize_input:
-      environment_spec = specs.make_environment_spec(environment_factory(False))
+      dummy_seed = 1
+      environment_spec = specs.make_environment_spec(
+          environment_factory(dummy_seed))
       # Two batch dimensions: [num_sequences, num_steps, ...]
       batch_dims = (0, 1)
       ppo_builder = normalization.NormalizationBuilder(
@@ -75,14 +77,14 @@ class DistributedPPO(distributed_layout.DistributedLayout):
           lambda networks: ppo_networks.make_inference_fn(networks, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
-              environment_factory=lambda seed: environment_factory(True),
+              environment_factory=environment_factory,
               network_factory=network_factory,
               policy_factory=eval_policy_factory,
               log_to_bigtable=save_reverb_logs)
       ]
     super().__init__(
         seed=seed,
-        environment_factory=lambda seed: environment_factory(False),
+        environment_factory=environment_factory,
         network_factory=network_factory,
         builder=ppo_builder,
         policy_network=ppo_networks.make_inference_fn,
