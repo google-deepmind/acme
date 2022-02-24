@@ -12,10 +12,10 @@ similar to Rainbow DQN ([Hessel et al., 2017]).
 *   Prioritized experience replay ([Schaul et al., 2015]).
 
 This DQN implementation has a configurable loss. In losses.py, you can find
-ready-to-use implmentations of other methods related to DQN.
+ready-to-use implementations of other methods related to DQN.
 
 * Vanilla Deep Q-learning [Mnih et al., 2013], with two optimization tweaks
-  (Adam intead of RMSProp, square innstead of Huber, as suggested e.g. by
+  (Adam intead of RMSProp, square instead of Huber, as suggested e.g. by
   [Obando-Ceron et al., 2020]).
 * Quantile regression DQN (QrDQN) [Dabney et al., 2017]
 * Categorical DQN (C51) [Bellemare et al., 2017]
