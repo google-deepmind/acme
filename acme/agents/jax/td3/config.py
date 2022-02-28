@@ -54,3 +54,8 @@ class TD3Config:
 
   # How many gradient updates to perform per step.
   num_sgd_steps_per_step: int = 1
+
+  # Offline RL options
+  # if bc_alpha: if given, will add a bc regularization term to the policy loss,
+  # (https://arxiv.org/pdf/2106.06860.pdf), useful for offline training.
+  bc_alpha: Optional[float] = None

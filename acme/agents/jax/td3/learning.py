@@ -63,6 +63,7 @@ class TD3Learner(acme.Learner):
                target_sigma: float = 0.2,
                noise_clip: float = 0.5,
                tau: float = 0.005,
+               bc_alpha: Optional[float] = None,
                counter: Optional[counting.Counter] = None,
                logger: Optional[loggers.Logger] = None,
                num_sgd_steps_per_step: int = 1):
@@ -82,6 +83,8 @@ class TD3Learner(acme.Learner):
         the next_state, for critic evaluation (reducing overestimation bias).
       noise_clip: hard constraint on target noise.
       tau: target parameters smoothing coefficient.
+      bc_alpha: bc_alpha: Implements TD3+BC.
+        See comments in TD3Config.bc_alpha for details.
       counter: counter object used to keep track of steps.
       logger: logger object to be used by learner.
       num_sgd_steps_per_step: number of sgd steps to perform per learner 'step'.
@@ -90,16 +93,21 @@ class TD3Learner(acme.Learner):
     def policy_loss(
         policy_params: networks_lib.Params,
         critic_params: networks_lib.Params,
-        observation: types.NestedArray,
+        transition: types.NestedArray,
     ) -> jnp.ndarray:
       # Computes the discrete policy gradient loss.
-      action = networks.policy_network.apply(policy_params, observation)
+      action = networks.policy_network.apply(
+          policy_params, transition.observation)
       grad_critic = jax.vmap(
           jax.grad(networks.critic_network.apply, argnums=2),
           in_axes=(None, 0, 0))
-      dq_da = grad_critic(critic_params, observation, action)
+      dq_da = grad_critic(critic_params, transition.observation, action)
       batch_dpg_learning = jax.vmap(rlax.dpg_loss, in_axes=(0, 0))
       loss = batch_dpg_learning(action, dq_da)
+      if bc_alpha is not None:
+        # BC regularization for offline RL
+        bc_factor = jax.lax.stop_gradient(bc_alpha / jnp.mean(jnp.abs(dq_da)))
+        loss += jnp.mean(jnp.square(action - transition.action)) / bc_factor
       return jnp.mean(loss)
 
     def critic_loss(
@@ -173,8 +181,7 @@ class TD3Learner(acme.Learner):
       # Polyak averaging (if delay enabled, the update might not be applied).
       policy_loss_and_grad = jax.value_and_grad(policy_loss)
       policy_loss_value, policy_gradients = policy_loss_and_grad(
-          state.policy_params, state.critic_params,
-          transitions.next_observation)
+          state.policy_params, state.critic_params, transitions)
       def update_policy_step():
         policy_updates, policy_opt_state = policy_optimizer.update(
             policy_gradients, state.policy_opt_state)

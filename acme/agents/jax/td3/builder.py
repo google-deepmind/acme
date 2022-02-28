@@ -80,6 +80,7 @@ class TD3Builder(builders.ActorLearnerBuilder):
         critic_optimizer=critic_optimizer,
         twin_critic_optimizer=twin_critic_optimizer,
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
+        bc_alpha=self._config.bc_alpha,
         iterator=dataset,
         logger=self._logger_fn(),
         counter=counter)
