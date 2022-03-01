@@ -13,10 +13,11 @@
 # limitations under the License.
 
 """Offline losses used in variants of BC."""
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Tuple, Union
 
 from acme import types
 from acme.jax import networks as networks_lib
+from acme.utils import loggers
 import jax
 import jax.numpy as jnp
 
@@ -25,13 +26,16 @@ ModelOutput = Any
 SampleFn = Callable[[ModelOutput, networks_lib.PRNGKey], networks_lib.Action]
 LogProb = jnp.ndarray
 LogProbFn = Callable[[ModelOutput, networks_lib.Action], LogProb]
-Loss = Callable[[
-    Callable[..., networks_lib.NetworkOutput], networks_lib.Params, networks_lib
-    .PRNGKey, types.Transition
-], jnp.ndarray]
+loss_args = [
+    Callable[..., networks_lib.NetworkOutput], networks_lib.Params,
+    networks_lib.PRNGKey, types.Transition
+]
+LossWithoutAux = Callable[loss_args, jnp.ndarray]
+LossWithAux = Callable[loss_args, Tuple[jnp.ndarray, loggers.LoggingData]]
+Loss = Union[LossWithoutAux, LossWithAux]
 
 
-def mse(sample_fn: SampleFn) -> Loss:
+def mse(sample_fn: SampleFn) -> LossWithoutAux:
   """Mean Squared Error loss.
 
   Args:
@@ -52,11 +56,12 @@ def mse(sample_fn: SampleFn) -> Loss:
   return loss
 
 
-def logp(logp_fn: LogProbFn) -> Loss:
+def logp(logp_fn: LogProbFn) -> LossWithoutAux:
   """Log probability loss.
 
   Args:
     logp_fn: a method that returns the log probability of an action.
+
   Returns:
     The loss.
   """
@@ -72,7 +77,7 @@ def logp(logp_fn: LogProbFn) -> Loss:
   return loss
 
 
-def peerbc(base_loss_fn: Loss, zeta: float) -> Loss:
+def peerbc(base_loss_fn: Loss, zeta: float) -> LossWithoutAux:
   """Peer-BC loss from https://arxiv.org/pdf/2010.01748.pdf.
 
   Args:
@@ -96,13 +101,14 @@ def peerbc(base_loss_fn: Loss, zeta: float) -> Loss:
     permuted_loss = base_loss_fn(apply_fn, params, key_permuted_loss,
                                  permuted_transition)
     return bc_loss - zeta * permuted_loss
+
   return loss
 
 
 def rcal(base_loss_fn: Loss,
          discount: float,
          alpha: float,
-         num_bins: Optional[int] = None) -> Loss:
+         num_bins: Optional[int] = None) -> LossWithoutAux:
   """https://www.cristal.univ-lille.fr/~pietquin/pdf/AAMAS_2014_BPMGOP.pdf.
 
   Args:
@@ -115,9 +121,10 @@ def rcal(base_loss_fn: Loss,
     The loss function.
   """
 
-  def loss(apply_fn: Callable[..., networks_lib.NetworkOutput],
-           params: networks_lib.Params, key: jnp.ndarray,
-           transitions: types.Transition) -> jnp.ndarray:
+  def loss(
+      apply_fn: Callable[..., networks_lib.NetworkOutput],
+      params: networks_lib.Params, key: jnp.ndarray,
+      transitions: types.Transition) -> jnp.ndarray:
 
     def logits_fn(key, observations, actions=None):
       logits = apply_fn(params, observations, key=key, is_training=True)
@@ -145,4 +152,5 @@ def rcal(base_loss_fn: Loss,
 
     loss = base_loss_fn(apply_fn, params, key, transitions)
     return loss + alpha * regularization_loss
+
   return loss

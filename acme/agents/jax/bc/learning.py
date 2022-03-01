@@ -15,7 +15,7 @@
 """BC learner implementation."""
 
 import time
-from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
+from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
 
 import acme
 from acme import types
@@ -37,6 +37,36 @@ class TrainingState(NamedTuple):
   steps: int
 
 
+def _create_loss_metrics(
+    loss_has_aux: bool,
+    loss_result: Union[jnp.ndarray, Tuple[jnp.ndarray, loggers.LoggingData]],
+    gradients: jnp.ndarray,
+):
+  """Creates loss metrics for logging."""
+  # Validate input.
+  if loss_has_aux and not (len(loss_result) == 2 and isinstance(
+      loss_result[0], jnp.ndarray) and isinstance(loss_result[1], dict)):
+    raise ValueError('Could not parse loss value and metrics from loss_fn\'s '
+                     'output. Since loss_has_aux is enabled, loss_fn must '
+                     'return loss_value and auxiliary metrics.')
+
+  if not loss_has_aux and not isinstance(loss_result, jnp.ndarray):
+    raise ValueError(f'Loss returns type {loss_result}. However, it should '
+                     'return a jnp.ndarray, given that loss_has_aux = False.')
+
+  # Maybe unpack loss result.
+  if loss_has_aux:
+    loss, metrics = loss_result
+  else:
+    loss = loss_result
+    metrics = {}
+
+  # Complete metrics dict and return it.
+  metrics['loss'] = loss
+  metrics['gradient_norm'] = optax.global_norm(gradients)
+  return metrics
+
+
 class BCLearner(acme.Learner):
   """BC learner.
 
@@ -53,6 +83,7 @@ class BCLearner(acme.Learner):
                optimizer: optax.GradientTransformation,
                demonstrations: Iterator[types.Transition],
                num_sgd_steps_per_step: int,
+               loss_has_aux: bool = False,
                logger: Optional[loggers.Logger] = None,
                counter: Optional[counting.Counter] = None):
     """Behavior Cloning Learner.
@@ -67,23 +98,27 @@ class BCLearner(acme.Learner):
       optimizer: Optax optimizer.
       demonstrations: Demonstrations iterator.
       num_sgd_steps_per_step: Number of gradient updates per step.
-      logger: Logger
-      counter: Counter
+      loss_has_aux: Whether the loss function returns auxiliary metrics as a
+        second argument.
+      logger: Logger.
+      counter: Counter.
     """
     def sgd_step(
         state: TrainingState,
         transitions: types.Transition,
     ) -> Tuple[TrainingState, Dict[str, jnp.ndarray]]:
 
-      loss_and_grad = jax.value_and_grad(loss_fn, argnums=1)
+      loss_and_grad = jax.value_and_grad(
+          loss_fn, argnums=1, has_aux=loss_has_aux)
 
       # Compute losses and their gradients.
       key, key_input = jax.random.split(state.key)
-      loss_value, gradients = loss_and_grad(network.apply, state.policy_params,
-                                            key_input, transitions)
+      loss_result, gradients = loss_and_grad(network.apply, state.policy_params,
+                                             key_input, transitions)
 
-      policy_update, optimizer_state = optimizer.update(
-          gradients, state.optimizer_state, state.policy_params)
+      policy_update, optimizer_state = optimizer.update(gradients,
+                                                        state.optimizer_state,
+                                                        state.policy_params)
       policy_params = optax.apply_updates(state.policy_params, policy_update)
 
       new_state = TrainingState(
@@ -92,12 +127,9 @@ class BCLearner(acme.Learner):
           key=key,
           steps=state.steps + 1,
       )
-      metrics = {
-          'loss': loss_value,
-          'gradient_norm': optax.global_norm(gradients)
-      }
 
-      return new_state, metrics
+      return new_state, _create_loss_metrics(loss_has_aux, loss_result,
+                                             gradients)
 
     # General learner book-keeping and loggers.
     self._counter = counter or counting.Counter(prefix='learner')
