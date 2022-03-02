@@ -93,6 +93,8 @@ class FeedForwardActor(core.Actor):
     if self._variable_client:
       self._variable_client.update(wait)
 
+# Placeholder for an FeedForwardActor alias
+
 
 class RecurrentActor(core.Actor):
   """A recurrent actor.
@@ -183,6 +185,7 @@ class RecurrentActor(core.Actor):
     if self._variable_client:
       self._variable_client.update(wait)
 
+# Placeholder for an RecurrentActor alias
 
 # Internal class 1.
 # Internal class 2.

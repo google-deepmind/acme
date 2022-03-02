@@ -45,9 +45,5 @@ def runtime_terminator(callback: Optional[_Handler] = None):
         ctypes.c_long(worker_id), ctypes.py_object(SystemExit))
     assert res < 2, 'Stopping worker failed'
   launchpad.register_stop_handler(signal_handler)
-  try:
-    yield
-  except SystemExit:
-    pass
-  finally:
-    launchpad.unregister_stop_handler(signal_handler)
+  yield
+  launchpad.unregister_stop_handler(signal_handler)
