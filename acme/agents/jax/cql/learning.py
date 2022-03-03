@@ -390,7 +390,7 @@ class CQLLearner(acme.Learner):
     self._update_step = jax.jit(self._update_step)
 
     # Create initial state.
-    key_policy, key_q, _ = jax.random.split(random_key, 3)
+    key_policy, key_q, random_key = jax.random.split(random_key, 3)
     policy_params = networks.policy_network.init(key_policy)
     policy_optimizer_state = policy_optimizer.init(policy_params)
     critic_params = networks.critic_network.init(key_q)
