@@ -142,4 +142,7 @@ class OpenSpielWrapper(dm_env.Environment):
 
   def __getattr__(self, name: str):
     """Expose any other attributes of the underlying environment."""
+    if name.startswith("__"):
+      raise AttributeError(
+          "attempted to get missing private attribute '{}'".format(name))
     return getattr(self._environment, name)
