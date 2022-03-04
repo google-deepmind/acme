@@ -63,6 +63,7 @@ class TD3Learner(acme.Learner):
                target_sigma: float = 0.2,
                noise_clip: float = 0.5,
                tau: float = 0.005,
+               use_sarsa_target: bool = False,
                bc_alpha: Optional[float] = None,
                counter: Optional[counting.Counter] = None,
                logger: Optional[loggers.Logger] = None,
@@ -83,6 +84,13 @@ class TD3Learner(acme.Learner):
         the next_state, for critic evaluation (reducing overestimation bias).
       noise_clip: hard constraint on target noise.
       tau: target parameters smoothing coefficient.
+      use_sarsa_target: compute on-policy target using iterator's actions rather
+        than sampled actions.
+        Useful for 1-step offline RL (https://arxiv.org/pdf/2106.08909.pdf).
+        When set to `True`, `target_policy_params` are unused.
+        This is only working when the learner is used as an offline algorithm.
+        I.e. TD3Builder does not support adding the SARSA target to the replay
+        buffer.
       bc_alpha: bc_alpha: Implements TD3+BC.
         See comments in TD3Config.bc_alpha for details.
       counter: counter object used to keep track of steps.
@@ -120,19 +128,25 @@ class TD3Learner(acme.Learner):
       q_tm1 = networks.critic_network.apply(
           critic_params, transition.observation, transition.action)
 
-      action = networks.policy_network.apply(state.target_policy_params,
-                                             transition.next_observation)
-      action_with_noise = networks.add_policy_noise(action, random_key,
-                                                    target_sigma, noise_clip)
+      if use_sarsa_target:
+        # TODO(b/222674779): use N-steps Trajectories to get the next actions.
+        assert 'next_action' in transition.extras, (
+            'next actions should be given as extras for one step RL.')
+        action = transition.extras['next_action']
+      else:
+        action = networks.policy_network.apply(state.target_policy_params,
+                                               transition.next_observation)
+        action = networks.add_policy_noise(action, random_key,
+                                           target_sigma, noise_clip)
 
       q_t = networks.critic_network.apply(
           state.target_critic_params,
           transition.next_observation,
-          action_with_noise)
+          action)
       twin_q_t = networks.twin_critic_network.apply(
           state.target_twin_critic_params,
           transition.next_observation,
-          action_with_noise)
+          action)
 
       q_t = jnp.minimum(q_t, twin_q_t)
 
