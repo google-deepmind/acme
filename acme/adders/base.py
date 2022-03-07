@@ -81,5 +81,3 @@ class Adder(abc.ABC):
   def reset(self):
     """Resets the adder's buffer."""
 
-# Placeholder for an Adder alias
-

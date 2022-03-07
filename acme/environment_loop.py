@@ -179,8 +179,6 @@ class EnvironmentLoop(core.Worker):
         # Log the given episode results.
         self._logger.write(result)
 
-# Placeholder for an EnvironmentLoop alias
-
 
 def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
   return np.zeros(spec.shape, spec.dtype)

@@ -60,8 +60,6 @@ class Actor(core.Actor):
   def update(self, wait: bool = False):
     self.num_updates += 1
 
-# Placeholder for an Actor alias
-
 
 class VariableSource(core.VariableSource):
   """Fake variable source."""

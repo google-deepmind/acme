@@ -108,8 +108,6 @@ class VariableSource(abc.ABC):
       corresponds to the collection named by `names[i]`.
     """
 
-# Placeholder for an Actor alias
-
 
 @metrics.record_class_usage
 class Worker(abc.ABC):
