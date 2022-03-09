@@ -27,7 +27,6 @@ from acme.utils import loggers
 import jax
 import jax.numpy as jnp
 import optax
-import reverb
 import rlax
 
 
@@ -55,7 +54,7 @@ class TD3Learner(acme.Learner):
                networks: td3_networks.TD3Networks,
                random_key: networks_lib.PRNGKey,
                discount: float,
-               iterator: Iterator[reverb.ReplaySample],
+               iterator: Iterator[types.Transition],
                policy_optimizer: optax.GradientTransformation,
                critic_optimizer: optax.GradientTransformation,
                twin_critic_optimizer: optax.GradientTransformation,
@@ -290,10 +289,7 @@ class TD3Learner(acme.Learner):
     self._timestamp = None
 
   def step(self):
-    # Get data from replay (dropping extras if any). Note there is no
-    # extra data here because we do not insert any into Reverb.
-    sample = next(self._iterator)
-    transitions = types.Transition(*sample.data)
+    transitions = next(self._iterator)
 
     self._state, metrics = self._update_step(self._state, transitions)
 
