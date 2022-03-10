@@ -52,6 +52,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
       log_every: float = 10.0,
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
+      max_number_of_steps: Optional[int] = None,
   ):
     logger_fn = functools.partial(loggers.make_default_logger,
                                   'learner', log_to_bigtable,
@@ -89,7 +90,8 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
             log_to_bigtable, log_every),
         prefetch_size=config.prefetch_size,
         checkpointing_config=distributed_layout.CheckpointingConfig(
-            directory=workdir, add_uid=(workdir == '~/acme')))
+            directory=workdir, add_uid=(workdir == '~/acme')),
+        max_number_of_steps=max_number_of_steps)
 
 
 class DistributedR2D2(DistributedR2D2FromConfig):
@@ -123,6 +125,7 @@ class DistributedR2D2(DistributedR2D2FromConfig):
       evaluator_epsilon: float = 0.,
       discount: float = 0.997,
       variable_update_period: int = 400,
+      max_number_of_steps: Optional[int] = None,
       seed: int = 1,
   ):
     config = r2d2_config.R2D2Config(
@@ -158,6 +161,7 @@ class DistributedR2D2(DistributedR2D2FromConfig):
         network_factory=network_factory,
         config=config,
         num_actors=num_actors,
+        max_number_of_steps=max_number_of_steps,
     )
 
 
