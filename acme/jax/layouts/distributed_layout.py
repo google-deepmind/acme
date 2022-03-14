@@ -43,6 +43,9 @@ NetworkFactory = Callable[[specs.EnvironmentSpec], AgentNetwork]
 PolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
 MakeActorFn = Callable[[types.PRNGKey, PolicyNetwork, core.VariableSource],
                        core.Actor]
+LoggerLabel = str
+LoggerStepsKey = str
+LoggerFn = Callable[[LoggerLabel, LoggerStepsKey], loggers.Logger]
 EvaluatorFactory = Callable[[
     types.PRNGKey,
     core.VariableSource,
@@ -70,7 +73,8 @@ def default_evaluator_factory(
     network_factory: NetworkFactory,
     policy_factory: PolicyFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
-    log_to_bigtable: bool = False) -> EvaluatorFactory:
+    log_to_bigtable: bool = False,
+    logger_fn: Optional[LoggerFn] = None) -> EvaluatorFactory:
   """Returns a default evaluator process."""
   def evaluator(
       random_key: networks_lib.PRNGKey,
@@ -90,8 +94,11 @@ def default_evaluator_factory(
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'evaluator')
-    logger = loggers.make_default_logger('evaluator', log_to_bigtable,
-                                         steps_key='actor_steps')
+    if logger_fn is not None:
+      logger = logger_fn('evaluator', 'actor_steps')
+    else:
+      logger = loggers.make_default_logger(
+          'evaluator', log_to_bigtable, steps_key='actor_steps')
 
     # Create the run loop and return it.
     return environment_loop.EnvironmentLoop(environment, actor, counter,
