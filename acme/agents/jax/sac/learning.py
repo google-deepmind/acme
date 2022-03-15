@@ -222,6 +222,10 @@ class SACLearner(acme.Learner):
               jax.tree_map(lambda x: jnp.std(x, axis=0),
                            transitions.next_observation)))
 
+      metrics['rewards_mean'] = jnp.mean(
+          jnp.abs(jnp.mean(transitions.reward, axis=0)))
+      metrics['rewards_std'] = jnp.std(transitions.reward, axis=0)
+
       return new_state, metrics
 
     # General learner book-keeping and loggers.
