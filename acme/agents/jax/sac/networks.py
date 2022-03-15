@@ -18,9 +18,11 @@
 import dataclasses
 from typing import Optional, Tuple
 
+from acme import core
 from acme import specs
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.jax import networks as networks_lib
+from acme.jax import types
 from acme.jax import utils
 import haiku as hk
 import jax
@@ -36,6 +38,42 @@ class SACNetworks:
   log_prob: networks_lib.LogProbFn
   sample: networks_lib.SampleFn
   sample_eval: Optional[networks_lib.SampleFn] = None
+
+
+def default_models_to_snapshot(
+    networks: SACNetworks,
+    spec: specs.EnvironmentSpec):
+  """Defines default models to be snapshotted."""
+  dummy_obs = utils.zeros_like(spec.observations)
+  dummy_action = utils.zeros_like(spec.actions)
+  dummy_key = jax.random.PRNGKey(0)
+
+  def q_network(
+      source: core.VariableSource) -> types.ModelToSnapshot:
+    params = source.get_variables(['critic'])[0]
+    return types.ModelToSnapshot(
+        networks.q_network.apply, params,
+        {'obs': dummy_obs, 'action': dummy_action})
+
+  def default_training_actor(
+      source: core.VariableSource) -> types.ModelToSnapshot:
+    params = source.get_variables(['policy'])[0]
+    return types.ModelToSnapshot(apply_policy_and_sample(networks, False),
+                                 params,
+                                 {'key': dummy_key, 'obs': dummy_obs})
+
+  def default_eval_actor(
+      source: core.VariableSource) -> types.ModelToSnapshot:
+    params = source.get_variables(['policy'])[0]
+    return types.ModelToSnapshot(
+        apply_policy_and_sample(networks, True), params,
+        {'key': dummy_key, 'obs': dummy_obs})
+
+  return {
+      'q_network': q_network,
+      'default_training_actor': default_training_actor,
+      'default_eval_actor': default_eval_actor,
+  }
 
 
 def apply_policy_and_sample(

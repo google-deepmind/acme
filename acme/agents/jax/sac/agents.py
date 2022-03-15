@@ -92,6 +92,8 @@ class DistributedSAC(distributed_layout.DistributedLayout):
         log_to_bigtable=log_to_bigtable,
         actor_logger_fn=distributed_layout.get_default_logger_fn(
             log_to_bigtable, log_every),
+        checkpointing_config=distributed_layout.CheckpointingConfig(),
+        make_snapshot_models=networks.default_models_to_snapshot,
     )
 
 

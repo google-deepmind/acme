@@ -15,7 +15,8 @@
 
 """Common JAX type definitions."""
 
-from typing import Callable, Generic, Mapping, TypeVar
+import dataclasses
+from typing import Any, Callable, Dict, Generic, Mapping, TypeVar
 
 from acme import types
 import chex
@@ -51,3 +52,17 @@ class TrainingStepOutput(Generic[TrainingState]):
 
 Seed = int
 EnvironmentFactory = Callable[[Seed], dm_env.Environment]
+
+
+@dataclasses.dataclass
+class ModelToSnapshot:
+  """Stores all necessary info to be able to save a model.
+
+  Attributes:
+    model: a jax function to be saved.
+    params: fixed params to be passed to the function.
+    dummy_kwargs: arguments to be passed to the function.
+  """
+  model: Any  # Callable[params, **dummy_kwargs]
+  params: Any
+  dummy_kwargs: Dict[str, Any]

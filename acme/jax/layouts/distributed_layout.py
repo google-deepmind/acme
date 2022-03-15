@@ -17,7 +17,7 @@
 
 import dataclasses
 import logging
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence, Dict
 
 from acme import core
 from acme import environment_loop
@@ -52,6 +52,11 @@ EvaluatorFactory = Callable[[
     counting.Counter,
     MakeActorFn,
 ], core.Worker]
+
+
+SnapshotModelFactory = Callable[
+    [AgentNetwork, specs.EnvironmentSpec],
+    Dict[str, Callable[[core.VariableSource], types.ModelToSnapshot]]]
 
 
 def get_default_logger_fn(
@@ -138,7 +143,8 @@ class DistributedLayout:
                max_number_of_steps: Optional[int] = None,
                observers: Sequence[observers_lib.EnvLoopObserver] = (),
                multithreading_colocate_learner_and_reverb: bool = False,
-               checkpointing_config: Optional[CheckpointingConfig] = None):
+               checkpointing_config: Optional[CheckpointingConfig] = None,
+               make_snapshot_models: Optional[SnapshotModelFactory] = None):
 
     if prefetch_size < 0:
       raise ValueError(f'Prefetch size={prefetch_size} should be non negative')
@@ -162,6 +168,7 @@ class DistributedLayout:
     self._multithreading_colocate_learner_and_reverb = (
         multithreading_colocate_learner_and_reverb)
     self._checkpointing_config = checkpointing_config
+    self._make_snapshot_models = make_snapshot_models
 
   def replay(self):
     """The replay storage."""
@@ -170,6 +177,16 @@ class DistributedLayout:
         self._environment_spec or
         specs.make_environment_spec(self._environment_factory(dummy_seed)))
     return self._builder.make_replay_tables(environment_spec)
+
+  def model_saver(self, variable_source: core.VariableSource):
+    environment = self._environment_factory(0)
+    spec = specs.make_environment_spec(environment)
+    networks = self._network_factory(spec)
+    models = self._make_snapshot_models(networks, spec)
+    # TODO(raveman): Decouple checkpointing and snahpshotting configs.
+    return savers.JAX2TFSaver(variable_source=variable_source, models=models,
+                              path=self._checkpointing_config.directory,
+                              add_uid=self._checkpointing_config.add_uid)
 
   def counter(self):
     kwargs = {}
@@ -306,5 +323,9 @@ class DistributedLayout:
         program.add_node(
             lp.CourierNode(self.actor, actor_key, replay, learner, counter,
                            actor_id))
+
+    if self._make_snapshot_models and self._checkpointing_config:
+      with program.group('model_saver'):
+        program.add_node(lp.CourierNode(self.model_saver, learner))
 
     return program

@@ -18,13 +18,19 @@
 import datetime
 import os
 import pickle
-from typing import Any
+import time
+from typing import Any, Callable, Dict
 
 from absl import logging
 from acme import core
+from acme.jax import types
 from acme.tf import savers as tf_savers
+from acme.utils import signals
+from acme.utils import paths
+from jax.experimental import jax2tf
 import jax.numpy as jnp
 import numpy as np
+import tensorflow as tf
 import tree
 
 # Internal imports.
@@ -95,3 +101,48 @@ class Checkpointer(tf_savers.Checkpointer):
 
 
 CheckpointingRunner = tf_savers.CheckpointingRunner
+
+
+def model_to_tf_module(model: types.ModelToSnapshot) -> tf.Module:
+  def jax_fn_to_save(**kwargs):
+    return model.model(model.params, **kwargs)
+
+  module = tf.Module()
+  module.f = tf.function(jax2tf.convert(jax_fn_to_save), autograph=False)
+  # Traces input to ensure the model has the correct shapes.
+  module.f(**model.dummy_kwargs)
+  return module
+
+
+class JAX2TFSaver(core.Worker):
+  """Periodically fetches new version of params and stores tf.saved_models."""
+
+  def __init__(self,
+               variable_source: core.VariableSource,
+               models: Dict[str, Callable[[core.VariableSource],
+                                          types.ModelToSnapshot]],
+               path: str,
+               add_uid: bool = False):
+    self._variable_source = variable_source
+    self._models = models
+    self._path = paths.process_path(path, add_uid=add_uid)
+
+  # Handle preemption signal. Note that this must happen in the main thread.
+  def _signal_handler(self):
+    logging.info('Caught SIGTERM: forcing models save.')
+    self._save()
+
+  def _save(self):
+    for name, model_fn in self._models.items():
+      model = model_fn(self._variable_source)
+      module = model_to_tf_module(model)
+      model_path = os.path.join(self._path, time.strftime('%Y%m%d-%H%M%S'),
+                                name)
+      tf.saved_model.save(module, model_path)
+
+  def run(self):
+    """Runs the saver."""
+    with signals.runtime_terminator(self._signal_handler):
+      while True:
+        self._save()
+        time.sleep(5 * 60)

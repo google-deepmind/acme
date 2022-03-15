@@ -289,6 +289,7 @@ class SACLearner(acme.Learner):
   def get_variables(self, names: List[str]) -> List[Any]:
     variables = {
         'policy': self._state.policy_params,
+        'critic': self._state.q_params,
     }
     return [variables[name] for name in names]
 
