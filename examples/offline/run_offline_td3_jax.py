@@ -31,7 +31,10 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
+import reverb
 import rlds
+import tensorflow as tf
+import tree
 
 # Agent flags
 flags.DEFINE_integer('batch_size', 64, 'Batch size.')
@@ -66,14 +69,19 @@ FLAGS = flags.FLAGS
 
 
 def _add_next_action_extras(double_transitions: Transition
-                            ) -> Transition:
-  return Transition(
-      observation=double_transitions.observation[0],
-      action=double_transitions.action[0],
-      reward=double_transitions.reward[0],
-      discount=double_transitions.discount[0],
-      next_observation=double_transitions.next_observation[0],
-      extras={'next_action': double_transitions.action[1]})
+                            ) -> reverb.ReplaySample:
+  # As TD3 is online by default, it expects an iterator over replay samples.
+  info = tree.map_structure(lambda dtype: tf.ones([], dtype),
+                            reverb.SampleInfo.tf_dtypes())
+  return reverb.ReplaySample(
+      info=info,
+      data=Transition(
+          observation=double_transitions.observation[0],
+          action=double_transitions.action[0],
+          reward=double_transitions.reward[0],
+          discount=double_transitions.discount[0],
+          next_observation=double_transitions.next_observation[0],
+          extras={'next_action': double_transitions.action[1]}))
 
 
 def main(_):

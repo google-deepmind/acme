@@ -18,7 +18,6 @@ from typing import Callable, Iterator, List, Optional
 from acme import adders
 from acme import core
 from acme import specs
-from acme import types
 from acme.adders import reverb as adders_reverb
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
@@ -57,7 +56,7 @@ class TD3Builder(builders.ActorLearnerBuilder):
       self,
       random_key: networks_lib.PRNGKey,
       networks: td3_networks.TD3Networks,
-      dataset: Iterator[types.Transition],
+      dataset: Iterator[reverb.ReplaySample],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -123,7 +122,7 @@ class TD3Builder(builders.ActorLearnerBuilder):
             environment_spec))]
 
   def make_dataset_iterator(
-      self, replay_client: reverb.Client) -> Iterator[types.Transition]:
+      self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
     """Creates a dataset iterator to use for learning."""
     dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
@@ -132,7 +131,6 @@ class TD3Builder(builders.ActorLearnerBuilder):
             self._config.batch_size * self._config.num_sgd_steps_per_step),
         prefetch_size=self._config.prefetch_size,
         transition_adder=True)
-    dataset = dataset.map(lambda sample: types.Transition(*sample.data))
     return dataset.as_numpy_iterator()
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
