@@ -17,16 +17,13 @@
 
 import os
 import os.path
+import time
 from typing import Optional, Tuple
-import uuid
 
 from absl import flags
 
 flags.DEFINE_string('acme_id', None, 'Experiment identifier to use for Acme.')
 FLAGS = flags.FLAGS
-
-# Pre-compute a unique identifier which is consistent within a single process.
-_ACME_ID = uuid.uuid1()
 
 
 def process_path(path: str,
@@ -54,7 +51,6 @@ def process_path(path: str,
   del backups, ttl_seconds
 
   path = os.path.expanduser(path)
-  # TODO(b/145460917): consider replacing this---e.g. with a timestamp.
   if add_uid:
     path = os.path.join(path, *get_unique_id())
   path = os.path.join(path, *subpaths)
@@ -65,7 +61,7 @@ def process_path(path: str,
 def get_unique_id() -> Tuple[str, ...]:
   """Makes a unique identifier for this process; override with FLAGS.acme_id."""
   # By default we'll use the global id.
-  identifier = str(_ACME_ID)
+  identifier = time.strftime('%Y%m%d-%H%M%S')
 
   # If the --acme_id flag is given prefer that; ignore if flag processing has
   # been skipped (this happens in colab or in tests).

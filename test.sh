@@ -53,4 +53,5 @@ pytest --ignore-glob="*/agent_test.py" --ignore-glob="*/agent_distributed_test.p
 
 # Clean-up.
 deactivate
+ls -l
 rm -rf acme_testing/

@@ -41,9 +41,6 @@ class PathTest(test_utils.TestCase):
     self.assertEqual(paths.get_unique_id(), ('test_flag',))
     FLAGS.unparse_flags()
 
-  def test_unique_id_without_flag(self):
-    self.assertEqual(paths.get_unique_id(), (str(paths._ACME_ID),))
-
 
 if __name__ == '__main__':
   absltest.main()
