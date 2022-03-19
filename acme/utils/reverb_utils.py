@@ -25,6 +25,7 @@ import reverb
 from reverb import item_selectors
 from reverb import rate_limiters
 from reverb import reverb_types
+import tensorflow as tf
 import tree
 
 
@@ -130,3 +131,11 @@ def replay_sample_to_sars_transition(
     transitions = jax.tree_map(lambda x: np.reshape(x, (-1,) + x.shape[2:]),
                                transitions)
   return transitions
+
+
+def transition_to_replaysample(
+    transitions: types.Transition) -> reverb.ReplaySample:
+  """Converts a types.Transition to a reverb.ReplaySample."""
+  info = tree.map_structure(lambda dtype: tf.ones([], dtype),
+                            reverb.SampleInfo.tf_dtypes())
+  return reverb.ReplaySample(info=info, data=transitions)
