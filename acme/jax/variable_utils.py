@@ -16,11 +16,12 @@
 """Variable utilities for JAX."""
 
 from concurrent import futures
+import datetime
+import time
 from typing import List, Optional, Sequence, Union
 
 from acme import core
 from acme.jax import networks as network_types
-
 import jax
 
 
@@ -30,7 +31,7 @@ class VariableClient:
   def __init__(self,
                client: core.VariableSource,
                key: Union[str, Sequence[str]],
-               update_period: int = 1,
+               update_period: Union[int, datetime.timedelta] = 1,
                device: Optional[Union[str, jax.xla.Device]] = None):
     """Initializes the variable client.
 
@@ -38,12 +39,15 @@ class VariableClient:
       client: A variable source from which we fetch variables.
       key: Which variables to request. When multiple keys are used, params
         property will return a list of params.
-      update_period: Interval between fetches.
+      update_period: Interval between fetches, specified as either (int) a
+        number of calls to update() between actual fetches or (timedelta) a time
+        interval that has to pass since the last fetch.
       device: The name of a JAX device to put variables on. If None (default),
-        don't put to device.
+        VariableClient won't put params on any device.
     """
     self._update_period = update_period
     self._call_counter = 0
+    self._last_call = time.time()
     self._client = client
     self._params: Sequence[network_types.Params] = None
 
@@ -73,12 +77,15 @@ class VariableClient:
         Defaults to False.
     """
     # Track calls (we only update periodically).
-    if self._call_counter < self._update_period:
-      self._call_counter += 1
+    self._call_counter += 1
 
     # Return if it's not time to fetch another update.
-    if self._call_counter < self._update_period:
-      return
+    if isinstance(self._update_period, datetime.timedelta):
+      if self._update_period.total_seconds() + self._last_call > time.time():
+        return
+    else:
+      if self._call_counter < self._update_period:
+        return
 
     if wait:
       if self._future is not None:
@@ -86,6 +93,7 @@ class VariableClient:
           self._future.cancel()
         self._future = None
       self._call_counter = 0
+      self._last_call = time.time()
       self.update_and_wait()
       return
 
@@ -95,6 +103,7 @@ class VariableClient:
 
     # Get a future and add the copy function as a callback.
     self._call_counter = 0
+    self._last_call = time.time()
     self._future = self._async_request()
     self._future.add_done_callback(lambda f: self._callback(f.result()))
 
