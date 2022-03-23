@@ -25,8 +25,10 @@ from acme.wrappers.gym_wrapper import GymAtariAdapter
 from acme.wrappers.gym_wrapper import GymWrapper
 from acme.wrappers.noop_starts import NoopStartsWrapper
 from acme.wrappers.observation_action_reward import ObservationActionRewardWrapper
+from acme.wrappers.reward_normalizing import RewardNormalizingWrapper
 from acme.wrappers.single_precision import SinglePrecisionWrapper
 from acme.wrappers.step_limit import StepLimitWrapper
+
 
 try:
   # pylint: disable=g-import-not-at-top
