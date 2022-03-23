@@ -15,26 +15,32 @@
 """Utilities related to loading TFDS datasets."""
 
 import logging
-from typing import Any, Dict, Iterator, Optional, Tuple, Sequence
+from typing import Any, Iterator, Optional, Tuple, Sequence
 
 from acme import types
 from flax import jax_utils
 import jax
 import jax.numpy as jnp
 import numpy as np
+import rlds
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
 
-def _episode_to_transition(step: Dict[str, Any]) -> types.Transition:
+def _batched_step_to_transition(step: rlds.BatchedStep) -> types.Transition:
   return types.Transition(
-      observation=step['observation'][:-1],
-      action=step['action'][:-1],
-      reward=step['reward'][:-1],
-      discount=1.0 - tf.cast(step['is_terminal'][1:], dtype=tf.float32),
+      observation=tf.nest.map_structure(lambda x: x[0], step[rlds.OBSERVATION]),
+      action=tf.nest.map_structure(lambda x: x[0], step[rlds.ACTION]),
+      reward=tf.nest.map_structure(lambda x: x[0], step[rlds.REWARD]),
+      discount=1.0 - tf.cast(step[rlds.IS_TERMINAL][1], dtype=tf.float32),
       # If next step is terminal, then the observation may be arbitrary.
       next_observation=step['observation'][1:],
   )
+
+
+def _batch_steps(episode: rlds.Episode) -> tf.data.Dataset:
+  return rlds.transformations.batch(
+      episode[rlds.STEPS], size=2, shift=1, drop_remainder=True)
 
 
 def _dataset_size_upperbound(dataset: tf.data.Dataset) -> int:
@@ -44,22 +50,13 @@ def _dataset_size_upperbound(dataset: tf.data.Dataset) -> int:
       dataset.batch(1000).reduce(0, lambda x, step: x + 1000), tf.int64)
 
 
-def _episode_steps_to_transition(episode) -> tf.data.Dataset:
-  """Transforms an Episode into a dataset of Transitions."""
-  episode = episode['steps']
-  # The code below might fail if the dataset contains more than 1e9 transitions,
-  # which is quite unlikely.
-  size = _dataset_size_upperbound(episode)
-  data = tf.data.experimental.get_single_element(episode.batch(size))
-  data = _episode_to_transition(data)
-  return tf.data.Dataset.from_tensor_slices(data)
-
-
 def get_tfds_dataset(dataset_name: str, num_episodes: Optional[int] = None):
   dataset = tfds.load(dataset_name)['train']
   if num_episodes:
     dataset = dataset.take(num_episodes)
-  return dataset.flat_map(_episode_steps_to_transition)
+  batched_steps = dataset.flat_map(_batch_steps)
+  return rlds.transformations.map_steps(batched_steps,
+                                        _batched_step_to_transition)
 
 
 # In order to avoid excessive copying on TPU one needs to make the last
@@ -191,4 +188,3 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
   def dataset_size(self) -> int:
     """An integer of the dataset cardinality."""
     return self._dataset_size
-

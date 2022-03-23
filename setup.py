@@ -40,10 +40,11 @@ spec.loader.exec_module(_metadata)
 tensorflow = [
     'dm-reverb==0.7.0',
     'keras==2.8.0',
-    'tensorflow-datasets==4.4.0',
+    'tensorflow-datasets==4.5.2',
     'tensorflow-estimator==2.8.0',
     'tensorflow==2.8.0',
     'tensorflow_probability==0.15.0',
+    'rlds',
 ]
 
 core_requirements = [
@@ -83,7 +84,8 @@ envs_requirements = [
     'gym',
     'gym[atari]',
     'pygame==2.1.0',
-    'tensorflow_datasets',
+    'tensorflow-datasets==4.5.2',
+    'rlds',
 ]
 
 
