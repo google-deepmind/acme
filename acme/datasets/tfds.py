@@ -37,12 +37,20 @@ def _episode_to_transition(step: Dict[str, Any]) -> types.Transition:
   )
 
 
+def _dataset_size_upperbound(dataset: tf.data.Dataset) -> int:
+  if dataset.cardinality() != tf.data.experimental.UNKNOWN_CARDINALITY:
+    return dataset.cardinality()
+  return tf.cast(
+      dataset.batch(1000).reduce(0, lambda x, step: x + 1000), tf.int64)
+
+
 def _episode_steps_to_transition(episode) -> tf.data.Dataset:
   """Transforms an Episode into a dataset of Transitions."""
   episode = episode['steps']
   # The code below might fail if the dataset contains more than 1e9 transitions,
   # which is quite unlikely.
-  data = tf.data.experimental.get_single_element(episode.batch(1000000000))
+  size = _dataset_size_upperbound(episode)
+  data = tf.data.experimental.get_single_element(episode.batch(size))
   data = _episode_to_transition(data)
   return tf.data.Dataset.from_tensor_slices(data)
 
@@ -111,7 +119,8 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
     """
     # Read the whole dataset. We use artificially large batch_size to make sure
     # we capture the whole dataset.
-    data = next(dataset.batch(1000000000).as_numpy_iterator())
+    size = _dataset_size_upperbound(dataset)
+    data = next(dataset.batch(size).as_numpy_iterator())
     self._dataset_size = jax.tree_flatten(
         jax.tree_map(lambda x: x.shape[0], data))[0][0]
     device = jax_utils._pmap_device_order()
