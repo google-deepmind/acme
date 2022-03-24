@@ -34,7 +34,8 @@ def _batched_step_to_transition(step: rlds.BatchedStep) -> types.Transition:
       reward=tf.nest.map_structure(lambda x: x[0], step[rlds.REWARD]),
       discount=1.0 - tf.cast(step[rlds.IS_TERMINAL][1], dtype=tf.float32),
       # If next step is terminal, then the observation may be arbitrary.
-      next_observation=step['observation'][1:],
+      next_observation=tf.nest.map_structure(
+          lambda x: x[1], step[rlds.OBSERVATION])
   )
 
 
