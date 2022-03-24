@@ -48,7 +48,7 @@ def main(_):
   # Create an environment, grab the spec, and use it to create networks.
   environment = helpers.make_environment(task=FLAGS.env_name)
   environment_spec = specs.make_environment_spec(environment)
-  agent_networks = ppo.make_gym_networks(environment_spec)
+  agent_networks = ppo.make_continuous_networks(environment_spec)
 
   # Construct the agent.
   config = ppo.PPOConfig(

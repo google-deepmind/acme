@@ -22,11 +22,11 @@ from acme import specs
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.jax import networks as networks_lib
 from acme.jax import utils
+
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
-
 
 EntropyFn = Callable[[Any], jnp.ndarray]
 
@@ -48,8 +48,9 @@ class PPONetworks:
   sample_eval: Optional[networks_lib.SampleFn] = None
 
 
-def make_inference_fn(ppo_networks: PPONetworks, evaluation: bool = False
-                      ) -> actor_core_lib.FeedForwardPolicyWithExtra:
+def make_inference_fn(
+    ppo_networks: PPONetworks,
+    evaluation: bool = False) -> actor_core_lib.FeedForwardPolicyWithExtra:
   """Returns a function to be used for inference by a PPO actor."""
 
   def inference(params: networks_lib.Params, key: networks_lib.PRNGKey,
@@ -63,7 +64,20 @@ def make_inference_fn(ppo_networks: PPONetworks, evaluation: bool = False
       return actions, {}
     log_prob = ppo_networks.log_prob(distribution, actions)
     return actions, {'log_prob': log_prob}
+
   return inference
+
+
+def make_networks(
+    spec: specs.EnvironmentSpec, hidden_layer_sizes: Sequence[int] = (256, 256)
+) -> PPONetworks:
+  if isinstance(spec.actions, specs.DiscreteArray):
+    return make_discrete_networks(spec, hidden_layer_sizes)
+  else:
+    return make_continuous_networks(
+        spec,
+        policy_layer_sizes=hidden_layer_sizes,
+        value_layer_sizes=hidden_layer_sizes)
 
 
 def make_ppo_networks(network: networks_lib.FeedForwardNetwork) -> PPONetworks:
@@ -84,20 +98,32 @@ def make_ppo_networks(network: networks_lib.FeedForwardNetwork) -> PPONetworks:
       sample_eval=lambda distribution, key: distribution.mode())
 
 
-def make_atari_networks(
+def make_discrete_networks(
     environment_spec: specs.EnvironmentSpec,
     hidden_layer_sizes: Sequence[int] = (512,),
+    use_conv: bool = True,
 ) -> PPONetworks:
-  """Creates networks used by the agent for Atari environments."""
+  """Creates networks used by the agent for discrete action environments.
+
+  Args:
+    environment_spec: Environment spec used to define number of actions.
+    hidden_layer_sizes: Network definition.
+    use_conv: Whether to use a conv or MLP feature extractor.
+  Returns:
+    PPONetworks
+  """
 
   num_actions = environment_spec.actions.num_values
 
   def forward_fn(inputs):
-    policy_value_network = hk.Sequential([
-        networks_lib.AtariTorso(),
+    layers = []
+    if use_conv:
+      layers.extend([networks_lib.AtariTorso()])
+    layers.extend([
         hk.nets.MLP(hidden_layer_sizes, activation=jax.nn.relu),
         networks_lib.CategoricalValueHead(num_values=num_actions)
     ])
+    policy_value_network = hk.Sequential(layers)
     return policy_value_network(inputs)
 
   forward_fn = hk.without_apply_rng(hk.transform(forward_fn))
@@ -109,12 +135,12 @@ def make_atari_networks(
   return make_ppo_networks(network)
 
 
-def make_gym_networks(
+def make_continuous_networks(
     environment_spec: specs.EnvironmentSpec,
     policy_layer_sizes: Sequence[int] = (64, 64),
     value_layer_sizes: Sequence[int] = (64, 64),
 ) -> PPONetworks:
-  """Creates networks to be used by the agent for OpenAI Gym environments."""
+  """Creates PPONetworks to be used for continuous action environments."""
 
   # Get total number of action dimensions from action spec.
   num_dimensions = np.prod(environment_spec.actions.shape, dtype=int)

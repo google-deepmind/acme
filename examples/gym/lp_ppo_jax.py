@@ -42,7 +42,7 @@ def main(_):
       batch_size=2048 // 16)
   program = ppo.DistributedPPO(
       environment_factory=environment_factory,
-      network_factory=ppo.make_gym_networks,
+      network_factory=ppo.make_continuous_networks,
       config=config,
       seed=FLAGS.seed,
       num_actors=4,

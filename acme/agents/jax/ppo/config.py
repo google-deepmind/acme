@@ -22,18 +22,44 @@ import numpy as np
 
 @dataclasses.dataclass
 class PPOConfig:
-  """Configuration options for PPO."""
-  unroll_length: int
-  num_minibatches: int
-  num_epochs: int
+  """Configuration options for PPO.
 
-  batch_size: int = 1
+  Attributes:
+    unroll_length: Length of sequences added to the replay buffer.
+    num_minibatches: The number of minibatches to split an epoch into.
+      i.e. minibatch size = batch_size / num_minibatches.
+    TODO(sinopalnikov): Consider changing config to support setting minibatch
+      size directly.
+    num_epochs: How many times to loop over the set of minibatches.
+    TODO(sinopalnikov): Consider completing these descriptions.
+
+    batch_size: int
+    clip_value: bool
+    replay_table_name: Replay table name.
+    ppo_clipping_epsilon: float
+    gae_lambda: float
+    discount: float
+    learning_rate:
+    adam_epsilon: float
+    entropy_cost: float
+    value_cost: float
+    max_abs_reward: float
+    max_gradient_norm: float
+    prefetch_size: int
+    variable_update_period: int
+  """
+  # TODO(dulacarnold): Update some of these after sweeps.
+  unroll_length: int = 16
+  num_minibatches: int = 32
+  num_epochs: int = 5
+
+  batch_size: int = 128
   clip_value: bool = False
   replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
   ppo_clipping_epsilon: float = 0.2
   gae_lambda: float = 0.95
   discount: float = 0.99
-  learning_rate: Union[float, Callable[[int], float]] = 1e-3
+  learning_rate: Union[float, Callable[[int], float]] = 3e-4
   adam_epsilon: float = 1e-5
   entropy_cost: float = 0.01
   value_cost: float = 1.

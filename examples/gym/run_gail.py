@@ -81,7 +81,7 @@ def main(_):
   # Create an environment, grab the spec, and use it to create networks.
   environment = helpers.make_environment(task=FLAGS.env_name)
   environment_spec = specs.make_environment_spec(environment)
-  agent_networks = ppo.make_gym_networks(environment_spec)
+  agent_networks = ppo.make_continuous_networks(environment_spec)
 
   # Construct the agent.
   ppo_config = ppo.PPOConfig(
@@ -93,7 +93,7 @@ def main(_):
       entropy_cost=0,
       gae_lambda=0.8,
       value_cost=0.25)
-  ppo_networks = ppo.make_gym_networks(environment_spec)
+  ppo_networks = ppo.make_continuous_networks(environment_spec)
   if FLAGS.pretrain:
     ppo_networks = add_bc_pretraining(ppo_networks)
 

@@ -20,8 +20,9 @@ from acme.agents.jax.ppo.agents import PPO
 from acme.agents.jax.ppo.builder import PPOBuilder
 from acme.agents.jax.ppo.config import PPOConfig
 from acme.agents.jax.ppo.learning import PPOLearner
-from acme.agents.jax.ppo.networks import make_atari_networks
-from acme.agents.jax.ppo.networks import make_gym_networks
+from acme.agents.jax.ppo.networks import make_continuous_networks
+from acme.agents.jax.ppo.networks import make_discrete_networks
 from acme.agents.jax.ppo.networks import make_inference_fn
+from acme.agents.jax.ppo.networks import make_networks
 from acme.agents.jax.ppo.networks import make_ppo_networks
 from acme.agents.jax.ppo.networks import PPONetworks
