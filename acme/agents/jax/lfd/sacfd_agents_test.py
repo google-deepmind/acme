@@ -45,7 +45,7 @@ def fake_demonstration_iterator():
     yield action, ts
 
 
-class SACFDTest(absltest.TestCase):
+class SACfDTest(absltest.TestCase):
 
   def test_sac_fd(self):
     # Create a fake environment to test with.
@@ -63,10 +63,10 @@ class SACFDTest(absltest.TestCase):
         min_replay_size=1)
     lfd_config = config.LfdConfig(initial_insert_count=0,
                                   demonstration_ratio=0.2)
-    sac_fd_config = sacfd_agents.SACFDConfig(lfd_config=lfd_config,
+    sac_fd_config = sacfd_agents.SACfDConfig(lfd_config=lfd_config,
                                              sac_config=sac_config)
     counter = counting.Counter()
-    agent = sacfd_agents.SACFD(
+    agent = sacfd_agents.SACfD(
         spec=spec,
         sac_network=sac_network,
         sac_fd_config=sac_fd_config,
@@ -80,7 +80,7 @@ class SACFDTest(absltest.TestCase):
     loop.run(num_episodes=20)
 
 
-class DistributedSACFDTest(absltest.TestCase):
+class DistributedSACfDTest(absltest.TestCase):
 
   def test_distributed_sac_fd(self):
     def make_env(seed):
@@ -98,10 +98,10 @@ class DistributedSACFDTest(absltest.TestCase):
         samples_per_insert=2)
     lfd_config = config.LfdConfig(initial_insert_count=0,
                                   demonstration_ratio=0.2)
-    sac_fd_config = sacfd_agents.SACFDConfig(lfd_config=lfd_config,
+    sac_fd_config = sacfd_agents.SACfDConfig(lfd_config=lfd_config,
                                              sac_config=sac_config)
 
-    agent = sacfd_agents.DistributedSACFD(
+    agent = sacfd_agents.DistributedSACfD(
         environment_factory=make_env,
         network_factory=sac.make_networks,
         sac_fd_config=sac_fd_config,

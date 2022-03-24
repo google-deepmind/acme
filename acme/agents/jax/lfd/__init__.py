@@ -17,6 +17,6 @@
 
 from acme.agents.jax.lfd.builder import LfdBuilder
 from acme.agents.jax.lfd.config import LfdConfig
-from acme.agents.jax.lfd.sacfd_agents import DistributedSACFD
-from acme.agents.jax.lfd.sacfd_agents import SACFD
-from acme.agents.jax.lfd.sacfd_agents import SACFDConfig
+from acme.agents.jax.lfd.sacfd_agents import DistributedSACfD
+from acme.agents.jax.lfd.sacfd_agents import SACfD
+from acme.agents.jax.lfd.sacfd_agents import SACfDConfig

@@ -34,7 +34,7 @@ NetworkFactory = Callable[[specs.EnvironmentSpec], sac.SACNetworks]
 
 
 @dataclasses.dataclass
-class SACFDConfig:
+class SACfDConfig:
   """Configuration options specific to SAC with demonstrations.
 
   Attributes:
@@ -45,17 +45,17 @@ class SACFDConfig:
   sac_config: sac.SACConfig
 
 
-class SACFD(local_layout.LocalLayout):
+class SACfD(local_layout.LocalLayout):
   """SAC agent learning from demonstrations."""
 
   def __init__(self,
                spec: specs.EnvironmentSpec,
                sac_network: sac.SACNetworks,
-               sac_fd_config: SACFDConfig,
+               sac_fd_config: SACfDConfig,
                lfd_iterator_fn: Callable[[], Iterator[builder.LfdStep]],
                seed: int,
                counter: Optional[counting.Counter] = None):
-    """New instance of a SAC-Fd agent."""
+    """New instance of a SACfD agent."""
     sac_config = sac_fd_config.sac_config
     lfd_config = sac_fd_config.lfd_config
     sac_builder = sac.SACBuilder(sac_config)
@@ -86,14 +86,14 @@ class SACFD(local_layout.LocalLayout):
         )
 
 
-class DistributedSACFD(distributed_layout.DistributedLayout):
+class DistributedSACfD(distributed_layout.DistributedLayout):
   """Distributed program definition for SAC from demonstrations."""
 
   def __init__(
       self,
       environment_factory: jax_types.EnvironmentFactory,
       network_factory: NetworkFactory,
-      sac_fd_config: SACFDConfig,
+      sac_fd_config: SACfDConfig,
       lfd_iterator_fn: Callable[[], Iterator[builder.LfdStep]],
       seed: int,
       num_actors: int,
