@@ -23,9 +23,9 @@ from absl.testing import absltest
 from acme import specs
 from acme.jax import running_statistics
 import jax
-from jax import test_util as jtu
 from jax.config import config as jax_config
 import jax.numpy as jnp
+import numpy as np
 import tree
 
 update_and_validate = functools.partial(
@@ -38,8 +38,7 @@ class TestNestedSpec(NamedTuple):
   b: specs.Array
 
 
-@jtu.with_config(jax_numpy_rank_promotion='allow')
-class RunningStatisticsTest(jtu.JaxTestCase):
+class RunningStatisticsTest(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -59,8 +58,8 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     mean = jnp.mean(normalized)
     std = jnp.std(normalized)
-    self.assertAllClose(mean, jnp.zeros_like(mean))
-    self.assertAllClose(std, jnp.ones_like(std))
+    np.testing.assert_allclose(mean, jnp.zeros_like(mean))
+    np.testing.assert_allclose(std, jnp.ones_like(std))
 
   def test_init_normalize(self):
     state = running_statistics.init_state(specs.Array((5,), jnp.float32))
@@ -68,7 +67,7 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     x = jnp.arange(200, dtype=jnp.float32).reshape(20, 2, 5)
     normalized = running_statistics.normalize(x, state)
 
-    self.assertAllClose(normalized, x)
+    np.testing.assert_allclose(normalized, x)
 
   def test_one_batch_dim(self):
     state = running_statistics.init_state(specs.Array((5,), jnp.float32))
@@ -80,8 +79,8 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     mean = jnp.mean(normalized, axis=0)
     std = jnp.std(normalized, axis=0)
-    self.assertAllClose(mean, jnp.zeros_like(mean))
-    self.assertAllClose(std, jnp.ones_like(std))
+    np.testing.assert_allclose(mean, jnp.zeros_like(mean))
+    np.testing.assert_allclose(std, jnp.ones_like(std))
 
   def test_clip(self):
     state = running_statistics.init_state(specs.Array((), jnp.float32))
@@ -93,8 +92,8 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     mean = jnp.mean(normalized)
     std = jnp.std(normalized)
-    self.assertAllClose(mean, jnp.zeros_like(mean))
-    self.assertAllClose(std, jnp.ones_like(std) * math.sqrt(0.6))
+    np.testing.assert_allclose(mean, jnp.zeros_like(mean))
+    np.testing.assert_allclose(std, jnp.ones_like(std) * math.sqrt(0.6))
 
   def test_nested_normalize(self):
     state = running_statistics.init_state({
@@ -122,9 +121,12 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     mean = tree.map_structure(lambda x: jnp.mean(x, axis=(0, 1)), normalized)
     std = tree.map_structure(lambda x: jnp.std(x, axis=(0, 1)), normalized)
-    tree.map_structure(lambda x: self.assertAllClose(x, jnp.zeros_like(x)),
-                       mean)
-    tree.map_structure(lambda x: self.assertAllClose(x, jnp.ones_like(x)), std)
+    tree.map_structure(
+        lambda x: np.testing.assert_allclose(x, jnp.zeros_like(x), atol=1E-6),
+        mean)
+    tree.map_structure(
+        lambda x: np.testing.assert_allclose(x, jnp.ones_like(x), rtol=1E-6),
+        std)
 
   def test_validation(self):
     state = running_statistics.init_state(specs.Array((1, 2, 3), jnp.float32))
@@ -145,7 +147,7 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     state = update_and_validate(state, x)
     normalized = running_statistics.normalize(x, state)
 
-    self.assertArraysEqual(normalized, x)
+    np.testing.assert_array_equal(normalized, x)
 
   def test_pmap_update_nested(self):
     local_device_count = jax.local_device_count()
@@ -175,9 +177,10 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     mean = tree.map_structure(lambda x: jnp.mean(x, axis=(0, 1)), normalized)
     std = tree.map_structure(lambda x: jnp.std(x, axis=(0, 1)), normalized)
-    tree.map_structure(lambda x: self.assertAllClose(x, jnp.zeros_like(x)),
-                       mean)
-    tree.map_structure(lambda x: self.assertAllClose(x, jnp.ones_like(x)), std)
+    tree.map_structure(
+        lambda x: np.testing.assert_allclose(x, jnp.zeros_like(x)), mean)
+    tree.map_structure(
+        lambda x: np.testing.assert_allclose(x, jnp.ones_like(x)), std)
 
   def test_different_structure_normalize(self):
     spec = TestNestedSpec(
@@ -242,17 +245,18 @@ class RunningStatisticsTest(jtu.JaxTestCase):
       mean = jnp.mean(normalized[key], axis=(0, 1))
       std = jnp.std(normalized[key], axis=(0, 1))
       if key == 'a':
-        self.assertAllClose(
+        np.testing.assert_allclose(
             mean,
             jnp.zeros_like(mean),
+            atol=1E-7,
             err_msg=f'key:{key} mean:{mean} normalized:{normalized[key]}')
-        self.assertAllClose(
+        np.testing.assert_allclose(
             std,
             jnp.ones_like(std),
             err_msg=f'key:{key} std:{std} normalized:{normalized[key]}')
       else:
         assert key == 'b'
-        self.assertArraysEqual(
+        np.testing.assert_array_equal(
             normalized[key],
             z[key],
             err_msg=f'z:{z[key]} normalized:{normalized[key]}')
@@ -269,9 +273,9 @@ class RunningStatisticsTest(jtu.JaxTestCase):
     clipped_z = running_statistics.clip(z, config)
 
     clipped_x = jnp.clip(a=x, a_min=-max_abs_x, a_max=max_abs_x)
-    self.assertArraysEqual(clipped_z['x'], clipped_x)
+    np.testing.assert_array_equal(clipped_z['x'], clipped_x)
 
-    self.assertArraysEqual(clipped_z['y'], z['y'])
+    np.testing.assert_array_equal(clipped_z['y'], z['y'])
 
   def test_denormalize(self):
     state = running_statistics.init_state(specs.Array((5,), jnp.float32))
@@ -285,11 +289,11 @@ class RunningStatisticsTest(jtu.JaxTestCase):
 
     mean = jnp.mean(normalized)
     std = jnp.std(normalized)
-    self.assertAllClose(mean, jnp.zeros_like(mean))
-    self.assertAllClose(std, jnp.ones_like(std))
+    np.testing.assert_allclose(mean, jnp.zeros_like(mean), atol=1E-5, rtol=1E-5)
+    np.testing.assert_allclose(std, jnp.ones_like(std))
 
     denormalized = running_statistics.denormalize(normalized, state)
-    self.assertAllClose(denormalized, x)
+    np.testing.assert_allclose(denormalized, x, atol=1E-5, rtol=1E-5)
 
 
 if __name__ == '__main__':

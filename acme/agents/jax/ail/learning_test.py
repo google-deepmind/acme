@@ -25,7 +25,6 @@ from acme.jax import networks as networks_lib
 from acme.jax import utils
 import haiku as hk
 import jax
-from jax import test_util as jtu
 import numpy as np
 import optax
 
@@ -45,7 +44,7 @@ def _make_discriminator(spec):
       discriminator_transformed=discriminator_transformed)
 
 
-class AilLearnerTest(jtu.JaxTestCase):
+class AilLearnerTest(absltest.TestCase):
 
   def test_step(self):
     simple_spec = specs.Array(shape=(), dtype=float)

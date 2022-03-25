@@ -19,12 +19,11 @@ from acme import types
 from acme.agents.jax.ail import losses
 from acme.jax import networks as networks_lib
 import jax
-from jax import test_util as jtu
 import jax.numpy as jnp
 import tree
 
 
-class AilLossTest(jtu.JaxTestCase):
+class AilLossTest(absltest.TestCase):
 
   def test_gradient_penalty(self):
 

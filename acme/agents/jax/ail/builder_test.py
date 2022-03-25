@@ -16,14 +16,13 @@
 from absl.testing import absltest
 from acme import types
 from acme.agents.jax.ail import builder
-from jax import test_util as jtu
 import numpy as np
 import reverb
 
 _REWARD = np.zeros((3,))
 
 
-class BuilderTest(jtu.JaxTestCase):
+class BuilderTest(absltest.TestCase):
 
   def test_weighted_generator(self):
     data0 = types.Transition(np.array([[1], [2], [3]]), (), _REWARD, (), ())
@@ -45,9 +44,9 @@ class BuilderTest(jtu.JaxTestCase):
     weighted_it = builder._generate_samples_with_demonstrations(
         it0, it1, policy_to_expert_data_ratio=2, batch_size=3)
 
-    self.assertArraysEqual(
+    np.testing.assert_array_equal(
         next(weighted_it).data.observation, np.array([[1], [4], [5]]))
-    self.assertArraysEqual(
+    np.testing.assert_array_equal(
         next(weighted_it).data.observation, np.array([[7], [8], [2]]))
     self.assertRaises(StopIteration, lambda: next(weighted_it))
 
