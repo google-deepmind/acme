@@ -20,3 +20,6 @@ from acme.agents.jax.lfd.config import LfdConfig
 from acme.agents.jax.lfd.sacfd_agents import DistributedSACfD
 from acme.agents.jax.lfd.sacfd_agents import SACfD
 from acme.agents.jax.lfd.sacfd_agents import SACfDConfig
+from acme.agents.jax.lfd.td3fd_agents import DistributedTD3fD
+from acme.agents.jax.lfd.td3fd_agents import TD3fD
+from acme.agents.jax.lfd.td3fd_agents import TD3fDConfig
