@@ -113,14 +113,27 @@ def default_evaluator_factory(
 
 @dataclasses.dataclass
 class CheckpointingConfig:
-  """Configuration options for learner checkpointer."""
-  # The maximum number of checkpoints to keep.
+  """Configuration options for checkpointing.
+
+  Attributes:
+    max_to_keep: Maximum number of checkpoints to keep. Does not apply to replay
+      checkpointing.
+    directory: Where to store the checkpoints.
+    add_uid: Whether or not to add a unique identifier, see
+      `paths.get_unique_id()` for how it is generated.
+    replay_checkpointing_time_delta_minutes: How frequently to write replay
+      checkpoints; defaults to None, which disables periodic checkpointing.
+      Warning! These are written asynchronously so as not to interrupt other
+      replay duties, however this does pose a risk of OOM since items that
+      would otherwise be removed are temporarily kept alive for checkpointing
+      purposes.
+      Note: Since replay buffers tend to be quite large O(100GiB), writing can
+      take up to 10 minutes so keep that in mind when setting this frequency.
+  """
   max_to_keep: int = 1
-  # Which directory to put the checkpoint in.
   directory: str = '~/acme'
-  # If True adds a UID to the checkpoint path, see
-  # `paths.get_unique_id()` for how this UID is generated.
   add_uid: bool = True
+  replay_checkpointing_time_delta_minutes: Optional[int] = None
 
 
 class DistributedLayout:
@@ -167,7 +180,7 @@ class DistributedLayout:
     self._observers = observers
     self._multithreading_colocate_learner_and_reverb = (
         multithreading_colocate_learner_and_reverb)
-    self._checkpointing_config = checkpointing_config
+    self._checkpointing_config = checkpointing_config or CheckpointingConfig()
     self._make_snapshot_models = make_snapshot_models
 
   def replay(self):
@@ -189,15 +202,14 @@ class DistributedLayout:
                               add_uid=self._checkpointing_config.add_uid)
 
   def counter(self):
-    kwargs = {}
-    if self._checkpointing_config:
-      kwargs = vars(self._checkpointing_config)
     return savers.CheckpointingRunner(
         counting.Counter(),
         key='counter',
         subdirectory='counter',
         time_delta_minutes=5,
-        **kwargs)
+        directory=self._checkpointing_config.directory,
+        add_uid=self._checkpointing_config.add_uid,
+        max_to_keep=self._checkpointing_config.max_to_keep)
 
   def learner(
       self,
@@ -230,19 +242,17 @@ class DistributedLayout:
       logging.info('Not prefetching the iterator.')
 
     counter = counting.Counter(counter, 'learner')
-
     learner = self._builder.make_learner(random_key, networks, iterator, replay,
                                          counter)
-    kwargs = {}
-    if self._checkpointing_config:
-      kwargs = vars(self._checkpointing_config)
-    # Return the learning agent.
+
     return savers.CheckpointingRunner(
         learner,
         key='learner',
         subdirectory='learner',
         time_delta_minutes=5,
-        **kwargs)
+        directory=self._checkpointing_config.directory,
+        add_uid=self._checkpointing_config.add_uid,
+        max_to_keep=self._checkpointing_config.max_to_keep)
 
   def actor(self, random_key: networks_lib.PRNGKey, replay: reverb.Client,
             variable_source: core.VariableSource, counter: counting.Counter,
@@ -280,7 +290,11 @@ class DistributedLayout:
 
     key = jax.random.PRNGKey(self._seed)
 
-    replay_node = lp.ReverbNode(self.replay)
+    replay_node = lp.ReverbNode(
+        self.replay,
+        checkpoint_time_delta_minutes=(
+            self._checkpointing_config.replay_checkpointing_time_delta_minutes))
+
     with program.group('replay'):
       if self._multithreading_colocate_learner_and_reverb:
         replay = replay_node.create_handle()
