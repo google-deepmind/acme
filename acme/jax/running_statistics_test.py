@@ -44,6 +44,13 @@ class RunningStatisticsTest(absltest.TestCase):
     super().setUp()
     jax_config.update('jax_enable_x64', False)
 
+  def assert_allclose(self,
+                      actual: jnp.ndarray,
+                      desired: jnp.ndarray,
+                      err_msg: str = '') -> None:
+    np.testing.assert_allclose(
+        actual, desired, atol=1e-5, rtol=1e-5, err_msg=err_msg)
+
   def test_normalize(self):
     state = running_statistics.init_state(specs.Array((5,), jnp.float32))
 
@@ -58,8 +65,8 @@ class RunningStatisticsTest(absltest.TestCase):
 
     mean = jnp.mean(normalized)
     std = jnp.std(normalized)
-    np.testing.assert_allclose(mean, jnp.zeros_like(mean))
-    np.testing.assert_allclose(std, jnp.ones_like(std))
+    self.assert_allclose(mean, jnp.zeros_like(mean))
+    self.assert_allclose(std, jnp.ones_like(std))
 
   def test_init_normalize(self):
     state = running_statistics.init_state(specs.Array((5,), jnp.float32))
@@ -67,7 +74,7 @@ class RunningStatisticsTest(absltest.TestCase):
     x = jnp.arange(200, dtype=jnp.float32).reshape(20, 2, 5)
     normalized = running_statistics.normalize(x, state)
 
-    np.testing.assert_allclose(normalized, x)
+    self.assert_allclose(normalized, x)
 
   def test_one_batch_dim(self):
     state = running_statistics.init_state(specs.Array((5,), jnp.float32))
@@ -79,8 +86,8 @@ class RunningStatisticsTest(absltest.TestCase):
 
     mean = jnp.mean(normalized, axis=0)
     std = jnp.std(normalized, axis=0)
-    np.testing.assert_allclose(mean, jnp.zeros_like(mean))
-    np.testing.assert_allclose(std, jnp.ones_like(std))
+    self.assert_allclose(mean, jnp.zeros_like(mean))
+    self.assert_allclose(std, jnp.ones_like(std))
 
   def test_clip(self):
     state = running_statistics.init_state(specs.Array((), jnp.float32))
@@ -92,8 +99,8 @@ class RunningStatisticsTest(absltest.TestCase):
 
     mean = jnp.mean(normalized)
     std = jnp.std(normalized)
-    np.testing.assert_allclose(mean, jnp.zeros_like(mean))
-    np.testing.assert_allclose(std, jnp.ones_like(std) * math.sqrt(0.6))
+    self.assert_allclose(mean, jnp.zeros_like(mean))
+    self.assert_allclose(std, jnp.ones_like(std) * math.sqrt(0.6))
 
   def test_nested_normalize(self):
     state = running_statistics.init_state({
@@ -122,10 +129,10 @@ class RunningStatisticsTest(absltest.TestCase):
     mean = tree.map_structure(lambda x: jnp.mean(x, axis=(0, 1)), normalized)
     std = tree.map_structure(lambda x: jnp.std(x, axis=(0, 1)), normalized)
     tree.map_structure(
-        lambda x: np.testing.assert_allclose(x, jnp.zeros_like(x), atol=1E-6),
+        lambda x: self.assert_allclose(x, jnp.zeros_like(x)),
         mean)
     tree.map_structure(
-        lambda x: np.testing.assert_allclose(x, jnp.ones_like(x), rtol=1E-6),
+        lambda x: self.assert_allclose(x, jnp.ones_like(x)),
         std)
 
   def test_validation(self):
@@ -151,7 +158,6 @@ class RunningStatisticsTest(absltest.TestCase):
 
   def test_pmap_update_nested(self):
     local_device_count = jax.local_device_count()
-    assert local_device_count > 1
     state = running_statistics.init_state({
         'a': specs.Array((5,), jnp.float32),
         'b': specs.Array((2,), jnp.float32)
@@ -178,9 +184,9 @@ class RunningStatisticsTest(absltest.TestCase):
     mean = tree.map_structure(lambda x: jnp.mean(x, axis=(0, 1)), normalized)
     std = tree.map_structure(lambda x: jnp.std(x, axis=(0, 1)), normalized)
     tree.map_structure(
-        lambda x: np.testing.assert_allclose(x, jnp.zeros_like(x)), mean)
+        lambda x: self.assert_allclose(x, jnp.zeros_like(x)), mean)
     tree.map_structure(
-        lambda x: np.testing.assert_allclose(x, jnp.ones_like(x)), std)
+        lambda x: self.assert_allclose(x, jnp.ones_like(x)), std)
 
   def test_different_structure_normalize(self):
     spec = TestNestedSpec(
@@ -245,12 +251,11 @@ class RunningStatisticsTest(absltest.TestCase):
       mean = jnp.mean(normalized[key], axis=(0, 1))
       std = jnp.std(normalized[key], axis=(0, 1))
       if key == 'a':
-        np.testing.assert_allclose(
+        self.assert_allclose(
             mean,
             jnp.zeros_like(mean),
-            atol=1E-7,
             err_msg=f'key:{key} mean:{mean} normalized:{normalized[key]}')
-        np.testing.assert_allclose(
+        self.assert_allclose(
             std,
             jnp.ones_like(std),
             err_msg=f'key:{key} std:{std} normalized:{normalized[key]}')
@@ -289,11 +294,11 @@ class RunningStatisticsTest(absltest.TestCase):
 
     mean = jnp.mean(normalized)
     std = jnp.std(normalized)
-    np.testing.assert_allclose(mean, jnp.zeros_like(mean), atol=1E-5, rtol=1E-5)
-    np.testing.assert_allclose(std, jnp.ones_like(std))
+    self.assert_allclose(mean, jnp.zeros_like(mean))
+    self.assert_allclose(std, jnp.ones_like(std))
 
     denormalized = running_statistics.denormalize(normalized, state)
-    np.testing.assert_allclose(denormalized, x, atol=1E-5, rtol=1E-5)
+    self.assert_allclose(denormalized, x)
 
 
 if __name__ == '__main__':

@@ -39,7 +39,7 @@ for TESTDIR in acme ${EXAMPLES}; do
 done
 
 # Run all tests.
-pytest --ignore-glob="*/agent_test.py" --ignore-glob="*/agent_distributed_test.py" --durations=10 -n "${N_CPU}" acme
+pytest --ignore-glob="*/*agent*_test.py" --durations=10 -n "${N_CPU}" acme
 
 # Run sample of examples.
 # For each of them make sure StepsLimiter reached the limit step count.
