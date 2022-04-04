@@ -24,7 +24,6 @@ from acme.jax import networks as networks_lib
 from acme.jax import utils
 
 import haiku as hk
-import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -120,7 +119,7 @@ def make_discrete_networks(
     if use_conv:
       layers.extend([networks_lib.AtariTorso()])
     layers.extend([
-        hk.nets.MLP(hidden_layer_sizes, activation=jax.nn.relu),
+        hk.nets.MLP(hidden_layer_sizes, activate_final=True),
         networks_lib.CategoricalValueHead(num_values=num_actions)
     ])
     policy_value_network = hk.Sequential(layers)
@@ -148,15 +147,16 @@ def make_continuous_networks(
   def forward_fn(inputs):
     policy_network = hk.Sequential([
         utils.batch_concat,
-        hk.nets.MLP(policy_layer_sizes, activation=jnp.tanh),
+        hk.nets.MLP(policy_layer_sizes, activate_final=True),
         # Note: we don't respect bounded action specs here and instead
         # rely on CanonicalSpecWrapper to clip actions accordingly.
         networks_lib.MultivariateNormalDiagHead(num_dimensions)
     ])
     value_network = hk.Sequential([
         utils.batch_concat,
-        hk.nets.MLP(value_layer_sizes, activation=jnp.tanh),
-        hk.Linear(1), lambda x: jnp.squeeze(x, axis=-1)
+        hk.nets.MLP(value_layer_sizes, activate_final=True),
+        hk.Linear(1),
+        lambda x: jnp.squeeze(x, axis=-1)
     ])
 
     action_distribution = policy_network(inputs)
