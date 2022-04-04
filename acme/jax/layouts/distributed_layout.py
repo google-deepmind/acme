@@ -294,29 +294,25 @@ class DistributedLayout:
         self.replay,
         checkpoint_time_delta_minutes=(
             self._checkpointing_config.replay_checkpointing_time_delta_minutes))
+    replay = replay_node.create_handle()
 
-    with program.group('replay'):
-      if self._multithreading_colocate_learner_and_reverb:
-        replay = replay_node.create_handle()
-      else:
-        replay = program.add_node(replay_node)
+    counter = program.add_node(lp.CourierNode(self.counter), label='counter')
 
-    with program.group('counter'):
-      counter = program.add_node(lp.CourierNode(self.counter))
-      if self._max_number_of_steps is not None:
-        _ = program.add_node(
-            lp.CourierNode(self.coordinator, counter,
-                           self._max_number_of_steps))
+    if self._max_number_of_steps is not None:
+      program.add_node(
+          lp.CourierNode(self.coordinator, counter, self._max_number_of_steps),
+          label='coordinator')
 
     learner_key, key = jax.random.split(key)
     learner_node = lp.CourierNode(self.learner, learner_key, replay, counter)
-    with program.group('learner'):
-      if self._multithreading_colocate_learner_and_reverb:
-        learner = learner_node.create_handle()
-        program.add_node(
-            lp.MultiThreadingColocation([learner_node, replay_node]))
-      else:
-        learner = program.add_node(learner_node)
+    learner = learner_node.create_handle()
+
+    if self._multithreading_colocate_learner_and_reverb:
+      program.add_node(lp.MultiThreadingColocation([learner_node, replay_node]),
+                       label='learner')
+    else:
+      program.add_node(learner_node, label='learner')
+      program.add_node(replay_node, label='replay')
 
     def make_actor(random_key: networks_lib.PRNGKey,
                    policy_network: PolicyNetwork,
@@ -324,22 +320,20 @@ class DistributedLayout:
       return self._builder.make_actor(
           random_key, policy_network, variable_source=variable_source)
 
-    with program.group('evaluator'):
-      for evaluator in self._evaluator_factories:
-        evaluator_key, key = jax.random.split(key)
-        program.add_node(
-            lp.CourierNode(evaluator, evaluator_key, learner, counter,
-                           make_actor))
+    for evaluator in self._evaluator_factories:
+      evaluator_key, key = jax.random.split(key)
+      program.add_node(
+          lp.CourierNode(evaluator, evaluator_key, learner, counter,
+                         make_actor), label='evaluator')
 
-    with program.group('actor'):
-      for actor_id in range(self._num_actors):
-        actor_key, key = jax.random.split(key)
-        program.add_node(
-            lp.CourierNode(self.actor, actor_key, replay, learner, counter,
-                           actor_id))
+    for actor_id in range(self._num_actors):
+      actor_key, key = jax.random.split(key)
+      program.add_node(
+          lp.CourierNode(self.actor, actor_key, replay, learner, counter,
+                         actor_id), label='actor')
 
     if self._make_snapshot_models and self._checkpointing_config:
-      with program.group('model_saver'):
-        program.add_node(lp.CourierNode(self.model_saver, learner))
+      program.add_node(lp.CourierNode(self.model_saver, learner),
+                       label='model_saver')
 
     return program
