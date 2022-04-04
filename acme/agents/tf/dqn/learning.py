@@ -50,6 +50,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
       learning_rate: float,
       target_update_period: int,
       dataset: tf.data.Dataset,
+      max_abs_reward: Optional[float] = 1.,
       huber_loss_parameter: float = 1.,
       replay_client: Optional[Union[reverb.Client, reverb.TFClient]] = None,
       counter: Optional[counting.Counter] = None,
@@ -71,6 +72,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
         the target networks.
       dataset: dataset to learn from, whether fixed or from a replay buffer (see
         `acme.datasets.reverb.make_reverb_dataset` documentation).
+      max_abs_reward: Optional maximum absolute value for the reward.
       huber_loss_parameter: Quadratic-linear boundary for Huber loss.
       replay_client: client to replay to allow for updating priorities.
       counter: Counter object for (potentially distributed) counting.
@@ -107,6 +109,7 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
     self._discount = discount
     self._target_update_period = target_update_period
     self._importance_sampling_exponent = importance_sampling_exponent
+    self._max_abs_reward = max_abs_reward
     self._huber_loss_parameter = huber_loss_parameter
     if max_gradient_norm is None:
       max_gradient_norm = 1e10  # A very large number. Infinity results in NaNs.
@@ -151,7 +154,8 @@ class DQNLearner(acme.Learner, tf2_savers.TFSaveable):
 
       # The rewards and discounts have to have the same type as network values.
       r_t = tf.cast(transitions.reward, q_tm1.dtype)
-      r_t = tf.clip_by_value(r_t, -1., 1.)
+      if self._max_abs_reward:
+        r_t = tf.clip_by_value(r_t, -self._max_abs_reward, self._max_abs_reward)
       d_t = tf.cast(transitions.discount, q_tm1.dtype) * tf.cast(
           self._discount, q_tm1.dtype)
 
