@@ -301,7 +301,7 @@ class DistributedLayout:
     if self._max_number_of_steps is not None:
       program.add_node(
           lp.CourierNode(self.coordinator, counter, self._max_number_of_steps),
-          label='coordinator')
+          label='counter')
 
     learner_key, key = jax.random.split(key)
     learner_node = lp.CourierNode(self.learner, learner_key, replay, counter)
