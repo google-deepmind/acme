@@ -25,6 +25,7 @@ from acme import specs
 from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.jax import savers
+from acme.jax import snapshotter
 from acme.jax import types
 from acme.jax import utils
 from acme.utils import counting
@@ -197,9 +198,11 @@ class DistributedLayout:
     networks = self._network_factory(spec)
     models = self._make_snapshot_models(networks, spec)
     # TODO(raveman): Decouple checkpointing and snahpshotting configs.
-    return savers.JAX2TFSaver(variable_source=variable_source, models=models,
-                              path=self._checkpointing_config.directory,
-                              add_uid=self._checkpointing_config.add_uid)
+    return snapshotter.JAXSnapshotter(
+        variable_source=variable_source,
+        models=models,
+        path=self._checkpointing_config.directory,
+        add_uid=self._checkpointing_config.add_uid)
 
   def counter(self):
     return savers.CheckpointingRunner(
