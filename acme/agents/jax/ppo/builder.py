@@ -109,8 +109,6 @@ class PPOBuilder(builders.ActorLearnerBuilder):
         priority_fns={self._config.replay_table_name: None},
         period=self._sequence_length - 1,
         sequence_length=self._sequence_length,
-        pad_end_of_episode=False,
-        break_end_of_episode=False,
     )
 
   def make_learner(
