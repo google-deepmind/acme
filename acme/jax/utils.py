@@ -22,6 +22,7 @@ import threading
 from typing import Callable, Generator, Iterable, NamedTuple, Optional, Sequence, Tuple, TypeVar
 
 from absl import logging
+from acme import core
 from acme import types
 from acme.jax.types import PRNGKey, TrainingMetrics, TrainingStepOutput  # pylint: disable=g-multiple-import
 import jax
@@ -117,61 +118,80 @@ def tile_nested(inputs: types.Nest, multiple: int) -> types.Nest:
   return jax.tree_map(tile, inputs)
 
 
-def prefetch(iterable: Iterable[T],
-             buffer_size: int = 5,
-             device=None) -> Generator[T, None, None]:
+class PrefetchIterator(core.PrefetchingIterator):
   """Performs prefetching of elements from an iterable in a separate thread.
 
-  Args:
-    iterable: A python iterable. This is used to build the python prefetcher.
-      Note that each iterable should only be passed to this function once as
-      iterables aren't thread safe
-    buffer_size (int): Number of elements to keep in the prefetch buffer.
-    device: The device to prefetch the elements to. If none then the elements
-      are left on the CPU. The device should be of the type returned by
-      `jax.devices()`.
+  Its interface is additionally extended with `ready` method which tells whether
+  there is any data waiting for processing.
 
   Yields:
     Prefetched elements from the original iterable.
   Raises:
-    ValueError if the buffer_size <= 1.
+    ValueError if the buffer_size < 1.
     Any error thrown by the iterable_function. Note this is not raised inside
       the producer, but after it finishes executing.
   """
 
-  if buffer_size <= 1:
-    raise ValueError('the buffer_size should be > 1')
-  buffer = queue.Queue(maxsize=(buffer_size - 1))
-  producer_error = []
-  end = object()
+  def __init__(self, iterable: Iterable,  # pylint: disable=g-bare-generic
+               buffer_size: int = 5,
+               device=None):
+    """Constructs PrefetchIterator.
 
-  def producer():
+    Args:
+      iterable: A python iterable. This is used to build the python prefetcher.
+        Note that each iterable should only be passed to this function once as
+        iterables aren't thread safe
+      buffer_size (int): Number of elements to keep in the prefetch buffer.
+      device: The device to prefetch the elements to. If none then the elements
+        are left on the CPU. The device should be of the type returned by
+        `jax.devices()`.
+    """
+    if buffer_size < 1:
+      raise ValueError('the buffer_size should be >= 1')
+    self.buffer = queue.Queue(maxsize=max(1, (buffer_size - 1)))
+    self.producer_error = []
+    self.end = object()
+    self.device = device
+    self.iterable = iterable
+    # Start the producer thread.
+    threading.Thread(target=self.producer, daemon=True).start()
+
+  def producer(self):
     """Enqueues items from `iterable` on a given thread."""
     try:
       # Build a new iterable for each thread. This is crucial if working with
       # tensorflow datasets because tf.Graph objects are thread local.
-      for item in iterable:
-        if device:
-          item = jax.device_put(item, device)
-        buffer.put(item)
+      for item in self.iterable:
+        if self.device:
+          item = jax.device_put(item, self.device)
+        self.buffer.put(item)
     except Exception as e:  # pylint: disable=broad-except
-      logging.exception('Error in producer thread for %s', iterable)
-      producer_error.append(e)
+      logging.exception('Error in producer thread for %s', self.iterable)
+      self.producer_error.append(e)
     finally:
-      buffer.put(end)
+      self.buffer.put(self.end)
 
-  # Start the producer thread.
-  threading.Thread(target=producer, daemon=True).start()
+  def __iter__(self):
+    return self
 
-  # Consume from the buffer.
-  while True:
-    value = buffer.get()
-    if value is end:
-      break
-    yield value
+  def ready(self):
+    return not self.buffer.empty()
 
-  if producer_error:
-    raise producer_error[0]
+  def __next__(self):
+    value = self.buffer.get()
+    if value is self.end:
+      if self.producer_error:
+        raise self.producer_error[0]
+      raise StopIteration
+    return value
+
+
+def prefetch(iterable: Iterable[T],
+             buffer_size: int = 5,
+             device=None) -> core.PrefetchingIterator[T]:
+  """Returns prefetching iterator with additional 'ready' method."""
+
+  return PrefetchIterator(iterable, buffer_size, device)
 
 
 class PrefetchingSplit(NamedTuple):

@@ -20,7 +20,7 @@ This file specifies and documents the notions of `Actor` and `Learner`.
 
 import abc
 import itertools
-from typing import Generic, List, Optional, Sequence, TypeVar
+from typing import Generic, Iterator, List, Optional, Sequence, TypeVar
 
 from acme import types
 from acme.utils import metrics
@@ -163,3 +163,11 @@ class Learner(VariableSource, Worker, Saveable):
 
   def restore(self, state):
     raise NotImplementedError('Method "restore" is not implemented.')
+
+
+class PrefetchingIterator(Iterator[T], abc.ABC):
+  """Abstract iterator object which supports `ready` method."""
+
+  @abc.abstractmethod
+  def ready(self):
+    """Is there any data waiting for processing."""

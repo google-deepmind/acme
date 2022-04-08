@@ -38,7 +38,7 @@ class LocalLayout(agent.Agent):
       builder: builders.GenericActorLearnerBuilder,
       networks: Any,
       policy_network: Any,
-      min_replay_size: int,
+      min_replay_size: Optional[int] = None,
       samples_per_insert: float = 256.0,
       workdir: Optional[str] = '~/acme',
       batch_size: int = 256,
@@ -56,7 +56,8 @@ class LocalLayout(agent.Agent):
       builder: builder defining an RL algorithm to train.
       networks: network objects to be passed to the learner.
       policy_network: function that given an observation returns actions.
-      min_replay_size: minimum replay size before updating.
+      min_replay_size: minimum replay size before updating. When not specified
+        new deadlock-protection logic is applied which uses learner's iterator.
       samples_per_insert: number of samples to take from replay for every insert
         that is made.
       workdir: if provided saves the state of the learner and the counter
@@ -104,10 +105,11 @@ class LocalLayout(agent.Agent):
                           for table in replay_tables)
 
     dataset = builder.make_dataset_iterator(replay_client)
-    if prefetch_size > 1:
-      device = jax.devices()[0] if device_prefetch else None
-      dataset = utils.prefetch(dataset, buffer_size=prefetch_size,
-                               device=device)
+    device = jax.devices()[0] if device_prefetch and prefetch_size > 1 else None
+    # We always use prefetch, as it provides an iterator with additional
+    # 'ready' method.
+    dataset = utils.prefetch(dataset, buffer_size=prefetch_size,
+                             device=device)
     learner_key, key = jax.random.split(key)
     learner = builder.make_learner(
         random_key=learner_key,
@@ -131,43 +133,28 @@ class LocalLayout(agent.Agent):
     actor_key, key = jax.random.split(key)
     actor = builder.make_actor(
         actor_key, policy_network, adder, variable_source=learner)
-    self._custom_update_fn = None
-    if is_reverb_queue:
-      # Reverb queue requires special handling on update: custom logic to
-      # decide when it is safe to make a learner step. This is only needed for
-      # the local agent, where the actor and the learner are running
-      # synchronously and the learner will deadlock if it makes a step with
-      # no data available.
-      def custom_update():
-        should_update_actor = False
-        # Run a number of learner steps (usually gradient steps).
-        # TODO(raveman): This is wrong. When running multi-level learners,
-        # different levels might have different batch sizes. Find a solution.
-        while all(table.can_sample(batch_size) for table in replay_tables):
-          learner.step()
-          should_update_actor = True
 
-        if should_update_actor:
-          # "wait=True" to make it more onpolicy
-          actor.update(wait=True)
-
-      self._custom_update_fn = custom_update
-
-    effective_batch_size = batch_size * num_sgd_steps_per_step
-    super().__init__(
-        actor=actor,
-        learner=learner,
-        min_observations=max(effective_batch_size, min_replay_size),
-        observations_per_step=float(effective_batch_size) / samples_per_insert)
+    if min_replay_size and not is_reverb_queue:
+      # TODO(stanczyk): Eliminate this code path when all agents use rate
+      # limiters.
+      effective_batch_size = batch_size * num_sgd_steps_per_step
+      super().__init__(
+          actor=actor,
+          learner=learner,
+          min_observations=max(effective_batch_size, min_replay_size),
+          observations_per_step=float(effective_batch_size) /
+          samples_per_insert)
+    else:
+      super().__init__(
+          actor=actor,
+          learner=learner,
+          iterator=dataset)
 
     # Save the replay so we don't garbage collect it.
     self._replay_server = replay_server
 
   def update(self):
-    if self._custom_update_fn:
-      self._custom_update_fn()
-    else:
-      super().update()
+    super().update()
     if self._checkpointer:
       self._checkpointer.save()
 

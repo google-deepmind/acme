@@ -15,7 +15,7 @@
 
 """The base agent interface."""
 
-from typing import List
+from typing import List, Optional
 
 from acme import core
 from acme import types
@@ -58,12 +58,15 @@ class Agent(core.Actor, core.VariableSource):
   """
 
   def __init__(self, actor: core.Actor, learner: core.Learner,
-               min_observations: int, observations_per_step: float):
+               min_observations: Optional[int] = None,
+               observations_per_step: Optional[float] = None,
+               iterator: Optional[core.PrefetchingIterator] = None):
     self._actor = actor
     self._learner = learner
     self._min_observations = min_observations
     self._observations_per_step = observations_per_step
     self._num_observations = 0
+    self._iterator = iterator
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     return self._actor.select_action(observation)
@@ -76,6 +79,20 @@ class Agent(core.Actor, core.VariableSource):
     self._actor.observe(action, next_timestep)
 
   def update(self):
+    if self._iterator:
+      # Perform learner steps as long as iterator has data.
+      update_actor = False
+      while self._iterator.ready():
+        # Run learner steps (usually means gradient steps).
+        self._learner.step()
+        update_actor = True
+      if update_actor:
+        # Update the actor weights only when learner was updated.
+        self._actor.update()
+      return
+
+    # If dataset is not provided, follback to the old logic.
+    # TODO(stanczyk): Remove when not used.
     num_steps = _calculate_num_learner_steps(
         num_observations=self._num_observations,
         min_observations=self._min_observations,
