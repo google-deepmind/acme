@@ -57,29 +57,10 @@ class PPOBuilder(builders.ActorLearnerBuilder):
     }
     signature = adders_reverb.SequenceAdder.signature(
         environment_spec, extra_spec, sequence_length=self._sequence_length)
-    # We set a huge size of queue, even though it is not really necessary since
-    # a custom update code in LocalLayout will make sure that we process data
-    # as soon as it is available. So the size here does not really matter, as
-    # long as it is bigger than or equal to the batch size.
-    # CAVEAT: we cannot make it equal to batch_size or batch_size + 1, the value
-    # has to be larger for few reasons:
-    #  - during the last step in an episode we might write 2 sequences to reverb
-    #    at once (that's how SequenceAdder works)
-    #  - reverb does addition/sampling in multiple threads, so data might be
-    #    added not when you expect it to be. so we need some extra buffer size
-    #    in order not to get deadlocks.
-    # TODO(raveman): This (large queue size) will not work for distributed setup
-    # if learner is slower than actors (the queue will fill up and the learner
-    # will be offpolicy). Find a better solution.
-    is_single_machine = True
-    extra_capacity_to_avoid_single_machine_deadlocks = 1000
-    max_size = self._config.batch_size + (
-        extra_capacity_to_avoid_single_machine_deadlocks
-        if is_single_machine else 0)
     return [
         reverb.Table.queue(
             name=self._config.replay_table_name,
-            max_size=max_size,
+            max_size=self._config.batch_size,
             signature=signature)
     ]
 
