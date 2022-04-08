@@ -38,9 +38,9 @@ class LocalLayout(agent.Agent):
       builder: builders.GenericActorLearnerBuilder,
       networks: Any,
       policy_network: Any,
-      workdir: Optional[str] = '~/acme',
-      min_replay_size: int = 1000,
+      min_replay_size: int,
       samples_per_insert: float = 256.0,
+      workdir: Optional[str] = '~/acme',
       batch_size: int = 256,
       num_sgd_steps_per_step: int = 1,
       prefetch_size: int = 1,
@@ -56,11 +56,11 @@ class LocalLayout(agent.Agent):
       builder: builder defining an RL algorithm to train.
       networks: network objects to be passed to the learner.
       policy_network: function that given an observation returns actions.
-      workdir: if provided saves the state of the learner and the counter
-        (if the counter is not None) into workdir.
       min_replay_size: minimum replay size before updating.
       samples_per_insert: number of samples to take from replay for every insert
         that is made.
+      workdir: if provided saves the state of the learner and the counter
+        (if the counter is not None) into workdir.
       batch_size: batch size for updates.
       num_sgd_steps_per_step: how many sgd steps a learner does per 'step' call.
         For performance reasons (especially to reduce TPU host-device transfer
