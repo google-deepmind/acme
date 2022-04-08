@@ -31,6 +31,9 @@ import reverb
 import sonnet as snt
 import tensorflow as tf
 
+# Valid values of the "accelerator" argument.
+_ACCELERATORS = ('CPU', 'GPU', 'TPU')
+
 
 class DistributedD4PG:
   """Program definition for D4PG."""
@@ -39,6 +42,7 @@ class DistributedD4PG:
       self,
       environment_factory: Callable[[bool], dm_env.Environment],
       network_factory: Callable[[specs.BoundedArray], Dict[str, snt.Module]],
+      accelerator: Optional[str] = None,
       num_actors: int = 1,
       num_caches: int = 0,
       environment_spec: Optional[specs.EnvironmentSpec] = None,
@@ -57,6 +61,10 @@ class DistributedD4PG:
       max_actor_steps: Optional[int] = None,
       log_every: float = 10.0,
   ):
+
+    if accelerator is not None and accelerator not in _ACCELERATORS:
+      raise ValueError(f'Accelerator must be one of {_ACCELERATORS}, '
+                       f'not "{accelerator}".')
 
     if not environment_spec:
       environment_spec = specs.make_environment_spec(environment_factory(False))
@@ -79,11 +87,13 @@ class DistributedD4PG:
     self._num_caches = num_caches
     self._max_actor_steps = max_actor_steps
     self._log_every = log_every
+    self._accelerator = accelerator
 
     self._builder = agent.D4PGBuilder(
         # TODO(mwhoffman): pass the config dataclass in directly.
         # TODO(mwhoffman): use the limiter rather than the workaround below.
         agent.D4PGConfig(
+            accelerator=accelerator,
             discount=discount,
             batch_size=batch_size,
             prefetch_size=prefetch_size,
@@ -117,15 +127,21 @@ class DistributedD4PG:
   ):
     """The Learning part of the agent."""
 
-    # Create the networks to optimize (online) and target networks.
-    online_networks = self._network_factory(self._environment_spec.actions)
-    target_networks = copy.deepcopy(online_networks)
+    # If we are running on multiple accelerator devices, this replicates
+    # weights and updates across devices.
+    replicator = agent.get_replicator(self._accelerator)
 
-    # Initialize the networks.
-    online_networks.init(self._environment_spec)
-    target_networks.init(self._environment_spec)
+    with replicator.scope():
+      # Create the networks to optimize (online) and target networks.
+      online_networks = self._network_factory(self._environment_spec.actions)
+      target_networks = copy.deepcopy(online_networks)
+
+      # Initialize the networks.
+      online_networks.init(self._environment_spec)
+      target_networks.init(self._environment_spec)
 
     dataset = self._builder.make_dataset_iterator(replay)
+
     counter = counting.Counter(counter, 'learner')
     logger = loggers.make_default_logger(
         'learner', time_delta=self._log_every, steps_key='learner_steps')

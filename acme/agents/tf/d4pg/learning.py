@@ -16,7 +16,7 @@
 """D4PG learner implementation."""
 
 import time
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Union, Sequence
 
 import acme
 from acme import types
@@ -31,6 +31,8 @@ import reverb
 import sonnet as snt
 import tensorflow as tf
 import tree
+
+Replicator = Union[snt.distribute.Replicator, snt.distribute.TpuReplicator]
 
 
 class D4PGLearner(acme.Learner):
@@ -49,6 +51,7 @@ class D4PGLearner(acme.Learner):
       discount: float,
       target_update_period: int,
       dataset_iterator: Iterator[reverb.ReplaySample],
+      replicator: Optional[Replicator] = None,
       observation_network: types.TensorTransformation = lambda x: x,
       target_observation_network: types.TensorTransformation = lambda x: x,
       policy_optimizer: Optional[snt.Optimizer] = None,
@@ -71,6 +74,8 @@ class D4PGLearner(acme.Learner):
         the target networks.
       dataset_iterator: dataset to learn from, whether fixed or from a replay
         buffer (see `acme.datasets.reverb.make_reverb_dataset` documentation).
+      replicator: Replicates variables and their update methods over multiple
+        accelerators, such as the multiple chips in a TPU.
       observation_network: an optional online network to process observations
         before the policy and the critic.
       target_observation_network: the target observation network.
@@ -102,16 +107,27 @@ class D4PGLearner(acme.Learner):
     self._discount = discount
     self._clipping = clipping
 
-    # Necessary to track when to update target networks.
-    self._num_steps = tf.Variable(0, dtype=tf.int32)
-    self._target_update_period = target_update_period
+    # Replicates Variables across multiple accelerators
+    if not replicator:
+      accelerator = _get_first_available_accelerator_type()
+      if accelerator == 'TPU':
+        replicator = snt.distribute.TpuReplicator()
+      else:
+        replicator = snt.distribute.Replicator()
+
+    self._replicator = replicator
+
+    with replicator.scope():
+      # Necessary to track when to update target networks.
+      self._num_steps = tf.Variable(0, dtype=tf.int32)
+      self._target_update_period = target_update_period
+
+      # Create optimizers if they aren't given.
+      self._critic_optimizer = critic_optimizer or snt.optimizers.Adam(1e-4)
+      self._policy_optimizer = policy_optimizer or snt.optimizers.Adam(1e-4)
 
     # Batch dataset and create iterator.
     self._iterator = dataset_iterator
-
-    # Create optimizers if they aren't given.
-    self._critic_optimizer = critic_optimizer or snt.optimizers.Adam(1e-4)
-    self._policy_optimizer = policy_optimizer or snt.optimizers.Adam(1e-4)
 
     # Expose the variables.
     policy_network_to_expose = snt.Sequential(
@@ -154,28 +170,7 @@ class D4PGLearner(acme.Learner):
     self._timestamp = None
 
   @tf.function
-  def _step(self) -> Dict[str, tf.Tensor]:
-    # Update target network
-    online_variables = (
-        *self._observation_network.variables,
-        *self._critic_network.variables,
-        *self._policy_network.variables,
-    )
-    target_variables = (
-        *self._target_observation_network.variables,
-        *self._target_critic_network.variables,
-        *self._target_policy_network.variables,
-    )
-
-    # Make online -> target network update ops.
-    if tf.math.mod(self._num_steps, self._target_update_period) == 0:
-      for src, dest in zip(online_variables, target_variables):
-        dest.assign(src)
-    self._num_steps.assign_add(1)
-
-    # Get data from replay (dropping extras if any). Note there is no
-    # extra data here because we do not insert any into Reverb.
-    sample = next(self._iterator)
+  def _step(self, sample) -> Dict[str, tf.Tensor]:
     transitions: types.Transition = sample.data  # Assuming ReverbSample.
 
     # Cast the additional discount to match the environment discount dtype.
@@ -226,8 +221,13 @@ class D4PGLearner(acme.Learner):
         self._critic_network.trainable_variables)
 
     # Compute gradients.
-    policy_gradients = tape.gradient(policy_loss, policy_variables)
-    critic_gradients = tape.gradient(critic_loss, critic_variables)
+    replica_context = tf.distribute.get_replica_context()
+    policy_gradients = _average_gradients_across_replicas(
+        replica_context,
+        tape.gradient(policy_loss, policy_variables))
+    critic_gradients = _average_gradients_across_replicas(
+        replica_context,
+        tape.gradient(critic_loss, critic_variables))
 
     # Delete the tape manually because of the persistent=True flag.
     del tape
@@ -247,9 +247,49 @@ class D4PGLearner(acme.Learner):
         'policy_loss': policy_loss,
     }
 
+  @tf.function
+  def _replicated_step(self):
+    # Update target network
+    online_variables = (
+        *self._observation_network.variables,
+        *self._critic_network.variables,
+        *self._policy_network.variables,
+    )
+    target_variables = (
+        *self._target_observation_network.variables,
+        *self._target_critic_network.variables,
+        *self._target_policy_network.variables,
+    )
+
+    # Make online -> target network update ops.
+    if tf.math.mod(self._num_steps, self._target_update_period) == 0:
+      for src, dest in zip(online_variables, target_variables):
+        dest.assign(src)
+    self._num_steps.assign_add(1)
+
+    # Get data from replay (dropping extras if any). Note there is no
+    # extra data here because we do not insert any into Reverb.
+    sample = next(self._iterator)
+
+    # This mirrors the structure of the fetches returned by self._step(),
+    # but the Tensors are replaced with replicated Tensors, one per accelerator.
+    replicated_fetches = self._replicator.run(self._step, args=(sample,))
+
+    def reduce_mean_over_replicas(replicated_value):
+      """Averages a replicated_value across replicas."""
+      # The "axis=None" arg means reduce across replicas, not internal axes.
+      return self._replicator.reduce(
+          reduce_op=tf.distribute.ReduceOp.MEAN,
+          value=replicated_value,
+          axis=None)
+
+    fetches = tree.map_structure(reduce_mean_over_replicas, replicated_fetches)
+
+    return fetches
+
   def step(self):
     # Run the learning step.
-    fetches = self._step()
+    fetches = self._replicated_step()
 
     # Compute elapsed time.
     timestamp = time.time()
@@ -269,3 +309,65 @@ class D4PGLearner(acme.Learner):
 
   def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
     return [tf2_utils.to_numpy(self._variables[name]) for name in names]
+
+
+def _get_first_available_accelerator_type(
+    wishlist: Sequence[str] = ('TPU', 'GPU', 'CPU')) -> str:
+  """Returns the first available accelerator type listed in a wishlist.
+
+  Args:
+    wishlist: A sequence of elements from {'CPU', 'GPU', 'TPU'}, listed in
+      order of descending preference.
+
+  Returns:
+    The first available accelerator type from `wishlist`.
+
+  Raises:
+    RuntimeError: Thrown if no accelerators from the `wishlist` are found.
+  """
+  get_visible_devices = tf.config.get_visible_devices
+
+  for wishlist_device in wishlist:
+    devices = get_visible_devices(device_type=wishlist_device)
+    if devices:
+      return wishlist_device
+
+  available = ', '.join(
+      sorted(frozenset([d.type for d in get_visible_devices()])))
+  raise RuntimeError(
+      'Couldn\'t find any devices from {wishlist}.' +
+      f'Only the following types are available: {available}.')
+
+
+def _average_gradients_across_replicas(replica_context, gradients):
+  """Computes the average gradient across replicas.
+
+  This computes the gradient locally on this device, then copies over the
+  gradients computed on the other replicas, and takes the average across
+  replicas.
+
+  This is faster than copying the gradients from TPU to CPU, and averaging
+  them on the CPU (which is what we do for the losses/fetches).
+
+  Args:
+    replica_context: the return value of `tf.distribute.get_replica_context()`.
+    gradients: The output of tape.gradients(loss, variables)
+
+  Returns:
+    A list of (d_loss/d_varabiable)s.
+  """
+
+  # We must remove any Nones from gradients before passing them to all_reduce.
+  # Nones occur when you call tape.gradient(loss, variables) with some
+  # variables that don't affect the loss.
+  # See: https://github.com/tensorflow/tensorflow/issues/783
+  gradients_without_nones = [g for g in gradients if g is not None]
+  original_indices = [i for i, g in enumerate(gradients) if g is not None]
+
+  results_without_nones = replica_context.all_reduce('mean',
+                                                     gradients_without_nones)
+  results = [None] * len(gradients)
+  for ii, result in zip(original_indices, results_without_nones):
+    results[ii] = result
+
+  return results

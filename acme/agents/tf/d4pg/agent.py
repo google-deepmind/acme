@@ -17,7 +17,8 @@
 
 import copy
 import dataclasses
-from typing import Iterator, List, Optional, Tuple
+import functools
+from typing import Iterator, List, Optional, Tuple, Union, Sequence
 
 from acme import adders
 from acme import core
@@ -37,11 +38,14 @@ import reverb
 import sonnet as snt
 import tensorflow as tf
 
+Replicator = Union[snt.distribute.Replicator, snt.distribute.TpuReplicator]
+
 
 @dataclasses.dataclass
 class D4PGConfig:
   """Configuration options for the D4PG agent."""
 
+  accelerator: Optional[str] = None
   discount: float = 0.99
   batch_size: int = 256
   prefetch_size: int = 4
@@ -166,6 +170,9 @@ class D4PGBuilder:
         batch_size=self._config.batch_size,
         prefetch_size=self._config.prefetch_size)
 
+    replicator = get_replicator(self._config.accelerator)
+    dataset = replicator.experimental_distribute_dataset(dataset)
+
     # TODO(b/155086959): Fix type stubs and remove.
     return iter(dataset)  # pytype: disable=wrong-arg-types
 
@@ -234,6 +241,7 @@ class D4PGBuilder:
         discount=self._config.discount,
         target_update_period=self._config.target_update_period,
         dataset_iterator=dataset,
+        replicator=get_replicator(self._config.accelerator),
         counter=counter,
         logger=logger,
         checkpoint=checkpoint,
@@ -255,6 +263,7 @@ class D4PG(agent.Agent):
       policy_network: snt.Module,
       critic_network: snt.Module,
       observation_network: types.TensorTransformation = tf.identity,
+      accelerator: Optional[str] = None,
       discount: float = 0.99,
       batch_size: int = 256,
       prefetch_size: int = 4,
@@ -280,6 +289,8 @@ class D4PG(agent.Agent):
       critic_network: the online critic.
       observation_network: optional network to transform the observations before
         they are fed into any network.
+      accelerator: 'TPU', 'GPU', or 'CPU'. If omitted, the first available
+        accelerator type from ['TPU', 'GPU', 'CPU'] will be selected.
       discount: discount to use for TD updates.
       batch_size: batch size for updates.
       prefetch_size: size to prefetch from replay.
@@ -299,6 +310,9 @@ class D4PG(agent.Agent):
       logger: logger object to be used by learner.
       checkpoint: boolean indicating whether to checkpoint the learner.
     """
+    if not accelerator:
+      accelerator = _get_first_available_accelerator_type(['TPU', 'GPU', 'CPU'])
+
     # Create the Builder object which will internally create agent components.
     builder = D4PGBuilder(
         # TODO(mwhoffman): pass the config dataclass in directly.
@@ -307,6 +321,7 @@ class D4PG(agent.Agent):
         # they are not controlled by a limiter and are instead handled by the
         # Agent base class (the above TODO directly references this behavior).
         D4PGConfig(
+            accelerator=accelerator,
             discount=discount,
             batch_size=batch_size,
             prefetch_size=prefetch_size,
@@ -322,17 +337,20 @@ class D4PG(agent.Agent):
             replay_table_name=replay_table_name,
         ))
 
-    # TODO(mwhoffman): pass the network dataclass in directly.
-    online_networks = D4PGNetworks(policy_network=policy_network,
-                                   critic_network=critic_network,
-                                   observation_network=observation_network)
+    replicator = get_replicator(accelerator)
 
-    # Target networks are just a copy of the online networks.
-    target_networks = copy.deepcopy(online_networks)
+    with replicator.scope():
+      # TODO(mwhoffman): pass the network dataclass in directly.
+      online_networks = D4PGNetworks(policy_network=policy_network,
+                                     critic_network=critic_network,
+                                     observation_network=observation_network)
 
-    # Initialize the networks.
-    online_networks.init(environment_spec)
-    target_networks.init(environment_spec)
+      # Target networks are just a copy of the online networks.
+      target_networks = copy.deepcopy(online_networks)
+
+      # Initialize the networks.
+      online_networks.init(environment_spec)
+      target_networks.init(environment_spec)
 
     # TODO(mwhoffman): either make this Dataclass or pass only one struct.
     # The network struct passed to make_learner is just a tuple for the
@@ -363,3 +381,83 @@ class D4PG(agent.Agent):
 
     # Save the replay so we don't garbage collect it.
     self._replay_server = replay_server
+
+
+def _ensure_accelerator(accelerator: str) -> str:
+  """Checks for the existence of the expected accelerator type.
+
+  Args:
+    accelerator: 'CPU', 'GPU' or 'TPU'.
+
+  Returns:
+    The validated `accelerator` argument.
+
+  Raises:
+    RuntimeError: Thrown if the expected accelerator isn't found.
+  """
+  devices = tf.config.get_visible_devices(device_type=accelerator)
+
+  if devices:
+    return accelerator
+  else:
+    error_messages = [f'Couldn\'t find any {accelerator} devices.',
+                      'tf.config.get_visible_devices() returned:']
+    error_messages.extend([str(d) for d in devices])
+    raise RuntimeError('\n'.join(error_messages))
+
+
+def _get_first_available_accelerator_type(
+    wishlist: Sequence[str] = ('TPU', 'GPU', 'CPU')) -> str:
+  """Returns the first available accelerator type listed in a wishlist.
+
+  Args:
+    wishlist: A sequence of elements from {'CPU', 'GPU', 'TPU'}, listed in
+      order of descending preference.
+
+  Returns:
+    The first available accelerator type from `wishlist`.
+
+  Raises:
+    RuntimeError: Thrown if no accelerators from the `wishlist` are found.
+  """
+  get_visible_devices = tf.config.get_visible_devices
+
+  for wishlist_device in wishlist:
+    devices = get_visible_devices(device_type=wishlist_device)
+    if devices:
+      return wishlist_device
+
+  available = ', '.join(
+      sorted(frozenset([d.type for d in get_visible_devices()])))
+  raise RuntimeError(
+      'Couldn\'t find any devices from {wishlist}.' +
+      f'Only the following types are available: {available}.')
+
+
+# Only instantiate one replicator per (process, accelerator type), in case
+# a replicator stores state that needs to be carried between its method calls.
+@functools.lru_cache()
+def get_replicator(accelerator: Optional[str]) -> Replicator:
+  """Returns a replicator instance appropriate for the given accelerator.
+
+  This caches the instance using functools.cache, so that only one replicator
+  is instantiated per process and argument value.
+
+  Args:
+    accelerator: None, 'TPU', 'GPU', or 'CPU'. If None, the first available
+      accelerator type will be chosen from ('TPU', 'GPU', 'CPU').
+
+  Returns:
+    A replicator, for replciating weights, datasets, and updates across
+    one or more accelerators.
+  """
+  if accelerator:
+    accelerator = _ensure_accelerator(accelerator)
+  else:
+    accelerator = _get_first_available_accelerator_type()
+
+  if accelerator == 'TPU':
+    tf.tpu.experimental.initialize_tpu_system()
+    return snt.distribute.TpuReplicator()
+  else:
+    return snt.distribute.Replicator()

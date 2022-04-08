@@ -61,6 +61,7 @@ class DistributedAgentTest(absltest.TestCase):
     agent = d4pg.DistributedD4PG(
         environment_factory=lambda x: fakes.ContinuousEnvironment(bounded=True),
         network_factory=make_networks,
+        accelerator='CPU',
         num_actors=2,
         batch_size=32,
         min_replay_size=32,

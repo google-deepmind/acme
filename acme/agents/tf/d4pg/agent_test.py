@@ -71,6 +71,7 @@ class D4PGTest(absltest.TestCase):
     # Construct the agent.
     agent = d4pg.D4PG(
         environment_spec=spec,
+        accelerator='CPU',
         policy_network=agent_networks['policy'],
         critic_network=agent_networks['critic'],
         batch_size=10,
