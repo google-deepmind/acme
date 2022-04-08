@@ -25,9 +25,9 @@ from acme import specs
 from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.jax import savers
-from acme.jax import snapshotter
 from acme.jax import types
 from acme.jax import utils
+from acme.jax import snapshotter
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import lp_utils
