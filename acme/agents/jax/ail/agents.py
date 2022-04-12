@@ -49,13 +49,13 @@ class DistributedAIL(distributed_layout.DistributedLayout):
       batch_size: int,
       make_demonstrations: Callable[[int], Iterator[types.Transition]],
       policy_network: Any,
-      evaluator_policy_network: Any,
       num_actors: int,
       max_number_of_steps: Optional[int] = None,
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
       prefetch_size: int = 4,
       discriminator_loss: Optional[losses.Loss] = None,
+      evaluator_policy_network: Optional[Any] = None,
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
@@ -75,6 +75,9 @@ class DistributedAIL(distributed_layout.DistributedLayout):
         make_demonstrations=make_demonstrations,
         logger_fn=logger_fn)
     if evaluator_factories is None:
+      if evaluator_policy_network is None:
+        raise ValueError('Either evaluator_policy_network or '
+                         'evaluator_factories must be specified.')
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
               environment_factory=environment_factory,
