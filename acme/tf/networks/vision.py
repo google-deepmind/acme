@@ -31,15 +31,39 @@ class ResNetTorso(snt.Module):
       conv_shape: Union[int, Sequence[int]] = 3,
       conv_stride: Union[int, Sequence[int]] = 1,
       pool_size: Union[int, Sequence[int]] = 3,
-      pool_stride: Union[int, Sequence[int]] = 2,
+      pool_stride: Union[int, Sequence[int], Sequence[Sequence[int]]] = 2,
       data_format: str = 'NHWC',
       activation: Callable[[tf.Tensor], tf.Tensor] = tf.nn.relu,
       output_dtype: tf.DType = tf.float32,
       name: str = 'resnet_torso'):
+    """Builds an IMPALA-style ResNet.
+
+    The arguments' default values construct the IMPALA resnet.
+
+    Args:
+      num_channels: The number of convolutional channels for each layer.
+      num_blocks: The number of resnet blocks in each "layer".
+      num_output_hidden: The output size(s) of the MLP layer(s) on top.
+      conv_shape: The convolution filter size (int), or size dimensions (H, W).
+      conv_stride: the convolution stride (int), or strides (row, column).
+      pool_size: The pooling footprint size (int), or size dimensions (H, W).
+      pool_stride: The pooling stride (int) or strides (row, column), or
+        strides for each of the N layers ((r1, c1), (r2, c2), ..., (rN, cN)).
+      data_format: The axis order of the input.
+      activation: The activation function.
+      output_dtype: the output dtype.
+      name: The Sonnet module name.
+    """
     super().__init__(name=name)
 
     self._output_dtype = output_dtype
     self._num_layers = len(num_blocks)
+
+    if isinstance(pool_stride, int):
+      pool_stride = (pool_stride, pool_stride)
+
+    if isinstance(pool_stride[0], int):
+      pool_stride = self._num_layers * (pool_stride,)
 
     # Create sequence of residual blocks.
     blocks = []
@@ -51,7 +75,7 @@ class ResNetTorso(snt.Module):
               conv_shape,
               conv_stride,
               pool_size,
-              pool_stride,
+              pool_stride[i],
               data_format=data_format,
               activation=activation))
 
