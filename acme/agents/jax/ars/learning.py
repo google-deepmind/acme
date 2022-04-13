@@ -23,6 +23,7 @@ import acme
 from acme import specs
 from acme.adders import reverb as acme_reverb
 from acme.agents.jax.ars import config as ars_config
+from acme.agents.jax.ars import networks as ars_networks
 from acme.jax import networks as networks_lib
 from acme.jax import running_statistics
 from acme.jax import utils
@@ -31,10 +32,6 @@ from acme.utils import loggers
 import jax
 import numpy as np
 import reverb
-
-
-BEHAVIOR_PARAMS_NAME = 'policy'
-EVAL_PARAMS_NAME = 'eval'
 
 
 class PerturbationKey(NamedTuple):
@@ -251,8 +248,9 @@ class ARSLearner(acme.Learner):
     self._logger.write(counts)
 
   def get_variables(self, names: List[str]) -> List[Any]:
-    assert names == [BEHAVIOR_PARAMS_NAME] or names == [EVAL_PARAMS_NAME]
-    if names == [EVAL_PARAMS_NAME]:
+    assert (names == [ars_networks.BEHAVIOR_PARAMS_NAME] or
+            names == [ars_networks.EVAL_PARAMS_NAME])
+    if names == [ars_networks.EVAL_PARAMS_NAME]:
       return [PerturbationKey(-1, -1, False),
               self._training_state.policy_params,
               self._training_state.normalizer_params]

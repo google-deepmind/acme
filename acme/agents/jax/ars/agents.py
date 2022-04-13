@@ -21,7 +21,7 @@ from typing import Callable, Optional, Sequence
 from acme import specs
 from acme.agents.jax.ars import builder
 from acme.agents.jax.ars import config as ars_config
-from acme.agents.jax.ars import learning
+from acme.agents.jax.ars import networks as ars_networks
 from acme.jax import networks as networks_lib
 from acme.jax import types as jax_types
 from acme.jax import utils
@@ -67,7 +67,7 @@ class DistributedARS(distributed_layout.DistributedLayout):
           distributed_layout.default_evaluator_factory(
               environment_factory=environment_factory,
               network_factory=network_factory,
-              policy_factory=lambda n: (learning.EVAL_PARAMS_NAME, n),
+              policy_factory=lambda n: (ars_networks.EVAL_PARAMS_NAME, n),
               log_to_bigtable=log_to_bigtable)
       ]
     super().__init__(
@@ -75,7 +75,7 @@ class DistributedARS(distributed_layout.DistributedLayout):
         environment_factory=environment_factory,
         network_factory=network_factory,
         builder=ars_builder,
-        policy_network=lambda n: (learning.BEHAVIOR_PARAMS_NAME, n),
+        policy_network=lambda n: (ars_networks.BEHAVIOR_PARAMS_NAME, n),
         evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         max_number_of_steps=max_number_of_steps,
