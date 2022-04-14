@@ -74,10 +74,10 @@ class DistributedAIL(distributed_layout.DistributedLayout):
         discriminator_loss=discriminator_loss,
         make_demonstrations=make_demonstrations,
         logger_fn=logger_fn)
+    if (evaluator_policy_network is None) == (evaluator_factories is None):
+      raise ValueError('Either evaluator_policy_network or '
+                       'evaluator_factories must be specified, but not both.')
     if evaluator_factories is None:
-      if evaluator_policy_network is None:
-        raise ValueError('Either evaluator_policy_network or '
-                         'evaluator_factories must be specified.')
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
               environment_factory=environment_factory,

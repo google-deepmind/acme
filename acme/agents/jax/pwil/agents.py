@@ -45,18 +45,21 @@ class DistributedPWIL(distributed_layout.DistributedLayout,
       seed: int,
       demonstrations_fn: Callable[[], pwil_config.PWILDemonstrations],
       policy_network: Callable[[DirectRLNetworks], DirectPolicyNetwork],
-      evaluator_policy_network: Callable[[DirectRLNetworks],
-                                         DirectPolicyNetwork],
       num_actors: int,
       max_number_of_steps: Optional[int] = None,
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
       prefetch_size: int = 4,
+      evaluator_policy_network: Optional[Callable[[DirectRLNetworks],
+                                                  DirectPolicyNetwork]] = None,
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
     pwil_builder = builder.PWILBuilder(
         rl_agent=rl_agent, config=config, demonstrations_fn=demonstrations_fn)
+    if (evaluator_policy_network is None) == (evaluator_factories is None):
+      raise ValueError('Either evaluator_policy_network or '
+                       'evaluator_factories must be specified, but not both.')
     if evaluator_factories is None:
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
