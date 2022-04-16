@@ -44,13 +44,13 @@ class DistributedRND(distributed_layout.DistributedLayout):
       network_factory: NetworkFactory,
       config: rnd_config.RNDConfig,
       policy_network: Any,
-      evaluator_policy_network: Any,
       seed: int,
       num_actors: int,
       max_number_of_steps: Optional[int] = None,
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
       prefetch_size: int = 4,
+      evaluator_policy_network: Optional[Any] = None,
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
@@ -60,6 +60,9 @@ class DistributedRND(distributed_layout.DistributedLayout):
                                   serialize_fn=utils.fetch_devicearray,
                                   steps_key='learner_steps')
     rnd_builder = builder.RNDBuilder(rl_agent, config, logger_fn=logger_fn)
+    if (evaluator_policy_network is None) == (evaluator_factories is None):
+      raise ValueError('Either evaluator_policy_network or '
+                       'evaluator_factories must be specified, but not both.')
     if evaluator_factories is None:
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
