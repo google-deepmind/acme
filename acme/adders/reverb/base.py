@@ -79,7 +79,7 @@ class ReverbAdder(base.Adder):
       max_in_flight_items: int,
       delta_encoded: bool = False,
       priority_fns: Optional[PriorityFnMapping] = None,
-      get_signature_timeout_ms: int = 300_000,
+      validate_items: bool = True,
   ):
     """Initialize a ReverbAdder instance.
 
@@ -95,8 +95,9 @@ class ReverbAdder(base.Adder):
       priority_fns: A mapping from table names to priority functions; if
         omitted, all transitions/steps/sequences are given uniform priorities
         (1.0) and placed in DEFAULT_PRIORITY_TABLE.
-      get_signature_timeout_ms: time before timeout in fetching the signature
-        from the reverb server.
+      validate_items: Whether to validate items against the table signature
+        before they are sent to the server. This requires table signature to be
+        fetched from the server and cached locally.
     """
     if priority_fns:
       priority_fns = dict(priority_fns)
@@ -118,7 +119,7 @@ class ReverbAdder(base.Adder):
     # Every time a new writer is created, it must fetch the signature from the
     # Reverb server. If this is set too low it can crash the adders in a
     # distributed setup where the replay may take a while to spin up.
-    self._get_signature_timeout_ms = get_signature_timeout_ms
+    self._validate_items = validate_items
 
   def __del__(self):
     if self.__writer is not None:
@@ -137,7 +138,7 @@ class ReverbAdder(base.Adder):
     if self.__writer is None:
       self.__writer = self._client.trajectory_writer(
           num_keep_alive_refs=self._max_sequence_length,
-          get_signature_timeout_ms=self._get_signature_timeout_ms)
+          validate_items=self._validate_items)
       self._writer_created_timestamp = time.time()
     return self.__writer
 
