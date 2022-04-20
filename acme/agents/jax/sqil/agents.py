@@ -42,17 +42,20 @@ class DistributedSQIL(distributed_layout.DistributedLayout):
       batch_size: int,
       make_demonstrations: Callable[[int], Iterator[types.Transition]],
       policy_network: Any,
-      evaluator_policy_network: Any,
       num_actors: int,
       max_number_of_steps: Optional[int] = None,
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
       prefetch_size: int = 4,
+      evaluator_policy_network: Optional[Any] = None,
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
     sqil_builder = builder.SQILBuilder(rl_agent, batch_size,
                                        make_demonstrations)
+    if (evaluator_policy_network is None) == (evaluator_factories is None):
+      raise ValueError('Either evaluator_policy_network or '
+                       'evaluator_factories must be specified, but not both.')
     if evaluator_factories is None:
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
