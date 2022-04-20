@@ -87,21 +87,17 @@ class LocalLayout(agent.Agent):
     # data respectively.
     adder = builder.make_adder(replay_client)
 
-    def _is_reverb_queue(reverb_table: reverb.Table,
-                         reverb_client: reverb.Client) -> bool:
+    def _is_reverb_queue(reverb_table: reverb.Table) -> bool:
       """Returns True iff the Reverb Table is actually a queue."""
       # TODO(sinopalnikov): make it more generic and check for a table that
       # needs special handling on update.
-      info = reverb_client.server_info()
-      table_info = info[reverb_table.name]
       is_queue = (
-          table_info.max_times_sampled == 1 and
-          table_info.sampler_options.fifo and
-          table_info.remover_options.fifo)
+          reverb_table.info.max_times_sampled == 1 and
+          reverb_table.info.sampler_options.fifo and
+          reverb_table.info.remover_options.fifo)
       return is_queue
 
-    is_reverb_queue = any(_is_reverb_queue(table, replay_client)
-                          for table in replay_tables)
+    is_reverb_queue = any(_is_reverb_queue(table) for table in replay_tables)
 
     dataset = builder.make_dataset_iterator(replay_client)
     device = jax.devices()[0] if device_prefetch and prefetch_size > 1 else None
