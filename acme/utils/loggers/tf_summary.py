@@ -55,7 +55,7 @@ class TFSummaryLogger(base.Logger):
 
   def write(self, values: base.LoggingData):
     if self._steps_key is not None and self._steps_key not in values:
-      logging.warn('steps key %s not found. Skip logging.', self._steps_key)
+      logging.warning('steps key %s not found. Skip logging.', self._steps_key)
       return
 
     step = values[
