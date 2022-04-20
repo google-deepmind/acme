@@ -18,6 +18,7 @@ from typing import Callable, Sequence
 
 from acme import specs
 from acme import types
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 import haiku as hk
@@ -36,9 +37,9 @@ class TD3Networks:
                               float, float], types.NestedArray]
 
 
-def get_default_behavior_policy(networks: TD3Networks,
-                                action_specs: specs.BoundedArray,
-                                sigma: float):
+def get_default_behavior_policy(
+    networks: TD3Networks, action_specs: specs.BoundedArray,
+    sigma: float) -> actor_core_lib.FeedForwardPolicy:
   """Selects action according to the policy."""
   def behavior_policy(params: networks_lib.Params, key: networks_lib.PRNGKey,
                       observation: types.NestedArray):
