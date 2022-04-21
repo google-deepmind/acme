@@ -56,6 +56,11 @@ class IMPALAActor(core.Actor):
       self._variable_client.update_and_wait()
 
     params = initial_state_init_fn(next(self._rng))
+
+    if isinstance(params, dict) and not params:
+      # Params can't be empty as they are being passed to vmapped function.
+      params['batch_size'] = 1
+
     self._initial_state = initial_state_fn(params)
 
   def select_action(self, observation: types.Observation) -> types.Action:

@@ -16,16 +16,18 @@
 
 import dataclasses
 import logging
-from typing import Any, Callable, Optional, Sequence, Dict
+from typing import Any, Callable, Dict, Optional, Sequence
 
 from acme import core
 from acme import environment_loop
 from acme import specs
 from acme.agents.jax import builders
+from acme.jax import inference_server
 from acme.jax import networks as networks_lib
 from acme.jax import savers
 from acme.jax import types
 from acme.jax import utils
+from acme.jax import variable_utils
 from acme.jax import snapshotter
 from acme.utils import counting
 from acme.utils import loggers
@@ -157,7 +159,9 @@ class DistributedLayout:
                observers: Sequence[observers_lib.EnvLoopObserver] = (),
                multithreading_colocate_learner_and_reverb: bool = False,
                checkpointing_config: Optional[CheckpointingConfig] = None,
-               make_snapshot_models: Optional[SnapshotModelFactory] = None):
+               make_snapshot_models: Optional[SnapshotModelFactory] = None,
+               inference_server_config: Optional[
+                   inference_server.InferenceServerConfig] = None):
 
     if prefetch_size < 0:
       raise ValueError(f'Prefetch size={prefetch_size} should be non negative')
@@ -182,6 +186,7 @@ class DistributedLayout:
         multithreading_colocate_learner_and_reverb)
     self._checkpointing_config = checkpointing_config or CheckpointingConfig()
     self._make_snapshot_models = make_snapshot_models
+    self._inference_server_config = inference_server_config
 
   def replay(self):
     """The replay storage."""
@@ -256,9 +261,15 @@ class DistributedLayout:
         add_uid=self._checkpointing_config.add_uid,
         max_to_keep=self._checkpointing_config.max_to_keep)
 
-  def actor(self, random_key: networks_lib.PRNGKey, replay: reverb.Client,
-            variable_source: core.VariableSource, counter: counting.Counter,
-            actor_id: ActorId) -> environment_loop.EnvironmentLoop:
+  def actor(
+      self,
+      random_key: networks_lib.PRNGKey,
+      replay: reverb.Client,
+      variable_source: core.VariableSource,
+      counter: counting.Counter,
+      actor_id: ActorId,
+      inference_client: Optional[inference_server.InferenceServer] = None
+  ) -> environment_loop.EnvironmentLoop:
     """The actor process."""
     adder = self._builder.make_adder(replay)
 
@@ -269,8 +280,13 @@ class DistributedLayout:
     environment = self._environment_factory(
         utils.sample_uint32(environment_key))
 
-    networks = self._network_factory(specs.make_environment_spec(environment))
-    policy_network = self._policy_network(networks)
+    if not inference_client:
+      networks = self._network_factory(specs.make_environment_spec(environment))
+      policy_network = self._policy_network(networks)
+    else:
+      variable_source = variable_utils.ReferenceVariableSource()
+      policy_network = inference_client
+
     actor = self._builder.make_actor(actor_key, policy_network, adder,
                                      variable_source)
 
@@ -284,6 +300,38 @@ class DistributedLayout:
 
   def coordinator(self, counter: counting.Counter, max_actor_steps: int):
     return lp_utils.StepsLimiter(counter, max_actor_steps)
+
+  def inference_server(self, random_key: networks_lib.PRNGKey,
+                       variable_source: core.VariableSource):
+    """Creates an inference server node to be connected to by the actors."""
+
+    # Environments normally require uint32 as a seed.
+    environment = self._environment_factory(random_key)
+    networks = self._network_factory(specs.make_environment_spec(environment))
+    policy_network = self._policy_network(networks)
+
+    if not self._inference_server_config.batch_size:
+      # Inference batch size computation:
+      # - In case of 1 inference device it is efficient to use
+      #   `batch size == num_envs / 2`, so that inference can execute
+      #   in parallel with a subset of environments' steps (it also addresses
+      #   the problem of some environments running slower etc.)
+      # - In case of multiple inference devices, we just divide the above
+      #   batch size.
+      # - Batch size can't obviously be smaller than 1.
+      self._inference_server_config.batch_size = max(
+          1, self._num_actors // (2 * len(jax.local_devices())))
+
+    if not self._inference_server_config.update_period:
+      self._inference_server_config.update_period = (
+          1000 * self._num_actors // self._inference_server_config.batch_size)
+
+    return inference_server.InferenceServer(
+        config=self._inference_server_config,
+        handler=(policy_network
+                 if callable(policy_network) else vars(policy_network)),
+        variable_source=variable_source,
+        devices=jax.local_devices())
 
   def build(self, name='agent', program: Optional[lp.Program] = None):
     """Build the distributed agent topology."""
@@ -316,6 +364,17 @@ class DistributedLayout:
       program.add_node(learner_node, label='learner')
       program.add_node(replay_node, label='replay')
 
+    inference_server_node = None
+    if self._inference_server_config:
+      with program.group('inference_server'):
+        inference_server_key, key = jax.random.split(key)
+        inference_server_node = program.add_node(
+            lp.CourierNode(
+                self.inference_server,
+                inference_server_key,
+                learner,
+                courier_kwargs={'thread_pool_size': self._num_actors}))
+
     def make_actor(random_key: networks_lib.PRNGKey,
                    policy_network: PolicyNetwork,
                    variable_source: core.VariableSource) -> core.Actor:
@@ -332,8 +391,7 @@ class DistributedLayout:
       actor_key, key = jax.random.split(key)
       program.add_node(
           lp.CourierNode(self.actor, actor_key, replay, learner, counter,
-                         actor_id), label='actor')
-
+                         actor_id, inference_server_node), label='actor')
     if self._make_snapshot_models and self._checkpointing_config:
       program.add_node(lp.CourierNode(self.model_saver, learner),
                        label='model_saver')

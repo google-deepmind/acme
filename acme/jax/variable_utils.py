@@ -17,11 +17,30 @@
 from concurrent import futures
 import datetime
 import time
-from typing import List, Optional, Sequence, Union
+from typing import List, NamedTuple, Optional, Sequence, Union
 
 from acme import core
 from acme.jax import networks as network_types
 import jax
+
+
+class VariableReference(NamedTuple):
+  variable_name: str
+
+
+class ReferenceVariableSource(core.VariableSource):
+  """Variable source which returns references instead of values.
+
+  This is passed to each actor when using a centralized inference server. The
+  actor uses this special variable source to get references rather than values.
+  These references are then passed to calls to the inference server, which will
+  dereference them to obtain the value of the corresponding variables at
+  inference time. This avoids passing around copies of variables from each
+  actor to the inference server.
+  """
+
+  def get_variables(self, names: List[str]) -> List[VariableReference]:
+    return [VariableReference(name) for name in names]
 
 
 class VariableClient:
@@ -61,7 +80,7 @@ class VariableClient:
 
     self._key = key
     self._request = lambda k=key: client.get_variables(k)
-    self._future: Optional[futures.Future] = None
+    self._future: Optional[futures.Future] = None  # pylint: disable=g-bare-generic
     self._async_request = lambda: self._executor.submit(self._request)
 
   def update(self, wait: bool = False) -> None:
@@ -111,7 +130,7 @@ class VariableClient:
     self._callback(self._request())
 
   def _callback(self, params_list: List[network_types.Params]):
-    if self._device:
+    if self._device and not isinstance(self._client, ReferenceVariableSource):
       # Move variables to a proper device.
       self._params = jax.device_put(params_list, self._device)
     else:
