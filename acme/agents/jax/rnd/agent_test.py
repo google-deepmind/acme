@@ -34,8 +34,8 @@ class RNDTest(absltest.TestCase):
     spec = specs.make_environment_spec(environment)
 
     networks = sac.make_networks(spec=spec)
-    config = sac.SACConfig(samples_per_insert_tolerance_rate=float('inf'),
-                           min_replay_size=1)
+    config = sac.SACConfig(
+        samples_per_insert_tolerance_rate=2.0, min_replay_size=1)
     sac_builder = sac.SACBuilder(config=config)
     behavior_policy = sac.apply_policy_and_sample(networks)
 

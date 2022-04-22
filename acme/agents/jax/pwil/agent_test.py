@@ -49,7 +49,7 @@ class PwilTest(parameterized.TestCase):
 
     networks = sac.make_networks(spec=spec)
     sac_config = sac.SACConfig(
-        samples_per_insert_tolerance_rate=float('inf'), min_replay_size=1)
+        samples_per_insert_tolerance_rate=2.0, min_replay_size=1)
     rl_agent = sac.SACBuilder(config=sac_config)
     behavior_policy = sac.apply_policy_and_sample(networks)
 

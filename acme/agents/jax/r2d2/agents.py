@@ -30,7 +30,6 @@ from acme.utils import loggers
 import haiku as hk
 import rlax
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], r2d2_networks.R2D2Networks]
 
 
@@ -53,11 +52,14 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
           distributed_layout.EvaluatorFactory]] = None,
       max_number_of_steps: Optional[int] = None,
   ):
-    logger_fn = functools.partial(loggers.make_default_logger,
-                                  'learner', log_to_bigtable,
-                                  time_delta=log_every, asynchronous=True,
-                                  serialize_fn=utils.fetch_devicearray,
-                                  steps_key='learner_steps')
+    logger_fn = functools.partial(
+        loggers.make_default_logger,
+        'learner',
+        log_to_bigtable,
+        time_delta=log_every,
+        asynchronous=True,
+        serialize_fn=utils.fetch_devicearray,
+        steps_key='learner_steps')
     r2d2_builder = builder.R2D2Builder(
         networks=network_factory(environment_spec),
         config=config,
@@ -190,8 +192,6 @@ class R2D2(local_layout.LocalLayout):
         networks=networks,
         policy_network=r2d2_networks.make_behavior_policy(networks, config),
         workdir=workdir,
-        min_replay_size=32 * config.sequence_period,
-        samples_per_insert=1.,
         batch_size=config.batch_size,
         num_sgd_steps_per_step=config.sequence_period,
         counter=counter,

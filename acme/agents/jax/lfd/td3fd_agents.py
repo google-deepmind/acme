@@ -29,7 +29,6 @@ from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], td3.TD3Networks]
 
 
@@ -61,19 +60,8 @@ class TD3fD(local_layout.LocalLayout):
     td3_builder = td3.TD3Builder(td3_config)
     lfd_builder = builder.LfdBuilder(td3_builder, lfd_iterator_fn, lfd_config)
 
-    min_replay_size = td3_config.min_replay_size
-    # Local layout (actually agent.Agent) makes sure that we populate the
-    # buffer with min_replay_size initial transitions and that there's no need
-    # for tolerance_rate. In order for deadlocks not to happen we need to
-    # disable rate limiting that heppens inside the SACBuilder. This is achieved
-    # by the following two lines.
-    td3_config.samples_per_insert_tolerance_rate = float('inf')
-    td3_config.min_replay_size = 1
-
     behavior_policy = td3.get_default_behavior_policy(
-        networks=td3_network,
-        action_specs=spec.actions,
-        sigma=td3_config.sigma)
+        networks=td3_network, action_specs=spec.actions, sigma=td3_config.sigma)
 
     self.builder = lfd_builder
     super().__init__(
@@ -84,8 +72,6 @@ class TD3fD(local_layout.LocalLayout):
         policy_network=behavior_policy,
         batch_size=td3_config.batch_size,
         prefetch_size=td3_config.prefetch_size,
-        samples_per_insert=td3_config.samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=td3_config.num_sgd_steps_per_step,
         counter=counter,
     )
@@ -124,15 +110,14 @@ class DistributedTD3fD(distributed_layout.DistributedLayout):
     lfd_builder = builder.LfdBuilder(td3_builder, lfd_iterator_fn, lfd_config)
 
     action_specs = environment_spec.actions
-    policy_network_fn = functools.partial(td3.get_default_behavior_policy,
-                                          action_specs=action_specs,
-                                          sigma=td3_config.sigma)
+    policy_network_fn = functools.partial(
+        td3.get_default_behavior_policy,
+        action_specs=action_specs,
+        sigma=td3_config.sigma)
 
     if evaluator_factories is None:
       eval_network_fn = functools.partial(
-          td3.get_default_behavior_policy,
-          action_specs=action_specs,
-          sigma=0.)
+          td3.get_default_behavior_policy, action_specs=action_specs, sigma=0.)
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
               environment_factory=environment_factory,

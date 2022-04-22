@@ -29,13 +29,11 @@ from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.RNDNetworks]
 
 
 class DistributedRND(distributed_layout.DistributedLayout):
-  """Distributed program definition for RND.
-  """
+  """Distributed program definition for RND."""
 
   def __init__(
       self,
@@ -54,11 +52,14 @@ class DistributedRND(distributed_layout.DistributedLayout):
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
-    logger_fn = functools.partial(loggers.make_default_logger,
-                                  'learner', log_to_bigtable,
-                                  time_delta=log_every, asynchronous=True,
-                                  serialize_fn=utils.fetch_devicearray,
-                                  steps_key='learner_steps')
+    logger_fn = functools.partial(
+        loggers.make_default_logger,
+        'learner',
+        log_to_bigtable,
+        time_delta=log_every,
+        asynchronous=True,
+        serialize_fn=utils.fetch_devicearray,
+        steps_key='learner_steps')
     rnd_builder = builder.RNDBuilder(rl_agent, config, logger_fn=logger_fn)
     if (evaluator_policy_network is None) == (evaluator_factories is None):
       raise ValueError('Either evaluator_policy_network or '
@@ -88,8 +89,7 @@ class DistributedRND(distributed_layout.DistributedLayout):
 
 
 class RND(local_layout.LocalLayout):
-  """Local agent for RND.
-  """
+  """Local agent for RND."""
 
   def __init__(
       self,
@@ -112,8 +112,6 @@ class RND(local_layout.LocalLayout):
         networks=network,
         policy_network=policy_network,
         batch_size=batch_size,
-        samples_per_insert=samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
         counter=counter,
     )

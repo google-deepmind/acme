@@ -28,6 +28,7 @@ import numpy as np
 
 def network_factory(
     spec: specs.EnvironmentSpec) -> networks_lib.FeedForwardNetwork:
+
   def network(x):
     model = hk.Sequential([
         hk.Flatten(),
@@ -40,8 +41,7 @@ def network_factory(
   dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
 
   return networks_lib.FeedForwardNetwork(
-      init=lambda rng: network_hk.init(rng, dummy_obs),
-      apply=network_hk.apply)
+      init=lambda rng: network_hk.init(rng, dummy_obs), apply=network_hk.apply)
 
 
 class RainbowDQNTest(absltest.TestCase):
@@ -57,7 +57,10 @@ class RainbowDQNTest(absltest.TestCase):
     spec = specs.make_environment_spec(environment)
 
     network = network_factory(spec)
-    config = rainbow_agents.RainbowConfig(batch_size=10, min_replay_size=10)
+    config = rainbow_agents.RainbowConfig(
+        batch_size=10,
+        min_replay_size=10,
+        samples_per_insert_tolerance_rate=0.2)
     # Construct the agent.
     agent = rainbow_agents.RainbowDQN(spec, network, config, seed=0)
 

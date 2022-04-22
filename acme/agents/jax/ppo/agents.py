@@ -29,7 +29,6 @@ from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], ppo_networks.PPONetworks]
 
 
@@ -123,7 +122,6 @@ class PPO(local_layout.LocalLayout):
         environment_spec=spec,
         builder=ppo_builder,
         networks=networks,
-        min_replay_size=1000,
         policy_network=ppo_networks.make_inference_fn(networks),
         batch_size=config.batch_size,
         # TODO(sinopalnikov): move it to the experiment config

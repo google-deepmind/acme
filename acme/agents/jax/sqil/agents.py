@@ -25,13 +25,11 @@ from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
 from acme.utils import counting
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], Any]
 
 
 class DistributedSQIL(distributed_layout.DistributedLayout):
-  """Distributed program definition for SQIL.
-  """
+  """Distributed program definition for SQIL."""
 
   def __init__(
       self,
@@ -81,8 +79,7 @@ class DistributedSQIL(distributed_layout.DistributedLayout):
 
 
 class SQIL(local_layout.LocalLayout):
-  """Local agent for SQIL.
-  """
+  """Local agent for SQIL."""
 
   def __init__(self,
                spec: specs.EnvironmentSpec,
@@ -105,8 +102,6 @@ class SQIL(local_layout.LocalLayout):
         networks=network,
         policy_network=policy_network,
         batch_size=batch_size,
-        samples_per_insert=samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=num_sgd_steps_per_step,
         counter=counter,
     )

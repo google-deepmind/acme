@@ -29,7 +29,6 @@ from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], sac.SACNetworks]
 
 
@@ -61,15 +60,6 @@ class SACfD(local_layout.LocalLayout):
     sac_builder = sac.SACBuilder(sac_config)
     lfd_builder = builder.LfdBuilder(sac_builder, lfd_iterator_fn, lfd_config)
 
-    min_replay_size = sac_config.min_replay_size
-    # Local layout (actually agent.Agent) makes sure that we populate the
-    # buffer with min_replay_size initial transitions and that there's no need
-    # for tolerance_rate. In order for deadlocks not to happen we need to
-    # disable rate limiting that heppens inside the SACBuilder. This is achieved
-    # by the following two lines.
-    sac_config.samples_per_insert_tolerance_rate = float('inf')
-    sac_config.min_replay_size = 1
-
     self.builder = lfd_builder
     super().__init__(
         builder=lfd_builder,
@@ -79,11 +69,9 @@ class SACfD(local_layout.LocalLayout):
         policy_network=sac.apply_policy_and_sample(sac_network),
         batch_size=sac_config.batch_size,
         prefetch_size=sac_config.prefetch_size,
-        samples_per_insert=sac_config.samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=sac_config.num_sgd_steps_per_step,
         counter=counter,
-        )
+    )
 
 
 class DistributedSACfD(distributed_layout.DistributedLayout):
@@ -119,8 +107,7 @@ class DistributedSACfD(distributed_layout.DistributedLayout):
     lfd_builder = builder.LfdBuilder(sac_builder, lfd_iterator_fn, lfd_config)
 
     if evaluator_factories is None:
-      eval_policy_factory = (
-          lambda n: sac.apply_policy_and_sample(n, True))
+      eval_policy_factory = (lambda n: sac.apply_policy_and_sample(n, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
               environment_factory=environment_factory,

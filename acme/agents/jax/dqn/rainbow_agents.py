@@ -41,8 +41,8 @@ class RainbowConfig(dqn_config.DQNConfig):
   max_abs_reward: float = 1.0  # For clipping reward
 
 
-def apply_policy_and_sample(network: networks_lib.FeedForwardNetwork,
-                            ) -> dqn_actor.EpsilonPolicy:
+def apply_policy_and_sample(
+    network: networks_lib.FeedForwardNetwork,) -> dqn_actor.EpsilonPolicy:
   """Returns a function that computes actions.
 
   Note that this differs from default_behavior_policy with that it
@@ -66,8 +66,8 @@ def apply_policy_and_sample(network: networks_lib.FeedForwardNetwork,
   return apply_and_sample
 
 
-def eval_policy(network: networks_lib.FeedForwardNetwork, eval_epsilon: float
-                ) -> dqn_actor.EpsilonPolicy:
+def eval_policy(network: networks_lib.FeedForwardNetwork,
+                eval_epsilon: float) -> dqn_actor.EpsilonPolicy:
   """Returns a function that computes actions.
 
   Note that this differs from default_behavior_policy with that it
@@ -163,14 +163,6 @@ class RainbowDQN(local_layout.LocalLayout):
       config: RainbowConfig,
       seed: int,
   ):
-    min_replay_size = config.min_replay_size
-    # Local layout (actually agent.Agent) makes sure that we populate the
-    # buffer with min_replay_size initial transitions and that there's no need
-    # for tolerance_rate. In order for deadlocks not to happen we need to
-    # disable rate limiting that heppens inside the DQNBuilder. This is achieved
-    # by the following two lines.
-    config.samples_per_insert_tolerance_rate = float('inf')
-    config.min_replay_size = 1
     self.builder = make_builder(config)
     super().__init__(
         seed=seed,
@@ -179,7 +171,5 @@ class RainbowDQN(local_layout.LocalLayout):
         networks=network,
         policy_network=apply_policy_and_sample(network),
         batch_size=config.batch_size,
-        samples_per_insert=config.samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
     )

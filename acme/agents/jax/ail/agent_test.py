@@ -37,7 +37,6 @@ import jax
 from jax import numpy as jnp
 import numpy as np
 
-
 NUM_DISCRETE_ACTIONS = 5
 NUM_OBSERVATIONS = 10
 OBS_SHAPE = (10, 5)
@@ -153,9 +152,10 @@ class AILTest(parameterized.TestCase):
 
     if algo == 'sac':
       networks = sac.make_networks(spec=spec)
-      config = sac.SACConfig(batch_size=batch_size,
-                             samples_per_insert_tolerance_rate=float('inf'),
-                             min_replay_size=1)
+      config = sac.SACConfig(
+          batch_size=batch_size,
+          samples_per_insert_tolerance_rate=float('inf'),
+          min_replay_size=1)
       base_builder = sac.SACBuilder(config=config)
       direct_rl_batch_size = batch_size
       behavior_policy = sac.apply_policy_and_sample(networks)
@@ -170,8 +170,7 @@ class AILTest(parameterized.TestCase):
           batch_size=batch_size)
       base_builder = ppo.PPOBuilder(config=config)
       direct_rl_batch_size = batch_size * unroll_length
-      behavior_policy = jax.jit(ppo.make_inference_fn(networks),
-                                backend='cpu')
+      behavior_policy = jax.jit(ppo.make_inference_fn(networks), backend='cpu')
     else:
       raise ValueError(f'Unexpected algorithm {algo}')
 
@@ -196,13 +195,11 @@ class AILTest(parameterized.TestCase):
             g_core=ail.DiscriminatorMLP(
                 [4, 4],
                 hidden_dropout_rate=dropout,
-                spectral_normalization_lipschitz_coeff=lipschitz_coeff
-            ),
+                spectral_normalization_lipschitz_coeff=lipschitz_coeff),
             h_core=ail.DiscriminatorMLP(
                 [4, 4],
                 hidden_dropout_rate=dropout,
-                spectral_normalization_lipschitz_coeff=lipschitz_coeff
-            ),
+                spectral_normalization_lipschitz_coeff=lipschitz_coeff),
             observation_embedding=embedding)(*args, **kwargs)
       else:
         return ail.DiscriminatorModule(
@@ -212,8 +209,7 @@ class AILTest(parameterized.TestCase):
             network_core=ail.DiscriminatorMLP(
                 [4, 4],
                 hidden_dropout_rate=dropout,
-                spectral_normalization_lipschitz_coeff=lipschitz_coeff
-            ),
+                spectral_normalization_lipschitz_coeff=lipschitz_coeff),
             observation_embedding=embedding)(*args, **kwargs)
 
     discriminator_transformed = hk.without_apply_rng(
@@ -245,7 +241,6 @@ class AILTest(parameterized.TestCase):
         builder=builder,
         networks=networks,
         policy_network=behavior_policy,
-        min_replay_size=1,
         batch_size=batch_size)
 
     # Train the agent.
@@ -264,9 +259,10 @@ class AILTest(parameterized.TestCase):
     spec = specs.make_environment_spec(environment)
 
     networks = sac.make_networks(spec=spec)
-    config = sac.SACConfig(batch_size=batch_size,
-                           samples_per_insert_tolerance_rate=float('inf'),
-                           min_replay_size=1)
+    config = sac.SACConfig(
+        batch_size=batch_size,
+        samples_per_insert_tolerance_rate=float('inf'),
+        min_replay_size=1)
     base_builder = sac.SACBuilder(config=config)
     direct_rl_batch_size = batch_size
     behavior_policy = sac.apply_policy_and_sample(networks)
@@ -323,7 +319,6 @@ class AILTest(parameterized.TestCase):
         builder=builder,
         networks=networks,
         policy_network=behavior_policy,
-        min_replay_size=1,
         batch_size=batch_size,
         counter=counter,
     )

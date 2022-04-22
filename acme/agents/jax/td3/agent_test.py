@@ -34,12 +34,11 @@ class TD3Test(absltest.TestCase):
     network = td3.make_networks(spec)
 
     config = td3.TD3Config(
-        batch_size=10,
-        min_replay_size=1)
+        batch_size=10, min_replay_size=1, samples_per_insert_tolerance_rate=2.0)
 
     counter = counting.Counter()
-    agent = td3.TD3(spec=spec, network=network, config=config, seed=0,
-                    counter=counter)
+    agent = td3.TD3(
+        spec=spec, network=network, config=config, seed=0, counter=counter)
 
     # Try running the environment loop. We have no assertions here because all
     # we care about is that the agent runs without raising any errors.

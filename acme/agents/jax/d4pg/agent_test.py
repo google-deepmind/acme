@@ -89,13 +89,10 @@ class D4PGTest(absltest.TestCase):
     networks = make_networks(spec)
 
     config = d4pg.D4PGConfig(
-        batch_size=10,
-        samples_per_insert=2,
-        min_replay_size=10,
-        samples_per_insert_tolerance_rate=float('inf'))
+        batch_size=10, samples_per_insert=2, min_replay_size=10)
     counter = counting.Counter()
-    agent = d4pg.D4PG(spec, networks, config=config, random_seed=0,
-                      counter=counter)
+    agent = d4pg.D4PG(
+        spec, networks, config=config, random_seed=0, counter=counter)
 
     # Try running the environment loop. We have no assertions here because all
     # we care about is that the agent runs without raising any errors.

@@ -31,7 +31,6 @@ from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], ail_networks.AILNetworks]
 
 
@@ -127,8 +126,6 @@ class AIL(local_layout.LocalLayout):
         networks=network,
         policy_network=policy_network,
         batch_size=batch_size,
-        samples_per_insert=samples_per_insert,
-        min_replay_size=config.min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
         counter=counter,
     )

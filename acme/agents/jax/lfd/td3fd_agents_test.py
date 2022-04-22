@@ -57,11 +57,11 @@ class TD3fDTest(absltest.TestCase):
     batch_size = 10
     td3_config = td3.TD3Config(
         batch_size=batch_size,
-        min_replay_size=1)
-    lfd_config = lfd.LfdConfig(initial_insert_count=0,
-                               demonstration_ratio=0.2)
-    td3_fd_config = lfd.TD3fDConfig(lfd_config=lfd_config,
-                                    td3_config=td3_config)
+        min_replay_size=1,
+        samples_per_insert_tolerance_rate=2.0)
+    lfd_config = lfd.LfdConfig(initial_insert_count=0, demonstration_ratio=0.2)
+    td3_fd_config = lfd.TD3fDConfig(
+        lfd_config=lfd_config, td3_config=td3_config)
     counter = counting.Counter()
     agent = lfd.TD3fD(
         spec=spec,
@@ -80,6 +80,7 @@ class TD3fDTest(absltest.TestCase):
 class DistributedTD3fDTest(absltest.TestCase):
 
   def test_distributed_td3_fd(self):
+
     def make_env(seed):
       del seed
       return fakes.ContinuousEnvironment(
@@ -87,13 +88,10 @@ class DistributedTD3fDTest(absltest.TestCase):
 
     batch_size = 10
     td3_config = td3.TD3Config(
-        batch_size=batch_size,
-        min_replay_size=16,
-        samples_per_insert=2)
-    lfd_config = lfd.LfdConfig(initial_insert_count=0,
-                               demonstration_ratio=0.2)
-    td3_fd_config = lfd.TD3fDConfig(lfd_config=lfd_config,
-                                    td3_config=td3_config)
+        batch_size=batch_size, min_replay_size=16, samples_per_insert=2)
+    lfd_config = lfd.LfdConfig(initial_insert_count=0, demonstration_ratio=0.2)
+    td3_fd_config = lfd.TD3fDConfig(
+        lfd_config=lfd_config, td3_config=td3_config)
 
     spec = specs.make_environment_spec(make_env(0))
 

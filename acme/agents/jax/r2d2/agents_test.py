@@ -36,8 +36,9 @@ class R2D2Test(absltest.TestCase):
         batch_size=1,
         trace_length=5,
         sequence_period=1,
-        samples_per_insert=0.,
+        samples_per_insert=1.,
         min_replay_size=1,
+        samples_per_insert_tolerance_rate=2.0,
         burn_in_length=1)
 
     counter = counting.Counter()

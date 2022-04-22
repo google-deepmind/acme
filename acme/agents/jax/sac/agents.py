@@ -29,13 +29,11 @@ from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.SACNetworks]
 
 
 class DistributedSAC(distributed_layout.DistributedLayout):
-  """Distributed program definition for SAC.
-  """
+  """Distributed program definition for SAC."""
 
   def __init__(
       self,
@@ -51,11 +49,14 @@ class DistributedSAC(distributed_layout.DistributedLayout):
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
-    logger_fn = functools.partial(loggers.make_default_logger,
-                                  'learner', log_to_bigtable,
-                                  time_delta=log_every, asynchronous=True,
-                                  serialize_fn=utils.fetch_devicearray,
-                                  steps_key='learner_steps')
+    logger_fn = functools.partial(
+        loggers.make_default_logger,
+        'learner',
+        log_to_bigtable,
+        time_delta=log_every,
+        asynchronous=True,
+        serialize_fn=utils.fetch_devicearray,
+        steps_key='learner_steps')
     sac_builder = builder.SACBuilder(config, logger_fn=logger_fn)
     if normalize_input:
       dummy_seed = 1
@@ -97,8 +98,7 @@ class DistributedSAC(distributed_layout.DistributedLayout):
 
 
 class SAC(local_layout.LocalLayout):
-  """Local agent for SAC.
-  """
+  """Local agent for SAC."""
 
   def __init__(
       self,
@@ -109,14 +109,6 @@ class SAC(local_layout.LocalLayout):
       normalize_input: bool = True,
       counter: Optional[counting.Counter] = None,
   ):
-    min_replay_size = config.min_replay_size
-    # Local layout (actually agent.Agent) makes sure that we populate the
-    # buffer with min_replay_size initial transitions and that there's no need
-    # for tolerance_rate. In order for deadlocks not to happen we need to
-    # disable rate limiting that heppens inside the SACBuilder. This is achieved
-    # by the following two lines.
-    config.samples_per_insert_tolerance_rate = float('inf')
-    config.min_replay_size = 1
     sac_builder = builder.SACBuilder(config)
     if normalize_input:
       # One batch dimension: [batch_size, ...]
@@ -132,8 +124,6 @@ class SAC(local_layout.LocalLayout):
         policy_network=networks.apply_policy_and_sample(network),
         batch_size=config.batch_size,
         prefetch_size=config.prefetch_size,
-        samples_per_insert=config.samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
         counter=counter,
     )

@@ -28,13 +28,11 @@ from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.TD3Networks]
 
 
 class DistributedTD3(distributed_layout.DistributedLayout):
-  """Distributed program definition for TD3.
-  """
+  """Distributed program definition for TD3."""
 
   def __init__(
       self,
@@ -50,17 +48,21 @@ class DistributedTD3(distributed_layout.DistributedLayout):
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
-    logger_fn = functools.partial(loggers.make_default_logger,
-                                  'learner', log_to_bigtable,
-                                  time_delta=log_every, asynchronous=True,
-                                  serialize_fn=utils.fetch_devicearray,
-                                  steps_key='learner_steps')
+    logger_fn = functools.partial(
+        loggers.make_default_logger,
+        'learner',
+        log_to_bigtable,
+        time_delta=log_every,
+        asynchronous=True,
+        serialize_fn=utils.fetch_devicearray,
+        steps_key='learner_steps')
     td3_builder = builder.TD3Builder(config, logger_fn=logger_fn)
 
     action_specs = environment_spec.actions
-    policy_network_fn = functools.partial(networks.get_default_behavior_policy,
-                                          action_specs=action_specs,
-                                          sigma=config.sigma)
+    policy_network_fn = functools.partial(
+        networks.get_default_behavior_policy,
+        action_specs=action_specs,
+        sigma=config.sigma)
 
     if evaluator_factories is None:
       eval_network_fn = functools.partial(
@@ -91,8 +93,7 @@ class DistributedTD3(distributed_layout.DistributedLayout):
 
 
 class TD3(local_layout.LocalLayout):
-  """Local agent for TD3.
-  """
+  """Local agent for TD3."""
 
   def __init__(
       self,
@@ -102,19 +103,8 @@ class TD3(local_layout.LocalLayout):
       seed: int,
       counter: Optional[counting.Counter] = None,
   ):
-    min_replay_size = config.min_replay_size
-    # Local layout (actually agent.Agent) makes sure that we populate the
-    # buffer with min_replay_size initial transitions and that there's no need
-    # for tolerance_rate. In order to avoid deadlocks, we disable rate limiting
-    # that is configured in TD3Builder.make_replay_tables. This is achieved by
-    # the following two lines.
-    config.samples_per_insert_tolerance_rate = float('inf')
-    config.min_replay_size = 1
-
     behavior_policy = networks.get_default_behavior_policy(
-        networks=network,
-        action_specs=spec.actions,
-        sigma=config.sigma)
+        networks=network, action_specs=spec.actions, sigma=config.sigma)
 
     self.builder = builder.TD3Builder(config)
     super().__init__(
@@ -125,8 +115,6 @@ class TD3(local_layout.LocalLayout):
         policy_network=behavior_policy,
         batch_size=config.batch_size,
         prefetch_size=config.prefetch_size,
-        samples_per_insert=config.samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
         counter=counter,
     )

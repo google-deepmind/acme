@@ -39,10 +39,15 @@ class SACTest(absltest.TestCase):
     config = sac_config.SACConfig(
         batch_size=batch_size,
         target_entropy=sac_config.target_entropy_from_env_spec(spec),
-        min_replay_size=1)
+        min_replay_size=1,
+        samples_per_insert_tolerance_rate=2.0)
     counter = counting.Counter()
     agent = agents.SAC(
-        spec=spec, network=network, config=config, seed=0, normalize_input=True,
+        spec=spec,
+        network=network,
+        config=config,
+        seed=0,
+        normalize_input=True,
         counter=counter)
 
     # Try running the environment loop. We have no assertions here because all

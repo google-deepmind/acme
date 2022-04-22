@@ -29,13 +29,11 @@ from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
 
-
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.ValueDiceNetworks]
 
 
 class DistributedValueDice(distributed_layout.DistributedLayout):
-  """Distributed program definition for ValueDice.
-  """
+  """Distributed program definition for ValueDice."""
 
   def __init__(
       self,
@@ -51,15 +49,19 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
-    logger_fn = functools.partial(loggers.make_default_logger,
-                                  'learner', log_to_bigtable,
-                                  time_delta=log_every, asynchronous=True,
-                                  serialize_fn=utils.fetch_devicearray,
-                                  steps_key='learner_steps')
+    logger_fn = functools.partial(
+        loggers.make_default_logger,
+        'learner',
+        log_to_bigtable,
+        time_delta=log_every,
+        asynchronous=True,
+        serialize_fn=utils.fetch_devicearray,
+        steps_key='learner_steps')
     dummy_seed = 1
     spec = specs.make_environment_spec(environment_factory(dummy_seed))
     value_dice_builder = builder.ValueDiceBuilder(
-        config=config, logger_fn=logger_fn,
+        config=config,
+        logger_fn=logger_fn,
         make_demonstrations=make_demonstrations)
     if evaluator_factories is None:
       eval_policy_factory = (
@@ -100,14 +102,6 @@ class ValueDice(local_layout.LocalLayout):
       seed: int,
       counter: Optional[counting.Counter] = None,
   ):
-    min_replay_size = config.min_replay_size
-    # Local layout (actually agent.Agent) makes sure that we populate the
-    # buffer with min_replay_size initial transitions and that there's no need
-    # for tolerance_rate. In order for deadlocks not to happen we need to
-    # disable rate limiting that heppens inside the ValueDiceBuilder.
-    # This is achieved by the following two lines.
-    config.samples_per_insert_tolerance_rate = float('inf')
-    config.min_replay_size = 1
     self.builder = builder.ValueDiceBuilder(
         config=config, make_demonstrations=make_demonstrations)
     super().__init__(
@@ -117,8 +111,6 @@ class ValueDice(local_layout.LocalLayout):
         networks=network,
         policy_network=networks.apply_policy_and_sample(network),
         batch_size=config.batch_size,
-        samples_per_insert=config.samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
         counter=counter,
     )

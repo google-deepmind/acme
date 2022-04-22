@@ -59,11 +59,12 @@ class SACfDTest(absltest.TestCase):
     sac_config = sac.SACConfig(
         batch_size=batch_size,
         target_entropy=sac.target_entropy_from_env_spec(spec),
-        min_replay_size=1)
-    lfd_config = config.LfdConfig(initial_insert_count=0,
-                                  demonstration_ratio=0.2)
-    sac_fd_config = sacfd_agents.SACfDConfig(lfd_config=lfd_config,
-                                             sac_config=sac_config)
+        min_replay_size=1,
+        samples_per_insert_tolerance_rate=2.0)
+    lfd_config = config.LfdConfig(
+        initial_insert_count=0, demonstration_ratio=0.2)
+    sac_fd_config = sacfd_agents.SACfDConfig(
+        lfd_config=lfd_config, sac_config=sac_config)
     counter = counting.Counter()
     agent = sacfd_agents.SACfD(
         spec=spec,
@@ -82,6 +83,7 @@ class SACfDTest(absltest.TestCase):
 class DistributedSACfDTest(absltest.TestCase):
 
   def test_distributed_sac_fd(self):
+
     def make_env(seed):
       del seed
       return fakes.ContinuousEnvironment(
@@ -95,10 +97,10 @@ class DistributedSACfDTest(absltest.TestCase):
         target_entropy=sac.target_entropy_from_env_spec(spec),
         min_replay_size=16,
         samples_per_insert=2)
-    lfd_config = config.LfdConfig(initial_insert_count=0,
-                                  demonstration_ratio=0.2)
-    sac_fd_config = sacfd_agents.SACfDConfig(lfd_config=lfd_config,
-                                             sac_config=sac_config)
+    lfd_config = config.LfdConfig(
+        initial_insert_count=0, demonstration_ratio=0.2)
+    sac_fd_config = sacfd_agents.SACfDConfig(
+        lfd_config=lfd_config, sac_config=sac_config)
 
     agent = sacfd_agents.DistributedSACfD(
         environment_factory=make_env,

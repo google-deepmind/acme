@@ -34,7 +34,8 @@ class ValueDiceTest(absltest.TestCase):
     # Create the networks.
     network = value_dice.make_networks(spec)
 
-    config = value_dice.ValueDiceConfig(batch_size=10, min_replay_size=1)
+    config = value_dice.ValueDiceConfig(
+        batch_size=10, min_replay_size=1, samples_per_insert_tolerance_rate=2.0)
     counter = counting.Counter()
     agent = value_dice.ValueDice(
         spec=spec,

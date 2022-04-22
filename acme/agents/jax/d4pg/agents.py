@@ -128,19 +128,6 @@ class D4PG(local_layout.LocalLayout):
       random_seed: int,
       counter: Optional[counting.Counter] = None,
   ):
-    # In the case of a synchronous agent, we do not use Reverb's built-in rate
-    # limitation to avoid deadlocks; so rather than using the Builder's min
-    # replay size, we trivially set it to 1 after extracting the requested value
-    # to be honored by the synchronous Layout instead.
-    min_replay_size = config.min_replay_size
-    config.min_replay_size = 1
-
-    # Local layout (actually agent.Agent) makes sure that we populate the
-    # buffer with min_replay_size initial transitions and that there's no need
-    # for tolerance_rate. In order to avoid deadlocks we disable rate limiting.
-    # This is achieved by setting the rate tolerance to be infinite.
-    config.samples_per_insert_tolerance_rate = float('inf')
-
     self.builder = d4pg_builder.D4PGBuilder(config)
     super().__init__(
         seed=random_seed,
@@ -150,8 +137,6 @@ class D4PG(local_layout.LocalLayout):
         policy_network=d4pg_networks.get_default_behavior_policy(
             network, config),
         batch_size=config.batch_size,
-        samples_per_insert=config.samples_per_insert,
-        min_replay_size=min_replay_size,
         num_sgd_steps_per_step=config.num_sgd_steps_per_step,
         counter=counter,
     )
