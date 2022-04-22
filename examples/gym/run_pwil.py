@@ -66,7 +66,7 @@ def main(_):
       target_entropy=sac.target_entropy_from_env_spec(environment_spec),
       num_sgd_steps_per_step=FLAGS.num_sgd_steps_per_step,
       min_replay_size=1,
-      samples_per_insert_tolerance_rate=float('inf'))
+      samples_per_insert_tolerance_rate=2.0)
   direct_rl_builder = sac.SACBuilder(sac_config)
   networks = sac.make_networks(environment_spec)
   policy_network = sac.apply_policy_and_sample(networks)

@@ -89,7 +89,7 @@ class DistributedRainbowTest(absltest.TestCase):
         config=rainbow_agents.RainbowConfig(
             batch_size=10,
             min_replay_size=10,
-            samples_per_insert_tolerance_rate=float('inf')),
+            samples_per_insert_tolerance_rate=0.2),
         seed=0,
         num_actors=2)
 

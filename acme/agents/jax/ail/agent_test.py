@@ -154,7 +154,7 @@ class AILTest(parameterized.TestCase):
       networks = sac.make_networks(spec=spec)
       config = sac.SACConfig(
           batch_size=batch_size,
-          samples_per_insert_tolerance_rate=float('inf'),
+          samples_per_insert_tolerance_rate=2.0,
           min_replay_size=1)
       base_builder = sac.SACBuilder(config=config)
       direct_rl_batch_size = batch_size
@@ -261,7 +261,7 @@ class AILTest(parameterized.TestCase):
     networks = sac.make_networks(spec=spec)
     config = sac.SACConfig(
         batch_size=batch_size,
-        samples_per_insert_tolerance_rate=float('inf'),
+        samples_per_insert_tolerance_rate=2.0,
         min_replay_size=1)
     base_builder = sac.SACBuilder(config=config)
     direct_rl_batch_size = batch_size

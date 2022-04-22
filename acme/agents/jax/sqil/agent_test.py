@@ -40,7 +40,7 @@ class SQILTest(absltest.TestCase):
 
     # Construct the agent.
     config = sac.SACConfig(batch_size=batch_size,
-                           samples_per_insert_tolerance_rate=float('inf'),
+                           samples_per_insert_tolerance_rate=2.0,
                            min_replay_size=1)
     builder = sac.SACBuilder(config=config)
 

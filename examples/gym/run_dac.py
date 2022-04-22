@@ -68,15 +68,10 @@ def main(_):
   environment_spec = specs.make_environment_spec(environment)
 
   # Construct the agent.
-  # Local layout makes sure that we populate the buffer with min_replay_size
-  # initial transitions and that there's no need for tolerance_rate. In order
-  # for deadlocks not to happen we need to disable rate limiting that heppens
-  # inside the TD3Builder. This is achieved by the min_replay_size and
-  # samples_per_insert_tolerance_rate arguments.
   td3_config = td3.TD3Config(
       num_sgd_steps_per_step=FLAGS.num_sgd_steps_per_step,
       min_replay_size=1,
-      samples_per_insert_tolerance_rate=float('inf'))
+      samples_per_insert_tolerance_rate=2.0)
   td3_networks = td3.make_networks(environment_spec)
   if FLAGS.pretrain:
     td3_networks = add_bc_pretraining(td3_networks)

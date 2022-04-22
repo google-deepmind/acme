@@ -43,16 +43,11 @@ def main(_):
   agent_networks = sac.make_networks(environment_spec)
 
   # Construct the agent.
-  # Local layout (actually agent.Agent) makes sure that we populate the
-  # buffer with min_replay_size initial transitions and that there's no need
-  # for tolerance_rate. In order for deadlocks not to happen we need to
-  # disable rate limiting that heppens inside the SACBuilder. This is achieved
-  # by the min_replay_size and samples_per_insert_tolerance_rate arguments.
   sac_config = sac.SACConfig(
       target_entropy=sac.target_entropy_from_env_spec(environment_spec),
       num_sgd_steps_per_step=FLAGS.num_sgd_steps_per_step,
       min_replay_size=1,
-      samples_per_insert_tolerance_rate=float('inf'))
+      samples_per_insert_tolerance_rate=2.0)
   sac_builder = sac.SACBuilder(sac_config)
   sac_networks = sac.make_networks(environment_spec)
 
