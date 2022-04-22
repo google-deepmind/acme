@@ -227,7 +227,10 @@ class SACLearner(acme.Learner):
     # General learner book-keeping and loggers.
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.make_default_logger(
-        'learner', asynchronous=True, serialize_fn=utils.fetch_devicearray)
+        'learner',
+        asynchronous=True,
+        serialize_fn=utils.fetch_devicearray,
+        steps_key=self._counter.get_steps_key())
 
     # Iterator on demonstration transitions.
     self._iterator = iterator

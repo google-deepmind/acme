@@ -207,7 +207,8 @@ class R2D2Learner(acme.Learner):
         'learner',
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
-        time_delta=1.)
+        time_delta=1.,
+        steps_key=self._counter.get_steps_key())
 
     self._sgd_step = jax.pmap(sgd_step, axis_name=_PMAP_AXIS_NAME)
     self._async_priority_updater = async_utils.AsyncExecutor(update_priorities)

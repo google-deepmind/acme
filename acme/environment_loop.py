@@ -68,7 +68,8 @@ class EnvironmentLoop(core.Worker):
     self._environment = environment
     self._actor = actor
     self._counter = counter or counting.Counter()
-    self._logger = logger or loggers.make_default_logger(label)
+    self._logger = logger or loggers.make_default_logger(
+        label, steps_key=self._counter.get_steps_key())
     self._should_update = should_update
     self._observers = observers
 

@@ -115,6 +115,12 @@ class Counter(core.Saveable):
     self._counts = state['counts']
     self._cache = state['cache']
 
+  def get_steps_key(self) -> str:
+    """Returns the key to use for steps by this counter."""
+    if not self._prefix or self._return_only_prefixed:
+      return 'steps'
+    return f'{self._prefix}_steps'
+
 
 def _prefix_keys(dictionary: Dict[str, Number], prefix: str):
   """Return a dictionary with prefixed keys.
