@@ -115,9 +115,16 @@ class InferenceServer:
     def dereference_params_and_call_handler(*args, **kwargs):
       with self._mutex:
         # Dereference args corresponding to params, leaving others unchanged.
-        args_with_dereferenced_params = map(self._dereference_params, args)
+        args_with_dereferenced_params = [
+            self._dereference_params(arg) for arg in args
+        ]
+        kwargs_with_dereferenced_params = {
+            key: self._dereference_params(value)
+            for key, value in kwargs.items()
+        }
         self._call_cnt += 1
-      return handler(*args_with_dereferenced_params, **kwargs)
+      return handler(*args_with_dereferenced_params,
+                     **kwargs_with_dereferenced_params)
 
     self.__setattr__(
         name,
