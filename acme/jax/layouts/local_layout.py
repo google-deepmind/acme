@@ -14,6 +14,7 @@
 
 """Local agent based on builders."""
 
+import sys
 from typing import Any, Optional
 
 from acme import specs
@@ -80,12 +81,6 @@ class LocalLayout(agent.Agent):
 
     # Create the replay server and grab its address.
     replay_tables = builder.make_replay_tables(environment_spec)
-    replay_server = reverb.Server(replay_tables, port=None)
-    replay_client = reverb.Client(f'localhost:{replay_server.port}')
-
-    # Create actor, dataset, and learner for generating, storing, and consuming
-    # data respectively.
-    adder = builder.make_adder(replay_client)
 
     def _is_reverb_queue(reverb_table: reverb.Table) -> bool:
       """Returns True iff the Reverb Table is actually a queue."""
@@ -98,6 +93,29 @@ class LocalLayout(agent.Agent):
       return is_queue
 
     is_reverb_queue = any(_is_reverb_queue(table) for table in replay_tables)
+    use_iterator_logic = is_reverb_queue or not min_replay_size
+
+    if use_iterator_logic:
+      # Disable blocking of inserts by tables' rate limiters, as LocalLayout
+      # agents run inserts and sampling from the same thread and blocked insert
+      # would result in a hang.
+      new_tables = []
+      for table in replay_tables:
+        rl_info = table.info.rate_limiter_info
+        rate_limiter = reverb.rate_limiters.RateLimiter(
+            samples_per_insert=rl_info.samples_per_insert,
+            min_size_to_sample=rl_info.min_size_to_sample,
+            min_diff=rl_info.min_diff,
+            max_diff=sys.float_info.max)
+        new_tables.append(table.replace(rate_limiter=rate_limiter))
+      replay_tables = new_tables
+
+    replay_server = reverb.Server(replay_tables, port=None)
+    replay_client = reverb.Client(f'localhost:{replay_server.port}')
+
+    # Create actor, dataset, and learner for generating, storing, and consuming
+    # data respectively.
+    adder = builder.make_adder(replay_client)
 
     dataset = builder.make_dataset_iterator(replay_client)
     device = jax.devices()[0] if device_prefetch and prefetch_size > 1 else None
@@ -129,7 +147,7 @@ class LocalLayout(agent.Agent):
     actor = builder.make_actor(
         actor_key, policy_network, adder, variable_source=learner)
 
-    if min_replay_size and not is_reverb_queue:
+    if not use_iterator_logic:
       # TODO(stanczyk): Eliminate this code path when all agents use rate
       # limiters.
       effective_batch_size = batch_size * num_sgd_steps_per_step
