@@ -29,10 +29,21 @@ Detailed notes:
 
 Citation:
 
+```
 @misc{mog_mpo,
-  title = {Revisiting Gaussian mixture critics in off-policy reinforcement learning: a sample-based approach},
+  title = {Revisiting Gaussian mixture critics in off-policy reinforcement
+           learning: a sample-based approach},
   url = {https://arxiv.org/abs/2204.10256},
-  author = {Shahriari, Bobak and Abdolmaleki, Abbas and Byravan, Arunkumar and Friesen, Abe and Liu, Siqi and Springenberg, Jost Tobias and Heess, Nicolas and Hoffman, Matt and Riedmiller, Martin},
+  author = {Shahriari, Bobak and
+            Abdolmaleki, Abbas and
+            Byravan, Arunkumar and
+            Friesen, Abram and
+            Liu, Siqi and
+            Springenberg, Jost Tobias and
+            Heess, Nicolas and
+            Hoffman, Matt and
+            Riedmiller, Martin},
   publisher = {arXiv},
   year = {2022},
 }
+```
