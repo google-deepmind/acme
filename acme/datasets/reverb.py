@@ -123,7 +123,3 @@ def make_reverb_dataset(
     dataset = dataset.prefetch(prefetch_size)
 
   return dataset
-
-
-# TODO(b/152732834): remove this and prefer datasets.make_reverb_dataset.
-make_dataset = make_reverb_dataset
