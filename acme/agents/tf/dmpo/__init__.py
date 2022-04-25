@@ -15,4 +15,5 @@
 """Implementations of a distributional MPO agent."""
 
 from acme.agents.tf.dmpo.agent import DistributionalMPO
+from acme.agents.tf.dmpo.agent_distributed import DistributedDistributionalMPO
 from acme.agents.tf.dmpo.learning import DistributionalMPOLearner
