@@ -38,8 +38,6 @@ class LocalLayout(agent.Agent):
       builder: builders.GenericActorLearnerBuilder,
       networks: Any,
       policy_network: Any,
-      min_replay_size: Optional[int] = None,
-      samples_per_insert: float = 256.0,
       workdir: Optional[str] = '~/acme',
       batch_size: int = 256,
       num_sgd_steps_per_step: int = 1,
@@ -56,10 +54,6 @@ class LocalLayout(agent.Agent):
       builder: builder defining an RL algorithm to train.
       networks: network objects to be passed to the learner.
       policy_network: function that given an observation returns actions.
-      min_replay_size: minimum replay size before updating. When not specified
-        new deadlock-protection logic is applied which uses learner's iterator.
-      samples_per_insert: number of samples to take from replay for every insert
-        that is made.
       workdir: if provided saves the state of the learner and the counter
         (if the counter is not None) into workdir.
       batch_size: batch size for updates.
@@ -82,33 +76,19 @@ class LocalLayout(agent.Agent):
     # Create the replay server and grab its address.
     replay_tables = builder.make_replay_tables(environment_spec)
 
-    def _is_reverb_queue(reverb_table: reverb.Table) -> bool:
-      """Returns True iff the Reverb Table is actually a queue."""
-      # TODO(sinopalnikov): make it more generic and check for a table that
-      # needs special handling on update.
-      is_queue = (
-          reverb_table.info.max_times_sampled == 1 and
-          reverb_table.info.sampler_options.fifo and
-          reverb_table.info.remover_options.fifo)
-      return is_queue
-
-    is_reverb_queue = any(_is_reverb_queue(table) for table in replay_tables)
-    use_iterator_logic = is_reverb_queue or not min_replay_size
-
-    if use_iterator_logic:
-      # Disable blocking of inserts by tables' rate limiters, as LocalLayout
-      # agents run inserts and sampling from the same thread and blocked insert
-      # would result in a hang.
-      new_tables = []
-      for table in replay_tables:
-        rl_info = table.info.rate_limiter_info
-        rate_limiter = reverb.rate_limiters.RateLimiter(
-            samples_per_insert=rl_info.samples_per_insert,
-            min_size_to_sample=rl_info.min_size_to_sample,
-            min_diff=rl_info.min_diff,
-            max_diff=sys.float_info.max)
-        new_tables.append(table.replace(rate_limiter=rate_limiter))
-      replay_tables = new_tables
+    # Disable blocking of inserts by tables' rate limiters, as LocalLayout
+    # agents run inserts and sampling from the same thread and blocked insert
+    # would result in a hang.
+    new_tables = []
+    for table in replay_tables:
+      rl_info = table.info.rate_limiter_info
+      rate_limiter = reverb.rate_limiters.RateLimiter(
+          samples_per_insert=rl_info.samples_per_insert,
+          min_size_to_sample=rl_info.min_size_to_sample,
+          min_diff=rl_info.min_diff,
+          max_diff=sys.float_info.max)
+      new_tables.append(table.replace(rate_limiter=rate_limiter))
+    replay_tables = new_tables
 
     replay_server = reverb.Server(replay_tables, port=None)
     replay_client = reverb.Client(f'localhost:{replay_server.port}')
@@ -147,21 +127,10 @@ class LocalLayout(agent.Agent):
     actor = builder.make_actor(
         actor_key, policy_network, adder, variable_source=learner)
 
-    if not use_iterator_logic:
-      # TODO(stanczyk): Eliminate this code path when all agents use rate
-      # limiters.
-      effective_batch_size = batch_size * num_sgd_steps_per_step
-      super().__init__(
-          actor=actor,
-          learner=learner,
-          min_observations=max(effective_batch_size, min_replay_size),
-          observations_per_step=float(effective_batch_size) /
-          samples_per_insert)
-    else:
-      super().__init__(
-          actor=actor,
-          learner=learner,
-          iterator=dataset)
+    super().__init__(
+        actor=actor,
+        learner=learner,
+        iterator=dataset)
 
     # Save the replay so we don't garbage collect it.
     self._replay_server = replay_server
