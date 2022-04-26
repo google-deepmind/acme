@@ -39,13 +39,13 @@ def main(_):
       num_minibatches=32,
       num_epochs=10,
       batch_size=2048 // 16)
-  program = ppo.DistributedPPO(
+  program = ppo.make_distributed_ppo(
       environment_factory=environment_factory,
       network_factory=ppo.make_continuous_networks,
       config=config,
       seed=FLAGS.seed,
       num_actors=4,
-      max_number_of_steps=100).build()
+      max_number_of_steps=100)
 
   # Launch experiment.
   lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
