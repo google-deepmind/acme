@@ -68,7 +68,7 @@ class _LearningActor(core.Actor):
       self._actor.update()
 
 
-def disable_insert_blocking(table: reverb.Table):
+def _disable_insert_blocking(table: reverb.Table):
   rate_limiter_info = table.info.rate_limiter_info
   rate_limiter = reverb.rate_limiters.RateLimiter(
       samples_per_insert=rate_limiter_info.samples_per_insert,
@@ -100,7 +100,7 @@ def run_agent(builder: builders.ActorLearnerBuilder,
   # executes learning (sampling from the table) and data generation
   # (inserting into the table) sequentially from the same thread
   # which could result in blocked insert making the algorithm hang.
-  replay_tables = [disable_insert_blocking(table) for table in replay_tables]
+  replay_tables = [_disable_insert_blocking(table) for table in replay_tables]
 
   replay_server = reverb.Server(replay_tables, port=None)
   replay_client = reverb.Client(f'localhost:{replay_server.port}')
