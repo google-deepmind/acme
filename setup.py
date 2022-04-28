@@ -37,7 +37,7 @@ spec.loader.exec_module(_metadata)
 # sure this constraint is upheld.
 
 tensorflow = [
-    'dm-reverb==0.7.1',
+    'dm-reverb==0.7.2',
     'keras==2.8.0',
     'tensorflow-datasets==4.5.2',
     'tensorflow-estimator==2.8.0',
