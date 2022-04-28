@@ -423,11 +423,11 @@ def make_distributed_program(
         lp.CourierNode(evaluator, evaluator_key, learner, counter,
                        make_actor), label='evaluator')
 
-    for actor_id in range(num_actors):
-      actor_key, key = jax.random.split(key)
-      program.add_node(
-          lp.CourierNode(build_actor, actor_key, replay, learner, counter,
-                         actor_id, inference_server_node), label='actor')
+  for actor_id in range(num_actors):
+    actor_key, key = jax.random.split(key)
+    program.add_node(
+        lp.CourierNode(build_actor, actor_key, replay, learner, counter,
+                       actor_id, inference_server_node), label='actor')
   if make_snapshot_models and checkpointing_config:
     program.add_node(lp.CourierNode(build_model_saver, learner),
                      label='model_saver')
