@@ -27,69 +27,85 @@ from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
 from acme.utils import counting
 from acme.utils import loggers
+import launchpad as lp
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.TD3Networks]
 
 
+# TODO(stanczyk): Remove DistributedTD3 once not used.
 class DistributedTD3(distributed_layout.DistributedLayout):
-  """Distributed program definition for TD3."""
+  """Distributed program definition for TD3.
 
-  def __init__(
-      self,
-      environment_factory: jax_types.EnvironmentFactory,
-      environment_spec: specs.EnvironmentSpec,
-      network_factory: NetworkFactory,
-      config: td3_config.TD3Config,
-      seed: int,
-      num_actors: int,
-      max_number_of_steps: Optional[int] = None,
-      log_to_bigtable: bool = False,
-      log_every: float = 10.0,
-      evaluator_factories: Optional[Sequence[
-          distributed_layout.EvaluatorFactory]] = None,
-  ):
-    logger_fn = functools.partial(
-        loggers.make_default_logger,
-        'learner',
-        log_to_bigtable,
-        time_delta=log_every,
-        asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
-        steps_key='learner_steps')
-    td3_builder = builder.TD3Builder(config, logger_fn=logger_fn)
+    DEPRECATED: Use distributed_td3 function instead.
+  """
 
-    action_specs = environment_spec.actions
-    policy_network_fn = functools.partial(
+  def __init__(self, *args, **kwargs):
+    self.args = args
+    self.kwargs = kwargs
+
+  def build(self, name='agent', program: Optional[lp.Program] = None):
+    """Build the distributed agent topology."""
+    return make_distributed_td3(
+        *self.args, name=name, program=program, **self.kwargs)
+
+
+def make_distributed_td3(environment_factory: jax_types.EnvironmentFactory,
+                         environment_spec: specs.EnvironmentSpec,
+                         network_factory: NetworkFactory,
+                         config: td3_config.TD3Config,
+                         seed: int,
+                         num_actors: int,
+                         max_number_of_steps: Optional[int] = None,
+                         log_to_bigtable: bool = False,
+                         log_every: float = 10.0,
+                         evaluator_factories: Optional[Sequence[
+                             distributed_layout.EvaluatorFactory]] = None,
+                         name: str = 'agent',
+                         program: Optional[lp.Program] = None):
+  """Builds distributed TD3 program."""
+  logger_fn = functools.partial(
+      loggers.make_default_logger,
+      'learner',
+      log_to_bigtable,
+      time_delta=log_every,
+      asynchronous=True,
+      serialize_fn=utils.fetch_devicearray,
+      steps_key='learner_steps')
+  td3_builder = builder.TD3Builder(config, logger_fn=logger_fn)
+
+  action_specs = environment_spec.actions
+  policy_network_fn = functools.partial(
+      networks.get_default_behavior_policy,
+      action_specs=action_specs,
+      sigma=config.sigma)
+
+  if evaluator_factories is None:
+    eval_network_fn = functools.partial(
         networks.get_default_behavior_policy,
         action_specs=action_specs,
-        sigma=config.sigma)
-
-    if evaluator_factories is None:
-      eval_network_fn = functools.partial(
-          networks.get_default_behavior_policy,
-          action_specs=action_specs,
-          sigma=0.)
-      evaluator_factories = [
-          distributed_layout.default_evaluator_factory(
-              environment_factory=environment_factory,
-              network_factory=network_factory,
-              policy_factory=eval_network_fn,
-              log_to_bigtable=log_to_bigtable)
-      ]
-    super().__init__(
-        seed=seed,
-        environment_factory=environment_factory,
-        network_factory=network_factory,
-        builder=td3_builder,
-        policy_network=policy_network_fn,
-        evaluator_factories=evaluator_factories,
-        num_actors=num_actors,
-        max_number_of_steps=max_number_of_steps,
-        prefetch_size=config.prefetch_size,
-        log_to_bigtable=log_to_bigtable,
-        actor_logger_fn=distributed_layout.get_default_logger_fn(
-            log_to_bigtable, log_every),
-    )
+        sigma=0.)
+    evaluator_factories = [
+        distributed_layout.default_evaluator_factory(
+            environment_factory=environment_factory,
+            network_factory=network_factory,
+            policy_factory=eval_network_fn,
+            log_to_bigtable=log_to_bigtable)
+    ]
+  return distributed_layout.make_distributed_program(
+      seed=seed,
+      environment_factory=environment_factory,
+      network_factory=network_factory,
+      builder=td3_builder,
+      policy_network_factory=policy_network_fn,
+      evaluator_factories=evaluator_factories,
+      num_actors=num_actors,
+      max_number_of_steps=max_number_of_steps,
+      prefetch_size=config.prefetch_size,
+      log_to_bigtable=log_to_bigtable,
+      actor_logger_fn=distributed_layout.get_default_logger_fn(
+          log_to_bigtable, log_every),
+      name=name,
+      program=program)
 
 
 class TD3(local_layout.LocalLayout):
