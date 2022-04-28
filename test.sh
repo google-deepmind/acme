@@ -43,13 +43,28 @@ pytest --ignore-glob="*/*agent*_test.py" --durations=10 -n "${N_CPU}" acme
 
 # Run sample of examples.
 # For each of them make sure StepsLimiter reached the limit step count.
-# TODO(sinopalnikov): uncomment when we fix the failure:
-# http://sponge2/c1d157fd-f885-4156-88e4-7a96abfac7e7
-# cd examples/gym
-# time python lp_ppo_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
-# cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
-# time python lp_sac_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
-# cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
+cd examples/gym
+time python lp_ppo_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
+cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
+#time python lp_sac_jax.py --lp_termination_notice_secs=1 > /tmp/log.txt 2>&1 || cat /tmp/log.txt
+#cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
+
+# Run tests for non-distributed examples:
+TEST_COUNT=0
+for TEST in run_*.py; do
+  if [[ "{$TEST}" =~ (run_ail|run_dac|run_gail|run_pwil|run_sqil|run_value_dice) ]]; then
+    continue
+  fi
+
+  echo "TEST: ${TEST}"
+  TEST_COUNT=$(($TEST_COUNT+1))
+  time python "${TEST}" --num_steps=1000 --eval_every=1000
+done
+# Make sure number of executed examples is expected. This makes sure
+# we will not forget to update this code when examples are renamed for example.
+if [ $TEST_COUNT -ne 4 ]; then
+  exit 1
+fi
 
 # Clean-up.
 deactivate
