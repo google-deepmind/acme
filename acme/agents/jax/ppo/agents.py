@@ -97,23 +97,6 @@ def make_distributed_ppo(
       program=program)
 
 
-# TODO(stanczyk): Remove DistributedPPO once not used.
-class DistributedPPO(distributed_layout.DistributedLayout):
-  """Distributed program definition for PPO.
-
-    DEPRECATED: Use distributed_ppo function instead.
-  """
-
-  def __init__(self, *args, **kwargs):
-    self.args = args
-    self.kwargs = kwargs
-
-  def build(self, name='agent', program: Optional[lp.Program] = None):
-    """Build the distributed agent topology."""
-    return make_distributed_ppo(
-        *self.args, name=name, program=program, **self.kwargs)
-
-
 class PPO(local_layout.LocalLayout):
   """Local agent for PPO."""
 

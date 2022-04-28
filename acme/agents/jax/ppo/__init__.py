@@ -14,7 +14,6 @@
 
 """PPO agent."""
 
-from acme.agents.jax.ppo.agents import DistributedPPO
 from acme.agents.jax.ppo.agents import make_distributed_ppo
 from acme.agents.jax.ppo.agents import PPO
 from acme.agents.jax.ppo.builder import PPOBuilder
