@@ -18,14 +18,12 @@ Runs the synchronous PPO agent.
 """
 
 from absl import flags
-import acme
 from acme import specs
 from acme.agents.jax import ppo
 from absl import app
 import helpers
-from acme.utils import counting
+from acme.jax import runners
 from acme.utils import experiment_utils
-import jax
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_steps', 4000000,
@@ -58,42 +56,20 @@ def main(_):
 
   learner_logger = experiment_utils.make_experiment_logger(
       label='learner', steps_key='learner_steps')
-  agent = ppo.PPO(
-      environment_spec,
-      agent_networks,
-      config=config,
+
+  ppo_builder = ppo.PPOBuilder(config, logger_fn=(lambda: learner_logger))
+
+  runners.run_agent(
+      builder=ppo_builder,
+      environment=environment,
+      num_steps=FLAGS.num_steps,
+      eval_every=FLAGS.eval_every,
       seed=FLAGS.seed,
-      counter=counting.Counter(prefix='learner'),
-      logger=learner_logger)
+      networks=agent_networks,
+      policy_network=ppo.make_inference_fn(agent_networks),
+      eval_policy_network=ppo.make_inference_fn(
+          agent_networks, evaluation=True))
 
-  # Create the environment loop used for training.
-  train_logger = experiment_utils.make_experiment_logger(
-      label='train', steps_key='train_steps')
-  train_loop = acme.EnvironmentLoop(
-      environment,
-      agent,
-      counter=counting.Counter(prefix='train'),
-      logger=train_logger)
-
-  # Create the evaluation actor and loop.
-  eval_logger = experiment_utils.make_experiment_logger(
-      label='eval', steps_key='eval_steps')
-  eval_actor = agent.builder.make_actor(
-      random_key=jax.random.PRNGKey(FLAGS.seed),
-      policy_network=ppo.make_inference_fn(agent_networks, evaluation=True),
-      variable_source=agent)
-  eval_env = helpers.make_environment(task=FLAGS.env_name)
-  eval_loop = acme.EnvironmentLoop(
-      eval_env,
-      eval_actor,
-      counter=counting.Counter(prefix='eval'),
-      logger=eval_logger)
-
-  assert FLAGS.num_steps % FLAGS.eval_every == 0
-  for _ in range(FLAGS.num_steps // FLAGS.eval_every):
-    eval_loop.run(num_episodes=5)
-    train_loop.run(num_steps=FLAGS.eval_every)
-  eval_loop.run(num_episodes=5)
 
 if __name__ == '__main__':
   app.run(main)
