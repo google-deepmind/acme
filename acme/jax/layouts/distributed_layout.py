@@ -188,14 +188,27 @@ class DistributedLayout:
   def build(self, name='agent', program: Optional[lp.Program] = None):
     """Build the distributed agent topology."""
     return make_distributed_program(
-        self._seed, self._environment_factory, self._network_factory,
-        self._builder, self._policy_network, self._num_actors,
-        self._environment_spec, self._actor_logger_fn,
-        self._evaluator_factories, self._device_prefetch, self._prefetch_size,
-        self._log_to_bigtable, self._max_number_of_steps, self._observers,
-        self._multithreading_colocate_learner_and_reverb,
-        self._checkpointing_config, self._make_snapshot_models,
-        self._inference_server_config, name, program)
+        self._seed,
+        self._environment_factory,
+        self._network_factory,
+        self._builder,
+        self._policy_network,
+        self._num_actors,
+        environment_spec=self._environment_spec,
+        actor_logger_fn=self._actor_logger_fn,
+        evaluator_factories=self._evaluator_factories,
+        device_prefetch=self._device_prefetch,
+        prefetch_size=self._prefetch_size,
+        log_to_bigtable=self._log_to_bigtable,
+        max_number_of_steps=self._max_number_of_steps,
+        observers=self._observers,
+        multithreading_colocate_learner_and_reverb=self
+        ._multithreading_colocate_learner_and_reverb,
+        checkpointing_config=self._checkpointing_config,
+        make_snapshot_models=self._make_snapshot_models,
+        inference_server_config=self._inference_server_config,
+        name=name,
+        program=program)
 
 
 def make_distributed_program(
@@ -205,8 +218,10 @@ def make_distributed_program(
     builder: builders.GenericActorLearnerBuilder,
     policy_network_factory: PolicyFactory,
     num_actors: int,
+    *,
     environment_spec: Optional[specs.EnvironmentSpec] = None,
     actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
+    num_threads_per_actor_node: int = 1,
     evaluator_factories: Sequence[EvaluatorFactory] = (),
     device_prefetch: bool = True,
     prefetch_size: int = 1,
@@ -408,6 +423,25 @@ def make_distributed_program(
               learner,
               courier_kwargs={'thread_pool_size': num_actors}))
 
+  with program.group('actor'):
+    # Create all actor threads.
+    *actor_keys, key = jax.random.split(key, num_actors + 1)
+    actor_nodes = [
+        lp.CourierNode(build_actor, actor_key, replay, learner, counter,
+                       actor_id, inference_server_node)
+        for actor_id, actor_key in enumerate(actor_keys)
+    ]
+
+    # Create (maybe colocated) actor nodes.
+    if num_threads_per_actor_node == 1:
+      for actor_node in actor_nodes:
+        program.add_node(actor_node)
+    else:
+      for i in range(0, num_actors, num_threads_per_actor_node):
+        program.add_node(
+            lp.MultiThreadingColocation(
+                actor_nodes[i:i + num_threads_per_actor_node]))
+
   def make_actor(random_key: networks_lib.PRNGKey,
                  policy_network: PolicyNetwork,
                  variable_source: core.VariableSource) -> core.Actor:
@@ -417,14 +451,9 @@ def make_distributed_program(
   for evaluator in evaluator_factories:
     evaluator_key, key = jax.random.split(key)
     program.add_node(
-        lp.CourierNode(evaluator, evaluator_key, learner, counter,
-                       make_actor), label='evaluator')
+        lp.CourierNode(evaluator, evaluator_key, learner, counter, make_actor),
+        label='evaluator')
 
-  for actor_id in range(num_actors):
-    actor_key, key = jax.random.split(key)
-    program.add_node(
-        lp.CourierNode(build_actor, actor_key, replay, learner, counter,
-                       actor_id, inference_server_node), label='actor')
   if make_snapshot_models and checkpointing_config:
     program.add_node(lp.CourierNode(build_model_saver, learner),
                      label='model_saver')
