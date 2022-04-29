@@ -15,12 +15,13 @@
 """Tests for action_metrics_observers."""
 
 
-from absl.testing import absltest
 from acme import specs
 from acme.testing import fakes
 from acme.utils.observers import action_metrics
 import dm_env
 import numpy as np
+
+from absl.testing import absltest
 
 
 def _make_fake_env() -> dm_env.Environment:

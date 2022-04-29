@@ -14,12 +14,13 @@
 
 """Tests for the TD3 agent."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import td3
 from acme.testing import fakes
 from acme.utils import counting
+
+from absl.testing import absltest
 
 
 class TD3Test(absltest.TestCase):

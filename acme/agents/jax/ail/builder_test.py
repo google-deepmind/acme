@@ -13,11 +13,12 @@
 # limitations under the License.
 
 """Tests for the builder generator."""
-from absl.testing import absltest
 from acme import types
 from acme.agents.jax.ail import builder
 import numpy as np
 import reverb
+
+from absl.testing import absltest
 
 _REWARD = np.zeros((3,))
 

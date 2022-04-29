@@ -14,17 +14,16 @@
 
 """Tests for actors_tf2."""
 
-from absl.testing import absltest
-
 from acme import environment_loop
 from acme import specs
 from acme.agents.tf import actors
 from acme.testing import fakes
-
 import dm_env
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
+
+from absl.testing import absltest
 
 
 def _make_fake_env() -> dm_env.Environment:

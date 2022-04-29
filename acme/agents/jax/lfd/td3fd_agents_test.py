@@ -14,7 +14,6 @@
 
 """Tests for local and distributed TD3fD agents using layouts."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import lfd
@@ -24,6 +23,8 @@ from acme.utils import counting
 import dm_env
 import launchpad as lp
 import numpy as np
+
+from absl.testing import absltest
 
 
 def fake_demonstration_iterator():

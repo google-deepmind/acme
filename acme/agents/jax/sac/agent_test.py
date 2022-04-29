@@ -14,7 +14,6 @@
 
 """Tests for the SAC agent."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax.sac import agents
@@ -22,6 +21,8 @@ from acme.agents.jax.sac import config as sac_config
 from acme.agents.jax.sac import networks
 from acme.testing import fakes
 from acme.utils import counting
+
+from absl.testing import absltest
 
 
 class SACTest(absltest.TestCase):

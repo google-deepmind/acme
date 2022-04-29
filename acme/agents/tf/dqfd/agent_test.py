@@ -14,17 +14,16 @@
 
 """Tests for DQN agent."""
 
-from absl.testing import absltest
-
 import acme
 from acme import specs
 from acme.agents.tf.dqfd import agent as dqfd
 from acme.agents.tf.dqfd import bsuite_demonstrations
 from acme.testing import fakes
-
 import dm_env
 import numpy as np
 import sonnet as snt
+
+from absl.testing import absltest
 
 
 def _make_network(action_spec: specs.DiscreteArray) -> snt.Module:

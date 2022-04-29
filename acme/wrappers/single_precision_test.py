@@ -14,12 +14,12 @@
 
 """Tests for the single precision wrapper."""
 
-from absl.testing import absltest
-
 from acme import wrappers
 from acme.testing import fakes
 from dm_env import specs
 import numpy as np
+
+from absl.testing import absltest
 
 
 class SinglePrecisionTest(absltest.TestCase):

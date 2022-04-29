@@ -17,12 +17,13 @@
 import copy
 from unittest import mock
 
-from absl.testing import absltest
 from acme import specs
 from acme.testing import fakes
 from acme.utils.observers import measurement_metrics
 import dm_env
 import numpy as np
+
+from absl.testing import absltest
 
 
 def _make_fake_env() -> dm_env.Environment:

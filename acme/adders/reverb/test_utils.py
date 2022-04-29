@@ -16,7 +16,6 @@
 
 from typing import Any, Callable, Optional, Sequence, Tuple, TypeVar, Union
 
-from absl.testing import absltest
 from acme import specs
 from acme import types
 from acme.adders import base as adders_base
@@ -27,6 +26,8 @@ import numpy as np
 import reverb
 import tensorflow as tf
 import tree
+
+from absl.testing import absltest
 
 StepWithExtra = Tuple[Any, dm_env.TimeStep, Any]
 StepWithoutExtra = Tuple[Any, dm_env.TimeStep]

@@ -14,8 +14,6 @@
 
 """Tests for RDQN agent."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
 import acme
 from acme import specs
 from acme.agents.tf import r2d2
@@ -23,6 +21,9 @@ from acme.testing import fakes
 from acme.tf import networks
 import numpy as np
 import sonnet as snt
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class SimpleNetwork(networks.RNNCore):

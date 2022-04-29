@@ -16,13 +16,14 @@
 
 import functools
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import r2d2
 from acme.testing import fakes
 from acme.utils import counting
 import launchpad as lp
+
+from absl.testing import absltest
 
 
 class R2D2Test(absltest.TestCase):

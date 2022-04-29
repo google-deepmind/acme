@@ -14,7 +14,6 @@
 
 """Tests for DQN agent."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import dqn
@@ -23,6 +22,8 @@ from acme.jax import utils
 from acme.testing import fakes
 import haiku as hk
 import numpy as np
+
+from absl.testing import absltest
 
 
 class DQNTest(absltest.TestCase):

@@ -15,8 +15,6 @@
 """Tests for actors."""
 from typing import Optional, Tuple
 
-from absl.testing import absltest
-from absl.testing import parameterized
 from acme import environment_loop
 from acme import specs
 from acme.agents.jax import actor_core as actor_core_lib
@@ -29,6 +27,9 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 def _make_fake_env() -> dm_env.Environment:

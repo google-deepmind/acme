@@ -15,7 +15,6 @@
 """Tests for the AIL learner."""
 import functools
 
-from absl.testing import absltest
 from acme import specs
 from acme import types
 from acme.agents.jax.ail import learning as ail_learning
@@ -27,6 +26,8 @@ import haiku as hk
 import jax
 import numpy as np
 import optax
+
+from absl.testing import absltest
 
 
 def _make_discriminator(spec):

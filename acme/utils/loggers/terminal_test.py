@@ -14,8 +14,9 @@
 
 """Tests for terminal logger."""
 
-from absl.testing import absltest
 from acme.utils.loggers import terminal
+
+from absl.testing import absltest
 
 
 class LoggingTest(absltest.TestCase):

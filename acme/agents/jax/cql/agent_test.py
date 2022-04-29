@@ -14,12 +14,13 @@
 
 """Tests for the CQL agent."""
 
-from absl.testing import absltest
 from acme import specs
 from acme.agents.jax import cql
 from acme.testing import fakes
 import jax
 import optax
+
+from absl.testing import absltest
 
 
 class CQLTest(absltest.TestCase):

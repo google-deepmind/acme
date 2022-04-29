@@ -16,11 +16,11 @@
 
 from unittest import mock
 
-from absl.testing import absltest
-from absl.testing import flagsaver
-
 from acme.testing import test_utils
 import acme.utils.paths as paths
+
+from absl.testing import flagsaver
+from absl.testing import absltest
 
 
 class PathTest(test_utils.TestCase):

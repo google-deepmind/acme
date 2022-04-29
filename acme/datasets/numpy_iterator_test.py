@@ -16,9 +16,10 @@
 
 import collections
 
-from absl.testing import absltest
 from acme.datasets import numpy_iterator
 import tensorflow as tf
+
+from absl.testing import absltest
 
 
 class NumpyIteratorTest(absltest.TestCase):

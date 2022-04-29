@@ -16,15 +16,14 @@
 
 from typing import Sequence, Tuple
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
 from acme import specs
 from acme.tf import utils as tf2_utils
-
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class PolicyValueHead(snt.Module):

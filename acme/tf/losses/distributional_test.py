@@ -14,12 +14,13 @@
 
 """Tests for acme.tf.losses.distributional."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
 from acme.tf.losses import distributional
 import numpy as np
 from numpy import testing as npt
 import tensorflow as tf
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 def _reference_l2_project(src_support, src_probs, dst_support):

@@ -18,7 +18,6 @@ import functools
 import math
 from typing import NamedTuple
 
-from absl.testing import absltest
 from acme import specs
 from acme.jax import running_statistics
 import jax
@@ -26,6 +25,8 @@ from jax.config import config as jax_config
 import jax.numpy as jnp
 import numpy as np
 import tree
+
+from absl.testing import absltest
 
 update_and_validate = functools.partial(
     running_statistics.update, validate_shapes=True)

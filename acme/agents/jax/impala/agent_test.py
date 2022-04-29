@@ -16,17 +16,16 @@
 
 from typing import Optional
 
-from absl.testing import absltest
-
 import acme
 from acme import specs
 from acme.agents.jax import impala
 from acme.jax import networks as networks_lib
 from acme.testing import fakes
-
 import haiku as hk
 import jax.numpy as jnp
 import numpy as np
+
+from absl.testing import absltest
 
 
 class MyNetwork(hk.RNNCore):

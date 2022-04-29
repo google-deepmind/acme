@@ -16,8 +16,6 @@
 
 from typing import Dict, Sequence, Tuple
 
-from absl.testing import absltest
-from absl.testing import parameterized
 import acme
 from acme import specs
 from acme.agents.tf import mompo
@@ -26,6 +24,9 @@ from acme.tf import networks
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 def make_networks(

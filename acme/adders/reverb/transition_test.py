@@ -14,11 +14,12 @@
 
 """Tests for NStepTransition adders."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
 from acme.adders.reverb import test_cases
 from acme.adders.reverb import test_utils
 from acme.adders.reverb import transition as adders
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class NStepTransitionAdderTest(test_utils.AdderTestMixin,

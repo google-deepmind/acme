@@ -14,11 +14,12 @@
 
 """Tests for acme.tf.networks.distributional."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
 from acme.tf.networks import distributional
 import numpy as np
 from numpy import testing as npt
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class DistributionalTest(parameterized.TestCase):

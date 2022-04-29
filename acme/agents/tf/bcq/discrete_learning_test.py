@@ -14,17 +14,16 @@
 
 """Tests for discrete BCQ learner."""
 
-from absl.testing import absltest
-
 from acme import specs
 from acme.agents.tf import bcq
 from acme.testing import fakes
 from acme.tf import utils as tf2_utils
 from acme.tf.networks import discrete as discrete_networks
 from acme.utils import counting
-
 import numpy as np
 import sonnet as snt
+
+from absl.testing import absltest
 
 
 def _make_network(action_spec: specs.DiscreteArray) -> snt.Module:

@@ -14,12 +14,12 @@
 
 """Tests for sequence adders."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
 from acme.adders.reverb import sequence as adders
 from acme.adders.reverb import test_cases
 from acme.adders.reverb import test_utils
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class SequenceAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):

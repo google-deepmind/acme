@@ -14,16 +14,16 @@
 
 """Tests for the IMPALA loss function."""
 
-from absl.testing import absltest
 from acme.adders import reverb as adders
 from acme.jax.losses import impala
 from acme.utils.tree_utils import tree_map
-
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
 import reverb
+
+from absl.testing import absltest
 
 
 class ImpalaTest(absltest.TestCase):

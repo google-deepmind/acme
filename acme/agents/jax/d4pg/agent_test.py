@@ -16,7 +16,6 @@
 
 from typing import Sequence
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import d4pg
@@ -27,6 +26,8 @@ from acme.utils import counting
 import haiku as hk
 import jax.numpy as jnp
 import numpy as np
+
+from absl.testing import absltest
 
 
 def make_networks(

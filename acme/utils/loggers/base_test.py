@@ -14,11 +14,12 @@
 
 """Tests for acme.utils.loggers.base."""
 
-from absl.testing import absltest
 from acme.utils.loggers import base
 import jax.numpy as jnp
 import numpy as np
 import tensorflow as tf
+
+from absl.testing import absltest
 
 
 class BaseTest(absltest.TestCase):

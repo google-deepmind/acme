@@ -14,7 +14,6 @@
 
 """Integration test for the distributed agent."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.tf import d4pg
@@ -24,6 +23,8 @@ from acme.tf import utils as tf2_utils
 import launchpad as lp
 import numpy as np
 import sonnet as snt
+
+from absl.testing import absltest
 
 
 def make_networks(action_spec: specs.BoundedArray):

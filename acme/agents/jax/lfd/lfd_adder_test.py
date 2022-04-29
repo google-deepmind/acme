@@ -16,12 +16,13 @@
 
 import collections
 
-from absl.testing import absltest
 from acme import adders
 from acme import types
 from acme.agents.jax.lfd import lfd_adder
 import dm_env
 import numpy as np
+
+from absl.testing import absltest
 
 
 class TestStatisticsAdder(adders.Adder):

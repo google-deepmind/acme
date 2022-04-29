@@ -16,7 +16,6 @@
 
 from typing import Dict, Sequence
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme import types
@@ -26,6 +25,8 @@ from acme.tf import networks
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
+
+from absl.testing import absltest
 
 
 def make_networks(

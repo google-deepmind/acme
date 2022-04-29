@@ -14,11 +14,12 @@
 
 """Integration test for the distributed agent."""
 
-from absl.testing import absltest
 import acme
 from acme.agents.jax import ars
 from acme.testing import fakes
 import launchpad as lp
+
+from absl.testing import absltest
 
 
 class DistributedAgentTest(absltest.TestCase):

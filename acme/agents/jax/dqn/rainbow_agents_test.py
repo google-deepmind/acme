@@ -14,7 +14,6 @@
 
 """Tests for local and distributed rainbow agents."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax.dqn import rainbow_agents
@@ -24,6 +23,8 @@ from acme.testing import fakes
 import haiku as hk
 import launchpad as lp
 import numpy as np
+
+from absl.testing import absltest
 
 
 def network_factory(

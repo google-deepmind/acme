@@ -16,7 +16,6 @@
 
 from typing import Sequence
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.tf import svg0_prior
@@ -26,6 +25,8 @@ from acme.tf import utils as tf2_utils
 import launchpad as lp
 import numpy as np
 import sonnet as snt
+
+from absl.testing import absltest
 
 
 def make_networks(

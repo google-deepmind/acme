@@ -16,9 +16,10 @@
 
 import time
 
-from absl.testing import absltest
 from acme.utils.loggers import base
 from acme.utils.loggers import filters
+
+from absl.testing import absltest
 
 
 # TODO(jaslanides): extract this to test_utils, or similar, for re-use.

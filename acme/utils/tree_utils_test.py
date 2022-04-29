@@ -17,10 +17,11 @@
 import functools
 from typing import Sequence
 
-from absl.testing import absltest
 from acme.utils import tree_utils
 import numpy as np
 import tree
+
+from absl.testing import absltest
 
 TEST_SEQUENCE = [
     {

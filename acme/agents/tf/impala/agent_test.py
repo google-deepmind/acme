@@ -14,7 +14,6 @@
 
 """Tests for IMPALA agent."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.tf import impala
@@ -22,6 +21,8 @@ from acme.testing import fakes
 from acme.tf import networks
 import numpy as np
 import sonnet as snt
+
+from absl.testing import absltest
 
 
 def _make_network(action_spec: specs.DiscreteArray) -> snt.RNNCore:

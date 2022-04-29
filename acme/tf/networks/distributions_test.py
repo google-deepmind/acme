@@ -14,11 +14,12 @@
 
 """Tests for acme.tf.networks.distributions."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
 from acme.tf.networks import distributions
 import numpy as np
 from numpy import testing as npt
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class DiscreteValuedDistributionTest(parameterized.TestCase):

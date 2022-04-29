@@ -14,13 +14,13 @@
 
 """Tests for utils."""
 
-from absl.testing import absltest
 from acme.jax import utils
-
 import chex
 import jax
 import jax.numpy as jnp
 import numpy as np
+
+from absl.testing import absltest
 
 chex.set_n_cpu_devices(4)
 

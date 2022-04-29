@@ -14,13 +14,14 @@
 
 """Tests for the AIL discriminator losses."""
 
-from absl.testing import absltest
 from acme import types
 from acme.agents.jax.ail import losses
 from acme.jax import networks as networks_lib
 import jax
 import jax.numpy as jnp
 import tree
+
+from absl.testing import absltest
 
 
 class AilLossTest(absltest.TestCase):

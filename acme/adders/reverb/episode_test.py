@@ -14,12 +14,12 @@
 
 """Tests for Episode adders."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
 from acme.adders.reverb import episode as adders
 from acme.adders.reverb import test_utils
 import numpy as np
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class EpisodeAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):

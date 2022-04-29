@@ -14,9 +14,10 @@
 
 """Tests for iterator_utils."""
 
-from absl.testing import absltest
 from acme.utils import iterator_utils
 import numpy as np
+
+from absl.testing import absltest
 
 
 class IteratorUtilsTest(absltest.TestCase):

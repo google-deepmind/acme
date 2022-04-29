@@ -17,12 +17,13 @@
 import os
 from typing import Any, Sequence
 
-from absl.testing import absltest
 from acme import core
 from acme.jax import snapshotter
 from acme.jax import types
 from acme.testing import test_utils
 import jax.numpy as jnp
+
+from absl.testing import absltest
 
 
 def _model0(params, x1, x2):

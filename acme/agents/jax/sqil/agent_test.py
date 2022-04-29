@@ -14,13 +14,14 @@
 
 """Tests for the SQIL agent."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import sac
 from acme.agents.jax import sqil
 from acme.testing import fakes
 from acme.utils import counting
+
+from absl.testing import absltest
 
 
 class SQILTest(absltest.TestCase):

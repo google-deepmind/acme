@@ -17,9 +17,10 @@
 import copy
 import pickle
 
-from absl.testing import absltest
 from acme.testing import fakes
 from acme.wrappers import base
+
+from absl.testing import absltest
 
 
 class BaseTest(absltest.TestCase):

@@ -19,7 +19,6 @@ import re
 import time
 from unittest import mock
 
-from absl.testing import absltest
 from acme import specs
 from acme.testing import test_utils
 from acme.tf import networks
@@ -31,6 +30,8 @@ import numpy as np
 import sonnet as snt
 import tensorflow as tf
 import tree
+
+from absl.testing import absltest
 
 
 class DummySaveable(tf2_savers.TFSaveable):

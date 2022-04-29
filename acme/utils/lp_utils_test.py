@@ -14,9 +14,9 @@
 
 """Tests for acme launchpad utilities."""
 
-from absl.testing import absltest
-
 from acme.utils import lp_utils
+
+from absl.testing import absltest
 
 
 class EnvironmentLoopTest(absltest.TestCase):

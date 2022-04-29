@@ -16,7 +16,6 @@
 
 from typing import Callable, Tuple
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.jax import ppo
@@ -31,6 +30,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import tensorflow_probability
+
+from absl.testing import absltest
+
 tfd = tensorflow_probability.substrates.jax.distributions
 
 

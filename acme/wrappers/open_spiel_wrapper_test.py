@@ -15,9 +15,11 @@
 """Tests for open_spiel_wrapper."""
 
 import unittest
-from absl.testing import absltest
+
 from dm_env import specs
 import numpy as np
+
+from absl.testing import absltest
 
 SKIP_OPEN_SPIEL_TESTS = False
 SKIP_OPEN_SPIEL_MESSAGE = 'open_spiel not installed.'

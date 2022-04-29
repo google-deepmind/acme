@@ -16,14 +16,13 @@
 
 from typing import Text
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
 from acme.agents.tf.mcts import search
 from acme.agents.tf.mcts.models import simulator
-
 from bsuite.environments import catch
 import numpy as np
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class TestSearch(parameterized.TestCase):

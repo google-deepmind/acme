@@ -17,11 +17,12 @@
 import csv
 import os
 
-from absl.testing import absltest
-from absl.testing import parameterized
 from acme.testing import test_utils
 from acme.utils import paths
 from acme.utils.loggers import csv as csv_logger
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 _TEST_INPUTS = [{
     'c': 'foo',

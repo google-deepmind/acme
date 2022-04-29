@@ -16,9 +16,10 @@
 
 import unittest
 
-from absl.testing import absltest
 from dm_env import specs
 import numpy as np
+
+from absl.testing import absltest
 
 SKIP_GYM_TESTS = False
 SKIP_GYM_MESSAGE = 'gym not installed.'

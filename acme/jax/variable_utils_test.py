@@ -14,7 +14,6 @@
 
 """Tests for variable utilities."""
 
-from absl.testing import absltest
 from acme.jax import variable_utils
 from acme.testing import fakes
 import haiku as hk
@@ -22,6 +21,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import tree
+
+from absl.testing import absltest
 
 
 def dummy_network(x):

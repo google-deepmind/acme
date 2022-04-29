@@ -14,11 +14,12 @@
 
 """Tests for the SQIL iterator."""
 
-from absl.testing import absltest
 from acme import types
 from acme.agents.jax.sqil import builder
 import numpy as np
 import reverb
+
+from absl.testing import absltest
 
 
 class BuilderTest(absltest.TestCase):

@@ -14,12 +14,13 @@
 
 """Tests for acme.utils.observers.env_info."""
 
-from absl.testing import absltest
 from acme.utils.observers import env_info
 from acme.wrappers import gym_wrapper
 import gym
 from gym import spaces
 import numpy as np
+
+from absl.testing import absltest
 
 
 class GymEnvWithInfo(gym.Env):

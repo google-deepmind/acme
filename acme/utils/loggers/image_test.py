@@ -16,11 +16,12 @@
 
 import os
 
-from absl.testing import absltest
 from acme.testing import test_utils
 from acme.utils.loggers import image
 import numpy as np
 from PIL import Image
+
+from absl.testing import absltest
 
 
 class ImageTest(test_utils.TestCase):

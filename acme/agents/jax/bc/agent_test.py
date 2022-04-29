@@ -14,8 +14,6 @@
 
 """Tests for the BC agent."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
 from acme import specs
 from acme import types
 from acme.agents.jax import bc
@@ -29,6 +27,9 @@ import jax.numpy as jnp
 from jax.scipy import special
 import numpy as np
 import optax
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 def make_networks(

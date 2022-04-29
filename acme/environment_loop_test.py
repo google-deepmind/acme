@@ -15,14 +15,15 @@
 """Tests for the environment loop."""
 
 from typing import Optional
-from absl.testing import absltest
-from absl.testing import parameterized
 
 from acme import environment_loop
 from acme import specs
 from acme import types
 from acme.testing import fakes
 import numpy as np
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 EPISODE_LENGTH = 10
 

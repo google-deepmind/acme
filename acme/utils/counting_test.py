@@ -15,8 +15,10 @@
 """Tests for acme.utils.counting."""
 
 import threading
-from absl.testing import absltest
+
 from acme.utils import counting
+
+from absl.testing import absltest
 
 
 class Barrier:

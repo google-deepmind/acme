@@ -16,9 +16,10 @@
 
 from typing import List
 
-from absl.testing import absltest
 from acme import core
 from acme import types
+
+from absl.testing import absltest
 
 
 class StepCountingLearner(core.Learner):

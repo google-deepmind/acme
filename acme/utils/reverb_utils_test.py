@@ -14,13 +14,14 @@
 
 """Tests for acme.utils.reverb_utils."""
 
-from absl.testing import absltest
 from acme import types
 from acme.adders import reverb as reverb_adders
 from acme.utils import reverb_utils
 import numpy as np
 import reverb
 import tree
+
+from absl.testing import absltest
 
 
 class ReverbUtilsTest(absltest.TestCase):

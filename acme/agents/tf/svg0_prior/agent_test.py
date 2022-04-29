@@ -17,7 +17,6 @@
 import sys
 from typing import Dict, Sequence
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme import types
@@ -25,9 +24,10 @@ from acme.agents.tf import svg0_prior
 from acme.testing import fakes
 from acme.tf import networks
 from acme.tf import utils as tf2_utils
-
 import numpy as np
 import sonnet as snt
+
+from absl.testing import absltest
 
 
 def make_networks(

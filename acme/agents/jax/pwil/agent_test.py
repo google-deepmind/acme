@@ -14,8 +14,6 @@
 
 """Tests for the PWIL agent."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
 import acme
 from acme import specs
 from acme import types
@@ -23,6 +21,9 @@ from acme.agents.jax import pwil
 from acme.agents.jax import sac
 from acme.testing import fakes
 from acme.utils import counting
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class PwilTest(parameterized.TestCase):

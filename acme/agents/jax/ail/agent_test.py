@@ -18,8 +18,6 @@ import shutil
 from typing import Any, Callable
 
 from absl import flags
-from absl.testing import absltest
-from absl.testing import parameterized
 import acme
 from acme import specs
 from acme import types
@@ -36,6 +34,9 @@ import haiku as hk
 import jax
 from jax import numpy as jnp
 import numpy as np
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 NUM_DISCRETE_ACTIONS = 5
 NUM_OBSERVATIONS = 10

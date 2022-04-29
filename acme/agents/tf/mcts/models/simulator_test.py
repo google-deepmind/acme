@@ -14,11 +14,12 @@
 
 """Tests for simulator.py."""
 
-from absl.testing import absltest
 from acme.agents.tf.mcts.models import simulator
 from bsuite.environments import catch
 import dm_env
 import numpy as np
+
+from absl.testing import absltest
 
 
 class SimulatorTest(absltest.TestCase):

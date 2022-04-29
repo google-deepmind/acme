@@ -14,13 +14,12 @@
 
 """Tests for the single precision wrapper."""
 
-from absl.testing import absltest
-
 from acme import wrappers
 from acme.testing import fakes
-
 import numpy as np
 import tree
+
+from absl.testing import absltest
 
 
 class FakeNonZeroObservationEnvironment(fakes.ContinuousEnvironment):

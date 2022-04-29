@@ -14,13 +14,14 @@
 
 """Tests for the CRR agent."""
 
-from absl.testing import absltest
-from absl.testing import parameterized
 from acme import specs
 from acme.agents.jax import crr
 from acme.testing import fakes
 import jax
 import optax
+
+from absl.testing import absltest
+from absl.testing import parameterized
 
 
 class CRRTest(parameterized.TestCase):

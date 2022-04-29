@@ -14,7 +14,6 @@
 
 """Tests for R2D3 agent."""
 
-from absl.testing import absltest
 import acme
 from acme import specs
 from acme.agents.tf import r2d3
@@ -24,6 +23,8 @@ from acme.tf import networks
 import dm_env
 import numpy as np
 import sonnet as snt
+
+from absl.testing import absltest
 
 
 class SimpleNetwork(networks.RNNCore):
