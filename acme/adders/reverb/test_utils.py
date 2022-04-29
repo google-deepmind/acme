@@ -178,7 +178,7 @@ class AdderTestMixin(absltest.TestCase):
       raise ValueError('At least one step must be given.')
 
     has_extras = len(steps[0]) == 3
-    for episode_id in range(repeat_episode_times):
+    for _ in range(repeat_episode_times):
       # Add all the data up to the final step.
       adder.add_first(first)
       for step in steps[:-1]:
