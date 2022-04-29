@@ -335,9 +335,6 @@ def make_distributed_program(
     return environment_loop.EnvironmentLoop(environment, actor, counter,
                                             logger, observers=observers)
 
-  def build_coordinator(counter: counting.Counter, max_actor_steps: int):
-    return lp_utils.StepsLimiter(counter, max_actor_steps)
-
   if not program:
     program = lp.Program(name=name)
 
@@ -353,7 +350,7 @@ def make_distributed_program(
 
   if max_number_of_steps is not None:
     program.add_node(
-        lp.CourierNode(build_coordinator, counter, max_number_of_steps),
+        lp.CourierNode(lp_utils.StepsLimiter, counter, max_number_of_steps),
         label='counter')
 
   learner_key, key = jax.random.split(key)
