@@ -21,8 +21,8 @@ from typing import Optional, Tuple
 
 from absl import flags
 
-flags.DEFINE_string('acme_id', None, 'Experiment identifier to use for Acme.')
-FLAGS = flags.FLAGS
+ACME_ID = flags.DEFINE_string('acme_id', None,
+                              'Experiment identifier to use for Acme.')
 
 
 def process_path(path: str,
@@ -42,7 +42,8 @@ def process_path(path: str,
     ttl_seconds: ignored.
     backups: ignored.
     add_uid: Whether to add a unique directory identifier between `path` and
-      `subpaths`. If FLAGS.acme_id is set, will use that as the identifier.
+      `subpaths`. If the `--acme_id` flag is set, will use that as the
+      identifier.
 
   Returns:
     the processed, expanded path string.
@@ -58,14 +59,14 @@ def process_path(path: str,
 
 
 def get_unique_id() -> Tuple[str, ...]:
-  """Makes a unique identifier for this process; override with FLAGS.acme_id."""
+  """Makes a unique identifier for this process; override with --acme_id."""
   # By default we'll use the global id.
   identifier = time.strftime('%Y%m%d-%H%M%S')
 
   # If the --acme_id flag is given prefer that; ignore if flag processing has
   # been skipped (this happens in colab or in tests).
   try:
-    identifier = FLAGS.acme_id or identifier
+    identifier = ACME_ID.value or identifier
   except flags.UnparsedFlagAccessError:
     pass
 

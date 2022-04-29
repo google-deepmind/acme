@@ -16,13 +16,11 @@
 
 from unittest import mock
 
-from absl import flags
 from absl.testing import absltest
+from absl.testing import flagsaver
 
 from acme.testing import test_utils
 import acme.utils.paths as paths
-
-FLAGS = flags.FLAGS
 
 
 class PathTest(test_utils.TestCase):
@@ -35,10 +33,8 @@ class PathTest(test_utils.TestCase):
     self.assertEqual(path, f'{root_directory}/test/foo/bar')
 
   def test_unique_id_with_flag(self):
-    argv = ('./program', '--acme_id=test_flag')
-    FLAGS(argv)
-    self.assertEqual(paths.get_unique_id(), ('test_flag',))
-    FLAGS.unparse_flags()
+    with flagsaver.flagsaver((paths.ACME_ID, 'test_flag')):
+      self.assertEqual(paths.get_unique_id(), ('test_flag',))
 
 
 if __name__ == '__main__':
