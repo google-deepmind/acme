@@ -32,23 +32,6 @@ import launchpad as lp
 NetworkFactory = Callable[[specs.EnvironmentSpec], d4pg_networks.D4PGNetworks]
 
 
-# TODO(stanczyk): Remove DistributedD4PG once not used.
-class DistributedD4PG(distributed_layout.DistributedLayout):
-  """Distributed program definition for SAC.
-
-    DEPRECATED: Use distributed_sac function instead.
-  """
-
-  def __init__(self, *args, **kwargs):
-    self.args = args
-    self.kwargs = kwargs
-
-  def build(self, name='agent', program: Optional[lp.Program] = None):
-    """Build the distributed agent topology."""
-    return make_distributed_d4pg(
-        *self.args, name=name, program=program, **self.kwargs)
-
-
 def make_distributed_d4pg(
     environment_factory: Callable[[bool], dm_env.Environment],
     network_factory: NetworkFactory,

@@ -15,7 +15,7 @@
 """Implementations of a D4PG agent."""
 
 from acme.agents.jax.d4pg.agents import D4PG
-from acme.agents.jax.d4pg.agents import DistributedD4PG
+from acme.agents.jax.d4pg.agents import make_distributed_d4pg
 from acme.agents.jax.d4pg.builder import D4PGBuilder
 from acme.agents.jax.d4pg.config import D4PGConfig
 from acme.agents.jax.d4pg.learning import D4PGLearner
