@@ -134,11 +134,15 @@ def run_agent(builder: builders.ActorLearnerBuilder,
   # at which new data is released is controlled by the replay table's
   # rate_limiter which is created by the builder.make_replay_tables call above.
   actor = _LearningActor(actor, learner, dataset)
+  # Parent counter allows to share step counts between train and eval loops, so
+  # that it is possible to plot for example evaluator's return value as
+  # a function of the number of training episodes.
+  parent_counter = counting.Counter(time_delta=0.)
 
   train_loop = acme.EnvironmentLoop(
       environment,
       actor,
-      counter=counting.Counter(prefix='train'),
+      counter=counting.Counter(parent_counter, prefix='train', time_delta=0.),
       logger=train_logger)
 
   # Create the evaluation actor and loop.
@@ -151,7 +155,7 @@ def run_agent(builder: builders.ActorLearnerBuilder,
   eval_loop = acme.EnvironmentLoop(
       environment,
       eval_actor,
-      counter=counting.Counter(prefix='eval'),
+      counter=counting.Counter(parent_counter, prefix='eval', time_delta=0.),
       logger=eval_logger)
 
   assert num_steps % eval_every == 0
