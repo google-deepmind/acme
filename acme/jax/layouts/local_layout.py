@@ -130,7 +130,8 @@ class LocalLayout(agent.Agent):
     super().__init__(
         actor=actor,
         learner=learner,
-        iterator=dataset)
+        iterator=dataset,
+        replay_tables=replay_tables)
 
     # Save the replay so we don't garbage collect it.
     self._replay_server = replay_server

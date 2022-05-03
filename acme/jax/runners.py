@@ -14,8 +14,9 @@
 
 """Runners used for executing local agents."""
 
+import math
 import sys
-from typing import Optional
+from typing import List
 
 import acme
 from acme import core
@@ -33,19 +34,23 @@ import reverb
 class _LearningActor(core.Actor):
   """Actor which learns (updates its parameters) when `update` is called.
 
-  This combines a base actor, a learner, and an iterator over data. Whenever
-  `update` is called on the wrapping actor the learner will take a step
-  (e.g. one step of gradient descent) until data from the iterator has been
-  consumed. Selecting actions and making observations are handled by the base
-  actor.
+  This combines a base actor and a learner. Whenever `update` is called
+  on the wrapping actor the learner will take a step (e.g. one step of gradient
+  descent) as long as there is data available for training
+  (provided iterator and replay_tables are used to check for that).
+  Selecting actions and making observations are handled by the base actor.
   Intended to be used by the `run_agent` only.
   """
 
   def __init__(self, actor: core.Actor, learner: core.Learner,
-               iterator: Optional[core.PrefetchingIterator] = None):
+               iterator: core.PrefetchingIterator,
+               replay_tables: List[reverb.Table]):
     self._actor = actor
     self._learner = learner
     self._iterator = iterator
+    self._replay_tables = replay_tables
+    self._batch_size_upper_bounds = [1_000_000_000] * len(replay_tables)
+    self._learner_steps = 0
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     return self._actor.select_action(observation)
@@ -56,11 +61,25 @@ class _LearningActor(core.Actor):
   def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
     self._actor.observe(action, next_timestep)
 
+  def _has_data_for_training(self):
+    if self._iterator.ready():
+      return True
+    for (table, batch_size) in zip(self._replay_tables,
+                                   self._batch_size_upper_bounds):
+      if not table.can_sample(batch_size):
+        return False
+    return True
+
   def update(self):
     # Perform learner steps as long as iterator has data.
     update_actor = False
-    while self._iterator.ready():
+    while self._has_data_for_training():
       # Run learner steps (usually means gradient steps).
+      self._learner_steps += 1
+      self._batch_size_upper_bounds = [
+          math.ceil(t.info.rate_limiter_info.sample_stats.completed /
+                    self._learner_steps) for t in self._replay_tables
+      ]
       self._learner.step()
       update_actor = True
     if update_actor:

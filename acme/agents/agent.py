@@ -14,13 +14,14 @@
 
 """The base agent interface."""
 
+import math
 from typing import List, Optional
 
 from acme import core
 from acme import types
-
 import dm_env
 import numpy as np
+import reverb
 
 
 def _calculate_num_learner_steps(num_observations: int,
@@ -59,13 +60,18 @@ class Agent(core.Actor, core.VariableSource):
   def __init__(self, actor: core.Actor, learner: core.Learner,
                min_observations: Optional[int] = None,
                observations_per_step: Optional[float] = None,
-               iterator: Optional[core.PrefetchingIterator] = None):
+               iterator: Optional[core.PrefetchingIterator] = None,
+               replay_tables: Optional[List[reverb.Table]] = None):
     self._actor = actor
     self._learner = learner
     self._min_observations = min_observations
     self._observations_per_step = observations_per_step
     self._num_observations = 0
     self._iterator = iterator
+    self._replay_tables = replay_tables
+    self._batch_size_upper_bounds = [1_000_000_000] * len(
+        replay_tables) if replay_tables else None
+    self._learner_steps = 0
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     return self._actor.select_action(observation)
@@ -77,12 +83,26 @@ class Agent(core.Actor, core.VariableSource):
     self._num_observations += 1
     self._actor.observe(action, next_timestep)
 
+  def _has_data_for_training(self):
+    if self._iterator.ready():
+      return True
+    for (table, batch_size) in zip(self._replay_tables,
+                                   self._batch_size_upper_bounds):
+      if not table.can_sample(batch_size):
+        return False
+    return True
+
   def update(self):
     if self._iterator:
       # Perform learner steps as long as iterator has data.
       update_actor = False
-      while self._iterator.ready():
+      while self._has_data_for_training():
         # Run learner steps (usually means gradient steps).
+        self._learner_steps += 1
+        self._batch_size_upper_bounds = [
+            math.ceil(t.info.rate_limiter_info.sample_stats.completed /
+                      self._learner_steps) for t in self._replay_tables
+        ]
         self._learner.step()
         update_actor = True
       if update_actor:
