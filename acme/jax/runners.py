@@ -152,7 +152,7 @@ def run_agent(builder: builders.ActorLearnerBuilder,
   # any new data to learn from and if so it runs a learner step. The rate
   # at which new data is released is controlled by the replay table's
   # rate_limiter which is created by the builder.make_replay_tables call above.
-  actor = _LearningActor(actor, learner, dataset)
+  actor = _LearningActor(actor, learner, dataset, replay_tables)
   # Parent counter allows to share step counts between train and eval loops, so
   # that it is possible to plot for example evaluator's return value as
   # a function of the number of training episodes.
