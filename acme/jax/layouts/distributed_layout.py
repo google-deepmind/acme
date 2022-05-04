@@ -221,7 +221,7 @@ def make_distributed_program(
     *,
     environment_spec: Optional[specs.EnvironmentSpec] = None,
     actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
-    num_threads_per_actor_node: int = 1,
+    num_actors_per_node: int = 1,
     evaluator_factories: Sequence[EvaluatorFactory] = (),
     device_prefetch: bool = True,
     prefetch_size: int = 1,
@@ -433,14 +433,14 @@ def make_distributed_program(
     ]
 
     # Create (maybe colocated) actor nodes.
-    if num_threads_per_actor_node == 1:
+    if num_actors_per_node == 1:
       for actor_node in actor_nodes:
         program.add_node(actor_node)
     else:
-      for i in range(0, num_actors, num_threads_per_actor_node):
+      for i in range(0, num_actors, num_actors_per_node):
         program.add_node(
             lp.MultiThreadingColocation(
-                actor_nodes[i:i + num_threads_per_actor_node]))
+                actor_nodes[i:i + num_actors_per_node]))
 
   def make_actor(random_key: networks_lib.PRNGKey,
                  policy_network: PolicyNetwork,
