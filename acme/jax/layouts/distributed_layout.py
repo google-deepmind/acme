@@ -15,6 +15,7 @@
 """Program definition for a distributed layout based on a builder."""
 
 import dataclasses
+import itertools
 import logging
 from typing import Any, Callable, Dict, Optional, Sequence
 
@@ -220,6 +221,7 @@ def make_distributed_program(
     num_actors: int,
     *,
     environment_spec: Optional[specs.EnvironmentSpec] = None,
+    num_learner_nodes: int = 1,
     actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
     num_actors_per_node: int = 1,
     evaluator_factories: Sequence[EvaluatorFactory] = (),
@@ -239,6 +241,15 @@ def make_distributed_program(
 
   if prefetch_size < 0:
     raise ValueError(f'Prefetch size={prefetch_size} should be non negative')
+
+  if multithreading_colocate_learner_and_reverb and num_learner_nodes > 1:
+    raise ValueError(
+        'Replay and learner colocation is not yet supported when the learner is'
+        ' spread across multiple nodes (num_learner_nodes > 1). Please contact'
+        ' Acme devs if this is a feature you want. Got:'
+        '\tmultithreading_colocate_learner_and_reverb='
+        f'{multithreading_colocate_learner_and_reverb}'
+        f'\tnum_learner_nodes={num_learner_nodes}.')
 
   actor_logger_fn = actor_logger_fn or get_default_logger_fn(log_to_bigtable)
   if checkpointing_config is None:
@@ -277,7 +288,8 @@ def make_distributed_program(
   def build_learner(
       random_key: networks_lib.PRNGKey,
       replay: reverb.Client,
-      counter: counting.Counter,
+      counter: Optional[counting.Counter] = None,
+      primary_learner: Optional[core.Learner] = None,
   ):
     """The Learning part of the agent."""
 
@@ -304,17 +316,25 @@ def make_distributed_program(
       logging.info('Not prefetching the iterator.')
 
     counter = counting.Counter(counter, 'learner')
-
     learner = builder.make_learner(random_key, networks, iterator, replay,
                                    counter)
-    return savers.CheckpointingRunner(
-        learner,
-        key='learner',
-        subdirectory='learner',
-        time_delta_minutes=5,
-        directory=checkpointing_config.directory,
-        add_uid=checkpointing_config.add_uid,
-        max_to_keep=checkpointing_config.max_to_keep)
+
+    if primary_learner is None:
+      learner = savers.CheckpointingRunner(
+          learner,
+          key='learner',
+          subdirectory='learner',
+          time_delta_minutes=5,
+          directory=checkpointing_config.directory,
+          add_uid=checkpointing_config.add_uid,
+          max_to_keep=checkpointing_config.max_to_keep)
+    else:
+      learner.restore(primary_learner.save())
+      # NOTE: This initially synchronizes secondary learner states with the
+      # primary one. Further synchronization should be handled by the learner
+      # properly doing a pmap/pmean on the loss/gradients, respectively.
+
+    return learner
 
   def build_actor(
       random_key: networks_lib.PRNGKey,
@@ -371,13 +391,34 @@ def make_distributed_program(
   learner_key, key = jax.random.split(key)
   learner_node = lp.CourierNode(build_learner, learner_key, replay, counter)
   learner = learner_node.create_handle()
+  variable_sources = [learner]
 
   if multithreading_colocate_learner_and_reverb:
     program.add_node(lp.MultiThreadingColocation([learner_node, replay_node]),
                      label='learner')
   else:
-    program.add_node(learner_node, label='learner')
     program.add_node(replay_node, label='replay')
+
+    with program.group('learner'):
+      program.add_node(learner_node)
+
+      # Maybe create secondary learners, necessary when using multi-host
+      # accelerators.
+      # Warning! If you set num_learner_nodes > 1, make sure the learner class
+      # does the appropriate pmap/pmean operations on the loss/gradients,
+      # respectively.
+      for _ in range(1, num_learner_nodes):
+        learner_key, key = jax.random.split(key)
+        variable_sources.append(
+            program.add_node(
+                lp.CourierNode(
+                    build_learner, learner_key, replay,
+                    primary_learner=learner)))
+        # NOTE: Secondary learners are used to load-balance get_variables calls,
+        # which is why they get added to the list of available variable sources.
+        # NOTE: Only the primary learner checkpoints.
+        # NOTE: Do not pass the counter to the secondary learners to avoid
+        # double counting of learner steps.
 
   inference_server_node = None
   if inference_server_config:
@@ -426,10 +467,11 @@ def make_distributed_program(
   with program.group('actor'):
     # Create all actor threads.
     *actor_keys, key = jax.random.split(key, num_actors + 1)
+    variable_sources = itertools.cycle(variable_sources)
     actor_nodes = [
-        lp.CourierNode(build_actor, actor_key, replay, learner, counter,
-                       actor_id, inference_server_node)
-        for actor_id, actor_key in enumerate(actor_keys)
+        lp.CourierNode(build_actor, akey, replay, vsource, counter, aid,
+                       inference_server_node)
+        for aid, (akey, vsource) in enumerate(zip(actor_keys, variable_sources))
     ]
 
     # Create (maybe colocated) actor nodes.
