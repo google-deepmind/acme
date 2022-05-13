@@ -36,7 +36,6 @@ class IMPALAActor(core.Actor):
   def __init__(
       self,
       forward_fn: types.PolicyValueFn,
-      initial_state_init_fn: types.RecurrentStateInitFn,
       initial_state_fn: types.RecurrentStateFn,
       rng: hk.PRNGSequence,
       variable_client: Optional[variable_utils.VariableClient] = None,
@@ -55,13 +54,7 @@ class IMPALAActor(core.Actor):
     if self._variable_client is not None:
       self._variable_client.update_and_wait()
 
-    params = initial_state_init_fn(next(self._rng))
-
-    if isinstance(params, dict) and not params:
-      # Params can't be empty as they are being passed to vmapped function.
-      params['batch_size'] = 1
-
-    self._initial_state = initial_state_fn(params)
+    self._initial_state = initial_state_fn(next(self._rng))
 
   def select_action(self, observation: types.Observation) -> types.Action:
 

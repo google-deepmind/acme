@@ -21,6 +21,7 @@ from acme import specs
 from acme.agents.jax.d4pg import builder as d4pg_builder
 from acme.agents.jax.d4pg import config as d4pg_config
 from acme.agents.jax.d4pg import networks as d4pg_networks
+from acme.jax import experiments
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
@@ -94,17 +95,19 @@ def make_distributed_d4pg(
             policy_factory=_eval_policy_network,
             log_to_bigtable=log_to_bigtable)
     ]
-  return distributed_layout.make_distributed_program(
-      seed=random_seed,
+  experiment = experiments.Config(
+      builder=builder,
       environment_factory=lambda seed: environment_factory(False),
       network_factory=network_factory,
-      builder=builder,
+      environment_spec=environment_spec,
       policy_network_factory=_policy_network,
       evaluator_factories=evaluator_factories,
+      seed=random_seed,
+      save_logs=log_to_bigtable)
+  return experiments.make_distributed_experiment(
+      experiment=experiment,
       num_actors=num_actors,
-      environment_spec=environment_spec,
       device_prefetch=device_prefetch,
-      log_to_bigtable=log_to_bigtable,
       actor_logger_fn=distributed_layout.get_default_logger_fn(
           log_to_bigtable, log_every),
       prefetch_size=config.prefetch_size,

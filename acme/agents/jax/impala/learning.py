@@ -107,10 +107,9 @@ class IMPALALearner(acme.Learner):
       key, key_initial_state = jax.random.split(key)
       # Note: parameters do not depend on the batch size, so initial_state below
       # does not need a batch dimension.
-      params = networks.initial_state_init_fn(key_initial_state)
       # TODO(jferret): as it stands, we do not yet support
       # training the initial state params.
-      initial_state = networks.initial_state_fn(params)
+      initial_state = networks.initial_state_fn(key_initial_state)
 
       initial_params = networks.unroll_init_fn(key, initial_state)
       initial_opt_state = optimizer.init(initial_params)

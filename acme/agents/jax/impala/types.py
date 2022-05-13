@@ -17,8 +17,8 @@ from typing import Callable, Tuple
 
 from acme.agents.jax.actor_core import RecurrentState
 from acme.jax import networks
+from acme.jax import types as jax_types
 import jax.numpy as jnp
-
 
 # Only simple observations & discrete action spaces for now.
 Observation = jnp.ndarray
@@ -28,5 +28,4 @@ PolicyValueInitFn = Callable[[networks.PRNGKey, RecurrentState],
                              networks.Params]
 PolicyValueFn = Callable[[networks.Params, Observation, RecurrentState],
                          Outputs]
-RecurrentStateInitFn = Callable[[networks.PRNGKey], networks.Params]
-RecurrentStateFn = Callable[[networks.Params], RecurrentState]
+RecurrentStateFn = Callable[[jax_types.PRNGKey], RecurrentState]

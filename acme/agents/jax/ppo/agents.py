@@ -22,6 +22,7 @@ from acme.agents.jax import normalization
 from acme.agents.jax.ppo import builder
 from acme.agents.jax.ppo import config as ppo_config
 from acme.agents.jax.ppo import networks as ppo_networks
+from acme.jax import experiments
 from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
@@ -45,7 +46,7 @@ def make_distributed_ppo(
     log_every: float = 10.0,
     max_number_of_steps: Optional[int] = None,
     evaluator_factories: Optional[Sequence[
-        distributed_layout.EvaluatorFactory]] = None,
+        experiments.EvaluatorFactory]] = None,
     name='agent',
     program: Optional[lp.Program] = None
 ):
@@ -70,27 +71,21 @@ def make_distributed_ppo(
         environment_spec,
         is_sequence_based=True,
         batch_dims=batch_dims)
-  if evaluator_factories is None:
-    eval_policy_factory = (
-        lambda networks: ppo_networks.make_inference_fn(networks, True))
-    evaluator_factories = [
-        distributed_layout.default_evaluator_factory(
-            environment_factory=environment_factory,
-            network_factory=network_factory,
-            policy_factory=eval_policy_factory,
-            log_to_bigtable=save_reverb_logs)
-    ]
-  return distributed_layout.make_distributed_program(
-      seed=seed,
+  experiment = experiments.Config(
+      builder=ppo_builder,
       environment_factory=environment_factory,
       network_factory=network_factory,
-      builder=ppo_builder,
       policy_network_factory=ppo_networks.make_inference_fn,
       evaluator_factories=evaluator_factories,
+      eval_policy_network_factory=(
+          lambda network: ppo_networks.make_inference_fn(network, True)),
+      seed=seed,
+      max_number_of_steps=max_number_of_steps,
+      save_logs=save_reverb_logs)
+  return experiments.make_distributed_experiment(
+      experiment=experiment,
       num_actors=num_actors,
       prefetch_size=config.prefetch_size,
-      max_number_of_steps=max_number_of_steps,
-      log_to_bigtable=save_reverb_logs,
       actor_logger_fn=distributed_layout.get_default_logger_fn(
           save_reverb_logs, log_every),
       name=name,

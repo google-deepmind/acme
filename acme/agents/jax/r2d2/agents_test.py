@@ -17,44 +17,11 @@
 import functools
 
 import acme
-from acme import specs
 from acme.agents.jax import r2d2
 from acme.testing import fakes
-from acme.utils import counting
 import launchpad as lp
 
 from absl.testing import absltest
-
-
-class R2D2Test(absltest.TestCase):
-
-  def test_r2d2(self):
-    # Create a fake environment to test with.
-    environment = fakes.fake_atari_wrapped(oar_wrapper=True)
-    spec = specs.make_environment_spec(environment)
-
-    config = r2d2.R2D2Config(
-        batch_size=1,
-        trace_length=5,
-        sequence_period=1,
-        samples_per_insert=1.,
-        min_replay_size=1,
-        samples_per_insert_tolerance_rate=2.0,
-        burn_in_length=1)
-
-    counter = counting.Counter()
-    agent = r2d2.R2D2(
-        spec=spec,
-        networks=r2d2.make_atari_networks(config.batch_size, spec),
-        config=config,
-        seed=0,
-        counter=counter,
-    )
-
-    # Try running the environment loop. We have no assertions here because all
-    # we care about is that the agent runs without raising any errors.
-    loop = acme.EnvironmentLoop(environment, agent, counter=counter)
-    loop.run(num_episodes=20)
 
 
 class DistributedAgentTest(absltest.TestCase):

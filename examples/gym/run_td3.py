@@ -19,7 +19,8 @@ from acme import specs
 from acme.agents.jax import td3
 from absl import app
 import helpers
-from acme.jax import runners
+from acme.jax import experiments
+from acme.utils import experiment_utils
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('num_steps', 1000000,
@@ -39,22 +40,26 @@ def main(_):
   agent_networks = td3.make_networks(environment_spec)
 
   config = td3.TD3Config(num_sgd_steps_per_step=FLAGS.num_sgd_steps_per_step)
-  td3_builder = td3.TD3Builder(config)
+  learner_logger = experiment_utils.make_experiment_logger(
+      label='learner', steps_key='learner_steps')
+
+  td3_builder = td3.TD3Builder(config, logger_fn=(lambda: learner_logger))
   policy_network = td3.get_default_behavior_policy(
       networks=agent_networks,
       action_specs=environment_spec.actions,
       sigma=config.sigma)
   eval_policy_network = td3.get_default_behavior_policy(
       agent_networks, environment_spec.actions, sigma=0.)
-  runners.run_agent(
+  experiment = experiments.Config(
       builder=td3_builder,
-      environment=environment,
-      num_steps=FLAGS.num_steps,
-      eval_every=FLAGS.eval_every,
+      environment_factory=lambda seed: environment,
+      network_factory=lambda spec: agent_networks,
+      policy_network_factory=lambda networks: policy_network,
+      eval_policy_network_factory=lambda network: eval_policy_network,
       seed=FLAGS.seed,
-      networks=agent_networks,
-      policy_network=policy_network,
-      eval_policy_network=eval_policy_network)
+      max_number_of_steps=FLAGS.num_steps)
+
+  experiments.run_experiment(experiment=experiment, eval_every=FLAGS.eval_every)
 
 
 if __name__ == '__main__':

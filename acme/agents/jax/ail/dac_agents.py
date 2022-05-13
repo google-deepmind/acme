@@ -15,7 +15,6 @@
 """Defines distributed and local DAC agents, using JAX.
 
 https://arxiv.org/pdf/1809.02925.pdf
-NOTE: The original DAC implementation uses TRPO but we use TD3 here.
 """
 
 import dataclasses

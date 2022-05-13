@@ -21,6 +21,7 @@ from acme import specs
 from acme.agents.jax.td3 import builder
 from acme.agents.jax.td3 import config as td3_config
 from acme.agents.jax.td3 import networks
+from acme.jax import experiments
 from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
@@ -91,17 +92,19 @@ def make_distributed_td3(environment_factory: jax_types.EnvironmentFactory,
             policy_factory=eval_network_fn,
             log_to_bigtable=log_to_bigtable)
     ]
-  return distributed_layout.make_distributed_program(
-      seed=seed,
+  experiment = experiments.Config(
+      builder=td3_builder,
       environment_factory=environment_factory,
       network_factory=network_factory,
-      builder=td3_builder,
       policy_network_factory=policy_network_fn,
       evaluator_factories=evaluator_factories,
-      num_actors=num_actors,
+      seed=seed,
       max_number_of_steps=max_number_of_steps,
+      save_logs=log_to_bigtable)
+  return experiments.make_distributed_experiment(
+      experiment=experiment,
+      num_actors=num_actors,
       prefetch_size=config.prefetch_size,
-      log_to_bigtable=log_to_bigtable,
       actor_logger_fn=distributed_layout.get_default_logger_fn(
           log_to_bigtable, log_every),
       name=name,

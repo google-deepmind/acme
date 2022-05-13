@@ -31,7 +31,7 @@ pip install .[jax,tf,launchpad,testing,envs]
 
 
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
-EXAMPLES=$(find examples/ -mindepth 1 -type d -not -path examples/offline -not -path examples/open_spiel)
+EXAMPLES=$(find examples/ -mindepth 1 -type d -not -path examples/offline -not -path examples/open_spiel -not -path examples/baselines)
 
 # Run static type-checking.
 for TESTDIR in acme ${EXAMPLES}; do
@@ -50,15 +50,13 @@ cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, termi
 #cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
 
 # Run tests for non-distributed examples:
+cd ../baselines/rl_continuous
 TEST_COUNT=0
 for TEST in run_*.py; do
-  if [[ "{$TEST}" =~ (run_ail|run_dac|run_gail|run_pwil|run_sqil|run_value_dice) ]]; then
-    continue
-  fi
-
   echo "TEST: ${TEST}"
   TEST_COUNT=$(($TEST_COUNT+1))
-  time python "${TEST}" --num_steps=1000 --eval_every=1000
+  time python "${TEST}" --num_steps=1000 --eval_every=1000 --env_name=gym:MountainCarContinuous-v0
+
 done
 # Make sure number of executed examples is expected. This makes sure
 # we will not forget to update this code when examples are renamed for example.

@@ -27,8 +27,6 @@ import jax.numpy as jnp
 
 
 NoneType = type(None)
-
-
 # The state of the actor. This could include recurrent network state or any
 # other state which needs to be propagated through the select_action calls.
 State = TypeVar('State')
@@ -92,6 +90,24 @@ def batched_feed_forward_to_actor_core(
 class SimpleActorCoreStateWithExtras:
   rng: PRNGKey
   extras: Mapping[str, jnp.ndarray]
+
+
+def unvectorize_select_action(actor_core: ActorCore) -> ActorCore:
+  """Makes an actor core's select_action method expect unbatched arguments."""
+
+  def unvectorized_select_action(
+      params: networks_lib.Params,
+      observations: networks_lib.Observation,
+      state: State,
+  ) -> Tuple[networks_lib.Action, State]:
+    observations, state = utils.add_batch_dim((observations, state))
+    actions, state = actor_core.select_action(params, observations, state)
+    return utils.squeeze_batch_dim((actions, state))
+
+  return ActorCore(
+      init=actor_core.init,
+      select_action=unvectorized_select_action,
+      get_extras=actor_core.get_extras)
 
 
 def batched_feed_forward_with_extras_to_actor_core(

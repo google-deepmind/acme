@@ -22,6 +22,9 @@ from acme.agents.jax.dqn.agent import DQN
 from acme.agents.jax.dqn.builder import DQNBuilder
 from acme.agents.jax.dqn.config import DQNConfig
 from acme.agents.jax.dqn.learning import DQNLearner
+from acme.agents.jax.dqn.learning_lib import LossExtra
+from acme.agents.jax.dqn.learning_lib import LossFn
+from acme.agents.jax.dqn.learning_lib import ReverbUpdate
 from acme.agents.jax.dqn.learning_lib import SGDLearner
 from acme.agents.jax.dqn.losses import PrioritizedDoubleQLearning
 from acme.agents.jax.dqn.losses import QrDqn

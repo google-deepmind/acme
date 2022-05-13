@@ -18,11 +18,10 @@ Runs the synchronous PPO agent.
 """
 
 from absl import flags
-from acme import specs
 from acme.agents.jax import ppo
 from absl import app
 import helpers
-from acme.jax import runners
+from acme.jax import experiments
 from acme.utils import experiment_utils
 
 FLAGS = flags.FLAGS
@@ -44,8 +43,6 @@ flags.DEFINE_integer('seed', 0, 'Random seed.')
 def main(_):
   # Create an environment, grab the spec, and use it to create networks.
   environment = helpers.make_environment(task=FLAGS.env_name)
-  environment_spec = specs.make_environment_spec(environment)
-  agent_networks = ppo.make_continuous_networks(environment_spec)
 
   # Construct the agent.
   config = ppo.PPOConfig(
@@ -58,17 +55,20 @@ def main(_):
       label='learner', steps_key='learner_steps')
 
   ppo_builder = ppo.PPOBuilder(config, logger_fn=(lambda: learner_logger))
-
-  runners.run_agent(
+  experiment = experiments.Config(
       builder=ppo_builder,
-      environment=environment,
-      num_steps=FLAGS.num_steps,
-      eval_every=FLAGS.eval_every,
+      environment_factory=lambda seed: environment,
+      network_factory=ppo.make_continuous_networks,
+      policy_network_factory=ppo.make_inference_fn,
+      eval_policy_network_factory=(
+          lambda network: ppo.make_inference_fn(network, True)),
       seed=FLAGS.seed,
-      networks=agent_networks,
-      policy_network=ppo.make_inference_fn(agent_networks),
-      eval_policy_network=ppo.make_inference_fn(
-          agent_networks, evaluation=True))
+      max_number_of_steps=FLAGS.num_steps)
+
+  experiments.run_experiment(
+      experiment=experiment,
+      eval_every=FLAGS.eval_every,
+  )
 
 
 if __name__ == '__main__':

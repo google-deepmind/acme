@@ -37,13 +37,11 @@ class IMPALANetworks(Generic[types.RecurrentState]):
 
     unroll_fn: Applies the unrolled network to a sequence of observations, for
       learning.
-    initial_state_init_fn: Initializes params for initial_state_fn.
     initial_state_fn: Recurrent state at the beginning of an episode.
   """
   forward_fn: types.PolicyValueFn
   unroll_init_fn: types.PolicyValueInitFn
   unroll_fn: types.PolicyValueFn
-  initial_state_init_fn: types.RecurrentStateInitFn
   initial_state_fn: types.RecurrentStateFn
 
 
@@ -58,9 +56,6 @@ def make_haiku_networks(
   initial_state_hk = hk.without_apply_rng(hk.transform(initial_state_fn))
   unroll_hk = hk.without_apply_rng(hk.transform(unroll_fn))
 
-  # Define networks init functions.
-  def initial_state_init_fn(rng: networks_lib.PRNGKey) -> hk.Params:
-    return initial_state_hk.init(rng)
   # Note: batch axis is not needed for the actors.
   dummy_obs = utils.zeros_like(env_spec.observations)
   dummy_obs_sequence = utils.add_batch_dim(dummy_obs)
@@ -73,8 +68,8 @@ def make_haiku_networks(
       forward_fn=forward_hk.apply,
       unroll_init_fn=unroll_init_fn,
       unroll_fn=unroll_hk.apply,
-      initial_state_init_fn=initial_state_init_fn,
-      initial_state_fn=initial_state_hk.apply)
+      initial_state_fn=(
+          lambda rng: initial_state_hk.apply(initial_state_hk.init(rng))))
 
 
 HaikuLSTMOutputs = Tuple[Tuple[networks_lib.Logits, networks_lib.Value],

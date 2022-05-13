@@ -45,7 +45,6 @@ def main(_):
       forward_fn=networks.forward_fn,
       unroll_init_fn=networks.unroll_init_fn,
       unroll_fn=networks.unroll_fn,
-      initial_state_init_fn=networks.initial_state_init_fn,
       initial_state_fn=networks.initial_state_fn,
       config=config,
   )

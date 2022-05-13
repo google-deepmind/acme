@@ -22,6 +22,7 @@ from acme.agents.jax import normalization
 from acme.agents.jax.sac import builder
 from acme.agents.jax.sac import config as sac_config
 from acme.agents.jax.sac import networks
+from acme.jax import experiments
 from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
@@ -85,8 +86,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
         is_sequence_based=False,
         batch_dims=batch_dims)
   if evaluator_factories is None:
-    eval_policy_factory = (
-        lambda n: networks.apply_policy_and_sample(n, True))
+    eval_policy_factory = (lambda n: networks.apply_policy_and_sample(n, True))
     evaluator_factories = [
         distributed_layout.default_evaluator_factory(
             environment_factory=environment_factory,
@@ -94,17 +94,19 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
             policy_factory=eval_policy_factory,
             log_to_bigtable=log_to_bigtable)
     ]
-  return distributed_layout.make_distributed_program(
-      seed=seed,
+  experiment = experiments.Config(
+      builder=sac_builder,
       environment_factory=environment_factory,
       network_factory=network_factory,
-      builder=sac_builder,
       policy_network_factory=networks.apply_policy_and_sample,
       evaluator_factories=evaluator_factories,
-      num_actors=num_actors,
+      seed=seed,
       max_number_of_steps=max_number_of_steps,
+      save_logs=log_to_bigtable)
+  return experiments.make_distributed_experiment(
+      experiment=experiment,
+      num_actors=num_actors,
       prefetch_size=config.prefetch_size,
-      log_to_bigtable=log_to_bigtable,
       actor_logger_fn=distributed_layout.get_default_logger_fn(
           log_to_bigtable, log_every),
       checkpointing_config=distributed_layout.CheckpointingConfig(),

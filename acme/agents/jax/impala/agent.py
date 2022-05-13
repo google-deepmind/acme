@@ -45,7 +45,6 @@ class IMPALAFromConfig(acme.Actor):
       forward_fn: impala_types.PolicyValueFn,
       unroll_init_fn: impala_types.PolicyValueInitFn,
       unroll_fn: impala_types.PolicyValueFn,
-      initial_state_init_fn: impala_types.RecurrentStateInitFn,
       initial_state_fn: impala_types.RecurrentStateFn,
       config: impala_config.IMPALAConfig,
       counter: Optional[counting.Counter] = None,
@@ -55,7 +54,6 @@ class IMPALAFromConfig(acme.Actor):
         forward_fn=forward_fn,
         unroll_init_fn=unroll_init_fn,
         unroll_fn=unroll_fn,
-        initial_state_init_fn=initial_state_init_fn,
         initial_state_fn=initial_state_fn,
     )
 
@@ -67,9 +65,8 @@ class IMPALAFromConfig(acme.Actor):
 
     key, key_initial_state = jax.random.split(
         jax.random.PRNGKey(self._config.seed))
-    params = initial_state_init_fn(key_initial_state)
     extra_spec = {
-        'core_state': initial_state_fn(params),
+        'core_state': initial_state_fn(key_initial_state),
         'logits': np.ones(shape=(num_actions,), dtype=np.float32)
     }
 
@@ -107,7 +104,6 @@ class IMPALAFromConfig(acme.Actor):
     variable_client = variable_utils.VariableClient(self._learner, key='policy')
     self._actor = acting.IMPALAActor(
         forward_fn=jax.jit(forward_fn, backend='cpu'),
-        initial_state_init_fn=initial_state_init_fn,
         initial_state_fn=initial_state_fn,
         rng=hk.PRNGSequence(key_actor),
         adder=reverb_queue.adder,
@@ -189,7 +185,6 @@ class IMPALA(IMPALAFromConfig):
         forward_fn=networks.forward_fn,
         unroll_init_fn=networks.unroll_init_fn,
         unroll_fn=networks.unroll_fn,
-        initial_state_init_fn=networks.initial_state_init_fn,
         initial_state_fn=networks.initial_state_fn,
         config=config,
         counter=counter,

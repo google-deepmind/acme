@@ -30,10 +30,8 @@ def make_environment(evaluation: bool = False,
 
   environment = suite.load(domain_name, task_name)
   environment = wrappers.SinglePrecisionWrapper(environment)
-  timestep = environment.reset()
-  obs_names = list(timestep.observation.keys())
   if concatenate_observations:
+    timestep = environment.reset()
+    obs_names = list(timestep.observation.keys())
     environment = wrappers.ConcatObservationWrapper(environment, obs_names)
   return environment
-
-
