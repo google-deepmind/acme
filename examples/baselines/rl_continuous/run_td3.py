@@ -15,14 +15,12 @@
 """Example running SAC on continuous control tasks."""
 
 from absl import flags
-import acme
 from acme import specs
 from acme.agents.jax import td3
 import helpers
 from absl import app
-from acme.utils import counting
+from acme.jax import experiments
 from acme.utils import experiment_utils
-import jax
 
 FLAGS = flags.FLAGS
 
@@ -47,43 +45,27 @@ def main(_):
       policy_learning_rate=3e-4,
       critic_learning_rate=3e-4,
   )
-  agent = td3.TD3(
-      spec=environment_spec,
-      network=agent_networks,
-      config=config,
-      seed=FLAGS.seed)
+  learner_logger = experiment_utils.make_experiment_logger(
+      label='learner', steps_key='learner_steps')
 
-  # Create the environment loop used for training.
-  train_logger = experiment_utils.make_experiment_logger(
-      label='train', steps_key='train_steps')
-
-  counter = counting.Counter()
-  train_loop = acme.EnvironmentLoop(
-      environment,
-      agent,
-      counter=counting.Counter(counter, prefix='train'),
-      logger=train_logger)
-
-  # Create the evaluation actor and loop.
-  eval_logger = experiment_utils.make_experiment_logger(
-      label='eval', steps_key='eval_steps')
-  eval_actor = agent.builder.make_actor(
-      random_key=jax.random.PRNGKey(FLAGS.seed),
-      policy_network=td3.get_default_behavior_policy(
-          agent_networks, environment_spec.actions, sigma=0),
-      variable_source=agent)
-  eval_env = helpers.make_environment(suite, task)
-  eval_loop = acme.EnvironmentLoop(
-      eval_env,
-      eval_actor,
-      counter=counting.Counter(counter, prefix='eval'),
-      logger=eval_logger)
-
-  assert FLAGS.num_steps % FLAGS.eval_every == 0
-  for _ in range(int(FLAGS.num_steps // FLAGS.eval_every)):
-    eval_loop.run(num_episodes=10)
-    train_loop.run(num_steps=FLAGS.eval_every)
-  eval_loop.run(num_episodes=10)
+  td3_builder = td3.TD3Builder(config, logger_fn=(lambda: learner_logger))
+  # pylint:disable=g-long-lambda
+  experiment = experiments.Config(
+      builder=td3_builder,
+      environment_factory=lambda seed: environment,
+      network_factory=lambda spec: agent_networks,
+      policy_network_factory=(lambda network: td3.get_default_behavior_policy(
+          networks=network,
+          action_specs=environment_spec.actions,
+          sigma=config.sigma)),
+      eval_policy_network_factory=(
+          lambda network: td3.get_default_behavior_policy(
+              network, environment_spec.actions, sigma=0)),
+      seed=FLAGS.seed,
+      max_number_of_steps=FLAGS.num_steps)
+  # pylint:enable=g-long-lambda
+  experiments.run_experiment(
+      experiment=experiment, eval_every=FLAGS.eval_every, num_eval_episodes=10)
 
 
 if __name__ == '__main__':
