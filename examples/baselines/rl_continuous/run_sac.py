@@ -15,14 +15,14 @@
 """Example running SAC on continuous control tasks."""
 
 from absl import flags
-import acme
 from acme import specs
+from acme.agents.jax import normalization
 from acme.agents.jax import sac
+from acme.agents.jax.sac import builder
 import helpers
 from absl import app
-from acme.utils import counting
+from acme.jax import experiments
 from acme.utils import experiment_utils
-import jax
 
 FLAGS = flags.FLAGS
 
@@ -47,39 +47,28 @@ def main(_):
       learning_rate=3e-4,
       n_step=2,
       target_entropy=sac.target_entropy_from_env_spec(environment_spec))
-  agent = sac.SAC(
-      environment_spec, agent_networks, config=config, seed=FLAGS.seed)
+  learner_logger = experiment_utils.make_experiment_logger(
+      label='learner', steps_key='learner_steps')
+  sac_builder = builder.SACBuilder(config, logger_fn=(lambda: learner_logger))
+  # One batch dimension: [batch_size, ...]
+  batch_dims = (0,)
+  sac_builder = normalization.NormalizationBuilder(
+      sac_builder,
+      environment_spec,
+      is_sequence_based=False,
+      batch_dims=batch_dims)
 
-  # Create the environment loop used for training.
-  train_logger = experiment_utils.make_experiment_logger(
-      label='train', steps_key='train_steps')
-  counter = counting.Counter()
-  train_loop = acme.EnvironmentLoop(
-      environment,
-      agent,
-      counter=counting.Counter(counter, prefix='train'),
-      logger=train_logger)
-
-  # Create the evaluation actor and loop.
-  eval_logger = experiment_utils.make_experiment_logger(
-      label='eval', steps_key='eval_steps')
-  eval_actor = agent.builder.make_actor(
-      random_key=jax.random.PRNGKey(FLAGS.seed),
-      policy_network=sac.apply_policy_and_sample(
-          agent_networks, eval_mode=True),
-      variable_source=agent)
-  eval_env = helpers.make_environment(suite, task)
-  eval_loop = acme.EnvironmentLoop(
-      eval_env,
-      eval_actor,
-      counter=counting.Counter(counter, prefix='eval'),
-      logger=eval_logger)
-
-  assert FLAGS.num_steps % FLAGS.eval_every == 0
-  for _ in range(int(FLAGS.num_steps // FLAGS.eval_every)):
-    eval_loop.run(num_episodes=10)
-    train_loop.run(num_steps=FLAGS.eval_every)
-  eval_loop.run(num_episodes=10)
+  experiment = experiments.Config(
+      builder=sac_builder,
+      environment_factory=lambda seed: environment,
+      network_factory=lambda spec: agent_networks,
+      policy_network_factory=sac.apply_policy_and_sample,
+      eval_policy_network_factory=(
+          lambda network: sac.apply_policy_and_sample(network, eval_mode=True)),
+      seed=FLAGS.seed,
+      max_number_of_steps=FLAGS.num_steps)
+  experiments.run_experiment(
+      experiment=experiment, eval_every=FLAGS.eval_every, num_eval_episodes=10)
 
 
 if __name__ == '__main__':
