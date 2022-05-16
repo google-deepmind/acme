@@ -15,46 +15,57 @@
 """Example running PPO on continuous control tasks."""
 
 from absl import flags
-from acme import specs
 from acme.agents.jax import ppo
 import helpers
 from absl import app
+from acme.utils import lp_utils
 from acme.jax import experiments
 from acme.utils import experiment_utils
+import launchpad as lp
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_bool(
+    'run_distributed', False, 'Should an agent be executed in a '
+    'distributed way (the default is a single-threaded agent)')
 flags.DEFINE_string('env_name', 'gym:HalfCheetah-v2', 'What environment to run')
 flags.DEFINE_integer('seed', 0, 'Random seed.')
 flags.DEFINE_integer('num_steps', 1_000_000, 'Number of env steps to run.')
 flags.DEFINE_integer('eval_every', 50_000, 'How often to run evaluation.')
 
 
-def main(_):
+def build_experiment_config():
+  """Builds PPO experiment config which can be executed in different ways."""
   # Create an environment, grab the spec, and use it to create networks.
-
   suite, task = FLAGS.env_name.split(':', 1)
-  environment = helpers.make_environment(suite, task)
-
-  environment_spec = specs.make_environment_spec(environment)
-  networks = ppo.make_networks(
-      environment_spec, hidden_layer_sizes=(256, 256, 256))
 
   config = ppo.PPOConfig(entropy_cost=0, learning_rate=1e-4)
-  learner_logger = experiment_utils.make_experiment_logger(
-      label='learner', steps_key='learner_steps')
-  ppo_builder = ppo.PPOBuilder(config, logger_fn=(lambda: learner_logger))
-  experiment = experiments.Config(
+  learner_logger_fn = lambda: experiment_utils.make_experiment_logger(  # pylint: disable=g-long-lambda
+      label='learner',
+      steps_key='learner_steps')
+  ppo_builder = ppo.PPOBuilder(config, logger_fn=learner_logger_fn)
+
+  layer_sizes = (256, 256, 256)
+  make_eval_policy = lambda network: ppo.make_inference_fn(network, True)
+  return experiments.Config(
       builder=ppo_builder,
-      environment_factory=lambda seed: environment,
-      network_factory=lambda spec: networks,
+      environment_factory=lambda seed: helpers.make_environment(suite, task),
+      network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),
       policy_network_factory=ppo.make_inference_fn,
-      eval_policy_network_factory=(
-          lambda network: ppo.make_inference_fn(network, True)),
+      eval_policy_network_factory=make_eval_policy,
       seed=FLAGS.seed,
       max_number_of_steps=FLAGS.num_steps)
-  experiments.run_experiment(
-      experiment=experiment, eval_every=FLAGS.eval_every, num_eval_episodes=10)
+
+
+def main(_):
+  config = build_experiment_config()
+  if FLAGS.run_distributed:
+    program = experiments.make_distributed_experiment(
+        experiment=config, num_actors=4)
+    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
+  else:
+    experiments.run_experiment(
+        experiment=config, eval_every=FLAGS.eval_every, num_eval_episodes=10)
 
 
 if __name__ == '__main__':
