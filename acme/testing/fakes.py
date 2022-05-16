@@ -308,27 +308,52 @@ def _validate_spec(spec: types.NestedSpec, value: types.NestedArray):
   tree.map_structure(lambda s, v: s.validate(v), spec, value)
 
 
-def _generate_from_spec(spec: types.NestedSpec) -> types.NestedArray:
-  """Generate a value from a potentially nested spec."""
-  return tree.map_structure(lambda s: s.generate_value(), spec)
+def _normalize_array(array: specs.Array) -> specs.Array:
+  """Converts bounded arrays with (-inf,+inf) bounds to unbounded arrays.
 
-
-def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
-  """Fake dataset of Reverb N-step transition samples.
+  The returned array should be mostly equivalent to the input, except that
+  `generate_value()` returns -infs on arrays bounded to (-inf,+inf) and zeros
+  on unbounded arrays.
 
   Args:
-    environment: Used to create a fake transition by looking at the observation,
-      action, discount and reward specs.
+    array: the array to be normalized.
 
   Returns:
-    tf.data.Dataset that produces the same fake N-step transition ReverSample
+    normalized array.
+  """
+  if isinstance(array, specs.DiscreteArray):
+    return array
+  if not isinstance(array, specs.BoundedArray):
+    return array
+  if not (array.minimum == float('-inf')).all():
+    return array
+  if not (array.maximum == float('+inf')).all():
+    return array
+  return specs.Array(array.shape, array.dtype, array.name)
+
+
+def _generate_from_spec(spec: types.NestedSpec) -> types.NestedArray:
+  """Generate a value from a potentially nested spec."""
+  return tree.map_structure(lambda s: _normalize_array(s).generate_value(),
+                            spec)
+
+
+def transition_dataset_from_spec(
+    spec: specs.EnvironmentSpec) -> tf.data.Dataset:
+  """Constructs fake dataset of Reverb N-step transition samples.
+
+  Args:
+    spec: Constructed fake transitions match the provided specification.
+
+  Returns:
+    tf.data.Dataset that produces the same fake N-step transition ReverbSample
     object indefinitely.
   """
 
-  observation = environment.observation_spec().generate_value()
-  action = environment.action_spec().generate_value()
-  reward = environment.reward_spec().generate_value()
-  discount = environment.discount_spec().generate_value()
+  observation = _generate_from_spec(spec.observations)
+  action = _generate_from_spec(spec.actions)
+  reward = _generate_from_spec(spec.rewards)
+  discount = _generate_from_spec(spec.discounts)
   data = types.Transition(observation, action, reward, discount, observation)
 
   info = tree.map_structure(
@@ -339,28 +364,55 @@ def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
   return tf.data.Dataset.from_tensors(sample).repeat()
 
 
-def transition_iterator(
-    environment: dm_env.Environment
-) -> Callable[[int], Iterator[types.Transition]]:
-  """Fake dataset of Reverb N-step transition samples.
+def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
+  """Constructs fake dataset of Reverb N-step transition samples.
 
   Args:
-    environment: Used to create a fake transition by looking at the observation,
-      action, discount and reward specs.
+    environment: Constructed fake transitions will match the specification of
+      this environment.
 
   Returns:
-    A callable that given a batch_size returns an iterator with demonstrations.
+    tf.data.Dataset that produces the same fake N-step transition ReverbSample
+    object indefinitely.
+  """
+  return transition_dataset_from_spec(specs.make_environment_spec(environment))
+
+
+def transition_iterator_from_spec(
+    spec: specs.EnvironmentSpec) -> Callable[[int], Iterator[types.Transition]]:
+  """Constructs fake iterator of transitions.
+
+  Args:
+    spec: Constructed fake transitions match the provided specification..
+
+  Returns:
+    A callable that given a batch_size returns an iterator of transitions.
   """
 
-  observation = environment.observation_spec().generate_value()
-  action = environment.action_spec().generate_value()
-  reward = environment.reward_spec().generate_value()
-  discount = environment.discount_spec().generate_value()
+  observation = _generate_from_spec(spec.observations)
+  action = _generate_from_spec(spec.actions)
+  reward = _generate_from_spec(spec.rewards)
+  discount = _generate_from_spec(spec.discounts)
   data = types.Transition(observation, action, reward, discount, observation)
 
   dataset = tf.data.Dataset.from_tensors(data).repeat()
 
   return lambda batch_size: dataset.batch(batch_size).as_numpy_iterator()
+
+
+def transition_iterator(
+    environment: dm_env.Environment
+) -> Callable[[int], Iterator[types.Transition]]:
+  """Constructs fake iterator of transitions.
+
+  Args:
+    environment: Constructed fake transitions will match the specification of
+      this environment.
+
+  Returns:
+    A callable that given a batch_size returns an iterator of transitions.
+  """
+  return transition_iterator_from_spec(specs.make_environment_spec(environment))
 
 
 def fake_atari_wrapped(episode_length: int = 10,
