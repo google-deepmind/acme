@@ -47,7 +47,7 @@ testing of reinforcement learning algorithms. As a result we've also included
 direct examples of prominent discrete-action algorithms implemented in Acme and
 running on this environment.
 
--   [DQN](https://github.com/deepmind/acme/blob/master/examples/atari/run_dqn.py): a "classic" benchmark agent for Atari; and
+-   [DQN](https://github.com/deepmind/acme/blob/master/examples/baselines/rl_discrete/run_dqn.py): a "classic" benchmark agent for Atari; and
 
 [Arcade Learning environment]: https://arxiv.org/abs/1207.4708
 

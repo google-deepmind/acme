@@ -22,7 +22,7 @@ from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax import crr
 from acme.datasets import tfds
-from acme.examples.gym import helpers as gym_helpers
+from acme.examples.offline import helpers as gym_helpers
 from acme.jax import variable_utils
 from acme.types import Transition
 from acme.utils import loggers
