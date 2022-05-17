@@ -15,14 +15,12 @@
 """Example running Munchausen-DQN on discrete control tasks."""
 
 from absl import flags
-import acme
 from acme import specs
 from acme.agents.jax import dqn
-from acme.agents.jax.dqn import agents as dqn_agent
 from acme.agents.jax.dqn import losses
 import helpers
 from absl import app
-from acme.utils import counting
+from acme.jax import experiments
 from acme.utils import experiment_utils
 import atari_py  # pylint:disable=unused-import
 
@@ -58,24 +56,20 @@ def main(_):
   loss_fn = losses.MunchausenQLearning(
       discount=config.discount, max_abs_reward=1., huber_loss_parameter=1.,
       entropy_temperature=0.03, munchausen_coefficient=0.9)
-  agent = dqn_agent.DQN(
-      environment_spec,
-      network,
-      loss_fn=loss_fn,
-      config=config,
-      seed=FLAGS.seed)
+  learner_logger = experiment_utils.make_experiment_logger(
+      label='learner', steps_key='learner_steps')
 
-  # Create the environment loop used for training.
-  logger = experiment_utils.make_experiment_logger(
-      label='train', steps_key='train_steps')
-  train_loop = acme.EnvironmentLoop(
-      environment,
-      agent,
-      label='train',
-      counter=counting.Counter(prefix='train'),
-      logger=logger)
+  dqn_builder = dqn.DQNBuilder(
+      config, loss_fn=loss_fn, logger_fn=lambda: learner_logger)
 
-  train_loop.run(num_steps=FLAGS.num_steps)
+  experiment = experiments.Config(
+      builder=dqn_builder,
+      environment_factory=lambda seed: environment,
+      network_factory=lambda spec: network,
+      policy_network_factory=dqn.behavior_policy,
+      seed=FLAGS.seed,
+      max_number_of_steps=FLAGS.num_steps)
+  experiments.run_experiment(experiment=experiment)
 
 
 if __name__ == '__main__':
