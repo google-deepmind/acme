@@ -173,22 +173,26 @@ def run_experiment(experiment: config.Config,
       counter=counting.Counter(parent_counter, prefix='train', time_delta=0.),
       logger=train_logger)
 
-  # Create the evaluation actor and loop.
-  eval_logger = experiment_utils.make_experiment_logger(
-      label='eval', steps_key='eval_steps')
-  eval_actor = experiment.builder.make_actor(
-      random_key=jax.random.PRNGKey(experiment.seed),
-      policy_network=experiment.eval_policy_network_factory(networks),
-      variable_source=learner)
-  eval_loop = acme.EnvironmentLoop(
-      environment,
-      eval_actor,
-      counter=counting.Counter(parent_counter, prefix='eval', time_delta=0.),
-      logger=eval_logger)
+  eval_loop = None
+  if experiment.eval_policy_network_factory:
+    # Create the evaluation actor and loop.
+    eval_logger = experiment_utils.make_experiment_logger(
+        label='eval', steps_key='eval_steps')
+    eval_actor = experiment.builder.make_actor(
+        random_key=jax.random.PRNGKey(experiment.seed),
+        policy_network=experiment.eval_policy_network_factory(networks),
+        variable_source=learner)
+    eval_loop = acme.EnvironmentLoop(
+        environment,
+        eval_actor,
+        counter=counting.Counter(parent_counter, prefix='eval', time_delta=0.),
+        logger=eval_logger)
 
   steps = 0
   while steps < experiment.max_number_of_steps:
-    eval_loop.run(num_episodes=num_eval_episodes)
+    if eval_loop:
+      eval_loop.run(num_episodes=num_eval_episodes)
     train_loop.run(num_steps=eval_every)
     steps += eval_every
-  eval_loop.run(num_episodes=num_eval_episodes)
+  if eval_loop:
+    eval_loop.run(num_episodes=num_eval_episodes)
