@@ -17,6 +17,7 @@
 import logging
 from typing import Any, Iterator, Optional, Tuple, Sequence
 
+from acme import specs
 from acme import types
 from flax import jax_utils
 import jax
@@ -51,7 +52,14 @@ def _dataset_size_upperbound(dataset: tf.data.Dataset) -> int:
       dataset.batch(1000).reduce(0, lambda x, step: x + 1000), tf.int64)
 
 
-def get_tfds_dataset(dataset_name: str, num_episodes: Optional[int] = None):
+def get_tfds_dataset(
+    dataset_name: str,
+    num_episodes: Optional[int] = None,
+    env_spec: Optional[specs.EnvironmentSpec] = None) -> tf.data.Dataset:
+  """Returns a TFDS dataset with the given name."""
+  # Used only in tests.
+  del env_spec
+
   dataset = tfds.load(dataset_name)['train']
   if num_episodes:
     dataset = dataset.take(num_episodes)
