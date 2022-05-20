@@ -20,17 +20,23 @@ from acme.agents.jax import dqn
 from acme.agents.jax.dqn import losses
 import helpers
 from absl import app
+from acme.utils import lp_utils
 from acme.jax import experiments
 import atari_py  # pylint:disable=unused-import
+import launchpad as lp
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_bool(
+    'run_distributed', False, 'Should an agent be executed in a '
+    'distributed way (the default is a single-threaded agent)')
 flags.DEFINE_string('env_name', 'Pong', 'What environment to run')
 flags.DEFINE_integer('seed', 0, 'Random seed.')
 flags.DEFINE_integer('num_steps', 1_000_000, 'Number of env steps to run.')
 
 
-def main(_):
+def build_experiment_config():
+  """Builds MDQN experiment config which can be executed in different ways."""
   # Create an environment, grab the spec, and use it to create networks.
   environment = helpers.make_atari_environment(
       level=FLAGS.env_name,
@@ -58,14 +64,23 @@ def main(_):
 
   dqn_builder = dqn.DQNBuilder(config, loss_fn=loss_fn)
 
-  experiment = experiments.Config(
+  return experiments.Config(
       builder=dqn_builder,
       environment_factory=lambda seed: environment,
       network_factory=lambda spec: network,
       policy_network_factory=dqn.behavior_policy,
       seed=FLAGS.seed,
       max_number_of_steps=FLAGS.num_steps)
-  experiments.run_experiment(experiment=experiment)
+
+
+def main(_):
+  config = build_experiment_config()
+  if FLAGS.run_distributed:
+    program = experiments.make_distributed_experiment(
+        experiment=config, num_actors=4)
+    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
+  else:
+    experiments.run_experiment(experiment=config)
 
 
 if __name__ == '__main__':
