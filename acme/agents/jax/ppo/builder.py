@@ -34,7 +34,9 @@ import optax
 import reverb
 
 
-class PPOBuilder(builders.ActorLearnerBuilder):
+class PPOBuilder(builders.GenericActorLearnerBuilder[
+    ppo_networks.PPONetworks, actor_core_lib.FeedForwardPolicyWithExtra,
+    reverb.ReplaySample]):
   """PPO Builder."""
 
   def __init__(
@@ -131,7 +133,7 @@ class PPOBuilder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: actor_core_lib.FeedForwardPolicyWithExtra,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:

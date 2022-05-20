@@ -106,6 +106,4 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
     """
 
 
-class ActorLearnerBuilder(GenericActorLearnerBuilder[Any, Any,
-                                                     reverb.ReplaySample]):
-  pass
+ActorLearnerBuilder = GenericActorLearnerBuilder[Any, Any, reverb.ReplaySample]
