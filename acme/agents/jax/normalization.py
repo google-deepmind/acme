@@ -28,6 +28,7 @@ from acme.jax import networks as networks_lib
 from acme.jax import running_statistics
 from acme.jax import variable_utils
 from acme.utils import counting
+from acme.utils import loggers
 import dm_env
 import jax
 import reverb
@@ -193,6 +194,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
       random_key: networks_lib.PRNGKey,
       networks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -201,6 +203,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
         self.builder.make_learner,
         random_key,
         networks,
+        logger=logger,
         replay_client=replay_client,
         counter=counter)
 

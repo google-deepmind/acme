@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """R2D2 Builder."""
-from typing import Callable, Iterator, List, Optional
+from typing import Iterator, List, Optional
 
 import acme
 from acme import adders
@@ -45,20 +45,19 @@ class R2D2Builder(builders.ActorLearnerBuilder):
   https://openreview.net/pdf?id=r1lyTjAqYX.
   """
 
-  def __init__(self,
-               networks: r2d2_networks.R2D2Networks,
-               config: r2d2_config.R2D2Config,
-               logger_fn: Callable[[], loggers.Logger] = lambda: None,):
+  def __init__(
+      self,
+      networks: r2d2_networks.R2D2Networks,
+      config: r2d2_config.R2D2Config,
+  ):
     """Creates a R2D2 learner, a behavior policy and an eval actor.
 
     Args:
       networks: R2D2 networks, used to build core state spec.
       config: a config with R2D2 hps
-      logger_fn: a logger factory for the learner
     """
     self._networks = networks
     self._config = config
-    self._logger_fn = logger_fn
 
     # Sequence length for dataset iterator.
     self._sequence_length = (
@@ -77,6 +76,7 @@ class R2D2Builder(builders.ActorLearnerBuilder):
       random_key: networks_lib.PRNGKey,
       networks: r2d2_networks.R2D2Networks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -99,7 +99,7 @@ class R2D2Builder(builders.ActorLearnerBuilder):
         clip_rewards=self._config.clip_rewards,
         replay_client=replay_client,
         counter=counter,
-        logger=self._logger_fn())
+        logger=logger)
 
   def make_replay_tables(
       self,

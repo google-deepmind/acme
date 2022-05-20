@@ -42,7 +42,6 @@ class IMPALABuilder(builders.ActorLearnerBuilder):
       self,
       config: impala_config.IMPALAConfig,
       core_state_spec: hk.LSTMState,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
       table_extension: Optional[Callable[[], Any]] = None,
   ):
     """Creates an IMPALA learner."""
@@ -50,7 +49,6 @@ class IMPALABuilder(builders.ActorLearnerBuilder):
     self._core_state_spec = core_state_spec
     self._sequence_length = self._config.sequence_length
     self._num_sequences_per_batch = self._config.batch_size
-    self._logger_fn = logger_fn
     self._table_extension = table_extension
 
   def make_replay_tables(
@@ -130,6 +128,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder):
       random_key: networks_lib.PRNGKey,
       networks: impala_networks.IMPALANetworks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -152,7 +151,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder):
         baseline_cost=self._config.baseline_cost,
         max_abs_reward=self._config.max_abs_reward,
         counter=counter,
-        logger=self._logger_fn(),
+        logger=logger,
     )
 
   def make_actor(

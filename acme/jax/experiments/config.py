@@ -27,6 +27,7 @@ from acme.jax import utils
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import observers as observers_lib
+from acme.utils import experiment_utils
 import jax
 
 AgentNetwork = Any
@@ -66,6 +67,7 @@ class Config:
       reduce the number of times environment_factory is invoked (for performance
       or resource usage reasons).
     observers: Observers used for extending logs with custom information.
+    learner_logger_fn: Logger factory for the Learner.
     seed: Seed used for agent initialization.
     max_number_of_steps: How many environment steps to perform. Infinite by
       default.
@@ -83,9 +85,17 @@ class Config:
   eval_policy_network_factory: Optional[PolicyFactory] = None
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
+  learner_logger_fn: Optional[Callable[[], loggers.Logger]] = None
   seed: int = 0
   max_number_of_steps: int = sys.maxsize
   save_logs: bool = True
+
+  def get_learner_logger(self):
+    if self.learner_logger_fn:
+      return self.learner_logger_fn()
+    else:
+      return experiment_utils.make_experiment_logger(
+          label='learner', steps_key='learner_steps')
 
   def get_evaluator_factories(self):
     if self.evaluator_factories is not None:

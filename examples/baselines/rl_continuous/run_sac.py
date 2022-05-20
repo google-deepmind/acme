@@ -23,7 +23,6 @@ import helpers
 from absl import app
 from acme.utils import lp_utils
 from acme.jax import experiments
-from acme.utils import experiment_utils
 import launchpad as lp
 
 FLAGS = flags.FLAGS
@@ -53,10 +52,7 @@ def build_experiment_config():
       learning_rate=3e-4,
       n_step=2,
       target_entropy=sac.target_entropy_from_env_spec(environment_spec))
-  learner_logger_fn = lambda: experiment_utils.make_experiment_logger(  # pylint: disable=g-long-lambda
-      label='learner',
-      steps_key='learner_steps')
-  sac_builder = builder.SACBuilder(config, logger_fn=learner_logger_fn)
+  sac_builder = builder.SACBuilder(config)
   # One batch dimension: [batch_size, ...]
   batch_dims = (0,)
   sac_builder = normalization.NormalizationBuilder(

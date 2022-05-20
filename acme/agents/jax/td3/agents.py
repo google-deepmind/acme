@@ -72,7 +72,7 @@ def make_distributed_td3(environment_factory: jax_types.EnvironmentFactory,
       asynchronous=True,
       serialize_fn=utils.fetch_devicearray,
       steps_key='learner_steps')
-  td3_builder = builder.TD3Builder(config, logger_fn=logger_fn)
+  td3_builder = builder.TD3Builder(config)
 
   action_specs = environment_spec.actions
   policy_network_fn = functools.partial(
@@ -100,6 +100,7 @@ def make_distributed_td3(environment_factory: jax_types.EnvironmentFactory,
       evaluator_factories=evaluator_factories,
       seed=seed,
       max_number_of_steps=max_number_of_steps,
+      learner_logger_fn=logger_fn,
       save_logs=log_to_bigtable)
   return experiments.make_distributed_experiment(
       experiment=experiment,

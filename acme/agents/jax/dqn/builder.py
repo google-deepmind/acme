@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """DQN Builder."""
-from typing import Callable, Iterator, List, Optional, Sequence
+from typing import Iterator, List, Optional, Sequence
 
 from acme import adders
 from acme import core
@@ -37,24 +37,19 @@ from reverb import rate_limiters
 class DQNBuilder(builders.ActorLearnerBuilder):
   """DQN Builder."""
 
-  def __init__(
-      self,
-      config: dqn_config.DQNConfig,
-      loss_fn: learning_lib.LossFn,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
-      actor_backend: Optional[str] = 'cpu'
-  ):
+  def __init__(self,
+               config: dqn_config.DQNConfig,
+               loss_fn: learning_lib.LossFn,
+               actor_backend: Optional[str] = 'cpu'):
     """Creates DQN learner and the behavior policies.
 
     Args:
       config: DQN config.
       loss_fn: A loss function.
-      logger_fn: a logger factory for the learner.
       actor_backend: Which backend to use when jitting the policy.
     """
     self._config = config
     self._loss_fn = loss_fn
-    self._logger_fn = logger_fn
     self._actor_backend = actor_backend
 
   def make_learner(
@@ -62,14 +57,15 @@ class DQNBuilder(builders.ActorLearnerBuilder):
       random_key: networks_lib.PRNGKey,
       networks: networks_lib.FeedForwardNetwork,
       dataset: Iterator[reverb.ReplaySample],
+      logger: Optional[loggers.Logger],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
     return learning_lib.SGDLearner(
         network=networks,
         random_key=random_key,
-        optimizer=optax.adam(self._config.learning_rate,
-                             eps=self._config.adam_eps),
+        optimizer=optax.adam(
+            self._config.learning_rate, eps=self._config.adam_eps),
         target_update_period=self._config.target_update_period,
         data_iterator=dataset,
         loss_fn=self._loss_fn,
@@ -77,7 +73,7 @@ class DQNBuilder(builders.ActorLearnerBuilder):
         replay_table_name=self._config.replay_table_name,
         counter=counter,
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
-        logger=self._logger_fn())
+        logger=logger)
 
   def make_actor(
       self,
@@ -88,17 +84,18 @@ class DQNBuilder(builders.ActorLearnerBuilder):
   ) -> core.Actor:
     assert variable_source is not None
     # Inference happens on CPU, so it's better to move variables there too.
-    variable_client = variable_utils.VariableClient(variable_source, '',
-                                                    device='cpu')
+    variable_client = variable_utils.VariableClient(
+        variable_source, '', device='cpu')
     epsilon = self._config.epsilon
     epsilons = epsilon if epsilon is Sequence else (epsilon,)
     actor_core = dqn_actor.alternating_epsilons_actor_core(
         policy_network, epsilons=epsilons)
-    return actors.GenericActor(actor=actor_core,
-                               random_key=random_key,
-                               variable_client=variable_client,
-                               adder=adder,
-                               backend=self._actor_backend)
+    return actors.GenericActor(
+        actor=actor_core,
+        random_key=random_key,
+        variable_client=variable_client,
+        adder=adder,
+        backend=self._actor_backend)
 
   def make_replay_tables(
       self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
@@ -111,14 +108,17 @@ class DQNBuilder(builders.ActorLearnerBuilder):
         min_size_to_sample=self._config.min_replay_size,
         samples_per_insert=self._config.samples_per_insert,
         error_buffer=error_buffer)
-    return [reverb.Table(
-        name=self._config.replay_table_name,
-        sampler=reverb.selectors.Prioritized(self._config.priority_exponent),
-        remover=reverb.selectors.Fifo(),
-        max_size=self._config.max_replay_size,
-        rate_limiter=limiter,
-        signature=adders_reverb.NStepTransitionAdder.signature(
-            environment_spec))]
+    return [
+        reverb.Table(
+            name=self._config.replay_table_name,
+            sampler=reverb.selectors.Prioritized(
+                self._config.priority_exponent),
+            remover=reverb.selectors.Fifo(),
+            max_size=self._config.max_replay_size,
+            rate_limiter=limiter,
+            signature=adders_reverb.NStepTransitionAdder.signature(
+                environment_spec))
+    ]
 
   def make_dataset_iterator(
       self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
@@ -126,8 +126,8 @@ class DQNBuilder(builders.ActorLearnerBuilder):
     dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
         server_address=replay_client.server_address,
-        batch_size=(
-            self._config.batch_size * self._config.num_sgd_steps_per_step),
+        batch_size=(self._config.batch_size *
+                    self._config.num_sgd_steps_per_step),
         prefetch_size=self._config.prefetch_size)
     return dataset.as_numpy_iterator()
 

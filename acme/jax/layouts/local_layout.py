@@ -23,6 +23,7 @@ from acme.agents.jax import builders
 from acme.jax import utils
 from acme.tf import savers
 from acme.utils import counting
+from acme.utils import loggers
 import jax
 import reverb
 
@@ -38,6 +39,7 @@ class LocalLayout(agent.Agent):
       builder: builders.GenericActorLearnerBuilder,
       networks: Any,
       policy_network: Any,
+      learner_logger: Optional[loggers.Logger] = None,
       workdir: Optional[str] = '~/acme',
       batch_size: int = 256,
       num_sgd_steps_per_step: int = 1,
@@ -54,6 +56,7 @@ class LocalLayout(agent.Agent):
       builder: builder defining an RL algorithm to train.
       networks: network objects to be passed to the learner.
       policy_network: function that given an observation returns actions.
+      learner_logger: logger used by the learner.
       workdir: if provided saves the state of the learner and the counter
         (if the counter is not None) into workdir.
       batch_size: batch size for updates.
@@ -108,6 +111,7 @@ class LocalLayout(agent.Agent):
         random_key=learner_key,
         networks=networks,
         dataset=dataset,
+        logger=learner_logger,
         replay_client=replay_client,
         counter=counter)
     if not checkpoint or workdir is None:

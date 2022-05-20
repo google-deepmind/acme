@@ -73,7 +73,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
       asynchronous=True,
       serialize_fn=utils.fetch_devicearray,
       steps_key='learner_steps')
-  sac_builder = builder.SACBuilder(config, logger_fn=logger_fn)
+  sac_builder = builder.SACBuilder(config)
   if normalize_input:
     dummy_seed = 1
     environment_spec = specs.make_environment_spec(
@@ -102,6 +102,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
       evaluator_factories=evaluator_factories,
       seed=seed,
       max_number_of_steps=max_number_of_steps,
+      learner_logger_fn=logger_fn,
       save_logs=log_to_bigtable)
   return experiments.make_distributed_experiment(
       experiment=experiment,

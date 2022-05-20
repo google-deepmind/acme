@@ -45,7 +45,7 @@ class RNDBuilder(builders.ActorLearnerBuilder):
     Args:
       rl_agent: The standard RL agent used by RND to optimize the generator.
       config: A config with RND HPs.
-      logger_fn: a logger factory for the learner
+      logger_fn: a logger factory for the rl_agent's learner.
     """
     self._rl_agent = rl_agent
     self._config = config
@@ -56,6 +56,7 @@ class RNDBuilder(builders.ActorLearnerBuilder):
       random_key: networks_lib.PRNGKey,
       networks: rnd_networks.RNDNetworks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -70,6 +71,7 @@ class RNDBuilder(builders.ActorLearnerBuilder):
           direct_rl_learner_key,
           networks,
           dataset,
+          logger=self._logger_fn(),
           replay_client=replay_client,
           counter=direct_rl_counter)
 
@@ -84,7 +86,7 @@ class RNDBuilder(builders.ActorLearnerBuilder):
         is_sequence_based=self._config.is_sequence_based,
         grad_updates_per_batch=self._config.num_sgd_steps_per_step,
         counter=counter,
-        logger=self._logger_fn())
+        logger=logger)
 
   def make_replay_tables(
       self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:

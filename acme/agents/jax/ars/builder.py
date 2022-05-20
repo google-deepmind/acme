@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """ARS Builder."""
-from typing import Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import acme
 from acme import adders
@@ -63,24 +63,23 @@ class ARSBuilder(builders.ActorLearnerBuilder):
       self,
       config: ars_config.ARSConfig,
       spec: specs.EnvironmentSpec,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):
     self._config = config
     self._spec = spec
-    self._logger_fn = logger_fn
 
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
       networks: networks_lib.FeedForwardNetwork,
       dataset: Iterator[reverb.ReplaySample],
+      logger: Optional[loggers.Logger] = None,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
       checkpoint: bool = False,
   ) -> core.Learner:
 
     return learning.ARSLearner(self._spec, networks, random_key, self._config,
-                               dataset, counter, self._logger_fn())
+                               dataset, counter, logger)
 
   def make_actor(
       self,

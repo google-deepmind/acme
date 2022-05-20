@@ -51,11 +51,10 @@ class DistributedGAIL(agents.DistributedAIL):
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
         steps_key='learner_steps')
-    ppo_agent = ppo.PPOBuilder(
-        config.ppo_config, logger_fn=logger_fn)
+    ppo_agent = ppo.PPOBuilder(config.ppo_config)
     kwargs['discriminator_loss'] = losses.gail_loss()
-    super().__init__(environment_factory, ppo_agent, config.ail_config, *args,
-                     **kwargs)
+    super().__init__(environment_factory, ppo_agent, logger_fn,
+                     config.ail_config, *args, **kwargs)
 
 
 class GAIL(agents.AIL):

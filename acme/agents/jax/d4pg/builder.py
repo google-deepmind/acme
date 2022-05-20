@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """D4PG Builder."""
-from typing import Callable, Iterator, List, Optional
+from typing import Iterator, List, Optional
 
 import acme
 from acme import adders
@@ -42,22 +42,20 @@ class D4PGBuilder(builders.ActorLearnerBuilder):
   def __init__(
       self,
       config: d4pg_config.D4PGConfig,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):
     """Creates a D4PG learner, a behavior policy and an eval actor.
 
     Args:
       config: a config with D4PG hps
-      logger_fn: a logger factory for the learner
     """
     self._config = config
-    self._logger_fn = logger_fn
 
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
       networks: d4pg_networks.D4PGNetworks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -82,7 +80,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder):
         target_update_period=self._config.target_update_period,
         iterator=dataset,
         counter=counter,
-        logger=self._logger_fn(),
+        logger=logger,
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step)
 
   def make_replay_tables(

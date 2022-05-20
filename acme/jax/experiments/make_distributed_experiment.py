@@ -181,6 +181,7 @@ def make_distributed_experiment(
 
     counter = counting.Counter(counter, 'learner')
     learner = experiment.builder.make_learner(random_key, networks, iterator,
+                                              experiment.get_learner_logger(),
                                               replay, counter)
 
     if primary_learner is None:

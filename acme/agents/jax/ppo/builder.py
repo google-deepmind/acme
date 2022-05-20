@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """PPO Builder."""
-from typing import Callable, Iterator, List, Optional
+from typing import Iterator, List, Optional
 
 from acme import adders
 from acme import core
@@ -40,11 +40,9 @@ class PPOBuilder(builders.ActorLearnerBuilder):
   def __init__(
       self,
       config: ppo_config.PPOConfig,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):
     """Creates PPO builder."""
     self._config = config
-    self._logger_fn = logger_fn
 
     # An extra step is used for bootstrapping when computing advantages.
     self._sequence_length = config.unroll_length + 1
@@ -97,6 +95,7 @@ class PPOBuilder(builders.ActorLearnerBuilder):
       random_key: networks_lib.PRNGKey,
       networks: ppo_networks.PPONetworks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -126,7 +125,7 @@ class PPOBuilder(builders.ActorLearnerBuilder):
         optimizer=optimizer,
         num_epochs=self._config.num_epochs,
         num_minibatches=self._config.num_minibatches,
-        logger=self._logger_fn(),
+        logger=logger,
     )
 
   def make_actor(

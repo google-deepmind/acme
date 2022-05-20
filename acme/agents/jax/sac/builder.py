@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """SAC Builder."""
-from typing import Callable, Iterator, List, Optional
+from typing import Iterator, List, Optional
 
 import acme
 from acme import adders
@@ -42,22 +42,20 @@ class SACBuilder(builders.ActorLearnerBuilder):
   def __init__(
       self,
       config: sac_config.SACConfig,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):
     """Creates a SAC learner, a behavior policy and an eval actor.
 
     Args:
       config: a config with SAC hps
-      logger_fn: a logger factory for the learner
     """
     self._config = config
-    self._logger_fn = logger_fn
 
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
       networks: sac_networks.SACNetworks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -77,7 +75,7 @@ class SACBuilder(builders.ActorLearnerBuilder):
         policy_optimizer=policy_optimizer,
         q_optimizer=q_optimizer,
         iterator=dataset,
-        logger=self._logger_fn(),
+        logger=logger,
         counter=counter)
 
   def make_actor(

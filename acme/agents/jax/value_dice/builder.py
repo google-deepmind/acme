@@ -44,13 +44,10 @@ class ValueDiceBuilder(builders.ActorLearnerBuilder):
   For offline please use the ValueDiceLearner directly.
   """
 
-  def __init__(
-      self,
-      config: value_dice_config.ValueDiceConfig,
-      make_demonstrations: Callable[[int], Iterator[types.Transition]],
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,):
+  def __init__(self, config: value_dice_config.ValueDiceConfig,
+               make_demonstrations: Callable[[int],
+                                             Iterator[types.Transition]]):
     self._make_demonstrations = make_demonstrations
-    self._logger_fn = logger_fn
     self._config = config
 
   def make_learner(
@@ -58,6 +55,7 @@ class ValueDiceBuilder(builders.ActorLearnerBuilder):
       random_key: networks_lib.PRNGKey,
       networks: value_dice_networks.ValueDiceNetworks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -78,7 +76,7 @@ class ValueDiceBuilder(builders.ActorLearnerBuilder):
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
         iterator_replay=dataset,
         iterator_demonstrations=iterator_demonstration,
-        logger=self._logger_fn(),
+        logger=logger,
         counter=counter,
     )
 

@@ -106,7 +106,7 @@ class DistributedTD3fD(distributed_layout.DistributedLayout):
 
     td3_config = td3_fd_config.td3_config
     lfd_config = td3_fd_config.lfd_config
-    td3_builder = td3.TD3Builder(td3_config, logger_fn=logger_fn)
+    td3_builder = td3.TD3Builder(td3_config)
     lfd_builder = builder.LfdBuilder(td3_builder, lfd_iterator_fn, lfd_config)
 
     action_specs = environment_spec.actions
@@ -128,6 +128,7 @@ class DistributedTD3fD(distributed_layout.DistributedLayout):
     super().__init__(
         seed=seed,
         environment_factory=environment_factory,
+        learner_logger_fn=logger_fn,
         network_factory=network_factory,
         builder=lfd_builder,
         policy_network=policy_network_fn,

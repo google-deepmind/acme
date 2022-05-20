@@ -20,7 +20,6 @@ import helpers
 from absl import app
 from acme.utils import lp_utils
 from acme.jax import experiments
-from acme.utils import experiment_utils
 import launchpad as lp
 
 FLAGS = flags.FLAGS
@@ -63,11 +62,7 @@ def build_experiment_config():
       sigma=0.2
   )
 
-  learner_logger_fn = lambda: experiment_utils.make_experiment_logger(  # pylint: disable=g-long-lambda
-      label='learner',
-      steps_key='learner_steps')
-
-  d4pg_builder = d4pg.D4PGBuilder(config, logger_fn=learner_logger_fn)
+  d4pg_builder = d4pg.D4PGBuilder(config)
 
   return experiments.Config(
       builder=d4pg_builder,

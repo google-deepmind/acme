@@ -78,7 +78,7 @@ def make_distributed_d4pg(
       asynchronous=True,
       serialize_fn=utils.fetch_devicearray,
       steps_key='learner_steps')
-  builder = d4pg_builder.D4PGBuilder(config, logger_fn=logger_fn)
+  builder = d4pg_builder.D4PGBuilder(config)
 
   def _policy_network(networks):
     return d4pg_networks.get_default_behavior_policy(networks, config=config)
@@ -103,6 +103,7 @@ def make_distributed_d4pg(
       policy_network_factory=_policy_network,
       evaluator_factories=evaluator_factories,
       seed=random_seed,
+      learner_logger_fn=logger_fn,
       save_logs=log_to_bigtable)
   return experiments.make_distributed_experiment(
       experiment=experiment,

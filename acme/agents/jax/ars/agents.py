@@ -32,8 +32,7 @@ NetworkFactory = Callable[[specs.EnvironmentSpec],
 
 
 class DistributedARS(distributed_layout.DistributedLayout):
-  """Distributed program definition for ARS.
-  """
+  """Distributed program definition for ARS."""
 
   def __init__(
       self,
@@ -59,8 +58,7 @@ class DistributedARS(distributed_layout.DistributedLayout):
     dummy_seed = 1
     ars_builder = builder.ARSBuilder(
         config,
-        spec=specs.make_environment_spec(environment_factory(dummy_seed)),
-        logger_fn=logger_fn)
+        spec=specs.make_environment_spec(environment_factory(dummy_seed)))
     if evaluator_factories is None:
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
@@ -82,4 +80,4 @@ class DistributedARS(distributed_layout.DistributedLayout):
         log_to_bigtable=log_to_bigtable,
         actor_logger_fn=distributed_layout.get_default_logger_fn(
             log_to_bigtable, log_every),
-    )
+        learner_logger_fn=logger_fn)

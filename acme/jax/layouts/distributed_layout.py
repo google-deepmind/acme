@@ -64,6 +64,7 @@ class DistributedLayout:
       policy_network: experiments.config.PolicyFactory,
       num_actors: int,
       environment_spec: Optional[specs.EnvironmentSpec] = None,
+      learner_logger_fn: Optional[Callable[[], loggers.Logger]] = None,
       actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
       evaluator_factories: Sequence[experiments.config.EvaluatorFactory] = (),
       device_prefetch: bool = True,
@@ -84,6 +85,7 @@ class DistributedLayout:
         policy_network_factory=policy_network,
         evaluator_factories=evaluator_factories,
         observers=observers,
+        learner_logger_fn=learner_logger_fn,
         seed=seed,
         max_number_of_steps=max_number_of_steps,
         save_logs=log_to_bigtable)

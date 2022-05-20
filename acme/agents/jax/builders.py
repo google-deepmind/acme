@@ -23,6 +23,7 @@ from acme import specs
 from acme.jax import networks as networks_lib
 from acme.jax.types import Networks, PolicyNetwork, Sample  # pylint: disable=g-multiple-import
 from acme.utils import counting
+from acme.utils import loggers
 import reverb
 
 
@@ -85,6 +86,7 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
       random_key: networks_lib.PRNGKey,
       networks: Networks,
       dataset: Iterator[Sample],
+      logger: Optional[loggers.Logger],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -95,6 +97,7 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
       networks: struct describing the networks needed by the learner; this can
         be specific to the learner in question.
       dataset: iterator over samples from replay.
+      logger: logger used by the constructed learner for logging progress.
       replay_client: client which allows communication with replay. Note that
         this is only intended to be used for updating priorities. Samples should
         be obtained from `dataset`.

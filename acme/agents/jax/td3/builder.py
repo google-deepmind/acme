@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """TD3 Builder."""
-from typing import Callable, Iterator, List, Optional
+from typing import Iterator, List, Optional
 
 from acme import adders
 from acme import core
@@ -41,22 +41,20 @@ class TD3Builder(builders.ActorLearnerBuilder):
   def __init__(
       self,
       config: td3_config.TD3Config,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):
     """Creates a TD3 learner, a behavior policy and an eval actor.
 
     Args:
       config: a config with TD3 hps
-      logger_fn: a logger factory for the learner
     """
     self._config = config
-    self._logger_fn = logger_fn
 
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
       networks: td3_networks.TD3Networks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -82,7 +80,7 @@ class TD3Builder(builders.ActorLearnerBuilder):
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
         bc_alpha=self._config.bc_alpha,
         iterator=dataset,
-        logger=self._logger_fn(),
+        logger=logger,
         counter=counter)
 
   def make_actor(

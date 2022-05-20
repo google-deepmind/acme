@@ -103,7 +103,7 @@ class DistributedSACfD(distributed_layout.DistributedLayout):
 
     sac_config = sac_fd_config.sac_config
     lfd_config = sac_fd_config.lfd_config
-    sac_builder = sac.SACBuilder(sac_config, logger_fn=logger_fn)
+    sac_builder = sac.SACBuilder(sac_config)
     lfd_builder = builder.LfdBuilder(sac_builder, lfd_iterator_fn, lfd_config)
 
     if evaluator_factories is None:
@@ -121,6 +121,7 @@ class DistributedSACfD(distributed_layout.DistributedLayout):
         environment_factory=environment_factory,
         network_factory=network_factory,
         environment_spec=environment_spec,
+        learner_logger_fn=logger_fn,
         builder=lfd_builder,
         policy_network=sac.apply_policy_and_sample,
         evaluator_factories=evaluator_factories,

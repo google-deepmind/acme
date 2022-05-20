@@ -61,15 +61,15 @@ class DistributedDAC(agents.DistributedAIL):
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
         steps_key='learner_steps')
-    td3_agent = td3.TD3Builder(config.td3_config, logger_fn=logger_fn)
+    td3_agent = td3.TD3Builder(config.td3_config)
 
     dac_loss = losses.add_gradient_penalty(
         losses.gail_loss(entropy_coefficient=config.entropy_coefficient),
         gradient_penalty_coefficient=config.gradient_penalty_coefficient,
         gradient_penalty_target=1.)
     kwargs['discriminator_loss'] = dac_loss
-    super().__init__(environment_factory, td3_agent, config.ail_config, *args,
-                     **kwargs)
+    super().__init__(environment_factory, td3_agent, logger_fn,
+                     config.ail_config, *args, **kwargs)
 
 
 class DAC(agents.AIL):

@@ -61,7 +61,6 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
     spec = specs.make_environment_spec(environment_factory(dummy_seed))
     value_dice_builder = builder.ValueDiceBuilder(
         config=config,
-        logger_fn=logger_fn,
         make_demonstrations=make_demonstrations)
     if evaluator_factories is None:
       eval_policy_factory = (
@@ -77,6 +76,7 @@ class DistributedValueDice(distributed_layout.DistributedLayout):
         seed=seed,
         environment_spec=spec,
         environment_factory=environment_factory,
+        learner_logger_fn=logger_fn,
         network_factory=network_factory,
         builder=value_dice_builder,
         policy_network=networks.apply_policy_and_sample,

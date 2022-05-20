@@ -21,7 +21,6 @@ from acme.agents.jax.dqn import losses
 import helpers
 from absl import app
 from acme.jax import experiments
-from acme.utils import experiment_utils
 import atari_py  # pylint:disable=unused-import
 
 FLAGS = flags.FLAGS
@@ -55,11 +54,8 @@ def main(_):
       batch_size=32)
   loss_fn = losses.QLearning(
       discount=config.discount, max_abs_reward=1.)
-  learner_logger = experiment_utils.make_experiment_logger(
-      label='learner', steps_key='learner_steps')
 
-  dqn_builder = dqn.DQNBuilder(
-      config, loss_fn=loss_fn, logger_fn=lambda: learner_logger)
+  dqn_builder = dqn.DQNBuilder(config, loss_fn=loss_fn)
 
   experiment = experiments.Config(
       builder=dqn_builder,

@@ -20,7 +20,6 @@ import helpers
 from absl import app
 from acme.utils import lp_utils
 from acme.jax import experiments
-from acme.utils import experiment_utils
 import launchpad as lp
 
 FLAGS = flags.FLAGS
@@ -40,10 +39,7 @@ def build_experiment_config():
   suite, task = FLAGS.env_name.split(':', 1)
 
   config = ppo.PPOConfig(entropy_cost=0, learning_rate=1e-4)
-  learner_logger_fn = lambda: experiment_utils.make_experiment_logger(  # pylint: disable=g-long-lambda
-      label='learner',
-      steps_key='learner_steps')
-  ppo_builder = ppo.PPOBuilder(config, logger_fn=learner_logger_fn)
+  ppo_builder = ppo.PPOBuilder(config)
 
   layer_sizes = (256, 256, 256)
   make_eval_policy = lambda network: ppo.make_inference_fn(network, True)

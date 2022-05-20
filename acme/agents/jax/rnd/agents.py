@@ -60,7 +60,7 @@ class DistributedRND(distributed_layout.DistributedLayout):
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
         steps_key='learner_steps')
-    rnd_builder = builder.RNDBuilder(rl_agent, config, logger_fn=logger_fn)
+    rnd_builder = builder.RNDBuilder(rl_agent, config)
     if (evaluator_policy_network is None) == (evaluator_factories is None):
       raise ValueError('Either evaluator_policy_network or '
                        'evaluator_factories must be specified, but not both.')
@@ -75,6 +75,7 @@ class DistributedRND(distributed_layout.DistributedLayout):
     super().__init__(
         seed=seed,
         environment_factory=environment_factory,
+        learner_logger_fn=logger_fn,
         network_factory=network_factory,
         builder=rnd_builder,
         policy_network=policy_network,

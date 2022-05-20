@@ -21,7 +21,6 @@ import helpers
 from absl import app
 from acme.utils import lp_utils
 from acme.jax import experiments
-from acme.utils import experiment_utils
 import launchpad as lp
 
 FLAGS = flags.FLAGS
@@ -51,11 +50,7 @@ def build_experiment_config():
       policy_learning_rate=3e-4,
       critic_learning_rate=3e-4,
   )
-  learner_logger_fn = lambda: experiment_utils.make_experiment_logger(  # pylint: disable=g-long-lambda
-      label='learner',
-      steps_key='learner_steps')
-
-  td3_builder = td3.TD3Builder(config, logger_fn=learner_logger_fn)
+  td3_builder = td3.TD3Builder(config)
   # pylint:disable=g-long-lambda
   return experiments.Config(
       builder=td3_builder,

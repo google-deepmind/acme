@@ -89,17 +89,14 @@ def eval_policy(network: networks_lib.FeedForwardNetwork,
   return apply_and_sample
 
 
-def make_builder(
-    config: RainbowConfig,
-    logger_fn: Callable[[], loggers.Logger] = lambda: None,
-):
+def make_builder(config: RainbowConfig):
   """Returns a DQNBuilder with a pre-built loss function."""
   loss_fn = losses.PrioritizedCategoricalDoubleQLearning(
       discount=config.discount,
       importance_sampling_exponent=config.importance_sampling_exponent,
       max_abs_reward=config.max_abs_reward,
   )
-  return builder.DQNBuilder(config, loss_fn=loss_fn, logger_fn=logger_fn)
+  return builder.DQNBuilder(config, loss_fn=loss_fn)
 
 
 class DistributedRainbow(distributed_layout.DistributedLayout):
@@ -127,7 +124,7 @@ class DistributedRainbow(distributed_layout.DistributedLayout):
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
         steps_key='learner_steps')
-    dqn_builder = make_builder(config, logger_fn=logger_fn)
+    dqn_builder = make_builder(config)
     train_policy_factory = apply_policy_and_sample
     if evaluator_factories is None:
       eval_policy_factory = lambda n: eval_policy(n, eval_epsilon)
@@ -141,6 +138,7 @@ class DistributedRainbow(distributed_layout.DistributedLayout):
     super().__init__(
         seed=seed,
         environment_factory=lambda seed: environment_factory(False),
+        learner_logger_fn=logger_fn,
         network_factory=network_factory,
         builder=dqn_builder,
         policy_network=train_policy_factory,

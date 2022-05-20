@@ -29,6 +29,7 @@ from acme.jax import networks as networks_lib
 from acme.jax.imitation_learning_types import DirectPolicyNetwork, DirectRLNetworks  # pylint: disable=g-multiple-import
 from acme.jax.types import PRNGKey
 from acme.utils import counting
+from acme.utils import loggers
 import dm_env
 import numpy as np
 import reverb
@@ -120,6 +121,7 @@ class PWILBuilder(
       random_key: networks_lib.PRNGKey,
       networks: DirectRLNetworks,
       dataset: Iterator[reverb.ReplaySample],
+      logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -127,6 +129,7 @@ class PWILBuilder(
         random_key=random_key,
         networks=networks,
         dataset=dataset,
+        logger=logger,
         replay_client=replay_client,
         counter=counter)
 

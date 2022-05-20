@@ -23,6 +23,7 @@ from acme import types
 from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.utils import counting
+from acme.utils import loggers
 import numpy as np
 import reverb
 import tree
@@ -88,6 +89,7 @@ class SQILBuilder(builders.ActorLearnerBuilder):
       random_key: networks_lib.PRNGKey,
       networks: Any,
       dataset: Iterator[reverb.ReplaySample],
+      logger: Optional[loggers.Logger] = None,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -98,6 +100,7 @@ class SQILBuilder(builders.ActorLearnerBuilder):
         random_key,
         networks,
         dataset=dataset,
+        logger=logger,
         replay_client=replay_client,
         counter=direct_rl_counter)
 

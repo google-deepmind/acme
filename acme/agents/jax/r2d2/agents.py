@@ -61,9 +61,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
         serialize_fn=utils.fetch_devicearray,
         steps_key='learner_steps')
     r2d2_builder = builder.R2D2Builder(
-        networks=network_factory(environment_spec),
-        config=config,
-        logger_fn=logger_fn)
+        networks=network_factory(environment_spec), config=config)
     policy_network_factory = (
         lambda n: r2d2_networks.make_behavior_policy(n, config))
     if evaluator_factories is None:
@@ -87,6 +85,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
         environment_spec=environment_spec,
         device_prefetch=device_prefetch,
         log_to_bigtable=log_to_bigtable,
+        learner_logger_fn=logger_fn,
         actor_logger_fn=distributed_layout.get_default_logger_fn(
             log_to_bigtable, log_every),
         prefetch_size=config.prefetch_size,

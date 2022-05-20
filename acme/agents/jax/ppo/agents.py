@@ -59,7 +59,7 @@ def make_distributed_ppo(
       asynchronous=True,
       serialize_fn=utils.fetch_devicearray,
       steps_key='learner_steps')
-  ppo_builder = builder.PPOBuilder(config, logger_fn=logger_fn)
+  ppo_builder = builder.PPOBuilder(config)
   if normalize_input:
     dummy_seed = 1
     environment_spec = specs.make_environment_spec(
@@ -81,6 +81,7 @@ def make_distributed_ppo(
           lambda network: ppo_networks.make_inference_fn(network, True)),
       seed=seed,
       max_number_of_steps=max_number_of_steps,
+      learner_logger_fn=logger_fn,
       save_logs=save_reverb_logs)
   return experiments.make_distributed_experiment(
       experiment=experiment,
@@ -106,7 +107,7 @@ class PPO(local_layout.LocalLayout):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
   ):
-    ppo_builder = builder.PPOBuilder(config, logger_fn=(lambda: logger))
+    ppo_builder = builder.PPOBuilder(config)
     if normalize_input:
       # Two batch dimensions: [num_sequences, num_steps, ...]
       batch_dims = (0, 1)
@@ -118,6 +119,7 @@ class PPO(local_layout.LocalLayout):
         environment_spec=spec,
         builder=ppo_builder,
         networks=networks,
+        learner_logger=logger,
         policy_network=ppo_networks.make_inference_fn(networks),
         batch_size=config.batch_size,
         # TODO(sinopalnikov): move it to the experiment config

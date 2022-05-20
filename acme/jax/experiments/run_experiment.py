@@ -143,6 +143,7 @@ def run_experiment(experiment: config.Config,
       random_key=learner_key,
       networks=networks,
       dataset=dataset,
+      logger=experiment.get_learner_logger(),
       replay_client=replay_client)
 
   actor_key, key = jax.random.split(key)

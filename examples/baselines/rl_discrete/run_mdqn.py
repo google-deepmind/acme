@@ -21,7 +21,6 @@ from acme.agents.jax.dqn import losses
 import helpers
 from absl import app
 from acme.jax import experiments
-from acme.utils import experiment_utils
 import atari_py  # pylint:disable=unused-import
 
 FLAGS = flags.FLAGS
@@ -56,11 +55,8 @@ def main(_):
   loss_fn = losses.MunchausenQLearning(
       discount=config.discount, max_abs_reward=1., huber_loss_parameter=1.,
       entropy_temperature=0.03, munchausen_coefficient=0.9)
-  learner_logger = experiment_utils.make_experiment_logger(
-      label='learner', steps_key='learner_steps')
 
-  dqn_builder = dqn.DQNBuilder(
-      config, loss_fn=loss_fn, logger_fn=lambda: learner_logger)
+  dqn_builder = dqn.DQNBuilder(config, loss_fn=loss_fn)
 
   experiment = experiments.Config(
       builder=dqn_builder,

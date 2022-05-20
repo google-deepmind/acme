@@ -41,6 +41,7 @@ class DistributedAIL(distributed_layout.DistributedLayout):
       self,
       environment_factory: jax_types.EnvironmentFactory,
       rl_agent: builders.GenericActorLearnerBuilder,
+      rl_agent_logger: Callable[[], loggers.Logger],
       config: ail_config.AILConfig,
       network_factory: NetworkFactory,
       seed: int,
@@ -68,10 +69,10 @@ class DistributedAIL(distributed_layout.DistributedLayout):
         steps_key='learner_steps')
     ail_builder = builder.AILBuilder(
         rl_agent=rl_agent,
+        logger_fn=rl_agent_logger,
         config=config,
         discriminator_loss=discriminator_loss,
-        make_demonstrations=make_demonstrations,
-        logger_fn=logger_fn)
+        make_demonstrations=make_demonstrations)
     if (evaluator_policy_network is None) == (evaluator_factories is None):
       raise ValueError('Either evaluator_policy_network or '
                        'evaluator_factories must be specified, but not both.')
@@ -86,6 +87,7 @@ class DistributedAIL(distributed_layout.DistributedLayout):
     super().__init__(
         seed=seed,
         environment_factory=environment_factory,
+        learner_logger_fn=logger_fn,
         network_factory=network_factory,
         builder=ail_builder,
         policy_network=policy_network,
