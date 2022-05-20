@@ -99,6 +99,13 @@ def impala_loss(
     mean_loss = jnp.mean(policy_gradient_loss + baseline_cost * critic_loss +
                          entropy_cost * entropy_loss)  # []
 
-    return mean_loss
+    metrics = {
+        'policy_loss': jnp.mean(policy_gradient_loss),
+        'critic_loss': jnp.mean(baseline_cost * critic_loss),
+        'entropy_loss': jnp.mean(entropy_cost * entropy_loss),
+        'entropy': jnp.mean(entropy_loss),
+    }
+
+    return mean_loss, metrics
 
   return utils.mapreduce(loss_fn, in_axes=(None, 0))

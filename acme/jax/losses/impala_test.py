@@ -89,9 +89,12 @@ class ImpalaTest(absltest.TestCase):
         unroll_fn_transformed.apply, discount=0.99)
 
     # Return value should be scalar.
-    loss = loss_fn(params, sample)
+    loss, metrics = loss_fn(params, sample)
     loss = jax.device_get(loss)
     self.assertEqual(loss.shape, ())
+    for value in metrics.values():
+      value = jax.device_get(value)
+      self.assertEqual(value.shape, ())
 
 
 if __name__ == '__main__':

@@ -82,8 +82,8 @@ class IMPALALearner(acme.Learner):
       """Computes an SGD step, returning new state and metrics for logging."""
 
       # Compute gradients.
-      grad_fn = jax.value_and_grad(loss_fn)
-      loss_value, gradients = grad_fn(state.params, sample)
+      grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
+      (loss_value, metrics), gradients = grad_fn(state.params, sample)
 
       # Average gradients over pmap replicas before optimizer update.
       gradients = jax.lax.pmean(gradients, _PMAP_AXIS_NAME)
@@ -92,11 +92,11 @@ class IMPALALearner(acme.Learner):
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
       new_params = optax.apply_updates(state.params, updates)
 
-      metrics = {
+      metrics.update({
           'loss': loss_value,
           'param_norm': optax.global_norm(new_params),
           'param_updates_norm': optax.global_norm(updates),
-      }
+      })
 
       new_state = TrainingState(params=new_params, opt_state=new_opt_state)
 
