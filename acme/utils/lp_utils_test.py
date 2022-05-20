@@ -19,7 +19,7 @@ from acme.utils import lp_utils
 from absl.testing import absltest
 
 
-class EnvironmentLoopTest(absltest.TestCase):
+class LpUtilsTest(absltest.TestCase):
 
   def test_partial_kwargs(self):
 
