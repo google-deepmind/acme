@@ -60,6 +60,7 @@ class DistributedDistributionalMPO:
       additional_discount: float = 0.99,
       target_policy_update_period: int = 100,
       target_critic_update_period: int = 100,
+      variable_update_period: int = 1000,
       policy_loss_factory: Optional[Callable[[], snt.Module]] = None,
       max_actor_steps: Optional[int] = None,
       log_every: float = 10.0,
@@ -86,6 +87,7 @@ class DistributedDistributionalMPO:
     self._num_samples = num_samples
     self._target_policy_update_period = target_policy_update_period
     self._target_critic_update_period = target_critic_update_period
+    self._variable_update_period = variable_update_period
     self._max_actor_steps = max_actor_steps
     self._log_every = log_every
     self._make_observers = make_observers
@@ -221,7 +223,9 @@ class DistributedDistributionalMPO:
 
     # Create the variable client responsible for keeping the actor up-to-date.
     variable_client = tf2_variable_utils.VariableClient(
-        variable_source, policy_variables, update_period=1000)
+        variable_source,
+        policy_variables,
+        update_period=self._variable_update_period)
 
     # Make sure not to use a random policy after checkpoint restoration by
     # assigning variables before running the environment loop.
@@ -283,7 +287,9 @@ class DistributedDistributionalMPO:
 
     # Create the variable client responsible for keeping the actor up-to-date.
     variable_client = tf2_variable_utils.VariableClient(
-        variable_source, policy_variables, update_period=1000)
+        variable_source,
+        policy_variables,
+        update_period=self._variable_update_period)
 
     # Make sure not to evaluate a random actor by assigning variables before
     # running the environment loop.

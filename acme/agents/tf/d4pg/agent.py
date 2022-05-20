@@ -49,6 +49,7 @@ class D4PGConfig:
   batch_size: int = 256
   prefetch_size: int = 4
   target_update_period: int = 100
+  variable_update_period: int = 1000
   policy_optimizer: Optional[snt.Optimizer] = None
   critic_optimizer: Optional[snt.Optimizer] = None
   min_replay_size: int = 1000
@@ -198,7 +199,7 @@ class D4PGBuilder:
       variable_client = variable_utils.VariableClient(
           client=variable_source,
           variables={'policy': policy_network.variables},
-          update_period=1000,
+          update_period=self._config.variable_update_period,
       )
 
       # Make sure not to use a random policy after checkpoint restoration by

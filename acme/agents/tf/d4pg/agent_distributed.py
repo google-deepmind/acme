@@ -57,6 +57,7 @@ class DistributedD4PG:
       policy_optimizer: Optional[snt.Optimizer] = None,
       critic_optimizer: Optional[snt.Optimizer] = None,
       target_update_period: int = 100,
+      variable_update_period: int = 1000,
       max_actor_steps: Optional[int] = None,
       log_every: float = 10.0,
   ):
@@ -87,6 +88,7 @@ class DistributedD4PG:
     self._max_actor_steps = max_actor_steps
     self._log_every = log_every
     self._accelerator = accelerator
+    self._variable_update_period = variable_update_period
 
     self._builder = agent.D4PGBuilder(
         # TODO(mwhoffman): pass the config dataclass in directly.
@@ -97,6 +99,7 @@ class DistributedD4PG:
             batch_size=batch_size,
             prefetch_size=prefetch_size,
             target_update_period=target_update_period,
+            variable_update_period=variable_update_period,
             policy_optimizer=policy_optimizer,
             critic_optimizer=critic_optimizer,
             min_replay_size=min_replay_size,
