@@ -18,7 +18,6 @@ import dataclasses
 from typing import Any, Optional, Tuple, Union
 
 from acme import types
-from acme.jax import utils
 from acme.utils import tree_utils
 import chex
 import jax
@@ -41,6 +40,14 @@ Path = Tuple[Any, ...]
 def _is_prefix(a: Path, b: Path) -> bool:
   """Returns whether `a` is a prefix of `b`."""
   return b[:len(a)] == a
+
+
+def _zeros_like(nest: types.Nest, dtype=None) -> types.NestedArray:
+  return jax.tree_map(lambda x: jnp.zeros(x.shape, dtype or x.dtype), nest)
+
+
+def _ones_like(nest: types.Nest, dtype=None) -> types.NestedArray:
+  return jax.tree_map(lambda x: jnp.ones(x.shape, dtype or x.dtype), nest)
 
 
 @chex.dataclass(frozen=True)
@@ -83,11 +90,11 @@ def init_state(nest: types.Nest) -> RunningStatisticsState:
 
   return RunningStatisticsState(
       count=0.,
-      mean=utils.zeros_like(nest, dtype=dtype),
-      summed_variance=utils.zeros_like(nest, dtype=dtype),
+      mean=_zeros_like(nest, dtype=dtype),
+      summed_variance=_zeros_like(nest, dtype=dtype),
       # Initialize with ones to make sure normalization works correctly
       # in the initial state.
-      std=utils.ones_like(nest, dtype=dtype))
+      std=_ones_like(nest, dtype=dtype))
 
 
 def _validate_batch_shapes(batch: types.NestedArray,
