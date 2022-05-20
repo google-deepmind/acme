@@ -34,22 +34,23 @@ import launchpad as lp
 NetworkFactory = Callable[[specs.EnvironmentSpec], ppo_networks.PPONetworks]
 
 
-def make_distributed_ppo(
-    environment_factory: jax_types.EnvironmentFactory,
-    network_factory: NetworkFactory,
-    config: ppo_config.PPOConfig,
-    seed: int,
-    num_actors: int,
-    normalize_input: bool = False,
-    logger_fn: Optional[Callable[[], loggers.Logger]] = None,
-    save_reverb_logs: bool = False,
-    log_every: float = 10.0,
-    max_number_of_steps: Optional[int] = None,
-    evaluator_factories: Optional[Sequence[
-        experiments.EvaluatorFactory]] = None,
-    name='agent',
-    program: Optional[lp.Program] = None
-):
+def make_distributed_ppo(environment_factory: jax_types.EnvironmentFactory,
+                         network_factory: NetworkFactory,
+                         config: ppo_config.PPOConfig,
+                         seed: int,
+                         num_actors: int,
+                         normalize_input: bool = False,
+                         logger_fn: Optional[Callable[[],
+                                                      loggers.Logger]] = None,
+                         save_reverb_logs: bool = False,
+                         log_every: float = 10.0,
+                         max_number_of_steps: Optional[int] = None,
+                         evaluator_factories: Optional[Sequence[
+                             experiments.EvaluatorFactory]] = None,
+                         make_snapshot_models: Optional[
+                             distributed_layout.SnapshotModelFactory] = None,
+                         name='agent',
+                         program: Optional[lp.Program] = None):
   """Builds distributed PPO program."""
   logger_fn = logger_fn or functools.partial(
       loggers.make_default_logger,
@@ -89,6 +90,7 @@ def make_distributed_ppo(
       prefetch_size=config.prefetch_size,
       actor_logger_fn=distributed_layout.get_default_logger_fn(
           save_reverb_logs, log_every),
+      make_snapshot_models=make_snapshot_models,
       name=name,
       program=program)
 
