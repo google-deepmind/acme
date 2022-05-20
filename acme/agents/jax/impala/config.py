@@ -19,6 +19,7 @@ from typing import Optional, Union
 from acme import types
 from acme.adders import reverb as adders_reverb
 import numpy as np
+import optax
 
 
 @dataclasses.dataclass
@@ -31,7 +32,7 @@ class IMPALAConfig:
   prefetch_size: int = 2
   sequence_length: int = 20
   sequence_period: Optional[int] = None
-  learning_rate: float = 1e-4
+  learning_rate: Union[float, optax.Schedule] = 1e-4
   adam_momentum_decay: float = 0.0
   adam_variance_decay: float = 0.99
   discount: float = 0.99
