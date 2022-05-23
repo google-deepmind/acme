@@ -18,5 +18,7 @@ from acme.utils import loggers
 
 
 def make_experiment_logger(label: str,
-                           steps_key: str = 'steps') -> loggers.Logger:
+                           steps_key: str = 'steps',
+                           task_instance: int = 0) -> loggers.Logger:
+  del task_instance
   return loggers.make_default_logger(label=label, steps_key=steps_key)

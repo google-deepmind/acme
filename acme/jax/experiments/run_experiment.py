@@ -25,7 +25,6 @@ from acme import types
 from acme.jax import utils
 from acme.jax.experiments import config
 from acme.utils import counting
-from acme.utils import experiment_utils
 import dm_env
 import jax
 import reverb
@@ -139,11 +138,12 @@ def run_experiment(experiment: config.Config,
   dataset = utils.prefetch(dataset, buffer_size=1)
   learner_key, key = jax.random.split(key)
   networks = experiment.network_factory(environment_spec)
+  learner_logger = experiment.logger_factory('learner', 'learner_steps', 0)
   learner = experiment.builder.make_learner(
       random_key=learner_key,
       networks=networks,
       dataset=dataset,
-      logger=experiment.get_learner_logger(),
+      logger=learner_logger,
       replay_client=replay_client)
 
   actor_key, key = jax.random.split(key)
@@ -154,8 +154,7 @@ def run_experiment(experiment: config.Config,
       variable_source=learner)
 
   # Create the environment loop used for training.
-  train_logger = experiment_utils.make_experiment_logger(
-      label='train', steps_key='train_steps')
+  train_logger = experiment.logger_factory('train', 'train_steps', 0)
 
   # Replace the actor with a LearningActor. This makes sure that every time
   # that `update` is called on the actor it checks to see whether there is
@@ -177,8 +176,7 @@ def run_experiment(experiment: config.Config,
   eval_loop = None
   if experiment.eval_policy_network_factory:
     # Create the evaluation actor and loop.
-    eval_logger = experiment_utils.make_experiment_logger(
-        label='eval', steps_key='eval_steps')
+    eval_logger = experiment.logger_factory('eval', 'eval_steps', 0)
     eval_actor = experiment.builder.make_actor(
         random_key=jax.random.PRNGKey(experiment.seed),
         policy_network=experiment.eval_policy_network_factory(networks),

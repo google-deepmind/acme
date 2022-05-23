@@ -103,14 +103,13 @@ def make_distributed_d4pg(
       policy_network_factory=_policy_network,
       evaluator_factories=evaluator_factories,
       seed=random_seed,
-      learner_logger_fn=logger_fn,
-      save_logs=log_to_bigtable)
+      logger_factory=distributed_layout.logger_factory(logger_fn, None,
+                                                       log_to_bigtable,
+                                                       log_every))
   return experiments.make_distributed_experiment(
       experiment=experiment,
       num_actors=num_actors,
       device_prefetch=device_prefetch,
-      actor_logger_fn=distributed_layout.get_default_logger_fn(
-          log_to_bigtable, log_every),
       prefetch_size=config.prefetch_size,
       name=name,
       program=program)

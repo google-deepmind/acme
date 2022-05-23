@@ -82,14 +82,13 @@ def make_distributed_ppo(environment_factory: jax_types.EnvironmentFactory,
           lambda network: ppo_networks.make_inference_fn(network, True)),
       seed=seed,
       max_number_of_steps=max_number_of_steps,
-      learner_logger_fn=logger_fn,
-      save_logs=save_reverb_logs)
+      logger_factory=distributed_layout.logger_factory(logger_fn, None,
+                                                       save_reverb_logs))
+
   return experiments.make_distributed_experiment(
       experiment=experiment,
       num_actors=num_actors,
       prefetch_size=config.prefetch_size,
-      actor_logger_fn=distributed_layout.get_default_logger_fn(
-          save_reverb_logs, log_every),
       make_snapshot_models=make_snapshot_models,
       name=name,
       program=program)

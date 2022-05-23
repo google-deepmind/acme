@@ -17,18 +17,21 @@
 from typing import Callable, Dict, Optional, Sequence
 
 from acme import core
+from acme import environment_loop
 from acme import specs
 from acme.agents.jax import builders
 from acme.jax import experiments
 from acme.jax import inference_server
 from acme.jax import types
+from acme.jax import utils
+from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import observers as observers_lib
+import jax
 import launchpad as lp
 
 # TODO(stanczyk): Remove when use cases are ported to the new location.
 EvaluatorFactory = experiments.config.EvaluatorFactory
-default_evaluator_factory = experiments.config.default_evaluator_factory
 AgentNetwork = experiments.config.AgentNetwork
 PolicyNetwork = experiments.config.PolicyNetwork
 NetworkFactory = experiments.config.NetworkFactory
@@ -36,7 +39,7 @@ PolicyFactory = experiments.config.PolicyFactory
 MakeActorFn = experiments.config.MakeActorFn
 LoggerLabel = experiments.config.LoggerLabel
 LoggerStepsKey = experiments.config.LoggerStepsKey
-LoggerFn = experiments.config.LoggerFn
+LoggerFn = Callable[[LoggerLabel, LoggerStepsKey], loggers.Logger]
 EvaluatorFactory = experiments.config.EvaluatorFactory
 
 ActorId = int
@@ -45,8 +48,86 @@ SnapshotModelFactory = Callable[
     [experiments.config.AgentNetwork, specs.EnvironmentSpec],
     Dict[str, Callable[[core.VariableSource], types.ModelToSnapshot]]]
 
-get_default_logger_fn = experiments.get_default_logger_fn
 CheckpointingConfig = experiments.CheckpointingConfig
+
+
+def default_evaluator_factory(
+    environment_factory: types.EnvironmentFactory,
+    network_factory: NetworkFactory,
+    policy_factory: PolicyFactory,
+    observers: Sequence[observers_lib.EnvLoopObserver] = (),
+    log_to_bigtable: bool = False,
+    logger_fn: Optional[LoggerFn] = None) -> EvaluatorFactory:
+  """Returns a default evaluator process."""
+
+  def evaluator(
+      random_key: types.PRNGKey,
+      variable_source: core.VariableSource,
+      counter: counting.Counter,
+      make_actor: MakeActorFn,
+  ):
+    """The evaluation process."""
+
+    # Create environment and evaluator networks
+    environment_key, actor_key = jax.random.split(random_key)
+    # Environments normally require uint32 as a seed.
+    environment = environment_factory(utils.sample_uint32(environment_key))
+    networks = network_factory(specs.make_environment_spec(environment))
+
+    actor = make_actor(actor_key, policy_factory(networks), variable_source)
+
+    # Create logger and counter.
+    counter = counting.Counter(counter, 'evaluator')
+    if logger_fn is not None:
+      logger = logger_fn('evaluator', 'actor_steps')
+    else:
+      logger = loggers.make_default_logger(
+          'evaluator', log_to_bigtable, steps_key='actor_steps')
+
+    # Create the run loop and return it.
+    return environment_loop.EnvironmentLoop(
+        environment, actor, counter, logger, observers=observers)
+
+  return evaluator
+
+
+def get_default_logger_fn(
+    log_to_bigtable: bool = False,
+    log_every: float = 10) -> Callable[[ActorId], loggers.Logger]:
+  """Creates an actor logger."""
+
+  def create_logger(actor_id: ActorId):
+    return loggers.make_default_logger(
+        'actor',
+        save_data=(log_to_bigtable and actor_id == 0),
+        time_delta=log_every,
+        steps_key='actor_steps')
+
+  return create_logger
+
+
+def logger_factory(learner_logger_fn: Optional[Callable[[],
+                                                        loggers.Logger]] = None,
+                   actor_logger_fn: Optional[Callable[[ActorId],
+                                                      loggers.Logger]] = None,
+                   save_logs: bool = True,
+                   log_every: float = 10.0):
+  """Builds a logger factory used by the experiments.config."""
+
+  def factory(label: str, steps_key: str, task_id: int):
+    if label == 'learner' and learner_logger_fn:
+      return learner_logger_fn()
+    if label == 'actor':
+      if actor_logger_fn:
+        return actor_logger_fn(task_id)
+      else:
+        get_default_logger_fn(save_logs)
+    if label == 'evaluator':
+      return loggers.make_default_logger(
+          label, save_logs, time_delta=log_every, steps_key=steps_key)
+    return None
+
+  return factory
 
 
 class DistributedLayout:
@@ -85,12 +166,11 @@ class DistributedLayout:
         policy_network_factory=policy_network,
         evaluator_factories=evaluator_factories,
         observers=observers,
-        learner_logger_fn=learner_logger_fn,
         seed=seed,
         max_number_of_steps=max_number_of_steps,
-        save_logs=log_to_bigtable)
+        logger_factory=logger_factory(learner_logger_fn, actor_logger_fn,
+                                      log_to_bigtable))
     self._num_actors = num_actors
-    self._actor_logger_fn = actor_logger_fn
     self._device_prefetch = device_prefetch
     self._prefetch_size = prefetch_size
     self._multithreading_colocate_learner_and_reverb = (
@@ -104,7 +184,6 @@ class DistributedLayout:
     return experiments.make_distributed_experiment(
         self._experiment_config,
         self._num_actors,
-        actor_logger_fn=self._actor_logger_fn,
         device_prefetch=self._device_prefetch,
         prefetch_size=self._prefetch_size,
         multithreading_colocate_learner_and_reverb=self

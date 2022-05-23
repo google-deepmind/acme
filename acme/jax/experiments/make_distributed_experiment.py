@@ -31,7 +31,6 @@ from acme.jax import variable_utils
 from acme.jax.experiments import config
 from acme.jax import snapshotter
 from acme.utils import counting
-from acme.utils import loggers
 from acme.utils import lp_utils
 import jax
 import launchpad as lp
@@ -43,20 +42,6 @@ ActorId = int
 SnapshotModelFactory = Callable[
     [config.AgentNetwork, specs.EnvironmentSpec],
     Dict[str, Callable[[core.VariableSource], types.ModelToSnapshot]]]
-
-
-def get_default_logger_fn(
-    log_to_bigtable: bool = False,
-    log_every: float = 10) -> Callable[[ActorId], loggers.Logger]:
-  """Creates an actor logger."""
-
-  def create_logger(actor_id: ActorId):
-    return loggers.make_default_logger(
-        'actor',
-        save_data=(log_to_bigtable and actor_id == 0),
-        time_delta=log_every,
-        steps_key='actor_steps')
-  return create_logger
 
 
 @dataclasses.dataclass
@@ -89,7 +74,6 @@ def make_distributed_experiment(
     num_actors: int,
     *,
     num_learner_nodes: int = 1,
-    actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
     num_actors_per_node: int = 1,
     device_prefetch: bool = True,
     prefetch_size: int = 1,
@@ -114,8 +98,6 @@ def make_distributed_experiment(
         f'{multithreading_colocate_learner_and_reverb}'
         f'\tnum_learner_nodes={num_learner_nodes}.')
 
-  actor_logger_fn = actor_logger_fn or get_default_logger_fn(
-      experiment.save_logs)
   if checkpointing_config is None:
     checkpointing_config = CheckpointingConfig()
 
@@ -179,10 +161,10 @@ def make_distributed_experiment(
     else:
       logging.info('Not prefetching the iterator.')
 
+    logger = experiment.logger_factory('learner', 'learner_steps', 0)
     counter = counting.Counter(counter, 'learner')
     learner = experiment.builder.make_learner(random_key, networks, iterator,
-                                              experiment.get_learner_logger(),
-                                              replay, counter)
+                                              logger, replay, counter)
 
     if primary_learner is None:
       learner = savers.CheckpointingRunner(
@@ -231,8 +213,7 @@ def make_distributed_experiment(
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'actor')
-    # Only actor #0 will write to bigtable in order not to spam it too much.
-    logger = actor_logger_fn(actor_id)
+    logger = experiment.logger_factory('actor', 'actor_steps', actor_id)
     # Create the loop to connect environment and agent.
     return environment_loop.EnvironmentLoop(
         environment, actor, counter, logger, observers=experiment.observers)

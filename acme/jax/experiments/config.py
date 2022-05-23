@@ -42,14 +42,17 @@ EvaluatorFactory = Callable[[
     counting.Counter,
     MakeActorFn,
 ], core.Worker]
+TaskInstance = int
 LoggerLabel = str
 LoggerStepsKey = str
-LoggerFn = Callable[[LoggerLabel, LoggerStepsKey], loggers.Logger]
+# TODO(stanczyk): Turn LoggerLabel into an enum of [Learner, Actor, Evaluator].
+LoggerFactory = Callable[[LoggerLabel, LoggerStepsKey, TaskInstance],
+                         loggers.Logger]
 
 
 @dataclasses.dataclass
 class Config:
-  """Experiment configuration which defines all aspects of constructing an Agent.
+  """Config which defines aspects of constructing an experiment.
 
   Attributes:
     builder: Builds components of an RL agent (Learner, Actor...).
@@ -67,12 +70,11 @@ class Config:
       reduce the number of times environment_factory is invoked (for performance
       or resource usage reasons).
     observers: Observers used for extending logs with custom information.
-    learner_logger_fn: Logger factory for the Learner.
     seed: Seed used for agent initialization.
     max_number_of_steps: How many environment steps to perform. Infinite by
       default.
-    save_logs: Whether to save logs to disk or external services (depends on
-      specific runtime used).
+    logger_factory: Loggers factory used to construct loggers for learner,
+      actors and evaluators.
   """
   # Below fields must be explicitly specified for any Agent.
   builder: builders.GenericActorLearnerBuilder
@@ -82,20 +84,15 @@ class Config:
   # Fields below are optional. If you just started with Acme do not worry about
   # them. You might need them later when you want to customize your RL agent.
   evaluator_factories: Optional[Sequence[EvaluatorFactory]] = None
+  # TODO(mwhoffman): Change the way network_factory, policy_network_factory
+  # and eval_policy_network_factory are specified.
   eval_policy_network_factory: Optional[PolicyFactory] = None
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
-  learner_logger_fn: Optional[Callable[[], loggers.Logger]] = None
   seed: int = 0
+  # TODO(stanczyk): Make this field required.
   max_number_of_steps: int = sys.maxsize
-  save_logs: bool = True
-
-  def get_learner_logger(self):
-    if self.learner_logger_fn:
-      return self.learner_logger_fn()
-    else:
-      return experiment_utils.make_experiment_logger(
-          label='learner', steps_key='learner_steps')
+  logger_factory: LoggerFactory = experiment_utils.make_experiment_logger
 
   def get_evaluator_factories(self):
     if self.evaluator_factories is not None:
@@ -109,7 +106,7 @@ class Config:
             environment_factory=self.environment_factory,
             network_factory=self.network_factory,
             policy_factory=self.eval_policy_network_factory,
-            log_to_bigtable=self.save_logs)
+            logger_factory=self.logger_factory)
     ]
 
 
@@ -117,9 +114,9 @@ def default_evaluator_factory(
     environment_factory: types.EnvironmentFactory,
     network_factory: NetworkFactory,
     policy_factory: PolicyFactory,
+    logger_factory: LoggerFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
-    log_to_bigtable: bool = False,
-    logger_fn: Optional[LoggerFn] = None) -> EvaluatorFactory:
+) -> EvaluatorFactory:
   """Returns a default evaluator process."""
 
   def evaluator(
@@ -140,11 +137,7 @@ def default_evaluator_factory(
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'evaluator')
-    if logger_fn is not None:
-      logger = logger_fn('evaluator', 'actor_steps')
-    else:
-      logger = loggers.make_default_logger(
-          'evaluator', log_to_bigtable, steps_key='actor_steps')
+    logger = logger_factory('evaluator', 'actor_steps', 0)
 
     # Create the run loop and return it.
     return environment_loop.EnvironmentLoop(

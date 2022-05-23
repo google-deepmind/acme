@@ -18,7 +18,6 @@ from acme.jax.experiments.config import AgentNetwork
 from acme.jax.experiments.config import Config
 from acme.jax.experiments.config import default_evaluator_factory
 from acme.jax.experiments.config import EvaluatorFactory
-from acme.jax.experiments.config import LoggerFn
 from acme.jax.experiments.config import LoggerLabel
 from acme.jax.experiments.config import LoggerStepsKey
 from acme.jax.experiments.config import MakeActorFn
@@ -26,6 +25,5 @@ from acme.jax.experiments.config import NetworkFactory
 from acme.jax.experiments.config import PolicyFactory
 from acme.jax.experiments.config import PolicyNetwork
 from acme.jax.experiments.make_distributed_experiment import CheckpointingConfig
-from acme.jax.experiments.make_distributed_experiment import get_default_logger_fn
 from acme.jax.experiments.make_distributed_experiment import make_distributed_experiment
 from acme.jax.experiments.run_experiment import run_experiment
