@@ -15,7 +15,7 @@
 """Defines distributed and local RND agents, using JAX."""
 
 import functools
-from typing import Any, Callable, Optional, Sequence
+from typing import Callable, Generic, Optional, Sequence
 
 from acme import specs
 from acme.agents.jax import builders
@@ -26,29 +26,34 @@ from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.layouts import distributed_layout
 from acme.jax.layouts import local_layout
+from acme.jax.types import PolicyNetwork
 from acme.utils import counting
 from acme.utils import loggers
+import reverb
 
 NetworkFactory = Callable[[specs.EnvironmentSpec], networks.RNDNetworks]
 
 
-class DistributedRND(distributed_layout.DistributedLayout):
+class DistributedRND(Generic[networks.DirectRLNetworks, PolicyNetwork],
+                     distributed_layout.DistributedLayout):
   """Distributed program definition for RND."""
 
   def __init__(
       self,
       environment_factory: jax_types.EnvironmentFactory,
-      rl_agent: builders.ActorLearnerBuilder,
+      rl_agent: builders.ActorLearnerBuilder[networks.DirectRLNetworks,
+                                             PolicyNetwork,
+                                             reverb.ReplaySample],
       network_factory: NetworkFactory,
       config: rnd_config.RNDConfig,
-      policy_network: Any,
+      policy_network: PolicyNetwork,
       seed: int,
       num_actors: int,
       max_number_of_steps: Optional[int] = None,
       log_to_bigtable: bool = False,
       log_every: float = 10.0,
       prefetch_size: int = 4,
-      evaluator_policy_network: Optional[Any] = None,
+      evaluator_policy_network: Optional[PolicyNetwork] = None,
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
   ):
@@ -89,16 +94,19 @@ class DistributedRND(distributed_layout.DistributedLayout):
     )
 
 
-class RND(local_layout.LocalLayout):
+class RND(Generic[networks.DirectRLNetworks, PolicyNetwork],
+          local_layout.LocalLayout):
   """Local agent for RND."""
 
   def __init__(
       self,
       spec: specs.EnvironmentSpec,
-      rl_agent: builders.ActorLearnerBuilder,
+      rl_agent: builders.ActorLearnerBuilder[networks.DirectRLNetworks,
+                                             PolicyNetwork,
+                                             reverb.ReplaySample],
       network: networks.RNDNetworks,
       config: rnd_config.RNDConfig,
-      policy_network: Any,
+      policy_network: PolicyNetwork,
       seed: int,
       batch_size: int = 256,
       min_replay_size: int = 10000,

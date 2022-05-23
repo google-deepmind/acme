@@ -14,7 +14,7 @@
 
 """SQIL Builder (https://arxiv.org/pdf/1905.11108.pdf)."""
 
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Callable, Generic, Iterator, List, Optional
 
 from acme import adders
 from acme import core
@@ -22,6 +22,7 @@ from acme import specs
 from acme import types
 from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
+from acme.jax.types import Networks, PolicyNetwork  # pylint: disable=g-multiple-import
 from acme.utils import counting
 from acme.utils import loggers
 import numpy as np
@@ -65,10 +66,14 @@ def _generate_sqil_samples(
         data=tree.map_structure(lambda x: x[1::2], double_batch))
 
 
-class SQILBuilder(builders.ActorLearnerBuilder):
+class SQILBuilder(Generic[Networks, PolicyNetwork],
+                  builders.ActorLearnerBuilder[Networks, PolicyNetwork,
+                                               reverb.ReplaySample]):
   """SQIL Builder (https://openreview.net/pdf?id=S1xKd24twB)."""
 
-  def __init__(self, rl_agent: builders.ActorLearnerBuilder,
+  def __init__(self,
+               rl_agent: builders.ActorLearnerBuilder[Networks, PolicyNetwork,
+                                                      reverb.ReplaySample],
                rl_agent_batch_size: int,
                make_demonstrations: Callable[[int],
                                              Iterator[types.Transition]]):
@@ -87,7 +92,7 @@ class SQILBuilder(builders.ActorLearnerBuilder):
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks: Any,
+      networks: Networks,
       dataset: Iterator[reverb.ReplaySample],
       logger: Optional[loggers.Logger] = None,
       replay_client: Optional[reverb.Client] = None,
@@ -137,7 +142,7 @@ class SQILBuilder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: PolicyNetwork,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:

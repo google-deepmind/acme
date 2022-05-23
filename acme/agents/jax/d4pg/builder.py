@@ -36,7 +36,9 @@ import reverb
 from reverb import rate_limiters
 
 
-class D4PGBuilder(builders.ActorLearnerBuilder):
+class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
+                                               actor_core_lib.FeedForwardPolicy,
+                                               reverb.ReplaySample]):
   """D4PG Builder."""
 
   def __init__(
@@ -130,7 +132,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: actor_core_lib.FeedForwardPolicy,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
     assert variable_source is not None

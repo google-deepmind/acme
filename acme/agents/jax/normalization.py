@@ -16,7 +16,7 @@
 
 import dataclasses
 import functools
-from typing import Any, Callable, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple
 
 import acme
 from acme import adders
@@ -27,6 +27,7 @@ from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.jax import running_statistics
 from acme.jax import variable_utils
+from acme.jax.types import Networks, PolicyNetwork  # pylint: disable=g-multiple-import
 from acme.utils import counting
 from acme.utils import loggers
 import dm_env
@@ -168,9 +169,12 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
 
 
 @dataclasses.dataclass
-class NormalizationBuilder(builders.ActorLearnerBuilder):
+class NormalizationBuilder(Generic[Networks, PolicyNetwork],
+                           builders.ActorLearnerBuilder[Networks, PolicyNetwork,
+                                                        reverb.ReplaySample]):
   """Builder wrapper that normalizes observations using running mean/std."""
-  builder: builders.ActorLearnerBuilder
+  builder: builders.ActorLearnerBuilder[Networks, PolicyNetwork,
+                                        reverb.ReplaySample]
   environment_spec: specs.EnvironmentSpec
   is_sequence_based: bool
   batch_dims: Optional[Tuple[int, ...]]
@@ -192,7 +196,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks,
+      networks: Networks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
@@ -218,7 +222,7 @@ class NormalizationBuilder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: PolicyNetwork,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:

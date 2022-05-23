@@ -14,7 +14,7 @@
 
 """RND Builder."""
 
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Callable, Generic, Iterator, List, Optional
 
 from acme import adders
 from acme import core
@@ -24,6 +24,7 @@ from acme.agents.jax.rnd import config as rnd_config
 from acme.agents.jax.rnd import learning as rnd_learning
 from acme.agents.jax.rnd import networks as rnd_networks
 from acme.jax import networks as networks_lib
+from acme.jax.types import PolicyNetwork
 from acme.utils import counting
 from acme.utils import loggers
 import jax
@@ -31,12 +32,17 @@ import optax
 import reverb
 
 
-class RNDBuilder(builders.ActorLearnerBuilder):
+class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
+                 builders.ActorLearnerBuilder[rnd_networks.RNDNetworks,
+                                              PolicyNetwork,
+                                              reverb.ReplaySample]):
   """RND Builder."""
 
   def __init__(
       self,
-      rl_agent: builders.ActorLearnerBuilder,
+      rl_agent: builders.ActorLearnerBuilder[rnd_networks.DirectRLNetworks,
+                                             PolicyNetwork,
+                                             reverb.ReplaySample],
       config: rnd_config.RNDConfig,
       logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):
@@ -54,7 +60,7 @@ class RNDBuilder(builders.ActorLearnerBuilder):
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks: rnd_networks.RNDNetworks,
+      networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
       replay_client: Optional[reverb.Client] = None,
@@ -66,7 +72,8 @@ class RNDBuilder(builders.ActorLearnerBuilder):
     direct_rl_counter = counting.Counter(counter, 'direct_rl')
 
     def direct_rl_learner_factory(
-        networks: Any, dataset: Iterator[reverb.ReplaySample]) -> core.Learner:
+        networks: rnd_networks.DirectRLNetworks,
+        dataset: Iterator[reverb.ReplaySample]) -> core.Learner:
       return self._rl_agent.make_learner(
           direct_rl_learner_key,
           networks,
@@ -104,7 +111,7 @@ class RNDBuilder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: PolicyNetwork,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:

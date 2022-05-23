@@ -36,7 +36,9 @@ import reverb
 from reverb import rate_limiters
 
 
-class SACBuilder(builders.ActorLearnerBuilder):
+class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
+                                              actor_core_lib.FeedForwardPolicy,
+                                              reverb.ReplaySample]):
   """SAC Builder."""
 
   def __init__(
@@ -81,7 +83,7 @@ class SACBuilder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: actor_core_lib.FeedForwardPolicy,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
     assert variable_source is not None

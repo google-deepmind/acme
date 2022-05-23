@@ -34,7 +34,9 @@ import reverb
 from reverb import rate_limiters
 
 
-class DQNBuilder(builders.ActorLearnerBuilder):
+class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
+                                              dqn_actor.EpsilonPolicy,
+                                              reverb.ReplaySample]):
   """DQN Builder."""
 
   def __init__(self,

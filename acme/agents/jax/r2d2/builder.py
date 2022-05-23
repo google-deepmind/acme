@@ -13,13 +13,14 @@
 # limitations under the License.
 
 """R2D2 Builder."""
-from typing import Iterator, List, Optional
+from typing import Generic, Iterator, List, Optional
 
 import acme
 from acme import adders
 from acme import core
 from acme import specs
 from acme.adders import reverb as adders_reverb
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax import builders
 from acme.agents.jax.r2d2 import actor as r2d2_actor
@@ -37,7 +38,11 @@ import optax
 import reverb
 
 
-class R2D2Builder(builders.ActorLearnerBuilder):
+class R2D2Builder(
+    Generic[actor_core_lib.RecurrentState],
+    builders.ActorLearnerBuilder[r2d2_networks.R2D2Networks,
+                                 r2d2_networks.EpsilonRecurrentPolicy,
+                                 reverb.ReplaySample]):
   """R2D2 Builder.
 
   This is constructs all of the components for Recurrent Experience Replay in
@@ -153,7 +158,7 @@ class R2D2Builder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: r2d2_networks.EpsilonRecurrentPolicy,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
 

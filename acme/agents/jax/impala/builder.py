@@ -35,7 +35,9 @@ import optax
 import reverb
 
 
-class IMPALABuilder(builders.ActorLearnerBuilder):
+class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
+                                                 impala_networks.IMPALANetworks,
+                                                 reverb.ReplaySample]):
   """IMPALA Builder."""
 
   def __init__(

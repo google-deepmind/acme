@@ -35,7 +35,9 @@ import reverb
 from reverb import rate_limiters
 
 
-class TD3Builder(builders.ActorLearnerBuilder):
+class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
+                                              actor_core_lib.FeedForwardPolicy,
+                                              reverb.ReplaySample]):
   """TD3 Builder."""
 
   def __init__(

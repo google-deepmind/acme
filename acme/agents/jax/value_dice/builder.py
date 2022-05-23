@@ -37,7 +37,10 @@ import reverb
 from reverb import rate_limiters
 
 
-class ValueDiceBuilder(builders.ActorLearnerBuilder):
+class ValueDiceBuilder(
+    builders.ActorLearnerBuilder[value_dice_networks.ValueDiceNetworks,
+                                 actor_core_lib.FeedForwardPolicy,
+                                 reverb.ReplaySample]):
   """ValueDice Builder.
 
   This builder is an entry point for online version of ValueDice.
@@ -120,7 +123,7 @@ class ValueDiceBuilder(builders.ActorLearnerBuilder):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy_network: actor_core_lib.FeedForwardPolicy,
       adder: Optional[adders.Adder] = None,
       variable_source: Optional[core.VariableSource] = None,
   ) -> core.Actor:

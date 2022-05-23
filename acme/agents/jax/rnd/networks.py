@@ -16,7 +16,7 @@
 
 import dataclasses
 import functools
-from typing import Any, Callable, Tuple
+from typing import Callable, Generic, Tuple, TypeVar
 
 from acme import specs
 from acme import types
@@ -26,8 +26,11 @@ import haiku as hk
 import jax.numpy as jnp
 
 
+DirectRLNetworks = TypeVar('DirectRLNetworks')
+
+
 @dataclasses.dataclass
-class RNDNetworks:
+class RNDNetworks(Generic[DirectRLNetworks]):
   """Container of RND networks factories."""
   target: networks_lib.FeedForwardNetwork
   predictor: networks_lib.FeedForwardNetwork
@@ -35,7 +38,7 @@ class RNDNetworks:
   get_reward: Callable[
       [networks_lib.NetworkOutput, networks_lib.NetworkOutput, jnp.ndarray],
       jnp.ndarray]
-  direct_rl_networks: Any = None
+  direct_rl_networks: DirectRLNetworks = None
 
 
 # See Appendix A.2 of https://arxiv.org/pdf/1810.12894.pdf
@@ -54,11 +57,11 @@ def rnd_reward_fn(
 
 def make_networks(
     spec: specs.EnvironmentSpec,
-    direct_rl_networks: Any,
+    direct_rl_networks: DirectRLNetworks,
     layer_sizes: Tuple[int, ...] = (256, 256),
     intrinsic_reward_coefficient: float = 1.0,
     extrinsic_reward_coefficient: float = 0.0,
-) -> RNDNetworks:
+) -> RNDNetworks[DirectRLNetworks]:
   """Creates networks used by the agent and returns RNDNetworks.
 
   Args:

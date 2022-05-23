@@ -56,7 +56,10 @@ def get_policy(policy_network: networks_lib.FeedForwardNetwork,
   return apply
 
 
-class ARSBuilder(builders.ActorLearnerBuilder):
+class ARSBuilder(
+    builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
+                                 Tuple[str, networks_lib.FeedForwardNetwork],
+                                 reverb.ReplaySample]):
   """ARS Builder."""
 
   def __init__(
