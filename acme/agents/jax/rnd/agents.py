@@ -38,7 +38,7 @@ class DistributedRND(distributed_layout.DistributedLayout):
   def __init__(
       self,
       environment_factory: jax_types.EnvironmentFactory,
-      rl_agent: builders.GenericActorLearnerBuilder,
+      rl_agent: builders.ActorLearnerBuilder,
       network_factory: NetworkFactory,
       config: rnd_config.RNDConfig,
       policy_network: Any,
@@ -95,7 +95,7 @@ class RND(local_layout.LocalLayout):
   def __init__(
       self,
       spec: specs.EnvironmentSpec,
-      rl_agent: builders.GenericActorLearnerBuilder,
+      rl_agent: builders.ActorLearnerBuilder,
       network: networks.RNDNetworks,
       config: rnd_config.RNDConfig,
       policy_network: Any,

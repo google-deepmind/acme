@@ -148,20 +148,21 @@ def _generate_samples_with_demonstrations(
     yield reverb.ReplaySample(info=sample.info, data=output_transitions)
 
 
-class AILBuilder(builders.GenericActorLearnerBuilder[ail_networks.AILNetworks,
-                                                     DirectPolicyNetwork,
-                                                     learning.AILSample],
+class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
+                                              DirectPolicyNetwork,
+                                              learning.AILSample],
                  Generic[ail_networks.DirectRLNetworks, DirectPolicyNetwork]):
   """AIL Builder."""
 
-  def __init__(self,
-               rl_agent: builders.GenericActorLearnerBuilder[
-                   ail_networks.DirectRLNetworks, DirectPolicyNetwork,
-                   reverb.ReplaySample],
-               config: ail_config.AILConfig,
-               discriminator_loss: losses.Loss,
-               make_demonstrations: Callable[[int], Iterator[types.Transition]],
-               logger_fn: Callable[[], loggers.Logger] = lambda: None):
+  def __init__(
+      self,
+      rl_agent: builders.ActorLearnerBuilder[ail_networks.DirectRLNetworks,
+                                             DirectPolicyNetwork,
+                                             reverb.ReplaySample],
+      config: ail_config.AILConfig,
+      discriminator_loss: losses.Loss,
+      make_demonstrations: Callable[[int], Iterator[types.Transition]],
+      logger_fn: Callable[[], loggers.Logger] = lambda: None):
     """Implements a builder for AIL using rl_agent as forward RL algorithm.
 
     Args:

@@ -36,7 +36,7 @@ class LocalLayout(agent.Agent):
       self,
       seed: int,
       environment_spec: specs.EnvironmentSpec,
-      builder: builders.GenericActorLearnerBuilder,
+      builder: builders.ActorLearnerBuilder,
       networks: Any,
       policy_network: Any,
       learner_logger: Optional[loggers.Logger] = None,

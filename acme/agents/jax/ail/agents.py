@@ -40,7 +40,7 @@ class DistributedAIL(distributed_layout.DistributedLayout):
   def __init__(
       self,
       environment_factory: jax_types.EnvironmentFactory,
-      rl_agent: builders.GenericActorLearnerBuilder,
+      rl_agent: builders.ActorLearnerBuilder,
       rl_agent_logger: Callable[[], loggers.Logger],
       config: ail_config.AILConfig,
       network_factory: NetworkFactory,
@@ -106,7 +106,7 @@ class AIL(local_layout.LocalLayout):
 
   def __init__(self,
                spec: specs.EnvironmentSpec,
-               rl_agent: builders.GenericActorLearnerBuilder,
+               rl_agent: builders.ActorLearnerBuilder,
                network: ail_networks.AILNetworks,
                config: ail_config.AILConfig,
                seed: int,

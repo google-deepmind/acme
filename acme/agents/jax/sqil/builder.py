@@ -68,7 +68,7 @@ def _generate_sqil_samples(
 class SQILBuilder(builders.ActorLearnerBuilder):
   """SQIL Builder (https://openreview.net/pdf?id=S1xKd24twB)."""
 
-  def __init__(self, rl_agent: builders.GenericActorLearnerBuilder,
+  def __init__(self, rl_agent: builders.ActorLearnerBuilder,
                rl_agent_batch_size: int,
                make_demonstrations: Callable[[int],
                                              Iterator[types.Transition]]):

@@ -34,9 +34,10 @@ import optax
 import reverb
 
 
-class PPOBuilder(builders.GenericActorLearnerBuilder[
-    ppo_networks.PPONetworks, actor_core_lib.FeedForwardPolicyWithExtra,
-    reverb.ReplaySample]):
+class PPOBuilder(
+    builders.ActorLearnerBuilder[ppo_networks.PPONetworks,
+                                 actor_core_lib.FeedForwardPolicyWithExtra,
+                                 reverb.ReplaySample]):
   """PPO Builder."""
 
   def __init__(

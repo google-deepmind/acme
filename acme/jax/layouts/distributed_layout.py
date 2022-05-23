@@ -141,7 +141,7 @@ class DistributedLayout:
       seed: int,
       environment_factory: types.EnvironmentFactory,
       network_factory: experiments.config.NetworkFactory,
-      builder: builders.GenericActorLearnerBuilder,
+      builder: builders.ActorLearnerBuilder,
       policy_network: experiments.config.PolicyFactory,
       num_actors: int,
       environment_spec: Optional[specs.EnvironmentSpec] = None,

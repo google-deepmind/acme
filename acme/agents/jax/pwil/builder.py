@@ -91,17 +91,17 @@ def _prefill_with_demonstrations(adder: adders.Adder,
   adder.reset()
 
 
-class PWILBuilder(
-    builders.GenericActorLearnerBuilder[DirectRLNetworks,
-                                        DirectPolicyNetwork,
-                                        reverb.ReplaySample],
-    Generic[DirectRLNetworks, DirectPolicyNetwork]):
+class PWILBuilder(builders.ActorLearnerBuilder[DirectRLNetworks,
+                                               DirectPolicyNetwork,
+                                               reverb.ReplaySample],
+                  Generic[DirectRLNetworks, DirectPolicyNetwork]):
   """PWIL Agent builder."""
 
   def __init__(self,
-               rl_agent: builders.GenericActorLearnerBuilder[
-                   DirectRLNetworks, DirectPolicyNetwork, reverb.ReplaySample,
-               ], config: pwil_config.PWILConfig,
+               rl_agent: builders.ActorLearnerBuilder[DirectRLNetworks,
+                                                      DirectPolicyNetwork,
+                                                      reverb.ReplaySample],
+               config: pwil_config.PWILConfig,
                demonstrations_fn: Callable[[], pwil_config.PWILDemonstrations]):
     """Initialize the agent.
 

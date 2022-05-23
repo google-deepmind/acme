@@ -36,7 +36,7 @@ class RNDBuilder(builders.ActorLearnerBuilder):
 
   def __init__(
       self,
-      rl_agent: builders.GenericActorLearnerBuilder,
+      rl_agent: builders.ActorLearnerBuilder,
       config: rnd_config.RNDConfig,
       logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):

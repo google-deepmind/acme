@@ -15,7 +15,7 @@
 """RL agent Builder interface."""
 
 import abc
-from typing import Any, Generic, Iterator, List, Optional
+from typing import Generic, Iterator, List, Optional
 
 from acme import adders
 from acme import core
@@ -27,8 +27,7 @@ from acme.utils import loggers
 import reverb
 
 
-class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
-                                                  Sample]):
+class ActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork, Sample]):
   """Defines an interface for defining the components of an RL agent.
 
   Implementations of this interface contain a complete specification of a
@@ -105,5 +104,5 @@ class GenericActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork,
         actor steps, etc.) distributed throughout the agent.
     """
 
-
-ActorLearnerBuilder = GenericActorLearnerBuilder[Any, Any, reverb.ReplaySample]
+# TODO(sinopalnikov): deprecated, migrate all users and remove.
+GenericActorLearnerBuilder = ActorLearnerBuilder

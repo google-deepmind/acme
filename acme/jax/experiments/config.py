@@ -77,7 +77,7 @@ class Config:
       actors and evaluators.
   """
   # Below fields must be explicitly specified for any Agent.
-  builder: builders.GenericActorLearnerBuilder
+  builder: builders.ActorLearnerBuilder
   network_factory: NetworkFactory
   policy_network_factory: PolicyFactory
   environment_factory: types.EnvironmentFactory
