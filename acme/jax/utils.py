@@ -18,7 +18,7 @@ import functools
 import itertools
 import queue
 import threading
-from typing import Callable, Generator, Iterable, NamedTuple, Optional, Sequence, Tuple, TypeVar
+from typing import Callable, Iterable, Iterator, NamedTuple, Optional, Sequence, Tuple, TypeVar
 
 from absl import logging
 from acme import core
@@ -32,6 +32,9 @@ import tree
 F = TypeVar('F', bound=Callable)
 N = TypeVar('N', bound=types.NestedArray)
 T = TypeVar('T')
+
+
+NUM_PREFETCH_THREADS = 1
 
 
 def add_batch_dim(values: types.Nest) -> types.NestedArray:
@@ -117,80 +120,15 @@ def tile_nested(inputs: types.Nest, multiple: int) -> types.Nest:
   return jax.tree_map(tile, inputs)
 
 
-class PrefetchIterator(core.PrefetchingIterator):
-  """Performs prefetching of elements from an iterable in a separate thread.
-
-  Its interface is additionally extended with `ready` method which tells whether
-  there is any data waiting for processing.
-
-  Yields:
-    Prefetched elements from the original iterable.
-  Raises:
-    ValueError if the buffer_size < 1.
-    Any error thrown by the iterable_function. Note this is not raised inside
-      the producer, but after it finishes executing.
-  """
-
-  def __init__(self, iterable: Iterable,  # pylint: disable=g-bare-generic
-               buffer_size: int = 5,
-               device=None):
-    """Constructs PrefetchIterator.
-
-    Args:
-      iterable: A python iterable. This is used to build the python prefetcher.
-        Note that each iterable should only be passed to this function once as
-        iterables aren't thread safe
-      buffer_size (int): Number of elements to keep in the prefetch buffer.
-      device: The device to prefetch the elements to. If none then the elements
-        are left on the CPU. The device should be of the type returned by
-        `jax.devices()`.
-    """
-    if buffer_size < 1:
-      raise ValueError('the buffer_size should be >= 1')
-    self.buffer = queue.Queue(maxsize=max(1, (buffer_size - 1)))
-    self.producer_error = []
-    self.end = object()
-    self.device = device
-    self.iterable = iterable
-    # Start the producer thread.
-    threading.Thread(target=self.producer, daemon=True).start()
-
-  def producer(self):
-    """Enqueues items from `iterable` on a given thread."""
-    try:
-      # Build a new iterable for each thread. This is crucial if working with
-      # tensorflow datasets because tf.Graph objects are thread local.
-      for item in self.iterable:
-        if self.device:
-          item = jax.device_put(item, self.device)
-        self.buffer.put(item)
-    except Exception as e:  # pylint: disable=broad-except
-      logging.exception('Error in producer thread for %s', self.iterable)
-      self.producer_error.append(e)
-    finally:
-      self.buffer.put(self.end)
-
-  def __iter__(self):
-    return self
-
-  def ready(self):
-    return not self.buffer.empty()
-
-  def __next__(self):
-    value = self.buffer.get()
-    if value is self.end:
-      if self.producer_error:
-        raise self.producer_error[0]
-      raise StopIteration
-    return value
-
-
-def prefetch(iterable: Iterable[T],
-             buffer_size: int = 5,
-             device=None) -> core.PrefetchingIterator[T]:
+def prefetch(
+    iterable: Iterable[T],
+    buffer_size: int = 5,
+    device: Optional[jax.xla.Device] = None,
+    num_threads: int = NUM_PREFETCH_THREADS,
+) -> core.PrefetchingIterator[T]:
   """Returns prefetching iterator with additional 'ready' method."""
 
-  return PrefetchIterator(iterable, buffer_size, device)
+  return PrefetchIterator(iterable, buffer_size, device, num_threads)
 
 
 class PrefetchingSplit(NamedTuple):
@@ -201,13 +139,150 @@ class PrefetchingSplit(NamedTuple):
 _SplitFunction = Callable[[types.NestedArray], PrefetchingSplit]
 
 
+def device_put(
+    iterable: Iterable[types.NestedArray],
+    device: jax.xla.Device,
+    split_fn: Optional[_SplitFunction] = None,
+):
+  """Returns iterator that, per device, samples an item and places on device."""
+
+  return PutToDevicesIterable(
+      iterable=iterable,
+      pmapped_user=False,
+      devices=[device],
+      split_fn=split_fn)
+
+
+def multi_device_put(
+    iterable: Iterable[types.NestedArray],
+    devices: Sequence[jax.xla.Device],
+    split_fn: Optional[_SplitFunction] = None,
+):
+  """Returns iterator that, per device, samples an item and places on device."""
+
+  return PutToDevicesIterable(
+      iterable=iterable, pmapped_user=True, devices=devices, split_fn=split_fn)
+
+
+class PutToDevicesIterable(Iterable[types.NestedArray]):
+  """Per device, samples an item from iterator and places on device.
+
+  if pmapped_user:
+    Items from the resulting generator are intended to be used in a pmapped
+    function. Every element is a ShardedDeviceArray or (nested) Python container
+    thereof. A single next() call to this iterator results in len(devices)
+    calls to the underlying iterator. The returned items are put one on each
+    device.
+  if not pmapped_user:
+    Places a sample from the iterator on the given device.
+
+  Yields:
+    If no split_fn is specified:
+      DeviceArray/ShardedDeviceArray or (nested) Python container thereof
+      representing the elements of shards stacked together, with each shard
+      backed by physical device memory specified by the corresponding entry in
+      devices.
+
+    If split_fn is specified:
+      PrefetchingSplit where the .host element is a stacked numpy array or
+      (nested) Python contained thereof. The .device element is a
+      DeviceArray/ShardedDeviceArray or (nested) Python container thereof.
+
+  Raises:
+    StopIteration: if there are not enough items left in the iterator to place
+      one sample on each device.
+    Any error thrown by the iterable_function. Note this is not raised inside
+      the producer, but after it finishes executing.
+  """
+
+  def __init__(
+      self,
+      iterable: Iterable[types.NestedArray],
+      pmapped_user: bool,
+      devices: Sequence[jax.xla.Device],
+      split_fn: Optional[_SplitFunction] = None,
+  ):
+    """Constructs PutToDevicesIterable.
+
+    Args:
+      iterable: A python iterable. This is used to build the python prefetcher.
+        Note that each iterable should only be passed to this function once as
+        iterables aren't thread safe.
+      pmapped_user: whether the user of data from this iterator is implemented
+        using pmapping.
+      devices: Devices used for prefecthing.
+      split_fn: Optional function applied to every element from the iterable to
+        split the parts of it that will be kept in the host and the parts that
+        will sent to the device.
+
+    Raises:
+      ValueError: If devices list is empty, or if pmapped_use=False and more
+        than 1 device is provided.
+    """
+    self.num_devices = len(devices)
+    if self.num_devices == 0:
+      raise ValueError('At least one device must be specified.')
+    if (not pmapped_user) and (self.num_devices != 1):
+      raise ValueError('User is not implemented with pmapping but len(devices) '
+                       f'= {len(devices)} is not equal to 1! Devices given are:'
+                       f'\n{devices}')
+
+    self.iterable = iterable
+    self.pmapped_user = pmapped_user
+    self.split_fn = split_fn
+    self.devices = devices
+
+  def __iter__(self) -> Iterator[types.NestedArray]:
+    # It is important to structure the Iterable like this, because in
+    # JustPrefetchIterator we must build a new iterable for each thread.
+    # This is crucial if working with tensorflow datasets because tf.Graph
+    # objects are thread local.
+    self.iterator = iter(self.iterable)
+    return self
+
+  def __next__(self) -> types.NestedArray:
+    try:
+      if not self.pmapped_user:
+        item = next(self.iterator)
+        if self.split_fn is None:
+          return jax.device_put(item, self.devices[0])
+        item_split = self.split_fn(item)
+        return PrefetchingSplit(
+            host=item_split.host,
+            device=jax.device_put(item_split.device, self.devices[0]))
+
+      items = itertools.islice(self.iterator, self.num_devices)
+      items = tuple(items)
+      if len(items) < self.num_devices:
+        raise StopIteration
+      if self.split_fn is None:
+        return jax.device_put_sharded(tuple(items), self.devices)
+      else:
+        # ((host: x1, device: y1), ..., (host: xN, device: yN)).
+        items_split = (self.split_fn(item) for item in items)
+        # (host: (x1, ..., xN), device: (y1, ..., yN)).
+        split = tree.map_structure_up_to(
+            PrefetchingSplit(None, None), lambda *x: x, *items_split)
+
+        return PrefetchingSplit(
+            host=np.stack(split.host),
+            device=jax.device_put_sharded(split.device, self.devices))
+
+    except StopIteration:
+      raise
+
+    except Exception:  # pylint: disable=broad-except
+      logging.exception('Error for %s', self.iterable)
+      raise
+
+
 def sharded_prefetch(
     iterable: Iterable[types.NestedArray],
     buffer_size: int = 5,
     num_threads: int = 1,
     split_fn: Optional[_SplitFunction] = None,
     devices: Optional[Sequence[jax.xla.Device]] = None,
-) -> Generator[types.NestedArray, None, None]:
+) -> core.PrefetchingIterator:
   """Performs sharded prefetching from an iterable in separate threads.
 
   Elements from the resulting generator are intended to be used in a jax.pmap
@@ -227,7 +302,7 @@ def sharded_prefetch(
     devices: Devices used for prefecthing. Optional, jax.local_devices() by
       default.
 
-  Yields:
+  Returns:
     Prefetched elements from the original iterable with additional replica
     dimension.
   Raises:
@@ -238,54 +313,10 @@ def sharded_prefetch(
 
   devices = devices or jax.local_devices()
 
-  if buffer_size <= 1:
-    raise ValueError('the buffer_size should be > 1')
-  buffer = queue.Queue(maxsize=(buffer_size - 1))
-  producer_error = []
-  end = object()
+  iterable = PutToDevicesIterable(
+      iterable=iterable, pmapped_user=True, devices=devices, split_fn=split_fn)
 
-  def producer():
-    """Enqueues batched items from `iterable` on a given thread."""
-    try:
-      # Build a new iterable for each thread. This is crucial if working with
-      # tensorflow datasets because tf.Graph objects are thread local.
-      it = iter(iterable)
-      while True:
-        items = itertools.islice(it, len(devices))
-        if not items:
-          break
-        if split_fn is None:
-          buffer.put(jax.device_put_sharded(tuple(items), devices))
-        else:
-          # ((host: x1, device: y1), ..., (host: xN, device: yN)).
-          items_split = (split_fn(item) for item in items)
-          # (host: (x1, ..., xN), device: (y1, ..., yN)).
-          split = tree.map_structure_up_to(
-              PrefetchingSplit(None, None), lambda *x: x, *items_split)
-
-          buffer.put(
-              PrefetchingSplit(
-                  host=np.stack(split.host),
-                  device=jax.device_put_sharded(split.device, devices)))
-    except Exception as e:  # pylint: disable=broad-except
-      logging.exception('Error in producer thread for %s', iterable)
-      producer_error.append(e)
-    finally:
-      buffer.put(end)
-
-  # Start producer threads.
-  for _ in range(num_threads):
-    threading.Thread(target=producer, daemon=True).start()
-
-  # Consume from the buffer.
-  while True:
-    value = buffer.get()
-    if value is end:
-      break
-    yield value
-
-  if producer_error:
-    raise producer_error[0]
+  return prefetch(iterable, buffer_size, device=None, num_threads=num_threads)
 
 
 def replicate_in_all_devices(nest: N,
@@ -445,3 +476,83 @@ def sample_uint32(random_key: PRNGKey) -> int:
   jax_random = jax.random.randint(
       random_key, shape=(), minval=iinfo.min, maxval=iinfo.max, dtype=jnp.int32)
   return np.uint32(jax_random).item()
+
+
+class PrefetchIterator(core.PrefetchingIterator):
+  """Performs prefetching from an iterable in separate threads.
+
+  Its interface is additionally extended with `ready` method which tells whether
+  there is any data waiting for processing.
+
+  Yields:
+    Prefetched elements from the original iterable.
+
+  Raises:
+    ValueError: if the buffer_size < 1.
+    StopIteration: If the iterable contains no more items.
+    Any error thrown by the iterable_function. Note this is not raised inside
+      the producer, but after it finishes executing.
+  """
+
+  def __init__(
+      self,
+      iterable: Iterable[types.NestedArray],
+      buffer_size: int = 5,
+      device: Optional[jax.xla.Device] = None,
+      num_threads: int = NUM_PREFETCH_THREADS,
+  ):
+    """Constructs PrefetchIterator.
+
+    Args:
+      iterable: A python iterable. This is used to build the python prefetcher.
+        Note that each iterable should only be passed to this function once as
+        iterables aren't thread safe.
+      buffer_size (int): Number of elements to keep in the prefetch buffer.
+      device (deprecated): Optionally place items from the iterable on the given
+        device. If None, the items are returns as given by the iterable. This
+        argument is deprecated and the recommended usage is to wrap the
+        iterables using utils.device_put or utils.multi_device_put before using
+        utils.prefetch.
+      num_threads (int): Number of threads.
+    """
+
+    if buffer_size < 1:
+      raise ValueError('the buffer_size should be >= 1')
+    self.buffer = queue.Queue(maxsize=buffer_size)
+    self.producer_error = []
+    self.end = object()
+    self.iterable = iterable
+    self.device = device
+
+    # Start producer threads.
+    for _ in range(num_threads):
+      threading.Thread(target=self.producer, daemon=True).start()
+
+  def producer(self):
+    """Enqueues items from `iterable` on a given thread."""
+    try:
+      # Build a new iterable for each thread. This is crucial if working with
+      # tensorflow datasets because tf.Graph objects are thread local.
+      for item in self.iterable:
+        if self.device:
+          jax.device_put(item, self.device)
+        self.buffer.put(item)
+    except Exception as e:  # pylint: disable=broad-except
+      logging.exception('Error in producer thread for %s', self.iterable)
+      self.producer_error.append(e)
+    finally:
+      self.buffer.put(self.end)
+
+  def __iter__(self):
+    return self
+
+  def ready(self):
+    return not self.buffer.empty()
+
+  def __next__(self):
+    value = self.buffer.get()
+    if value is self.end:
+      if self.producer_error:
+        raise self.producer_error[0] from self.producer_error[0]
+      raise StopIteration
+    return value

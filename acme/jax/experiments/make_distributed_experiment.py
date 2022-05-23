@@ -75,6 +75,7 @@ def make_distributed_experiment(
     *,
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
+    # TODO(kamyar) remove device_prefetch
     device_prefetch: bool = True,
     prefetch_size: int = 1,
     multithreading_colocate_learner_and_reverb: bool = False,
@@ -150,14 +151,14 @@ def make_distributed_experiment(
     networks = experiment.network_factory(spec)
 
     if prefetch_size > 1:
-      # When working with single GPU we should prefetch to device for
-      # efficiency. If running on TPU this isn't necessary as the computation
-      # and input placement can be done automatically. For multi-gpu currently
-      # the best solution is to pre-fetch to host although this may change in
-      # the future.
-      device = jax.devices()[0] if device_prefetch else None
-      iterator = utils.prefetch(
-          iterator, buffer_size=prefetch_size, device=device)
+      if device_prefetch:
+        # For backwards compatibility.
+        device = jax.devices()[0]
+        iterable = utils.device_put(
+            iterable=iterator, device=device, split_fn=None)
+        iterator = utils.prefetch(iterable=iterable, buffer_size=prefetch_size)
+      else:
+        iterator = utils.prefetch(iterable=iterator, buffer_size=prefetch_size)
     else:
       logging.info('Not prefetching the iterator.')
 
