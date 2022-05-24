@@ -83,6 +83,7 @@ class Config:
   environment_factory: types.EnvironmentFactory
   # Fields below are optional. If you just started with Acme do not worry about
   # them. You might need them later when you want to customize your RL agent.
+  # TODO(stanczyk): Introduce a marker for the default value (instead of None).
   evaluator_factories: Optional[Sequence[EvaluatorFactory]] = None
   # TODO(mwhoffman): Change the way network_factory, policy_network_factory
   # and eval_policy_network_factory are specified.
@@ -94,6 +95,7 @@ class Config:
   max_number_of_steps: int = sys.maxsize
   logger_factory: LoggerFactory = experiment_utils.make_experiment_logger
 
+  # TODO(stanczyk): Make get_evaluator_factories a standalone function.
   def get_evaluator_factories(self):
     if self.evaluator_factories is not None:
       return self.evaluator_factories
