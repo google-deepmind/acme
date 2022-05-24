@@ -46,7 +46,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
       num_actors: int,
       workdir: str = '~/acme',
       device_prefetch: bool = False,
-      log_to_bigtable: bool = True,
+      save_logs: bool = True,
       log_every: float = 10.0,
       evaluator_factories: Optional[Sequence[
           distributed_layout.EvaluatorFactory]] = None,
@@ -55,7 +55,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
     logger_fn = functools.partial(
         loggers.make_default_logger,
         'learner',
-        log_to_bigtable,
+        save_logs,
         time_delta=log_every,
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
@@ -72,7 +72,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
               environment_factory=environment_factory,
               network_factory=network_factory,
               policy_factory=evaluator_policy_network_factory,
-              log_to_bigtable=log_to_bigtable)
+              save_logs=save_logs)
       ]
     super().__init__(
         seed=seed,
@@ -84,10 +84,10 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
         num_actors=num_actors,
         environment_spec=environment_spec,
         device_prefetch=device_prefetch,
-        log_to_bigtable=log_to_bigtable,
+        save_logs=save_logs,
         learner_logger_fn=logger_fn,
         actor_logger_fn=distributed_layout.get_default_logger_fn(
-            log_to_bigtable, log_every),
+            save_logs, log_every),
         prefetch_size=config.prefetch_size,
         checkpointing_config=distributed_layout.CheckpointingConfig(
             directory=workdir, add_uid=(workdir == '~/acme')),

@@ -56,7 +56,7 @@ class DistributedDAC(agents.DistributedAIL):
     logger_fn = functools.partial(
         loggers.make_default_logger,
         'direct_learner',
-        kwargs['log_to_bigtable'],
+        kwargs['save_logs'],
         time_delta=kwargs['log_every'],
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,

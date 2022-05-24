@@ -50,7 +50,7 @@ def make_distributed_d4pg(
     discount: float = 0.99,
     target_update_period: int = 100,
     device_prefetch: bool = True,
-    log_to_bigtable: bool = False,
+    save_logs: bool = False,
     log_every: float = 10.0,
     evaluator_factories: Optional[Sequence[
         distributed_layout.EvaluatorFactory]] = None,
@@ -73,7 +73,7 @@ def make_distributed_d4pg(
   logger_fn = functools.partial(
       loggers.make_default_logger,
       'learner',
-      log_to_bigtable,
+      save_logs,
       time_delta=log_every,
       asynchronous=True,
       serialize_fn=utils.fetch_devicearray,
@@ -93,7 +93,7 @@ def make_distributed_d4pg(
             environment_factory=lambda seed: environment_factory(True),
             network_factory=network_factory,
             policy_factory=_eval_policy_network,
-            log_to_bigtable=log_to_bigtable)
+            save_logs=save_logs)
     ]
   experiment = experiments.Config(
       builder=builder,
@@ -104,8 +104,7 @@ def make_distributed_d4pg(
       evaluator_factories=evaluator_factories,
       seed=random_seed,
       logger_factory=distributed_layout.logger_factory(logger_fn, None,
-                                                       log_to_bigtable,
-                                                       log_every))
+                                                       save_logs, log_every))
   return experiments.make_distributed_experiment(
       experiment=experiment,
       num_actors=num_actors,

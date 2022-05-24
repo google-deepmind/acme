@@ -59,7 +59,7 @@ class R2D3(agent.Agent):
                importance_sampling_exponent: float = 0.2,
                epsilon: float = 0.01,
                learning_rate: float = 1e-3,
-               log_to_bigtable: bool = False,
+               save_logs: bool = False,
                log_name: str = 'agent',
                checkpoint: bool = True,
                min_replay_size: int = 1000,

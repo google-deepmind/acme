@@ -46,7 +46,7 @@ class DistributedPWIL(distributed_layout.DistributedLayout,
       policy_network: Callable[[DirectRLNetworks], DirectPolicyNetwork],
       num_actors: int,
       max_number_of_steps: Optional[int] = None,
-      log_to_bigtable: bool = False,
+      save_logs: bool = False,
       log_every: float = 10.0,
       prefetch_size: int = 4,
       evaluator_policy_network: Optional[Callable[[DirectRLNetworks],
@@ -65,7 +65,7 @@ class DistributedPWIL(distributed_layout.DistributedLayout,
               environment_factory=environment_factory,
               network_factory=network_factory,
               policy_factory=evaluator_policy_network,
-              log_to_bigtable=log_to_bigtable)
+              save_logs=save_logs)
       ]
     super().__init__(
         seed=seed,
@@ -77,9 +77,9 @@ class DistributedPWIL(distributed_layout.DistributedLayout,
         num_actors=num_actors,
         max_number_of_steps=max_number_of_steps,
         prefetch_size=prefetch_size,
-        log_to_bigtable=log_to_bigtable,
+        save_logs=save_logs,
         actor_logger_fn=distributed_layout.get_default_logger_fn(
-            log_to_bigtable, log_every),
+            save_logs, log_every),
     )
 
 

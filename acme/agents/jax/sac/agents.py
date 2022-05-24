@@ -57,7 +57,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
                          seed: int,
                          num_actors: int,
                          max_number_of_steps: Optional[int] = None,
-                         log_to_bigtable: bool = False,
+                         save_logs: bool = False,
                          log_every: float = 10.0,
                          normalize_input: bool = True,
                          evaluator_factories: Optional[Sequence[
@@ -68,7 +68,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
   logger_fn = functools.partial(
       loggers.make_default_logger,
       'learner',
-      log_to_bigtable,
+      save_logs,
       time_delta=log_every,
       asynchronous=True,
       serialize_fn=utils.fetch_devicearray,
@@ -92,7 +92,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
             environment_factory=environment_factory,
             network_factory=network_factory,
             policy_factory=eval_policy_factory,
-            log_to_bigtable=log_to_bigtable)
+            save_logs=save_logs)
     ]
   experiment = experiments.Config(
       builder=sac_builder,
@@ -103,8 +103,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
       seed=seed,
       max_number_of_steps=max_number_of_steps,
       logger_factory=distributed_layout.logger_factory(logger_fn, None,
-                                                       log_to_bigtable,
-                                                       log_every))
+                                                       save_logs, log_every))
   return experiments.make_distributed_experiment(
       experiment=experiment,
       num_actors=num_actors,

@@ -56,7 +56,7 @@ def default_evaluator_factory(
     network_factory: NetworkFactory,
     policy_factory: PolicyFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
-    log_to_bigtable: bool = False,
+    save_logs: bool = False,
     logger_fn: Optional[LoggerFn] = None) -> EvaluatorFactory:
   """Returns a default evaluator process."""
 
@@ -82,7 +82,7 @@ def default_evaluator_factory(
       logger = logger_fn('evaluator', 'actor_steps')
     else:
       logger = loggers.make_default_logger(
-          'evaluator', log_to_bigtable, steps_key='actor_steps')
+          'evaluator', save_logs, steps_key='actor_steps')
 
     # Create the run loop and return it.
     return environment_loop.EnvironmentLoop(
@@ -92,14 +92,14 @@ def default_evaluator_factory(
 
 
 def get_default_logger_fn(
-    log_to_bigtable: bool = False,
+    save_logs: bool = False,
     log_every: float = 10) -> Callable[[ActorId], loggers.Logger]:
   """Creates an actor logger."""
 
   def create_logger(actor_id: ActorId):
     return loggers.make_default_logger(
         'actor',
-        save_data=(log_to_bigtable and actor_id == 0),
+        save_data=(save_logs and actor_id == 0),
         time_delta=log_every,
         steps_key='actor_steps')
 
@@ -150,7 +150,7 @@ class DistributedLayout:
       evaluator_factories: Sequence[experiments.config.EvaluatorFactory] = (),
       device_prefetch: bool = True,
       prefetch_size: int = 1,
-      log_to_bigtable: bool = False,
+      save_logs: bool = False,
       max_number_of_steps: Optional[int] = None,
       observers: Sequence[observers_lib.EnvLoopObserver] = (),
       multithreading_colocate_learner_and_reverb: bool = False,
@@ -169,7 +169,7 @@ class DistributedLayout:
         seed=seed,
         max_number_of_steps=max_number_of_steps,
         logger_factory=logger_factory(learner_logger_fn, actor_logger_fn,
-                                      log_to_bigtable))
+                                      save_logs))
     self._num_actors = num_actors
     self._device_prefetch = device_prefetch
     self._prefetch_size = prefetch_size
