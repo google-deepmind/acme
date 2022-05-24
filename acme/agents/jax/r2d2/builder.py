@@ -174,9 +174,6 @@ class R2D2Builder(
     # - the EnvironmentLoop - this is a good place if it potentially applies
     #   for all actors.
     #
-    # Make sure not to use a random policy after checkpoint restoration by
-    # assigning variables before running the environment loop.
-    variable_client.update_and_wait()
 
     initial_state_key1, initial_state_key2, random_key = jax.random.split(
         random_key, 3)

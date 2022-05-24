@@ -49,11 +49,6 @@ class IMPALAActor(core.Actor):
     self._reset_fn_or_none = getattr(forward_fn, 'reset', None)
     self._rng = rng
 
-    # Make sure not to use a random policy after checkpoint restoration by
-    # assigning variables before running the environment loop.
-    if self._variable_client is not None:
-      self._variable_client.update_and_wait()
-
     self._initial_state = initial_state_fn(next(self._rng))
 
   def select_action(self, observation: types.Observation) -> types.Action:
