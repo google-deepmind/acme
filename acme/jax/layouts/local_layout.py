@@ -44,7 +44,6 @@ class LocalLayout(agent.Agent):
       batch_size: int = 256,
       num_sgd_steps_per_step: int = 1,
       prefetch_size: int = 1,
-      device_prefetch: bool = True,
       counter: Optional[counting.Counter] = None,
       checkpoint: bool = True,
   ):
@@ -66,7 +65,6 @@ class LocalLayout(agent.Agent):
         provided that it does not hurt the training, which needs to be verified
         empirically for each environment.
       prefetch_size: whether to prefetch iterator.
-      device_prefetch: whether prefetching should happen to a device.
       counter: counter object used to keep track of steps.
       checkpoint: boolean indicating whether to checkpoint the learner
         and the counter (if the counter is not None).
@@ -101,11 +99,9 @@ class LocalLayout(agent.Agent):
     adder = builder.make_adder(replay_client)
 
     dataset = builder.make_dataset_iterator(replay_client)
-    device = jax.devices()[0] if device_prefetch and prefetch_size > 1 else None
     # We always use prefetch, as it provides an iterator with additional
     # 'ready' method.
-    dataset = utils.prefetch(dataset, buffer_size=prefetch_size,
-                             device=device)
+    dataset = utils.prefetch(dataset, buffer_size=prefetch_size)
     learner_key, key = jax.random.split(key)
     learner = builder.make_learner(
         random_key=learner_key,

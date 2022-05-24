@@ -45,7 +45,6 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
       seed: int,
       num_actors: int,
       workdir: str = '~/acme',
-      device_prefetch: bool = False,
       save_logs: bool = True,
       log_every: float = 10.0,
       evaluator_factories: Optional[Sequence[
@@ -83,7 +82,6 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
         evaluator_factories=evaluator_factories,
         num_actors=num_actors,
         environment_spec=environment_spec,
-        device_prefetch=device_prefetch,
         save_logs=save_logs,
         learner_logger_fn=logger_fn,
         actor_logger_fn=distributed_layout.get_default_logger_fn(

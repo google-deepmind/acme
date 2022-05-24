@@ -26,9 +26,11 @@ from acme.agents.jax.dqn import config as dqn_config
 from acme.agents.jax.dqn import learning_lib
 from acme.datasets import reverb as datasets
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
+import jax
 import optax
 import reverb
 from reverb import rate_limiters
@@ -131,7 +133,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
         batch_size=(self._config.batch_size *
                     self._config.num_sgd_steps_per_step),
         prefetch_size=self._config.prefetch_size)
-    return dataset.as_numpy_iterator()
+    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
     """Creates an adder which handles observations."""

@@ -27,9 +27,11 @@ from acme.agents.jax.td3 import learning
 from acme.agents.jax.td3 import networks as td3_networks
 from acme.datasets import reverb as datasets
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
+import jax
 import optax
 import reverb
 from reverb import rate_limiters
@@ -131,7 +133,7 @@ class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
             self._config.batch_size * self._config.num_sgd_steps_per_step),
         prefetch_size=self._config.prefetch_size,
         transition_adder=True)
-    return dataset.as_numpy_iterator()
+    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
     """Creates an adder which handles observations."""

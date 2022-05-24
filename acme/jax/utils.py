@@ -144,7 +144,7 @@ def device_put(
     device: jax.xla.Device,
     split_fn: Optional[_SplitFunction] = None,
 ):
-  """Returns iterator that, per device, samples an item and places on device."""
+  """Returns iterator that samples an item and places it on the device."""
 
   return PutToDevicesIterable(
       iterable=iterable,
@@ -231,6 +231,7 @@ class PutToDevicesIterable(Iterable[types.NestedArray]):
     self.pmapped_user = pmapped_user
     self.split_fn = split_fn
     self.devices = devices
+    self.iterator = iter(self.iterable)
 
   def __iter__(self) -> Iterator[types.NestedArray]:
     # It is important to structure the Iterable like this, because in

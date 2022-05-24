@@ -75,8 +75,6 @@ def make_distributed_experiment(
     *,
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
-    # TODO(kamyar) remove device_prefetch
-    device_prefetch: bool = True,
     prefetch_size: int = 1,
     multithreading_colocate_learner_and_reverb: bool = False,
     checkpointing_config: Optional[CheckpointingConfig] = None,
@@ -151,14 +149,7 @@ def make_distributed_experiment(
     networks = experiment.network_factory(spec)
 
     if prefetch_size > 1:
-      if device_prefetch:
-        # For backwards compatibility.
-        device = jax.devices()[0]
-        iterable = utils.device_put(
-            iterable=iterator, device=device, split_fn=None)
-        iterator = utils.prefetch(iterable=iterable, buffer_size=prefetch_size)
-      else:
-        iterator = utils.prefetch(iterable=iterator, buffer_size=prefetch_size)
+      iterator = utils.prefetch(iterable=iterator, buffer_size=prefetch_size)
     else:
       logging.info('Not prefetching the iterator.')
 

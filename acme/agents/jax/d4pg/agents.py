@@ -49,7 +49,6 @@ def make_distributed_d4pg(
     clipping: bool = True,
     discount: float = 0.99,
     target_update_period: int = 100,
-    device_prefetch: bool = True,
     save_logs: bool = False,
     log_every: float = 10.0,
     evaluator_factories: Optional[Sequence[
@@ -108,7 +107,6 @@ def make_distributed_d4pg(
   return experiments.make_distributed_experiment(
       experiment=experiment,
       num_actors=num_actors,
-      device_prefetch=device_prefetch,
       prefetch_size=config.prefetch_size,
       name=name,
       program=program)

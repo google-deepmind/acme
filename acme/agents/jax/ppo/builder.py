@@ -26,9 +26,11 @@ from acme.agents.jax.ppo import config as ppo_config
 from acme.agents.jax.ppo import learning
 from acme.agents.jax.ppo import networks as ppo_networks
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
+import jax
 import numpy as np
 import optax
 import reverb
@@ -79,7 +81,7 @@ class PPOBuilder(
         max_in_flight_samples_per_worker=2 * self._config.batch_size)
     # Add batch dimension.
     dataset = dataset.batch(self._config.batch_size, drop_remainder=True)
-    return dataset.as_numpy_iterator()
+    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
     """Creates an adder which handles observations."""

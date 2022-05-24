@@ -148,7 +148,6 @@ class DistributedLayout:
       learner_logger_fn: Optional[Callable[[], loggers.Logger]] = None,
       actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
       evaluator_factories: Sequence[experiments.config.EvaluatorFactory] = (),
-      device_prefetch: bool = True,
       prefetch_size: int = 1,
       save_logs: bool = False,
       max_number_of_steps: Optional[int] = None,
@@ -171,7 +170,6 @@ class DistributedLayout:
         logger_factory=logger_factory(learner_logger_fn, actor_logger_fn,
                                       save_logs))
     self._num_actors = num_actors
-    self._device_prefetch = device_prefetch
     self._prefetch_size = prefetch_size
     self._multithreading_colocate_learner_and_reverb = (
         multithreading_colocate_learner_and_reverb)
@@ -181,10 +179,10 @@ class DistributedLayout:
 
   def build(self, name='agent', program: Optional[lp.Program] = None):
     """Build the distributed agent topology."""
+
     return experiments.make_distributed_experiment(
         self._experiment_config,
         self._num_actors,
-        device_prefetch=self._device_prefetch,
         prefetch_size=self._prefetch_size,
         multithreading_colocate_learner_and_reverb=self
         ._multithreading_colocate_learner_and_reverb,

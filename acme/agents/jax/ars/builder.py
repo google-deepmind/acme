@@ -27,6 +27,7 @@ from acme.agents.jax.ars import config as ars_config
 from acme.agents.jax.ars import learning
 from acme.jax import networks as networks_lib
 from acme.jax import running_statistics
+from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
@@ -137,7 +138,7 @@ class ARSBuilder(
         server_address=replay_client.server_address,
         table=self._config.replay_table_name,
         max_in_flight_samples_per_worker=1)
-    return dataset.as_numpy_iterator()
+    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
   def make_adder(self,
                  replay_client: reverb.Client) -> Optional[adders.Adder]:

@@ -30,6 +30,7 @@ from acme.agents.jax.ail import losses
 from acme.agents.jax.ail import networks as ail_networks
 from acme.datasets import reverb as datasets
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.jax.imitation_learning_types import DirectPolicyNetwork
 from acme.jax.types import PRNGKey
 from acme.utils import counting
@@ -288,11 +289,11 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
         process_discriminator_sample(sample)._replace(extras=())
         for sample in discriminator_iterator)
 
-    return (learning.AILSample(*sample) for sample in zip(
-        discriminator_iterator, direct_iterator, iterator_demonstration))
+    return utils.device_put((learning.AILSample(*sample) for sample in zip(
+        discriminator_iterator, direct_iterator, iterator_demonstration)),
+                            jax.devices()[0])
 
-  def make_adder(self,
-                 replay_client: reverb.Client) -> Optional[adders.Adder]:
+  def make_adder(self, replay_client: reverb.Client) -> Optional[adders.Adder]:
     direct_rl_adder = self._rl_agent.make_adder(replay_client)
     if self._config.share_iterator:
       return direct_rl_adder

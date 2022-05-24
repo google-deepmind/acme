@@ -26,10 +26,12 @@ from acme.agents.jax.impala import config as impala_config
 from acme.agents.jax.impala import learning
 from acme.agents.jax.impala import networks as impala_networks
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
 import haiku as hk
+import jax
 import jax.numpy as jnp
 import optax
 import reverb
@@ -111,7 +113,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
 
     # Add batch dimension.
     dataset = dataset.batch(self._num_sequences_per_batch, drop_remainder=True)
-    return dataset.as_numpy_iterator()
+    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
     """Creates an adder which handles observations."""

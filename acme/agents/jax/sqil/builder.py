@@ -22,9 +22,11 @@ from acme import specs
 from acme import types
 from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.jax.types import Networks, PolicyNetwork  # pylint: disable=g-multiple-import
 from acme.utils import counting
 from acme.utils import loggers
+import jax
 import numpy as np
 import reverb
 import tree
@@ -133,7 +135,9 @@ class SQILBuilder(Generic[Networks, PolicyNetwork],
 
     rb_iterator = self._rl_agent.make_dataset_iterator(replay_client)
 
-    return _generate_sqil_samples(demonstration_iterator, rb_iterator)
+    return utils.device_put(
+        _generate_sqil_samples(demonstration_iterator, rb_iterator),
+        jax.devices()[0])
 
   def make_adder(self,
                  replay_client: reverb.Client) -> Optional[adders.Adder]:
