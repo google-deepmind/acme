@@ -168,5 +168,9 @@ class PrefetchingIterator(Iterator[T], abc.ABC):
   """Abstract iterator object which supports `ready` method."""
 
   @abc.abstractmethod
-  def ready(self):
+  def ready(self) -> bool:
     """Is there any data waiting for processing."""
+
+  @abc.abstractmethod
+  def retrieved_elements(self) -> int:
+    """How many elements were retrieved from the iterator."""

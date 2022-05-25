@@ -483,7 +483,8 @@ class PrefetchIterator(core.PrefetchingIterator):
   """Performs prefetching from an iterable in separate threads.
 
   Its interface is additionally extended with `ready` method which tells whether
-  there is any data waiting for processing.
+  there is any data waiting for processing and a `retrieved_elements` method
+  specifying number of elements retrieved from the iterator.
 
   Yields:
     Prefetched elements from the original iterable.
@@ -524,6 +525,7 @@ class PrefetchIterator(core.PrefetchingIterator):
     self.end = object()
     self.iterable = iterable
     self.device = device
+    self.count = 0
 
     # Start producer threads.
     for _ in range(num_threads):
@@ -550,10 +552,14 @@ class PrefetchIterator(core.PrefetchingIterator):
   def ready(self):
     return not self.buffer.empty()
 
+  def retrieved_elements(self):
+    return self.count
+
   def __next__(self):
     value = self.buffer.get()
     if value is self.end:
       if self.producer_error:
         raise self.producer_error[0] from self.producer_error[0]
       raise StopIteration
+    self.count += 1
     return value

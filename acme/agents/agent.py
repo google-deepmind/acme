@@ -71,7 +71,6 @@ class Agent(core.Actor, core.VariableSource):
     self._replay_tables = replay_tables
     self._batch_size_upper_bounds = [1_000_000_000] * len(
         replay_tables) if replay_tables else None
-    self._learner_steps = 0
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     return self._actor.select_action(observation)
@@ -98,12 +97,15 @@ class Agent(core.Actor, core.VariableSource):
       update_actor = False
       while self._has_data_for_training():
         # Run learner steps (usually means gradient steps).
-        self._learner_steps += 1
+        batches_processed = self._iterator.retrieved_elements()
+        self._learner.step()
+        assert self._iterator.retrieved_elements() == batches_processed + 1, (
+            'Learner step must retrieve exactly one '
+            'element from the iterator. Otherwise agent can deadlock.')
         self._batch_size_upper_bounds = [
             math.ceil(t.info.rate_limiter_info.sample_stats.completed /
-                      self._learner_steps) for t in self._replay_tables
+                      (batches_processed + 1)) for t in self._replay_tables
         ]
-        self._learner.step()
         update_actor = True
       if update_actor:
         # Update the actor weights only when learner was updated.
