@@ -15,4 +15,5 @@
 """Implementations of a MPO agent."""
 
 from acme.agents.tf.mpo.agent import MPO
+from acme.agents.tf.mpo.agent_distributed import DistributedMPO
 from acme.agents.tf.mpo.learning import MPOLearner

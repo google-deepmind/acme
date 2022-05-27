@@ -15,4 +15,5 @@
 """Implementations of a DDPG agent."""
 
 from acme.agents.tf.ddpg.agent import DDPG
+from acme.agents.tf.ddpg.agent_distributed import DistributedDDPG
 from acme.agents.tf.ddpg.learning import DDPGLearner
