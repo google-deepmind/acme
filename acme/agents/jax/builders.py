@@ -15,19 +15,22 @@
 """RL agent Builder interface."""
 
 import abc
-from typing import Generic, Iterator, List, Optional
+from typing import Generic, Iterator, List, Optional, TypeVar
 
 from acme import adders
 from acme import core
 from acme import specs
 from acme.jax import networks as networks_lib
-from acme.jax.types import Networks, PolicyNetwork, Sample  # pylint: disable=g-multiple-import
 from acme.utils import counting
 from acme.utils import loggers
 import reverb
 
+Networks = TypeVar('Networks')  # Container for all agent network components.
+Policy = TypeVar('Policy')  # Function or container for agent policy functions.
+Sample = TypeVar('Sample')  # Generic type for a sample from the replay buffer.
 
-class ActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork, Sample]):
+
+class ActorLearnerBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
   """Defines an interface for defining the components of an RL agent.
 
   Implementations of this interface contain a complete specification of a
@@ -40,8 +43,17 @@ class ActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork, Sample]):
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
+      policy: Policy,
   ) -> List[reverb.Table]:
-    """Create tables to insert data into."""
+    """Create tables to insert data into.
+
+    Args:
+      environment_spec: A container for all relevant environment specs.
+      policy: Agent's policy which can be used to extract the extras_spec.
+
+    Returns:
+      The replay tables used to store the experience the agent uses to train.
+    """
 
   @abc.abstractmethod
   def make_dataset_iterator(
@@ -65,18 +77,20 @@ class ActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork, Sample]):
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: PolicyNetwork,
-      adder: Optional[adders.Adder] = None,
+      policy: Policy,
+      environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
     """Create an actor instance.
 
     Args:
       random_key: A key for random number generation.
-      policy_network: Instance of a policy network; this should be a callable
-        which takes as input observations and returns actions.
-      adder: How data is recorded (e.g. added to replay).
+      policy: Instance of a policy expected by the algorithm corresponding to
+        this builder.
+      environment_spec: A container for all relevant environment specs.
       variable_source: A source providing the necessary actor parameters.
+      adder: How data is recorded (e.g. added to replay).
     """
 
   @abc.abstractmethod
@@ -86,6 +100,7 @@ class ActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork, Sample]):
       networks: Networks,
       dataset: Iterator[Sample],
       logger: Optional[loggers.Logger],
+      environment_spec: Optional[specs.EnvironmentSpec],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -97,6 +112,7 @@ class ActorLearnerBuilder(abc.ABC, Generic[Networks, PolicyNetwork, Sample]):
         be specific to the learner in question.
       dataset: iterator over samples from replay.
       logger: logger used by the constructed learner for logging progress.
+      environment_spec: A container for all relevant environment specs.
       replay_client: client which allows communication with replay. Note that
         this is only intended to be used for updating priorities. Samples should
         be obtained from `dataset`.

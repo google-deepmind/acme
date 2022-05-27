@@ -62,9 +62,12 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
       networks: networks_lib.FeedForwardNetwork,
       dataset: Iterator[reverb.ReplaySample],
       logger: Optional[loggers.Logger],
+      environment_spec: Optional[specs.EnvironmentSpec],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
+    del environment_spec
+
     return learning_lib.SGDLearner(
         network=networks,
         random_key=random_key,
@@ -82,10 +85,12 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: dqn_actor.EpsilonPolicy,
-      adder: Optional[adders.Adder] = None,
+      policy: dqn_actor.EpsilonPolicy,
+      environment_spec: Optional[specs.EnvironmentSpec],
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
+    del environment_spec
     assert variable_source is not None
     # Inference happens on CPU, so it's better to move variables there too.
     variable_client = variable_utils.VariableClient(
@@ -93,7 +98,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
     epsilon = self._config.epsilon
     epsilons = epsilon if epsilon is Sequence else (epsilon,)
     actor_core = dqn_actor.alternating_epsilons_actor_core(
-        policy_network, epsilons=epsilons)
+        policy, epsilons=epsilons)
     return actors.GenericActor(
         actor=actor_core,
         random_key=random_key,
@@ -102,8 +107,12 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
         backend=self._actor_backend)
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: dqn_actor.EpsilonPolicy,
+  ) -> List[reverb.Table]:
     """Creates reverb tables for the algorithm."""
+    del policy
     samples_per_insert_tolerance = (
         self._config.samples_per_insert_tolerance_rate *
         self._config.samples_per_insert)

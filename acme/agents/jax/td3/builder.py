@@ -59,9 +59,11 @@ class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
       networks: td3_networks.TD3Networks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
+    del environment_spec, replay_client
 
     critic_optimizer = optax.adam(self._config.critic_learning_rate)
     twin_critic_optimizer = optax.adam(self._config.critic_learning_rate)
@@ -90,13 +92,14 @@ class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
-      adder: Optional[adders.Adder] = None,
+      policy: actor_core_lib.FeedForwardPolicy,
+      environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
+    del environment_spec
     assert variable_source is not None
-    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
-        policy_network)
+    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(policy)
     # Inference happens on CPU, so it's better to move variables there too.
     variable_client = variable_utils.VariableClient(variable_source, 'policy',
                                                     device='cpu')
@@ -104,8 +107,12 @@ class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
         actor_core, random_key, variable_client, adder, backend='cpu')
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: actor_core_lib.FeedForwardPolicy,
+  ) -> List[reverb.Table]:
     """Creates reverb tables for the algorithm."""
+    del policy
     samples_per_insert_tolerance = (
         self._config.samples_per_insert_tolerance_rate *
         self._config.samples_per_insert)

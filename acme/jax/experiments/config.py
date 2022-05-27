@@ -32,8 +32,9 @@ import jax
 
 AgentNetwork = Any
 PolicyNetwork = Any
-MakeActorFn = Callable[[types.PRNGKey, PolicyNetwork, core.VariableSource],
-                       core.Actor]
+MakeActorFn = Callable[
+    [types.PRNGKey, PolicyNetwork, specs.EnvironmentSpec, core.VariableSource],
+    core.Actor]
 NetworkFactory = Callable[[specs.EnvironmentSpec], AgentNetwork]
 PolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
 EvaluatorFactory = Callable[[
@@ -133,9 +134,11 @@ def default_evaluator_factory(
     environment_key, actor_key = jax.random.split(random_key)
     # Environments normally require uint32 as a seed.
     environment = environment_factory(utils.sample_uint32(environment_key))
-    networks = network_factory(specs.make_environment_spec(environment))
+    environment_spec = specs.make_environment_spec(environment)
+    networks = network_factory(environment_spec)
 
-    actor = make_actor(actor_key, policy_factory(networks), variable_source)
+    actor = make_actor(actor_key, policy_factory(networks), environment_spec,
+                       variable_source)
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'evaluator')

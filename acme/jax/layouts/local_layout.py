@@ -75,7 +75,7 @@ class LocalLayout(agent.Agent):
     key = jax.random.PRNGKey(seed)
 
     # Create the replay server and grab its address.
-    replay_tables = builder.make_replay_tables(environment_spec)
+    replay_tables = builder.make_replay_tables(environment_spec, policy_network)
 
     # Disable blocking of inserts by tables' rate limiters, as LocalLayout
     # agents run inserts and sampling from the same thread and blocked insert
@@ -108,6 +108,7 @@ class LocalLayout(agent.Agent):
         networks=networks,
         dataset=dataset,
         logger=learner_logger,
+        environment_spec=environment_spec,
         replay_client=replay_client,
         counter=counter)
     if not checkpoint or workdir is None:
@@ -125,7 +126,11 @@ class LocalLayout(agent.Agent):
 
     actor_key, key = jax.random.split(key)
     actor = builder.make_actor(
-        actor_key, policy_network, adder, variable_source=learner)
+        actor_key,
+        policy_network,
+        environment_spec,
+        variable_source=learner,
+        adder=adder)
 
     super().__init__(
         actor=actor,

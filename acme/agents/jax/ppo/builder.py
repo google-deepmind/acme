@@ -53,8 +53,12 @@ class PPOBuilder(
     self._sequence_length = config.unroll_length + 1
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: actor_core_lib.FeedForwardPolicyWithExtra,
+  ) -> List[reverb.Table]:
     """Creates reverb tables for the algorithm."""
+    del policy
     extra_spec = {
         'log_prob': np.ones(shape=(), dtype=np.float32),
     }
@@ -101,9 +105,12 @@ class PPOBuilder(
       networks: ppo_networks.PPONetworks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
+    del environment_spec, replay_client
+
     if callable(self._config.learning_rate):
       optimizer = optax.chain(
           optax.clip_by_global_norm(self._config.max_gradient_norm),
@@ -136,13 +143,15 @@ class PPOBuilder(
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: actor_core_lib.FeedForwardPolicyWithExtra,
-      adder: Optional[adders.Adder] = None,
+      policy: actor_core_lib.FeedForwardPolicyWithExtra,
+      environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
+    del environment_spec
     assert variable_source is not None
     actor = actor_core_lib.batched_feed_forward_with_extras_to_actor_core(
-        policy_network)
+        policy)
     variable_client = variable_utils.VariableClient(
         variable_source,
         'network',

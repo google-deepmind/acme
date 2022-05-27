@@ -60,9 +60,12 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
       networks: d4pg_networks.D4PGNetworks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
+    del environment_spec, replay_client
+
     policy_optimizer = optax.adam(self._config.learning_rate)
     critic_optimizer = optax.adam(self._config.learning_rate)
 
@@ -90,8 +93,10 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
+      policy: actor_core_lib.FeedForwardPolicy,
   ) -> List[reverb.Table]:
     """Create tables to insert data into."""
+    del policy
     samples_per_insert_tolerance = (
         self._config.samples_per_insert_tolerance_rate *
         self._config.samples_per_insert)
@@ -134,12 +139,14 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: actor_core_lib.FeedForwardPolicy,
+      policy: actor_core_lib.FeedForwardPolicy,
+      environment_spec: specs.EnvironmentSpec,
+      variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
-      variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
+  ) -> acme.Actor:
+    del environment_spec
     assert variable_source is not None
-    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
-        policy_network)
+    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(policy)
     # Inference happens on CPU, so it's better to move variables there too.
     variable_client = variable_utils.VariableClient(
         variable_source, 'policy', device='cpu')

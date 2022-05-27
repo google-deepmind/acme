@@ -76,29 +76,32 @@ class ARSBuilder(
       random_key: networks_lib.PRNGKey,
       networks: networks_lib.FeedForwardNetwork,
       dataset: Iterator[reverb.ReplaySample],
-      logger: Optional[loggers.Logger] = None,
+      logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
-      checkpoint: bool = False,
   ) -> core.Learner:
-
+    del environment_spec, replay_client
     return learning.ARSLearner(self._spec, networks, random_key, self._config,
                                dataset, counter, logger)
 
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: Tuple[str, networks_lib.FeedForwardNetwork],
+      policy: Tuple[str, networks_lib.FeedForwardNetwork],
+      environment_spec: specs.EnvironmentSpec,
+      variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
-      variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
+  ) -> acme.Actor:
+    del environment_spec
     assert variable_source is not None
 
-    kname, policy_network = policy_network
+    kname, policy = policy
 
     normalization_apply_fn = (
         running_statistics.normalize if self._config.normalize_observations else
         (lambda a, b: a))
-    policy_to_run = get_policy(policy_network, normalization_apply_fn)
+    policy_to_run = get_policy(policy, normalization_apply_fn)
 
     actor_core = actor_core_lib.batched_feed_forward_with_extras_to_actor_core(
         policy_to_run)
@@ -115,8 +118,10 @@ class ARSBuilder(
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
+      policy: Tuple[str, networks_lib.FeedForwardNetwork],
   ) -> List[reverb.Table]:
     """Create tables to insert data into."""
+    del policy
     extra_spec = {
         'params_key': (np.zeros(shape=(), dtype=np.int32),
                        np.zeros(shape=(), dtype=np.int32),

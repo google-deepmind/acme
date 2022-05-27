@@ -23,7 +23,7 @@ from acme import types
 from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.jax import utils
-from acme.jax.types import Networks, PolicyNetwork  # pylint: disable=g-multiple-import
+from acme.jax.imitation_learning_types import DirectPolicyNetwork, DirectRLNetworks  # pylint: disable=g-multiple-import
 from acme.utils import counting
 from acme.utils import loggers
 import jax
@@ -68,13 +68,15 @@ def _generate_sqil_samples(
         data=tree.map_structure(lambda x: x[1::2], double_batch))
 
 
-class SQILBuilder(Generic[Networks, PolicyNetwork],
-                  builders.ActorLearnerBuilder[Networks, PolicyNetwork,
+class SQILBuilder(Generic[DirectRLNetworks, DirectPolicyNetwork],
+                  builders.ActorLearnerBuilder[DirectRLNetworks,
+                                               DirectPolicyNetwork,
                                                reverb.ReplaySample]):
   """SQIL Builder (https://openreview.net/pdf?id=S1xKd24twB)."""
 
   def __init__(self,
-               rl_agent: builders.ActorLearnerBuilder[Networks, PolicyNetwork,
+               rl_agent: builders.ActorLearnerBuilder[DirectRLNetworks,
+                                                      DirectPolicyNetwork,
                                                       reverb.ReplaySample],
                rl_agent_batch_size: int,
                make_demonstrations: Callable[[int],
@@ -94,9 +96,10 @@ class SQILBuilder(Generic[Networks, PolicyNetwork],
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks: Networks,
+      networks: DirectRLNetworks,
       dataset: Iterator[reverb.ReplaySample],
-      logger: Optional[loggers.Logger] = None,
+      logger: Optional[loggers.Logger],
+      environment_spec: Optional[specs.EnvironmentSpec] = None,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -108,12 +111,16 @@ class SQILBuilder(Generic[Networks, PolicyNetwork],
         networks,
         dataset=dataset,
         logger=logger,
+        environment_spec=environment_spec,
         replay_client=replay_client,
         counter=direct_rl_counter)
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
-    return self._rl_agent.make_replay_tables(environment_spec)
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: DirectPolicyNetwork,
+  ) -> List[reverb.Table]:
+    return self._rl_agent.make_replay_tables(environment_spec, policy)
 
   def make_dataset_iterator(
       self,
@@ -146,9 +153,10 @@ class SQILBuilder(Generic[Networks, PolicyNetwork],
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: PolicyNetwork,
-      adder: Optional[adders.Adder] = None,
+      policy: DirectPolicyNetwork,
+      environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
-    return self._rl_agent.make_actor(random_key, policy_network, adder,
-                                     variable_source)
+    return self._rl_agent.make_actor(random_key, policy, environment_spec,
+                                     variable_source, adder)

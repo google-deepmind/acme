@@ -57,7 +57,6 @@ def build_experiment_config():
   batch_dims = (0,)
   sac_builder = normalization.NormalizationBuilder(
       sac_builder,
-      environment_spec,
       is_sequence_based=False,
       batch_dims=batch_dims)
 

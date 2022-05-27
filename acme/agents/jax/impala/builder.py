@@ -56,9 +56,12 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
     self._table_extension = table_extension
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: impala_networks.IMPALANetworks,
+  ) -> List[reverb.Table]:
     """The queue; use XData or INFO log."""
-
+    del policy
     num_actions = environment_spec.actions.num_values
     extra_spec = {
         'core_state': self._core_state_spec,
@@ -133,9 +136,11 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
       networks: impala_networks.IMPALANetworks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
+    del environment_spec, replay_client
 
     optimizer = optax.chain(
         optax.clip_by_global_norm(self._config.max_gradient_norm),
@@ -161,14 +166,17 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network,
+      policy: impala_networks.IMPALANetworks,
+      environment_spec: specs.EnvironmentSpec,
+      variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
-      variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
+  ) -> acme.Actor:
+    del environment_spec
     variable_client = variable_utils.VariableClient(
         client=variable_source, key='network', update_period=1000, device='cpu')
     return acting.IMPALAActor(
-        forward_fn=policy_network.forward_fn,
-        initial_state_fn=policy_network.initial_state_fn,
+        forward_fn=policy.forward_fn,
+        initial_state_fn=policy.initial_state_fn,
         variable_client=variable_client,
         adder=adder,
         rng=hk.PRNGSequence(random_key),

@@ -60,9 +60,12 @@ class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
       networks: sac_networks.SACNetworks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
+    del environment_spec, replay_client
+
     # Create optimizers
     policy_optimizer = optax.adam(learning_rate=self._config.learning_rate)
     q_optimizer = optax.adam(learning_rate=self._config.learning_rate)
@@ -85,12 +88,14 @@ class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: actor_core_lib.FeedForwardPolicy,
+      policy: actor_core_lib.FeedForwardPolicy,
+      environment_spec: specs.EnvironmentSpec,
+      variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
-      variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
+  ) -> acme.Actor:
+    del environment_spec
     assert variable_source is not None
-    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
-        policy_network)
+    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(policy)
     variable_client = variable_utils.VariableClient(
         variable_source, 'policy', device='cpu')
     return actors.GenericActor(
@@ -99,8 +104,10 @@ class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
+      policy: actor_core_lib.FeedForwardPolicy,
   ) -> List[reverb.Table]:
     """Create tables to insert data into."""
+    del policy
     samples_per_insert_tolerance = (
         self._config.samples_per_insert_tolerance_rate *
         self._config.samples_per_insert)

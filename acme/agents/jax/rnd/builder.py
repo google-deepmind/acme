@@ -63,6 +63,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
       networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -79,6 +80,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
           networks,
           dataset,
           logger=self._logger_fn(),
+          environment_spec=environment_spec,
           replay_client=replay_client,
           counter=direct_rl_counter)
 
@@ -96,8 +98,11 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
         logger=logger)
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
-    return self._rl_agent.make_replay_tables(environment_spec)
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: PolicyNetwork,
+  ) -> List[reverb.Table]:
+    return self._rl_agent.make_replay_tables(environment_spec, policy)
 
   def make_dataset_iterator(
       self,
@@ -111,9 +116,10 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: PolicyNetwork,
-      adder: Optional[adders.Adder] = None,
+      policy: PolicyNetwork,
+      environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
-    return self._rl_agent.make_actor(random_key, policy_network, adder,
-                                     variable_source)
+    return self._rl_agent.make_actor(random_key, policy, environment_spec,
+                                     variable_source, adder)

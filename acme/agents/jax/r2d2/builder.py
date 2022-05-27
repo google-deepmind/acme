@@ -82,9 +82,12 @@ class R2D2Builder(
       networks: r2d2_networks.R2D2Networks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
+    del environment_spec
+
     # The learner updates the parameters (and initializes them).
     return r2d2_learning.R2D2Learner(
         unroll=networks.unroll,
@@ -109,9 +112,10 @@ class R2D2Builder(
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
+      policy: r2d2_networks.EpsilonRecurrentPolicy,
   ) -> List[reverb.Table]:
     """Create tables to insert data into."""
-    #'''
+    del policy
     if self._config.samples_per_insert:
       samples_per_insert_tolerance = (
           self._config.samples_per_insert_tolerance_rate *
@@ -158,10 +162,12 @@ class R2D2Builder(
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: r2d2_networks.EpsilonRecurrentPolicy,
+      policy: r2d2_networks.EpsilonRecurrentPolicy,
+      environment_spec: specs.EnvironmentSpec,
+      variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
-      variable_source: Optional[core.VariableSource] = None) -> acme.Actor:
-
+  ) -> acme.Actor:
+    del environment_spec
     # Create variable client.
     variable_client = variable_utils.VariableClient(
         variable_source,
@@ -182,7 +188,7 @@ class R2D2Builder(
     actor_initial_state = self._networks.initial_state.apply(
         actor_initial_state_params, initial_state_key2, 1)
 
-    actor_core = r2d2_actor.get_actor_core(policy_network, actor_initial_state,
+    actor_core = r2d2_actor.get_actor_core(policy, actor_initial_state,
                                            self._config.num_epsilons)
     return actors.GenericActor(
         actor_core, random_key, variable_client, adder, backend='cpu')

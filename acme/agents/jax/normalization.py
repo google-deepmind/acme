@@ -175,15 +175,17 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
   """Builder wrapper that normalizes observations using running mean/std."""
   builder: builders.ActorLearnerBuilder[Networks, PolicyNetwork,
                                         reverb.ReplaySample]
-  environment_spec: specs.EnvironmentSpec
   is_sequence_based: bool
   batch_dims: Optional[Tuple[int, ...]]
   max_abs_observation: Optional[float] = 10.0
   statistics_update_period: int = 100
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
-    return self.builder.make_replay_tables(environment_spec)
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: PolicyNetwork,
+  ) -> List[reverb.Table]:
+    return self.builder.make_replay_tables(environment_spec, policy)
 
   def make_dataset_iterator(
       self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
@@ -199,6 +201,7 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
       networks: Networks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
@@ -208,13 +211,14 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
         random_key,
         networks,
         logger=logger,
+        environment_spec=environment_spec,
         replay_client=replay_client,
         counter=counter)
 
     return NormalizationLearnerWrapper(
         learner_factory=learner_factory,
         iterator=dataset,
-        environment_spec=self.environment_spec,
+        environment_spec=environment_spec,
         is_sequence_based=self.is_sequence_based,
         batch_dims=self.batch_dims,
         max_abs_observation=self.max_abs_observation)
@@ -222,12 +226,13 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: PolicyNetwork,
-      adder: Optional[adders.Adder] = None,
+      policy: PolicyNetwork,
+      environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
-    actor = self.builder.make_actor(random_key, policy_network, adder,
-                                    variable_source)
+    actor = self.builder.make_actor(random_key, policy, environment_spec,
+                                    variable_source, adder)
     return NormalizationActorWrapper(
         actor,
         variable_source,

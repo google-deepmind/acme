@@ -72,9 +72,10 @@ def default_evaluator_factory(
     environment_key, actor_key = jax.random.split(random_key)
     # Environments normally require uint32 as a seed.
     environment = environment_factory(utils.sample_uint32(environment_key))
-    networks = network_factory(specs.make_environment_spec(environment))
+    environment_spec = specs.make_environment_spec(environment)
+    policy = policy_factory(network_factory(environment_spec))
 
-    actor = make_actor(actor_key, policy_factory(networks), variable_source)
+    actor = make_actor(actor_key, policy, environment_spec, variable_source)
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'evaluator')

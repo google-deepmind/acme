@@ -75,16 +75,10 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
       steps_key='learner_steps')
   sac_builder = builder.SACBuilder(config)
   if normalize_input:
-    dummy_seed = 1
-    environment_spec = specs.make_environment_spec(
-        environment_factory(dummy_seed))
     # One batch dimension: [batch_size, ...]
     batch_dims = (0,)
     sac_builder = normalization.NormalizationBuilder(
-        sac_builder,
-        environment_spec,
-        is_sequence_based=False,
-        batch_dims=batch_dims)
+        sac_builder, is_sequence_based=False, batch_dims=batch_dims)
   if evaluator_factories is None:
     eval_policy_factory = (lambda n: networks.apply_policy_and_sample(n, True))
     evaluator_factories = [
@@ -131,7 +125,7 @@ class SAC(local_layout.LocalLayout):
       # One batch dimension: [batch_size, ...]
       batch_dims = (0,)
       sac_builder = normalization.NormalizationBuilder(
-          sac_builder, spec, is_sequence_based=False, batch_dims=batch_dims)
+          sac_builder, is_sequence_based=False, batch_dims=batch_dims)
     self.builder = sac_builder
     super().__init__(
         seed=seed,

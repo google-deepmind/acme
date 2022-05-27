@@ -29,10 +29,9 @@ from acme.agents.jax.ail import learning
 from acme.agents.jax.ail import losses
 from acme.agents.jax.ail import networks as ail_networks
 from acme.datasets import reverb as datasets
-from acme.jax import networks as networks_lib
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax.imitation_learning_types import DirectPolicyNetwork
-from acme.jax.types import PRNGKey
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import reverb_utils
@@ -181,10 +180,11 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
     self._logger_fn = logger_fn
 
   def make_learner(self,
-                   random_key: networks_lib.PRNGKey,
+                   random_key: jax_types.PRNGKey,
                    networks: ail_networks.AILNetworks,
                    dataset: Iterator[learning.AILSample],
                    logger: loggers.Logger,
+                   environment_spec: specs.EnvironmentSpec,
                    replay_client: Optional[reverb.Client] = None,
                    counter: Optional[counting.Counter] = None) -> core.Learner:
     counter = counter or counting.Counter()
@@ -199,6 +199,7 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
         direct_rl_learner_key,
         networks.direct_rl_networks,
         logger=self._logger_fn(),
+        environment_spec=environment_spec,
         replay_client=replay_client,
         counter=direct_rl_counter)
 
@@ -220,8 +221,11 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
         logger=logger)
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
-    replay_tables = self._rl_agent.make_replay_tables(environment_spec)
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: DirectPolicyNetwork,
+  ) -> List[reverb.Table]:
+    replay_tables = self._rl_agent.make_replay_tables(environment_spec, policy)
     if self._config.share_iterator:
       return replay_tables
     replay_tables.append(
@@ -310,10 +314,11 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
 
   def make_actor(
       self,
-      random_key: PRNGKey,
-      policy_network: DirectPolicyNetwork,
-      adder: Optional[adders.Adder] = None,
+      random_key: jax_types.PRNGKey,
+      policy: DirectPolicyNetwork,
+      environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
-    return self._rl_agent.make_actor(random_key, policy_network, adder,
-                                     variable_source)
+    return self._rl_agent.make_actor(random_key, policy, environment_spec,
+                                     variable_source, adder)

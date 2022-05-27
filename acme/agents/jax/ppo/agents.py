@@ -62,16 +62,10 @@ def make_distributed_ppo(environment_factory: jax_types.EnvironmentFactory,
       steps_key='learner_steps')
   ppo_builder = builder.PPOBuilder(config)
   if normalize_input:
-    dummy_seed = 1
-    environment_spec = specs.make_environment_spec(
-        environment_factory(dummy_seed))
     # Two batch dimensions: [num_sequences, num_steps, ...]
     batch_dims = (0, 1)
     ppo_builder = normalization.NormalizationBuilder(
-        ppo_builder,
-        environment_spec,
-        is_sequence_based=True,
-        batch_dims=batch_dims)
+        ppo_builder, is_sequence_based=True, batch_dims=batch_dims)
   experiment = experiments.Config(
       builder=ppo_builder,
       environment_factory=environment_factory,
@@ -113,7 +107,7 @@ class PPO(local_layout.LocalLayout):
       # Two batch dimensions: [num_sequences, num_steps, ...]
       batch_dims = (0, 1)
       ppo_builder = normalization.NormalizationBuilder(
-          ppo_builder, spec, is_sequence_based=True, batch_dims=batch_dims)
+          ppo_builder, is_sequence_based=True, batch_dims=batch_dims)
     self.builder = ppo_builder
     super().__init__(
         seed=seed,

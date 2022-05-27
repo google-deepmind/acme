@@ -106,7 +106,8 @@ def make_distributed_experiment(
     spec = (
         experiment.environment_spec or
         specs.make_environment_spec(experiment.environment_factory(dummy_seed)))
-    return experiment.builder.make_replay_tables(spec)
+    policy = experiment.policy_network_factory(experiment.network_factory(spec))
+    return experiment.builder.make_replay_tables(spec, policy)
 
   def build_model_saver(variable_source: core.VariableSource):
     environment = experiment.environment_factory(0)
@@ -156,7 +157,7 @@ def make_distributed_experiment(
     logger = experiment.logger_factory('learner', 'learner_steps', 0)
     counter = counting.Counter(counter, 'learner')
     learner = experiment.builder.make_learner(random_key, networks, iterator,
-                                              logger, replay, counter)
+                                              logger, spec, replay, counter)
 
     if primary_learner is None:
       learner = savers.CheckpointingRunner(
@@ -192,16 +193,17 @@ def make_distributed_experiment(
     # Environments normally require uint32 as a seed.
     environment = experiment.environment_factory(
         utils.sample_uint32(environment_key))
+    environment_spec = specs.make_environment_spec(environment)
 
     if not inference_client:
-      networks = experiment.network_factory(
-          specs.make_environment_spec(environment))
+      networks = experiment.network_factory(environment_spec)
       policy_network = experiment.policy_network_factory(networks)
     else:
       variable_source = variable_utils.ReferenceVariableSource()
       policy_network = inference_client
-    actor = experiment.builder.make_actor(actor_key, policy_network, adder,
-                                          variable_source)
+    actor = experiment.builder.make_actor(actor_key, policy_network,
+                                          environment_spec, variable_source,
+                                          adder)
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'actor')
@@ -326,16 +328,11 @@ def make_distributed_experiment(
             lp.MultiThreadingColocation(
                 actor_nodes[i:i + num_actors_per_node]))
 
-  def make_actor(random_key: networks_lib.PRNGKey,
-                 policy_network: config.PolicyNetwork,
-                 variable_source: core.VariableSource) -> core.Actor:
-    return experiment.builder.make_actor(
-        random_key, policy_network, variable_source=variable_source)
-
   for evaluator in experiment.get_evaluator_factories():
     evaluator_key, key = jax.random.split(key)
     program.add_node(
-        lp.CourierNode(evaluator, evaluator_key, learner, counter, make_actor),
+        lp.CourierNode(evaluator, evaluator_key, learner, counter,
+                       experiment.builder.make_actor),
         label='evaluator')
 
   if make_snapshot_models and checkpointing_config:

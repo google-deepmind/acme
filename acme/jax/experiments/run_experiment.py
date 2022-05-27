@@ -114,12 +114,19 @@ def run_experiment(experiment: config.Config,
   """
 
   key = jax.random.PRNGKey(experiment.seed)
-  environment = experiment.environment_factory(experiment.seed)
 
-  # Create the replay server and grab its address.
+  # Create the environment and get its spec.
+  environment = experiment.environment_factory(experiment.seed)
   environment_spec = experiment.environment_spec or specs.make_environment_spec(
       environment)
-  replay_tables = experiment.builder.make_replay_tables(environment_spec)
+
+  # Create the networks and policy.
+  networks = experiment.network_factory(environment_spec)
+  policy = experiment.policy_network_factory(networks)
+
+  # Create the replay server and grab its address.
+  replay_tables = experiment.builder.make_replay_tables(environment_spec,
+                                                        policy)
 
   # Disable blocking of inserts by tables' rate limiters, as this function
   # executes learning (sampling from the table) and data generation
@@ -139,21 +146,18 @@ def run_experiment(experiment: config.Config,
   # 'ready' method.
   dataset = utils.prefetch(dataset, buffer_size=1)
   learner_key, key = jax.random.split(key)
-  networks = experiment.network_factory(environment_spec)
   learner_logger = experiment.logger_factory('learner', 'learner_steps', 0)
   learner = experiment.builder.make_learner(
       random_key=learner_key,
       networks=networks,
       dataset=dataset,
       logger=learner_logger,
+      environment_spec=environment_spec,
       replay_client=replay_client)
 
   actor_key, key = jax.random.split(key)
   actor = experiment.builder.make_actor(
-      actor_key,
-      experiment.policy_network_factory(networks),
-      adder,
-      variable_source=learner)
+      actor_key, policy, environment_spec, variable_source=learner, adder=adder)
 
   # Create the environment loop used for training.
   train_logger = experiment.logger_factory('train', 'train_steps', 0)
@@ -181,7 +185,8 @@ def run_experiment(experiment: config.Config,
     eval_logger = experiment.logger_factory('eval', 'eval_steps', 0)
     eval_actor = experiment.builder.make_actor(
         random_key=jax.random.PRNGKey(experiment.seed),
-        policy_network=experiment.eval_policy_network_factory(networks),
+        policy=experiment.eval_policy_network_factory(networks),
+        environment_spec=environment_spec,
         variable_source=learner)
     eval_loop = acme.EnvironmentLoop(
         environment,

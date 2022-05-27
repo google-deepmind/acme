@@ -61,9 +61,11 @@ class ValueDiceBuilder(
       networks: value_dice_networks.ValueDiceNetworks,
       dataset: Iterator[reverb.ReplaySample],
       logger: loggers.Logger,
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
+    del environment_spec, replay_client
     iterator_demonstration = self._make_demonstrations(
         self._config.batch_size * self._config.num_sgd_steps_per_step)
     policy_optimizer = optax.adam(
@@ -86,7 +88,11 @@ class ValueDiceBuilder(
     )
 
   def make_replay_tables(
-      self, environment_spec: specs.EnvironmentSpec) -> List[reverb.Table]:
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: actor_core_lib.FeedForwardPolicy,
+  ) -> List[reverb.Table]:
+    del policy
     samples_per_insert_tolerance = (
         self._config.samples_per_insert_tolerance_rate *
         self._config.samples_per_insert)
@@ -125,13 +131,14 @@ class ValueDiceBuilder(
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy_network: actor_core_lib.FeedForwardPolicy,
-      adder: Optional[adders.Adder] = None,
+      policy: actor_core_lib.FeedForwardPolicy,
+      environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
+    del environment_spec
     assert variable_source is not None
-    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
-        policy_network)
+    actor_core = actor_core_lib.batched_feed_forward_to_actor_core(policy)
     # Inference happens on CPU, so it's better to move variables there too.
     variable_client = variable_utils.VariableClient(variable_source, 'policy',
                                                     device='cpu')
