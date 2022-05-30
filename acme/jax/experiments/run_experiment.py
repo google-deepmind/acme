@@ -141,6 +141,11 @@ def run_experiment(experiment: config.Config,
   # data respectively.
   adder = experiment.builder.make_adder(replay_client)
 
+  # Parent counter allows to share step counts between train and eval loops and
+  # the learner, so that it is possible to plot for example evaluator's return
+  # value as a function of the number of training episodes.
+  parent_counter = counting.Counter(time_delta=0.)
+
   dataset = experiment.builder.make_dataset_iterator(replay_client)
   # We always use prefetch, as it provides an iterator with additional
   # 'ready' method.
@@ -153,7 +158,8 @@ def run_experiment(experiment: config.Config,
       dataset=dataset,
       logger=learner_logger,
       environment_spec=environment_spec,
-      replay_client=replay_client)
+      replay_client=replay_client,
+      counter=counting.Counter(parent_counter, prefix='learner', time_delta=0.))
 
   actor_key, key = jax.random.split(key)
   actor = experiment.builder.make_actor(
@@ -168,10 +174,6 @@ def run_experiment(experiment: config.Config,
   # at which new data is released is controlled by the replay table's
   # rate_limiter which is created by the builder.make_replay_tables call above.
   actor = _LearningActor(actor, learner, dataset, replay_tables)
-  # Parent counter allows to share step counts between train and eval loops, so
-  # that it is possible to plot for example evaluator's return value as
-  # a function of the number of training episodes.
-  parent_counter = counting.Counter(time_delta=0.)
 
   train_loop = acme.EnvironmentLoop(
       environment,
