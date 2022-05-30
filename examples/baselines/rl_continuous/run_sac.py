@@ -34,6 +34,7 @@ flags.DEFINE_string('env_name', 'gym:HalfCheetah-v2', 'What environment to run')
 flags.DEFINE_integer('seed', 0, 'Random seed.')
 flags.DEFINE_integer('num_steps', 1_000_000, 'Number of env steps to run.')
 flags.DEFINE_integer('eval_every', 50_000, 'How often to run evaluation.')
+flags.DEFINE_integer('evaluation_episodes', 10, 'Evaluation episodes.')
 
 
 def build_experiment_config():
@@ -79,7 +80,9 @@ def main(_):
     lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
   else:
     experiments.run_experiment(
-        experiment=config, eval_every=FLAGS.eval_every, num_eval_episodes=10)
+        experiment=config,
+        eval_every=FLAGS.eval_every,
+        num_eval_episodes=FLAGS.evaluation_episodes)
 
 
 if __name__ == '__main__':
