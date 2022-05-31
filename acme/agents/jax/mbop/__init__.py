@@ -1,0 +1,32 @@
+# Copyright 2018 DeepMind Technologies Limited. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Implementation of the Model-Based Offline Planning (MBOP) agent."""
+
+from acme.agents.jax.mbop.acting import make_actor_core
+from acme.agents.jax.mbop.acting import make_ensemble_mbop_actor
+from acme.agents.jax.mbop.dataset import episodes_to_timestep_batched_transitions
+from acme.agents.jax.mbop.dataset import get_normalization_stats
+from acme.agents.jax.mbop.learning import make_ensemble_regressor_learner
+from acme.agents.jax.mbop.learning import MBOPLearner
+from acme.agents.jax.mbop.losses import MBOPLosses
+from acme.agents.jax.mbop.models import make_ensemble_n_step_return
+from acme.agents.jax.mbop.models import make_ensemble_policy_prior
+from acme.agents.jax.mbop.models import make_ensemble_world_model
+from acme.agents.jax.mbop.mppi import mppi_planner
+from acme.agents.jax.mbop.mppi import MPPIConfig
+from acme.agents.jax.mbop.mppi import return_top_k_average
+from acme.agents.jax.mbop.mppi import return_weighted_average
+from acme.agents.jax.mbop.networks import make_networks
+from acme.agents.jax.mbop.networks import MBOPNetworks
