@@ -70,7 +70,8 @@ def episode_to_timestep_batch(
     episode: rlds.BatchedStep,
     return_horizon: int = 0,
     drop_return_horizon: bool = False,
-    flatten_observations: bool = False) -> tf.data.Dataset:
+    flatten_observations: bool = False,
+    calculate_episode_return: bool = False) -> tf.data.Dataset:
   """Converts an episode into multi-timestep batches.
 
   Args:
@@ -81,6 +82,8 @@ def episode_to_timestep_batch(
       steps to avoid mis-calculated returns near the end of the episode.
     flatten_observations: bool whether we should flatten dict-based observations
       into a single 1-d vector.
+    calculate_episode_return: Whether to calculate episode return.  Can be an
+      expensive operation on datasets with many episodes.
 
   Returns:
     rl_dataset.DatasetType of 3-batched transitions, with scalar rewards
@@ -92,10 +95,11 @@ def episode_to_timestep_batch(
   ```
   o_tm1 = el[types.OBSERVATION][0]
   ```
-  Two additional keys are added: 'R_t' which corresponds to the undiscounted
-  return for horizon `return_horizon` from time t, and 'R_total' which
-  corresponds to the total return of the associated episode. Rewards are
-  converted to be (at least) one-dimensional, prior to batching.
+  Two additional keys can be added: 'R_t' which corresponds to the undiscounted
+  return for horizon `return_horizon` from time t (always present), and
+  'R_total' which corresponds to the total return of the associated episode (if
+  `calculate_episode_return` is True). Rewards are converted to be (at least)
+  one-dimensional, prior to batching (to avoid ()-shaped elements).
 
   In this example, 0-valued observations correspond to o_{t-1}, 1-valued
   observations correspond to o_t, and 2-valued observations correspond to
@@ -110,24 +114,27 @@ def episode_to_timestep_batch(
   ```
   """
   steps = episode[rlds.STEPS]
+
   if drop_return_horizon:
     episode_length = steps.cardinality()
     steps = steps.take(episode_length - return_horizon)
 
   # Calculate n-step return:
-  returns = steps.map(lambda step: step[rlds.REWARD])
-  returns = rlds.transformations.batch(
-      returns, size=return_horizon, shift=1, stride=1, drop_remainder=True)
-  returns = returns.map(tf.math.reduce_sum)
+  rewards = steps.map(lambda step: step[rlds.REWARD])
+  batched_rewards = rlds.transformations.batch(
+      rewards, size=return_horizon, shift=1, stride=1, drop_remainder=True)
+  returns = batched_rewards.map(tf.math.reduce_sum)
   output = tf.data.Dataset.zip((steps, returns)).map(_append_n_step_return)
 
   # Calculate total episode return for potential filtering, use total # of steps
   # to calculate return.
   dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
-  episode_return = rlds.transformations.sum_dataset(
-      episode[rlds.STEPS], lambda step: tf.cast(step[rlds.REWARD], dtype=dtype))
-  output = output.map(
-      functools.partial(_append_episode_return, episode_return=episode_return))
+  if calculate_episode_return:
+    episode_return = rewards.reduce(dtype(0), lambda x, y: x + y)
+    output = output.map(
+        functools.partial(
+            _append_episode_return, episode_return=episode_return))
+
   output = output.map(_expand_scalars)
   if flatten_observations:
     output = output.map(_flatten_observations)
@@ -151,7 +158,6 @@ def _step_to_transition(rlds_step: rlds.BatchedStep) -> types.Transition:
                                           rlds_step[rlds.OBSERVATION]),
       extras={
           N_STEP_RETURN: rlds_step[N_STEP_RETURN],
-          EPISODE_RETURN: rlds_step[EPISODE_RETURN]
       })
 
 
@@ -183,7 +189,8 @@ def episodes_to_timestep_batched_transitions(
           episode_to_timestep_batch,
           return_horizon=return_horizon,
           drop_return_horizon=drop_return_horizon,
-          flatten_observations=flatten_observations),
+          flatten_observations=flatten_observations,
+          calculate_episode_return=min_return_filter is not None),
       num_parallel_calls=tf.data.experimental.AUTOTUNE,
       deterministic=False)
 
