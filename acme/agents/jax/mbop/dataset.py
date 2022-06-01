@@ -128,8 +128,10 @@ def episode_to_timestep_batch(
 
   # Calculate total episode return for potential filtering, use total # of steps
   # to calculate return.
-  dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
   if calculate_episode_return:
+    dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
+    # Need to redefine this here to avoid a tf.data crash.
+    rewards = steps.map(lambda step: step[rlds.REWARD])
     episode_return = rewards.reduce(dtype(0), lambda x, y: x + y)
     output = output.map(
         functools.partial(
