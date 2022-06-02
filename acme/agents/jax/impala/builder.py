@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """IMPALA Builder."""
+
 from typing import Any, Callable, Iterator, List, Optional
 
 import acme
@@ -25,6 +26,7 @@ from acme.agents.jax.impala import acting
 from acme.agents.jax.impala import config as impala_config
 from acme.agents.jax.impala import learning
 from acme.agents.jax.impala import networks as impala_networks
+from acme.datasets import reverb as datasets
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.jax import variable_utils
@@ -106,16 +108,11 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
   def make_dataset_iterator(
       self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
     """Creates a dataset."""
-    # NOTE: we need TrajectoryDataset for SequenceAdder.
-    # NOTE: Value for max_in_flight_samples_per_worker comes from a
-    # reverb.TrajectoryDataset recommendation of 2-3x batch size.
-    dataset = reverb.TrajectoryDataset.from_table_signature(
-        server_address=replay_client.server_address,
+    dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
-        max_in_flight_samples_per_worker=2 * self._config.batch_size)
-
-    # Add batch dimension.
-    dataset = dataset.batch(self._num_sequences_per_batch, drop_remainder=True)
+        server_address=replay_client.server_address,
+        batch_size=self._num_sequences_per_batch,
+        num_parallel_calls=None)
     return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:

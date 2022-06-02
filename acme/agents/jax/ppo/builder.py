@@ -25,6 +25,7 @@ from acme.agents.jax import builders
 from acme.agents.jax.ppo import config as ppo_config
 from acme.agents.jax.ppo import learning
 from acme.agents.jax.ppo import networks as ppo_networks
+from acme.datasets import reverb as datasets
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.jax import variable_utils
@@ -74,17 +75,11 @@ class PPOBuilder(
   def make_dataset_iterator(
       self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
     """Creates a dataset."""
-    # We don't use datasets.make_reverb_dataset() here to avoid interleaving
-    # and prefetching, that doesn't work well with can_sample() check on update.
-    # NOTE: Value for max_in_flight_samples_per_worker comes from a
-    # recommendation here: https://git.io/JYzXB
-    # TODO(bshahr): use TrajectoryDataset instead when the adders are updated.
-    dataset = reverb.TrajectoryDataset.from_table_signature(
-        server_address=replay_client.server_address,
+    dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
-        max_in_flight_samples_per_worker=2 * self._config.batch_size)
-    # Add batch dimension.
-    dataset = dataset.batch(self._config.batch_size, drop_remainder=True)
+        server_address=replay_client.server_address,
+        batch_size=self._config.batch_size,
+        num_parallel_calls=None)
     return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:

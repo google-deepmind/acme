@@ -31,7 +31,7 @@ def make_reverb_dataset(
     batch_size: Optional[int] = None,
     prefetch_size: Optional[int] = None,
     table: str = adders.DEFAULT_PRIORITY_TABLE,
-    num_parallel_calls: int = 12,
+    num_parallel_calls: Optional[int] = 12,
     max_in_flight_samples_per_worker: Optional[int] = None,
     postprocess: Optional[Transform] = None,
     # Deprecated kwargs.
@@ -107,16 +107,20 @@ def make_reverb_dataset(
 
     return dataset
 
-  # Create a datasets and interleaves it to create `num_parallel_calls`
-  # `TrajectoryDataset`s.
-  num_datasets_to_interleave = (
-      os.cpu_count()
-      if num_parallel_calls == tf.data.AUTOTUNE else num_parallel_calls)
-  dataset = tf.data.Dataset.range(num_datasets_to_interleave).interleave(
-      map_func=_make_dataset,
-      cycle_length=num_parallel_calls,
-      num_parallel_calls=num_parallel_calls,
-      deterministic=False)
+  if num_parallel_calls is not None:
+    # Create a datasets and interleaves it to create `num_parallel_calls`
+    # `TrajectoryDataset`s.
+    num_datasets_to_interleave = (
+        os.cpu_count()
+        if num_parallel_calls == tf.data.AUTOTUNE else num_parallel_calls)
+    dataset = tf.data.Dataset.range(num_datasets_to_interleave).interleave(
+        map_func=_make_dataset,
+        cycle_length=num_parallel_calls,
+        num_parallel_calls=num_parallel_calls,
+        deterministic=False)
+  else:
+    dataset = _make_dataset(tf.constant(0))
+
   if prefetch_size:
     dataset = dataset.prefetch(prefetch_size)
 
