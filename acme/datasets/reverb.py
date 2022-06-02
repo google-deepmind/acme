@@ -14,15 +14,14 @@
 
 """Functions for making TensorFlow datasets for sampling from Reverb replay."""
 
+import os
 from typing import Callable, Optional
 
 from acme import specs
 from acme import types
 from acme.adders import reverb as adders
-
 import reverb
 import tensorflow as tf
-
 
 Transform = Callable[[reverb.ReplaySample], reverb.ReplaySample]
 
@@ -109,16 +108,15 @@ def make_reverb_dataset(
     return dataset
 
   # Create a datasets and interleaves it to create `num_parallel_calls`
-  # `TrajectoryDataset`s. The initial dataset is infinitely large in order
-  # to allow `num_parallel_calls` to be set to `tf.data.AUTOTUNE` - this ensures
-  # that the interleaved dataset is large enough.
-  dataset = tf.data.Dataset.from_tensors(0).repeat()
-  dataset = dataset.interleave(
+  # `TrajectoryDataset`s.
+  num_datasets_to_interleave = (
+      os.cpu_count()
+      if num_parallel_calls == tf.data.AUTOTUNE else num_parallel_calls)
+  dataset = tf.data.Dataset.range(num_datasets_to_interleave).interleave(
       map_func=_make_dataset,
       cycle_length=num_parallel_calls,
       num_parallel_calls=num_parallel_calls,
       deterministic=False)
-
   if prefetch_size:
     dataset = dataset.prefetch(prefetch_size)
 
