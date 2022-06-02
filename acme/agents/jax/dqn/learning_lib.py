@@ -126,7 +126,7 @@ class SGDLearner(acme.Learner):
     self._sgd_step = jax.jit(sgd_step)
 
     # Internalise agent components
-    self._data_iterator = utils.prefetch(data_iterator)
+    self._data_iterator = data_iterator
     self._target_update_period = target_update_period
     self._counter = counter or counting.Counter()
     self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
