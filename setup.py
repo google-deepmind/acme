@@ -154,7 +154,7 @@ setup(
     license='Apache License, Version 2.0',
     keywords='reinforcement-learning python machine learning',
     packages=find_packages(),
-    package_data={'': ['requirements.txt']},
+    package_data={'': ['requirements.txt', 'py.typed']},
     include_package_data=True,
     install_requires=core_requirements,
     extras_require={
