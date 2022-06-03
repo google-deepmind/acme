@@ -16,7 +16,6 @@
 
 import dataclasses
 import itertools
-import logging
 from typing import Callable, Dict, Optional
 
 from acme import core
@@ -75,7 +74,6 @@ def make_distributed_experiment(
     *,
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
-    prefetch_size: int = 1,
     multithreading_colocate_learner_and_reverb: bool = False,
     checkpointing_config: Optional[CheckpointingConfig] = None,
     make_snapshot_models: Optional[SnapshotModelFactory] = None,
@@ -84,9 +82,6 @@ def make_distributed_experiment(
     name='agent',
     program: Optional[lp.Program] = None):
   """Builds distributed agent based on a builder."""
-
-  if prefetch_size < 0:
-    raise ValueError(f'Prefetch size={prefetch_size} should be non negative')
 
   if multithreading_colocate_learner_and_reverb and num_learner_nodes > 1:
     raise ValueError(
@@ -139,8 +134,6 @@ def make_distributed_experiment(
   ):
     """The Learning part of the agent."""
 
-    iterator = experiment.builder.make_dataset_iterator(replay)
-
     dummy_seed = 1
     spec = (
         experiment.environment_spec or
@@ -149,11 +142,11 @@ def make_distributed_experiment(
     # Creates the networks to optimize (online) and target networks.
     networks = experiment.network_factory(spec)
 
-    if prefetch_size > 1:
-      iterator = utils.prefetch(iterable=iterator, buffer_size=prefetch_size)
-    else:
-      logging.info('Not prefetching the iterator.')
-
+    iterator = experiment.builder.make_dataset_iterator(replay)
+    # make_dataset_iterator is responsible for putting data onto appropriate
+    # training devices, so here we apply prefetch, so that data is copied over
+    # in the background.
+    iterator = utils.prefetch(iterable=iterator, buffer_size=1)
     logger = experiment.logger_factory('learner', 'learner_steps', 0)
     counter = counting.Counter(counter, 'learner')
     learner = experiment.builder.make_learner(random_key, networks, iterator,

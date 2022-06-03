@@ -101,7 +101,6 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
   return experiments.make_distributed_experiment(
       experiment=experiment,
       num_actors=num_actors,
-      prefetch_size=config.prefetch_size,
       checkpointing_config=distributed_layout.CheckpointingConfig(),
       make_snapshot_models=networks.default_models_to_snapshot,
       name=name,

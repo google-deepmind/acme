@@ -45,7 +45,6 @@ class PPOConfig:
     value_cost: float
     max_abs_reward: float
     max_gradient_norm: float
-    prefetch_size: int
     variable_update_period: int
   """
   # TODO(dulacarnold): Update some of these after sweeps.
@@ -65,5 +64,4 @@ class PPOConfig:
   value_cost: float = 1.
   max_abs_reward: float = np.inf
   max_gradient_norm: float = 0.5
-  prefetch_size: int = 4
   variable_update_period: int = 1

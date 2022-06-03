@@ -82,7 +82,6 @@ def make_distributed_ppo(environment_factory: jax_types.EnvironmentFactory,
   return experiments.make_distributed_experiment(
       experiment=experiment,
       num_actors=num_actors,
-      prefetch_size=config.prefetch_size,
       make_snapshot_models=make_snapshot_models,
       name=name,
       program=program)

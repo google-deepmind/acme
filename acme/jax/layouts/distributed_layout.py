@@ -158,6 +158,7 @@ class DistributedLayout:
       make_snapshot_models: Optional[SnapshotModelFactory] = None,
       inference_server_config: Optional[
           inference_server.InferenceServerConfig] = None):
+    del prefetch_size
     self._experiment_config = experiments.config.Config(
         builder=builder,
         environment_factory=environment_factory,
@@ -171,7 +172,6 @@ class DistributedLayout:
         logger_factory=logger_factory(learner_logger_fn, actor_logger_fn,
                                       save_logs))
     self._num_actors = num_actors
-    self._prefetch_size = prefetch_size
     self._multithreading_colocate_learner_and_reverb = (
         multithreading_colocate_learner_and_reverb)
     self._checkpointing_config = checkpointing_config
@@ -184,7 +184,6 @@ class DistributedLayout:
     return experiments.make_distributed_experiment(
         self._experiment_config,
         self._num_actors,
-        prefetch_size=self._prefetch_size,
         multithreading_colocate_learner_and_reverb=self
         ._multithreading_colocate_learner_and_reverb,
         checkpointing_config=self._checkpointing_config,
