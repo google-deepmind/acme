@@ -14,9 +14,9 @@
 
 """Runners used for executing local agents."""
 
-import math
 import sys
-from typing import List
+import time
+from typing import Sequence, Tuple
 
 import acme
 from acme import core
@@ -28,75 +28,6 @@ from acme.utils import counting
 import dm_env
 import jax
 import reverb
-
-
-class _LearningActor(core.Actor):
-  """Actor which learns (updates its parameters) when `update` is called.
-
-  This combines a base actor and a learner. Whenever `update` is called
-  on the wrapping actor the learner will take a step (e.g. one step of gradient
-  descent) as long as there is data available for training
-  (provided iterator and replay_tables are used to check for that).
-  Selecting actions and making observations are handled by the base actor.
-  Intended to be used by the `run_experiment` only.
-  """
-
-  def __init__(self, actor: core.Actor, learner: core.Learner,
-               iterator: core.PrefetchingIterator,
-               replay_tables: List[reverb.Table]):
-    self._actor = actor
-    self._learner = learner
-    self._iterator = iterator
-    self._replay_tables = replay_tables
-    self._batch_size_upper_bounds = [1_000_000_000] * len(replay_tables)
-
-  def select_action(self, observation: types.NestedArray) -> types.NestedArray:
-    return self._actor.select_action(observation)
-
-  def observe_first(self, timestep: dm_env.TimeStep):
-    self._actor.observe_first(timestep)
-
-  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
-    self._actor.observe(action, next_timestep)
-
-  def _has_data_for_training(self):
-    if self._iterator.ready():
-      return True
-    for (table, batch_size) in zip(self._replay_tables,
-                                   self._batch_size_upper_bounds):
-      if not table.can_sample(batch_size):
-        return False
-    return True
-
-  def update(self):
-    # Perform learner steps as long as iterator has data.
-    update_actor = False
-    while self._has_data_for_training():
-      # Run learner steps (usually means gradient steps).
-      total_batches = self._iterator.retrieved_elements()
-      self._learner.step()
-      current_batches = self._iterator.retrieved_elements() - total_batches
-      assert current_batches == 1, (
-          'Learner step must retrieve exactly one element from the iterator'
-          f' (retrieved {current_batches}). Otherwise agent can deadlock.')
-      self._batch_size_upper_bounds = [
-          math.ceil(t.info.rate_limiter_info.sample_stats.completed /
-                    (total_batches + 1)) for t in self._replay_tables
-      ]
-      update_actor = True
-    if update_actor:
-      # Update the actor weights only when learner was updated.
-      self._actor.update()
-
-
-def _disable_insert_blocking(table: reverb.Table):
-  rate_limiter_info = table.info.rate_limiter_info
-  rate_limiter = reverb.rate_limiters.RateLimiter(
-      samples_per_insert=rate_limiter_info.samples_per_insert,
-      min_size_to_sample=rate_limiter_info.min_size_to_sample,
-      min_diff=rate_limiter_info.min_diff,
-      max_diff=sys.float_info.max)
-  return table.replace(rate_limiter=rate_limiter)
 
 
 def run_experiment(experiment: config.Config,
@@ -133,20 +64,19 @@ def run_experiment(experiment: config.Config,
   # executes learning (sampling from the table) and data generation
   # (inserting into the table) sequentially from the same thread
   # which could result in blocked insert making the algorithm hang.
-  replay_tables = [_disable_insert_blocking(table) for table in replay_tables]
+  replay_tables, rate_limiters_max_diff = _disable_insert_blocking(
+      replay_tables)
 
   replay_server = reverb.Server(replay_tables, port=None)
   replay_client = reverb.Client(f'localhost:{replay_server.port}')
-
-  # Create actor, dataset, and learner for generating, storing, and consuming
-  # data respectively.
-  adder = experiment.builder.make_adder(replay_client)
 
   # Parent counter allows to share step counts between train and eval loops and
   # the learner, so that it is possible to plot for example evaluator's return
   # value as a function of the number of training episodes.
   parent_counter = counting.Counter(time_delta=0.)
 
+  # Create actor, and learner for generating, storing, and consuming
+  # data respectively.
   dataset = experiment.builder.make_dataset_iterator(replay_client)
   # We always use prefetch, as it provides an iterator with additional
   # 'ready' method.
@@ -162,19 +92,16 @@ def run_experiment(experiment: config.Config,
       replay_client=replay_client,
       counter=counting.Counter(parent_counter, prefix='learner', time_delta=0.))
 
+  adder = experiment.builder.make_adder(replay_client)
+  adder = _TrainingAdder(adder, learner, dataset, replay_tables,
+                         rate_limiters_max_diff)
+
   actor_key, key = jax.random.split(key)
   actor = experiment.builder.make_actor(
       actor_key, policy, environment_spec, variable_source=learner, adder=adder)
 
   # Create the environment loop used for training.
   train_logger = experiment.logger_factory('train', 'train_steps', 0)
-
-  # Replace the actor with a LearningActor. This makes sure that every time
-  # that `update` is called on the actor it checks to see whether there is
-  # any new data to learn from and if so it runs a learner step. The rate
-  # at which new data is released is controlled by the replay table's
-  # rate_limiter which is created by the builder.make_replay_tables call above.
-  actor = _LearningActor(actor, learner, dataset, replay_tables)
 
   train_loop = acme.EnvironmentLoop(
       environment,
@@ -205,3 +132,94 @@ def run_experiment(experiment: config.Config,
     steps += eval_every
   if eval_loop:
     eval_loop.run(num_episodes=num_eval_episodes)
+
+
+class _TrainingAdder(acme.adders.base.Adder):
+  """Experience adder which executes training when there is sufficient data."""
+
+  def __init__(self, adder: acme.adders.base.Adder, learner: core.Learner,
+               iterator: core.PrefetchingIterator,
+               replay_tables: Sequence[reverb.Table],
+               max_diffs: Sequence[float]):
+    """Initializes _TrainingAdder.
+
+    Args:
+      adder: Underlying, to be wrapped, adder used to add experience to Reverb.
+      learner: Learner on which step() is to be called when there is data.
+      iterator: Iterator used by the Learner to fetch training data.
+      replay_tables: Collection of tables from which Learner fetches data
+        through the iterator.
+      max_diffs: Corresponding max_diff settings of the original rate limiters
+        (before the _disable_insert_blocking call) corresponding to the
+        `replay_tables`.
+    """
+    self._adder = adder
+    self._learner = learner
+    self._iterator = iterator
+    self._replay_tables = replay_tables
+    self._max_diffs = max_diffs
+    self._learner_steps = 0
+
+  def add_first(self, timestep: dm_env.TimeStep):
+    self._maybe_train()
+    self._adder.add_first(timestep)
+
+  def add(self,
+          action: types.NestedArray,
+          next_timestep: dm_env.TimeStep,
+          extras: types.NestedArray = ()):
+    self._maybe_train()
+    self._adder.add(action, next_timestep, extras)
+
+  def reset(self):
+    self._adder.reset()
+
+  def _maybe_train(self):
+    while True:
+      if self._iterator.ready():
+        self._learner.step()
+        batches = self._iterator.retrieved_elements() - self._learner_steps
+        self._learner_steps += 1
+        assert batches == 1, (
+            'Learner step must retrieve exactly one element from the iterator'
+            f' (retrieved {batches}). Otherwise agent can deadlock.')
+      elif self._learner_steps == 0:
+        # Make sure `min_size_to_sample_` was reached before checking
+        # `max_diff`.
+        return
+      else:
+        # If any of the rate limiters would block the insert call, we sleep
+        # a bit to allow for Learner's iterator to fetch data from the table.
+        # As a result, either making a Learner step should be possible or insert
+        # call won't be blocked anymore due to some data being sampled from the
+        # table in the background.
+        can_insert = True
+        for table, max_diff in zip(self._replay_tables, self._max_diffs):
+          info = table.info.rate_limiter_info
+          diff = (
+              info.insert_stats.completed * info.samples_per_insert -
+              info.sample_stats.completed)
+          if diff > max_diff:
+            can_insert = False
+        if can_insert:
+          return
+        else:
+          time.sleep(0.001)
+
+
+def _disable_insert_blocking(
+    tables: Sequence[reverb.Table]
+) -> Tuple[Sequence[reverb.Table], Sequence[float]]:
+  """Disables blocking of insert operations for a given collection of tables."""
+  modified_tables = []
+  max_diffs = []
+  for table in tables:
+    rate_limiter_info = table.info.rate_limiter_info
+    rate_limiter = reverb.rate_limiters.RateLimiter(
+        samples_per_insert=rate_limiter_info.samples_per_insert,
+        min_size_to_sample=rate_limiter_info.min_size_to_sample,
+        min_diff=rate_limiter_info.min_diff,
+        max_diff=sys.float_info.max)
+    modified_tables.append(table.replace(rate_limiter=rate_limiter))
+    max_diffs.append(rate_limiter_info.max_diff)
+  return modified_tables, max_diffs
