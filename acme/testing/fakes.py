@@ -28,6 +28,7 @@ from acme import wrappers
 import dm_env
 import numpy as np
 import reverb
+from rlds import rlds_types
 import tensorflow as tf
 import tree
 
@@ -437,3 +438,37 @@ def fake_atari_wrapped(episode_length: int = 10,
   if oar_wrapper:
     env = wrappers.ObservationActionRewardWrapper(env)
   return env
+
+
+def rlds_dataset_from_env_spec(
+    spec: specs.EnvironmentSpec,
+    *,
+    episode_count: int = 10,
+    episode_length: int = 25,
+) -> tf.data.Dataset:
+  """Constructs a fake RLDS dataset with the given spec.
+
+  Args:
+    spec: specification to use for generation of fake steps.
+    episode_count: number of episodes in the dataset.
+    episode_length: length of the episode in the dataset.
+
+  Returns:
+    a fake RLDS dataset.
+  """
+
+  fake_steps = {
+      rlds_types.OBSERVATION:
+          ([_generate_from_spec(spec.observations)] * episode_length),
+      rlds_types.ACTION: ([_generate_from_spec(spec.actions)] * episode_length),
+      rlds_types.REWARD: ([_generate_from_spec(spec.rewards)] * episode_length),
+      rlds_types.DISCOUNT:
+          ([_generate_from_spec(spec.discounts)] * episode_length),
+      rlds_types.IS_TERMINAL: [False] * (episode_length - 1) + [True],
+      rlds_types.IS_FIRST: [True] + [False] * (episode_length - 1),
+      rlds_types.IS_LAST: [False] * (episode_length - 1) + [True],
+  }
+  steps_dataset = tf.data.Dataset.from_tensor_slices(fake_steps)
+
+  return tf.data.Dataset.from_tensor_slices(
+      {rlds_types.STEPS: [steps_dataset] * episode_count})

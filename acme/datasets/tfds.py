@@ -52,7 +52,7 @@ def _dataset_size_upperbound(dataset: tf.data.Dataset) -> int:
       dataset.batch(1000).reduce(0, lambda x, step: x + 1000), tf.int64)
 
 
-def get_tfds_dataset(
+def load_tfds_dataset(
     dataset_name: str,
     num_episodes: Optional[int] = None,
     env_spec: Optional[specs.EnvironmentSpec] = None) -> tf.data.Dataset:
@@ -63,6 +63,16 @@ def get_tfds_dataset(
   dataset = tfds.load(dataset_name)['train']
   if num_episodes:
     dataset = dataset.take(num_episodes)
+  return dataset
+
+
+# TODO(sinopalnikov): replace get_ftds_dataset with a pair of load/transform.
+def get_tfds_dataset(
+    dataset_name: str,
+    num_episodes: Optional[int] = None,
+    env_spec: Optional[specs.EnvironmentSpec] = None) -> tf.data.Dataset:
+  """Returns a TFDS dataset transformed to a dataset of transitions."""
+  dataset = load_tfds_dataset(dataset_name, num_episodes, env_spec)
   batched_steps = dataset.flat_map(_batch_steps)
   return rlds.transformations.map_steps(batched_steps,
                                         _batched_step_to_transition)
