@@ -97,14 +97,15 @@ class Agent(core.Actor, core.VariableSource):
       update_actor = False
       while self._has_data_for_training():
         # Run learner steps (usually means gradient steps).
-        batches_processed = self._iterator.retrieved_elements()
+        total_batches = self._iterator.retrieved_elements()
         self._learner.step()
-        assert self._iterator.retrieved_elements() == batches_processed + 1, (
-            'Learner step must retrieve exactly one '
-            'element from the iterator. Otherwise agent can deadlock.')
+        current_batches = self._iterator.retrieved_elements() - total_batches
+        assert current_batches == 1, (
+            'Learner step must retrieve exactly one element from the iterator'
+            f' (retrieved {current_batches}). Otherwise agent can deadlock.')
         self._batch_size_upper_bounds = [
             math.ceil(t.info.rate_limiter_info.sample_stats.completed /
-                      (batches_processed + 1)) for t in self._replay_tables
+                      (total_batches + 1)) for t in self._replay_tables
         ]
         update_actor = True
       if update_actor:
