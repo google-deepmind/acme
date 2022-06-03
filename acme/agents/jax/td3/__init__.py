@@ -14,7 +14,6 @@
 
 """TD3 agent."""
 
-from acme.agents.jax.td3.agents import TD3
 from acme.agents.jax.td3.builder import TD3Builder
 from acme.agents.jax.td3.config import TD3Config
 from acme.agents.jax.td3.learning import TD3Learner
