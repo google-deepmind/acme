@@ -24,3 +24,6 @@ from acme.tf.losses.mpo import MPO
 from acme.tf.losses.r2d2 import transformed_n_step_loss
 
 # Internal imports.
+# pylint: disable=g-bad-import-order,g-import-not-at-top
+from acme.tf.losses.quantile import NonUniformQuantileRegression
+from acme.tf.losses.quantile import QuantileDistribution

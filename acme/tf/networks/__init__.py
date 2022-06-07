@@ -63,3 +63,4 @@ except ImportError:
   pass
 
 # Internal imports.
+from acme.tf.networks.quantile import IQNNetwork

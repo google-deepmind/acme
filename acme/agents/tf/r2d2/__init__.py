@@ -15,3 +15,4 @@
 """Module for Recurrent DQN (R2D2)."""
 
 from acme.agents.tf.r2d2.agent import R2D2
+from acme.agents.tf.r2d2.agent_distributed import DistributedR2D2

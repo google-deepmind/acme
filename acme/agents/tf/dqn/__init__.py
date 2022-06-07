@@ -15,4 +15,5 @@
 """Implementation of a deep Q-networks (DQN) agent."""
 
 from acme.agents.tf.dqn.agent import DQN
+from acme.agents.tf.dqn.agent_distributed import DistributedDQN
 from acme.agents.tf.dqn.learning import DQNLearner

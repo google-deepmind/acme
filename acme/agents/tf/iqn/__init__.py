@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Monte-Carlo tree search (MCTS) agent."""
+"""Implementation of an IQN agent."""
 
-from acme.agents.tf.mcts.agent import MCTS
-from acme.agents.tf.mcts.agent_distributed import DistributedMCTS
+from acme.agents.tf.iqn.learning import IQNLearner
