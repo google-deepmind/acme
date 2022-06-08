@@ -107,7 +107,8 @@ def run_experiment(experiment: config.Config,
       environment,
       actor,
       counter=counting.Counter(parent_counter, prefix='train', time_delta=0.),
-      logger=train_logger)
+      logger=train_logger,
+      observers=experiment.observers)
 
   eval_loop = None
   if experiment.eval_policy_network_factory:
@@ -122,7 +123,8 @@ def run_experiment(experiment: config.Config,
         environment,
         eval_actor,
         counter=counting.Counter(parent_counter, prefix='eval', time_delta=0.),
-        logger=eval_logger)
+        logger=eval_logger,
+        observers=experiment.observers)
 
   steps = 0
   while steps < experiment.max_number_of_steps:

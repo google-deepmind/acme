@@ -109,7 +109,8 @@ class Config:
             environment_factory=self.environment_factory,
             network_factory=self.network_factory,
             policy_factory=self.eval_policy_network_factory,
-            logger_factory=self.logger_factory)
+            logger_factory=self.logger_factory,
+            observers=self.observers)
     ]
 
 
