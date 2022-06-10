@@ -163,7 +163,6 @@ class TD3Learner(acme.Learner):
     ) -> Tuple[TrainingState, Dict[str, jnp.ndarray]]:
 
       random_key, key_critic, key_twin = jax.random.split(state.random_key, 3)
-      polyak_averaging = lambda x, y: x * (1 - tau) + y * tau
 
       # Updates on the critic: compute the gradients, and update using
       # Polyak averaging.
@@ -176,8 +175,10 @@ class TD3Learner(acme.Learner):
       # In the original authors' implementation the critic target update is
       # delayed similarly to the policy update which we found empirically to
       # perform slightly worse.
-      target_critic_params = jax.tree_multimap(
-          polyak_averaging, state.target_critic_params, critic_params)
+      target_critic_params = optax.incremental_update(
+          new_tensors=critic_params,
+          old_tensors=state.target_critic_params,
+          step_size=tau)
 
       # Updates on the twin critic: compute the gradients, and update using
       # Polyak averaging.
@@ -190,8 +191,10 @@ class TD3Learner(acme.Learner):
       # In the original authors' implementation the twin critic target update is
       # delayed similarly to the policy update which we found empirically to
       # perform slightly worse.
-      target_twin_critic_params = jax.tree_multimap(
-          polyak_averaging, state.target_twin_critic_params, twin_critic_params)
+      target_twin_critic_params = optax.incremental_update(
+          new_tensors=twin_critic_params,
+          old_tensors=state.target_twin_critic_params,
+          step_size=tau)
 
       # Updates on the policy: compute the gradients, and update using
       # Polyak averaging (if delay enabled, the update might not be applied).
@@ -202,8 +205,10 @@ class TD3Learner(acme.Learner):
         policy_updates, policy_opt_state = policy_optimizer.update(
             policy_gradients, state.policy_opt_state)
         policy_params = optax.apply_updates(state.policy_params, policy_updates)
-        target_policy_params = jax.tree_multimap(
-            polyak_averaging, state.target_policy_params, policy_params)
+        target_policy_params = optax.incremental_update(
+            new_tensors=policy_params,
+            old_tensors=state.target_policy_params,
+            step_size=tau)
         return policy_params, target_policy_params, policy_opt_state
 
       # The update on the policy is applied every `delay` steps.
