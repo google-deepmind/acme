@@ -20,9 +20,10 @@ from typing import Any, Callable, Dict, Generic, Mapping, TypeVar
 from acme import types
 import chex
 import dm_env
+import jax
 import jax.numpy as jnp
 
-PRNGKey = jnp.ndarray
+PRNGKey = jax.random.KeyArray
 Networks = TypeVar('Networks')
 PolicyNetwork = TypeVar('PolicyNetwork')
 Sample = TypeVar('Sample')
