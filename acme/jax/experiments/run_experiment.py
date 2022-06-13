@@ -142,7 +142,7 @@ class _TrainingAdder(acme.adders.base.Adder):
   def __init__(self, adder: acme.adders.base.Adder, learner: core.Learner,
                iterator: core.PrefetchingIterator,
                replay_tables: Sequence[reverb.Table],
-               max_diffs: Sequence[float]):
+               sample_sizes: Sequence[int]):
     """Initializes _TrainingAdder.
 
     Args:
@@ -151,15 +151,16 @@ class _TrainingAdder(acme.adders.base.Adder):
       iterator: Iterator used by the Learner to fetch training data.
       replay_tables: Collection of tables from which Learner fetches data
         through the iterator.
-      max_diffs: Corresponding max_diff settings of the original rate limiters
-        (before the _disable_insert_blocking call) corresponding to the
-        `replay_tables`.
+      sample_sizes: For each table from `replay_tables`, how many elements the
+        table should have available for sampling to wait for the `iterator` to
+        prefetch a batch of data. Otherwise more experience needs to be
+        collected by the actor.
     """
     self._adder = adder
     self._learner = learner
     self._iterator = iterator
     self._replay_tables = replay_tables
-    self._max_diffs = max_diffs
+    self._sample_sizes = sample_sizes
     self._learner_steps = 0
 
   def add_first(self, timestep: dm_env.TimeStep):
@@ -185,36 +186,22 @@ class _TrainingAdder(acme.adders.base.Adder):
         assert batches == 1, (
             'Learner step must retrieve exactly one element from the iterator'
             f' (retrieved {batches}). Otherwise agent can deadlock.')
-      elif self._learner_steps == 0:
-        # Make sure `min_size_to_sample_` was reached before checking
-        # `max_diff`.
-        return
       else:
-        # If any of the rate limiters would block the insert call, we sleep
-        # a bit to allow for Learner's iterator to fetch data from the table.
-        # As a result, either making a Learner step should be possible or insert
-        # call won't be blocked anymore due to some data being sampled from the
-        # table in the background.
-        can_insert = True
-        for table, max_diff in zip(self._replay_tables, self._max_diffs):
-          info = table.info.rate_limiter_info
-          diff = (
-              info.insert_stats.completed * info.samples_per_insert -
-              info.sample_stats.completed)
-          if diff > max_diff:
-            can_insert = False
-        if can_insert:
-          return
-        else:
-          time.sleep(0.001)
+        # Wait for the iterator to fetch more data from the table(s) only
+        # if there plenty of data to sample from each table.
+        for table, sample_size in zip(self._replay_tables, self._sample_sizes):
+          if not table.can_sample(sample_size):
+            return
+        # Let iterator's prefetching thread get data from the table(s).
+        time.sleep(0.001)
 
 
 def _disable_insert_blocking(
     tables: Sequence[reverb.Table]
-) -> Tuple[Sequence[reverb.Table], Sequence[float]]:
+) -> Tuple[Sequence[reverb.Table], Sequence[int]]:
   """Disables blocking of insert operations for a given collection of tables."""
   modified_tables = []
-  max_diffs = []
+  sample_sizes = []
   for table in tables:
     rate_limiter_info = table.info.rate_limiter_info
     rate_limiter = reverb.rate_limiters.RateLimiter(
@@ -223,5 +210,8 @@ def _disable_insert_blocking(
         min_diff=rate_limiter_info.min_diff,
         max_diff=sys.float_info.max)
     modified_tables.append(table.replace(rate_limiter=rate_limiter))
-    max_diffs.append(rate_limiter_info.max_diff)
-  return modified_tables, max_diffs
+    # Target the middle of the rate limiter's insert-sample balance window.
+    sample_sizes.append(
+        max(1, int(
+            (rate_limiter_info.max_diff - rate_limiter_info.min_diff) / 2)))
+  return modified_tables, sample_sizes
