@@ -42,21 +42,16 @@ def make_environment(suite: str, task: str) -> dm_env.Environment:
     env = gym.make(task)
     # Make sure the environment obeys the dm_env.Environment interface.
     env = wrappers.GymWrapper(env)
-    # Clip the action returned by the agent to the environment spec.
-    env = wrappers.CanonicalSpecWrapper(env, clip=True)
-    env = wrappers.SinglePrecisionWrapper(env)
 
   elif suite == 'control':
     # Load dm_suite lazily not require Mujoco license when not using it.
     from dm_control import suite as dm_suite  # pylint: disable=g-import-not-at-top
     domain_name, task_name = task.split(':')
     env = dm_suite.load(domain_name, task_name)
-    env = wrappers.SinglePrecisionWrapper(env)
-    timestep = env.reset()
-    obs_names = list(timestep.observation.keys())
-    env = wrappers.ConcatObservationWrapper(env, obs_names)
+    env = wrappers.ConcatObservationWrapper(env)
 
   # Wrap the environment so the expected continuous action spec is [-1, 1].
   # Note: this is a no-op on 'control' tasks.
   env = wrappers.CanonicalSpecWrapper(env, clip=True)
+  env = wrappers.SinglePrecisionWrapper(env)
   return env
