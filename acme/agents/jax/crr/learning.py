@@ -28,7 +28,6 @@ from acme.utils import loggers
 import jax
 import jax.numpy as jnp
 import optax
-import rlax
 
 
 class TrainingState(NamedTuple):
@@ -164,7 +163,7 @@ class CRRLearner(acme.Learner):
       steps = state.steps + 1
 
       # Periodically update target networks.
-      target_policy_params, target_critic_params = rlax.periodic_update(
+      target_policy_params, target_critic_params = optax.periodic_update(
           (policy_params, critic_params),
           (state.target_policy_params, state.target_critic_params), steps,
           target_update_period)

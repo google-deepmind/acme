@@ -177,8 +177,8 @@ class R2D2Learner(acme.Learner):
 
       # Periodically update target networks.
       steps = state.steps + 1
-      target_params = rlax.periodic_update(
-          new_params, state.target_params, steps, self._target_update_period)
+      target_params = optax.periodic_update(new_params, state.target_params,
+                                            steps, self._target_update_period)
 
       new_state = TrainingState(
           params=new_params,

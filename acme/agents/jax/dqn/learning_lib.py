@@ -29,7 +29,6 @@ import jax
 import jax.numpy as jnp
 import optax
 import reverb
-import rlax
 import tree
 import typing_extensions
 
@@ -107,8 +106,8 @@ class SGDLearner(acme.Learner):
 
       # Periodically update target networks.
       steps = state.steps + 1
-      target_params = rlax.periodic_update(
-          new_params, state.target_params, steps, target_update_period)
+      target_params = optax.periodic_update(new_params, state.target_params,
+                                            steps, target_update_period)
       new_training_state = TrainingState(
           new_params, target_params, new_opt_state, steps, next_rng_key)
       return new_training_state, extra

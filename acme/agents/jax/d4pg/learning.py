@@ -143,10 +143,10 @@ class D4PGLearner(acme.Learner):
       steps = state.steps + 1
 
       # Periodically update target networks.
-      target_policy_params, target_critic_params = rlax.periodic_update(
+      target_policy_params, target_critic_params = optax.periodic_update(
           (policy_params, critic_params),
-          (state.target_policy_params, state.target_critic_params),
-          steps, self._target_update_period)
+          (state.target_policy_params, state.target_critic_params), steps,
+          self._target_update_period)
 
       new_state = TrainingState(
           policy_params=policy_params,
