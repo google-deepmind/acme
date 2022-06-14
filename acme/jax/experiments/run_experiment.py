@@ -93,15 +93,20 @@ def run_experiment(experiment: config.Config,
       counter=counting.Counter(parent_counter, prefix='learner', time_delta=0.))
 
   adder = experiment.builder.make_adder(replay_client)
-  adder = _TrainingAdder(adder, learner, dataset, replay_tables,
-                         rate_limiters_max_diff)
-
   actor_key, key = jax.random.split(key)
   actor = experiment.builder.make_actor(
       actor_key, policy, environment_spec, variable_source=learner, adder=adder)
 
   # Create the environment loop used for training.
   train_logger = experiment.logger_factory('train', 'train_steps', 0)
+
+  # Replace the actor with a LearningActor. This makes sure that every time
+  # that `update` is called on the actor it checks to see whether there is
+  # any new data to learn from and if so it runs a learner step. The rate
+  # at which new data is released is controlled by the replay table's
+  # rate_limiter which is created by the builder.make_replay_tables call above.
+  actor = _LearningActor(actor, learner, dataset, replay_tables,
+                         rate_limiters_max_diff)
 
   train_loop = acme.EnvironmentLoop(
       environment,
@@ -136,17 +141,25 @@ def run_experiment(experiment: config.Config,
     eval_loop.run(num_episodes=num_eval_episodes)
 
 
-class _TrainingAdder(acme.adders.base.Adder):
-  """Experience adder which executes training when there is sufficient data."""
+class _LearningActor(core.Actor):
+  """Actor which learns (updates its parameters) when `update` is called.
 
-  def __init__(self, adder: acme.adders.base.Adder, learner: core.Learner,
+  This combines a base actor and a learner. Whenever `update` is called
+  on the wrapping actor the learner will take a step (e.g. one step of gradient
+  descent) as long as there is data available for training
+  (provided iterator and replay_tables are used to check for that).
+  Selecting actions and making observations are handled by the base actor.
+  Intended to be used by the `run_experiment` only.
+  """
+
+  def __init__(self, actor: core.Actor, learner: core.Learner,
                iterator: core.PrefetchingIterator,
                replay_tables: Sequence[reverb.Table],
                sample_sizes: Sequence[int]):
-    """Initializes _TrainingAdder.
+    """Initializes _LearningActor.
 
     Args:
-      adder: Underlying, to be wrapped, adder used to add experience to Reverb.
+      actor: Actor to be wrapped.
       learner: Learner on which step() is to be called when there is data.
       iterator: Iterator used by the Learner to fetch training data.
       replay_tables: Collection of tables from which Learner fetches data
@@ -156,28 +169,24 @@ class _TrainingAdder(acme.adders.base.Adder):
         prefetch a batch of data. Otherwise more experience needs to be
         collected by the actor.
     """
-    self._adder = adder
+    self._actor = actor
     self._learner = learner
     self._iterator = iterator
     self._replay_tables = replay_tables
     self._sample_sizes = sample_sizes
     self._learner_steps = 0
 
-  def add_first(self, timestep: dm_env.TimeStep):
-    self._maybe_train()
-    self._adder.add_first(timestep)
+  def select_action(self, observation: types.NestedArray) -> types.NestedArray:
+    return self._actor.select_action(observation)
 
-  def add(self,
-          action: types.NestedArray,
-          next_timestep: dm_env.TimeStep,
-          extras: types.NestedArray = ()):
-    self._maybe_train()
-    self._adder.add(action, next_timestep, extras)
+  def observe_first(self, timestep: dm_env.TimeStep):
+    self._actor.observe_first(timestep)
 
-  def reset(self):
-    self._adder.reset()
+  def observe(self, action: types.NestedArray, next_timestep: dm_env.TimeStep):
+    self._actor.observe(action, next_timestep)
 
   def _maybe_train(self):
+    trained = False
     while True:
       if self._iterator.ready():
         self._learner.step()
@@ -186,14 +195,20 @@ class _TrainingAdder(acme.adders.base.Adder):
         assert batches == 1, (
             'Learner step must retrieve exactly one element from the iterator'
             f' (retrieved {batches}). Otherwise agent can deadlock.')
+        trained = True
       else:
         # Wait for the iterator to fetch more data from the table(s) only
         # if there plenty of data to sample from each table.
         for table, sample_size in zip(self._replay_tables, self._sample_sizes):
           if not table.can_sample(sample_size):
-            return
+            return trained
         # Let iterator's prefetching thread get data from the table(s).
         time.sleep(0.001)
+
+  def update(self):
+    if self._maybe_train():
+      # Update the actor weights only when learner was updated.
+      self._actor.update()
 
 
 def _disable_insert_blocking(
