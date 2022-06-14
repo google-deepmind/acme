@@ -107,12 +107,11 @@ def get_default_logger_fn(
   return create_logger
 
 
-def logger_factory(learner_logger_fn: Optional[Callable[[],
-                                                        loggers.Logger]] = None,
-                   actor_logger_fn: Optional[Callable[[ActorId],
-                                                      loggers.Logger]] = None,
-                   save_logs: bool = True,
-                   log_every: float = 10.0):
+def logger_factory(
+    learner_logger_fn: Optional[Callable[[], loggers.Logger]] = None,
+    actor_logger_fn: Optional[Callable[[ActorId], loggers.Logger]] = None,
+    save_logs: bool = True,
+    log_every: float = 10.0) -> Callable[[str, str, int], loggers.Logger]:
   """Builds a logger factory used by the experiments.config."""
 
   def factory(label: str, steps_key: str, task_id: int):
@@ -122,7 +121,7 @@ def logger_factory(learner_logger_fn: Optional[Callable[[],
       if actor_logger_fn:
         return actor_logger_fn(task_id)
       else:
-        get_default_logger_fn(save_logs)
+        return get_default_logger_fn(save_logs)(task_id)
     if label == 'evaluator':
       return loggers.make_default_logger(
           label, save_logs, time_delta=log_every, steps_key=steps_key)
