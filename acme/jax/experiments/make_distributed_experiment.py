@@ -147,8 +147,8 @@ def make_distributed_experiment(
     # training devices, so here we apply prefetch, so that data is copied over
     # in the background.
     iterator = utils.prefetch(iterable=iterator, buffer_size=1)
-    logger = experiment.logger_factory('learner', 'learner_steps', 0)
     counter = counting.Counter(counter, 'learner')
+    logger = experiment.logger_factory('learner', counter.get_steps_key(), 0)
     learner = experiment.builder.make_learner(random_key, networks, iterator,
                                               logger, spec, replay, counter)
 
@@ -200,7 +200,8 @@ def make_distributed_experiment(
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'actor')
-    logger = experiment.logger_factory('actor', 'actor_steps', actor_id)
+    logger = experiment.logger_factory('actor', counter.get_steps_key(),
+                                       actor_id)
     # Create the loop to connect environment and agent.
     return environment_loop.EnvironmentLoop(
         environment, actor, counter, logger, observers=experiment.observers)

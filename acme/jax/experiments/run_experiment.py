@@ -82,7 +82,10 @@ def run_experiment(experiment: config.Config,
   # 'ready' method.
   dataset = utils.prefetch(dataset, buffer_size=1)
   learner_key, key = jax.random.split(key)
-  learner_logger = experiment.logger_factory('learner', 'learner_steps', 0)
+  learner_counter = counting.Counter(
+      parent_counter, prefix='learner', time_delta=0.)
+  learner_logger = experiment.logger_factory('learner',
+                                             learner_counter.get_steps_key(), 0)
   learner = experiment.builder.make_learner(
       random_key=learner_key,
       networks=networks,
@@ -90,7 +93,7 @@ def run_experiment(experiment: config.Config,
       logger=learner_logger,
       environment_spec=environment_spec,
       replay_client=replay_client,
-      counter=counting.Counter(parent_counter, prefix='learner', time_delta=0.))
+      counter=learner_counter)
 
   adder = experiment.builder.make_adder(replay_client)
   actor_key, key = jax.random.split(key)
@@ -98,7 +101,10 @@ def run_experiment(experiment: config.Config,
       actor_key, policy, environment_spec, variable_source=learner, adder=adder)
 
   # Create the environment loop used for training.
-  train_logger = experiment.logger_factory('train', 'train_steps', 0)
+  train_counter = counting.Counter(
+      parent_counter, prefix='train', time_delta=0.)
+  train_logger = experiment.logger_factory('train',
+                                           train_counter.get_steps_key(), 0)
 
   # Replace the actor with a LearningActor. This makes sure that every time
   # that `update` is called on the actor it checks to see whether there is
@@ -111,14 +117,17 @@ def run_experiment(experiment: config.Config,
   train_loop = acme.EnvironmentLoop(
       environment,
       actor,
-      counter=counting.Counter(parent_counter, prefix='train', time_delta=0.),
+      counter=train_counter,
       logger=train_logger,
       observers=experiment.observers)
 
   eval_loop = None
   if experiment.eval_policy_network_factory:
     # Create the evaluation actor and loop.
-    eval_logger = experiment.logger_factory('eval', 'eval_steps', 0)
+    eval_counter = counting.Counter(
+        parent_counter, prefix='eval', time_delta=0.)
+    eval_logger = experiment.logger_factory('eval',
+                                            eval_counter.get_steps_key(), 0)
     eval_actor = experiment.builder.make_actor(
         random_key=jax.random.PRNGKey(experiment.seed),
         policy=experiment.eval_policy_network_factory(networks),
@@ -127,7 +136,7 @@ def run_experiment(experiment: config.Config,
     eval_loop = acme.EnvironmentLoop(
         environment,
         eval_actor,
-        counter=counting.Counter(parent_counter, prefix='eval', time_delta=0.),
+        counter=eval_counter,
         logger=eval_logger,
         observers=experiment.observers)
 
