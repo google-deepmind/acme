@@ -79,7 +79,7 @@ MakeNStepReturnLearner = Callable[[
 def make_ensemble_regressor_learner(
     name: str,
     num_networks: int,
-    logger_fn: Callable[[str, str], Optional[loggers.Logger]],
+    logger_fn: loggers.LoggerFactory,
     counter: counting.Counter,
     rng_key: jnp.ndarray,
     iterator: Iterator[types.Transition],
@@ -109,8 +109,8 @@ def make_ensemble_regressor_learner(
   mbop_ensemble = ensemble.make_ensemble(base_network, ensemble.apply_all,
                                          num_networks)
   local_counter = counting.Counter(parent=counter, prefix=name)
-  steps_label = f'{name}_steps'
-  local_logger = logger_fn(name, steps_label) if logger_fn else None
+  local_logger = logger_fn(name,
+                           local_counter.get_steps_key()) if logger_fn else None
 
   def loss_fn(apply_fn: Callable[..., networks_lib.NetworkOutput],
               params: networks_lib.Params, key: jnp.ndarray,

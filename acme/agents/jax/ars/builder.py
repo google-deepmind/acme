@@ -76,14 +76,14 @@ class ARSBuilder(
       random_key: networks_lib.PRNGKey,
       networks: networks_lib.FeedForwardNetwork,
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
     del environment_spec, replay_client
     return learning.ARSLearner(self._spec, networks, random_key, self._config,
-                               dataset, counter, logger)
+                               dataset, counter, logger_fn('learner'))
 
   def make_actor(
       self,

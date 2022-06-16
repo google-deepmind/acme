@@ -43,12 +43,6 @@ EvaluatorFactory = Callable[[
     counting.Counter,
     MakeActorFn,
 ], core.Worker]
-TaskInstance = int
-LoggerLabel = str
-LoggerStepsKey = str
-# TODO(stanczyk): Turn LoggerLabel into an enum of [Learner, Actor, Evaluator].
-LoggerFactory = Callable[[LoggerLabel, LoggerStepsKey, TaskInstance],
-                         loggers.Logger]
 
 
 @dataclasses.dataclass
@@ -94,7 +88,7 @@ class Config:
   seed: int = 0
   # TODO(stanczyk): Make this field required.
   max_number_of_steps: int = sys.maxsize
-  logger_factory: LoggerFactory = experiment_utils.make_experiment_logger
+  logger_factory: loggers.LoggerFactory = experiment_utils.make_experiment_logger
 
   # TODO(stanczyk): Make get_evaluator_factories a standalone function.
   def get_evaluator_factories(self):
@@ -118,7 +112,7 @@ def default_evaluator_factory(
     environment_factory: types.EnvironmentFactory,
     network_factory: NetworkFactory,
     policy_factory: PolicyFactory,
-    logger_factory: LoggerFactory,
+    logger_factory: loggers.LoggerFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
 ) -> EvaluatorFactory:
   """Returns a default evaluator process."""

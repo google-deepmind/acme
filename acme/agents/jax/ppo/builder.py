@@ -99,7 +99,7 @@ class PPOBuilder(
       random_key: networks_lib.PRNGKey,
       networks: ppo_networks.PPONetworks,
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -132,7 +132,7 @@ class PPOBuilder(
         optimizer=optimizer,
         num_epochs=self._config.num_epochs,
         num_minibatches=self._config.num_minibatches,
-        logger=logger,
+        logger=logger_fn('learner'),
     )
 
   def make_actor(

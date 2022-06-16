@@ -62,7 +62,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
       random_key: networks_lib.PRNGKey,
       networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -79,7 +79,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
           direct_rl_learner_key,
           networks,
           dataset,
-          logger=self._logger_fn(),
+          logger_fn=lambda name: self._logger_fn(),
           environment_spec=environment_spec,
           replay_client=replay_client,
           counter=direct_rl_counter)
@@ -95,7 +95,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
         is_sequence_based=self._config.is_sequence_based,
         grad_updates_per_batch=self._config.num_sgd_steps_per_step,
         counter=counter,
-        logger=logger)
+        logger=logger_fn('learner'))
 
   def make_replay_tables(
       self,

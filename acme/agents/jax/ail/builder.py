@@ -183,7 +183,7 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
                    random_key: jax_types.PRNGKey,
                    networks: ail_networks.AILNetworks,
                    dataset: Iterator[learning.AILSample],
-                   logger: loggers.Logger,
+                   logger_fn: loggers.LoggerFactory,
                    environment_spec: specs.EnvironmentSpec,
                    replay_client: Optional[reverb.Client] = None,
                    counter: Optional[counting.Counter] = None) -> core.Learner:
@@ -198,7 +198,7 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
         self._rl_agent.make_learner,
         direct_rl_learner_key,
         networks.direct_rl_networks,
-        logger=self._logger_fn(),
+        logger_fn=logger_fn,
         environment_spec=environment_spec,
         replay_client=replay_client,
         counter=direct_rl_counter)
@@ -218,7 +218,7 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
         num_sgd_steps_per_step=batch_size_per_learner_step //
         self._config.discriminator_batch_size,
         policy_variable_name=self._config.policy_variable_name,
-        logger=logger)
+        logger=logger_fn('learner', steps_key=counter.get_steps_key()))
 
   def make_replay_tables(
       self,

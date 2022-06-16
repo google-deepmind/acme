@@ -58,7 +58,7 @@ class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
       random_key: networks_lib.PRNGKey,
       networks: td3_networks.TD3Networks,
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -86,7 +86,7 @@ class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
         bc_alpha=self._config.bc_alpha,
         iterator=dataset,
-        logger=logger,
+        logger=logger_fn('learner'),
         counter=counter)
 
   def make_actor(

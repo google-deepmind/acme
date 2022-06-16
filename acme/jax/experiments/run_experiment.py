@@ -82,18 +82,14 @@ def run_experiment(experiment: config.Config,
   # 'ready' method.
   dataset = utils.prefetch(dataset, buffer_size=1)
   learner_key, key = jax.random.split(key)
-  learner_counter = counting.Counter(
-      parent_counter, prefix='learner', time_delta=0.)
-  learner_logger = experiment.logger_factory('learner',
-                                             learner_counter.get_steps_key(), 0)
   learner = experiment.builder.make_learner(
       random_key=learner_key,
       networks=networks,
       dataset=dataset,
-      logger=learner_logger,
+      logger_fn=experiment.logger_factory,
       environment_spec=environment_spec,
       replay_client=replay_client,
-      counter=learner_counter)
+      counter=counting.Counter(parent_counter, prefix='learner', time_delta=0.))
 
   adder = experiment.builder.make_adder(replay_client)
   actor_key, key = jax.random.split(key)

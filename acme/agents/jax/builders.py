@@ -99,7 +99,7 @@ class ActorLearnerBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
       random_key: networks_lib.PRNGKey,
       networks: Networks,
       dataset: Iterator[Sample],
-      logger: Optional[loggers.Logger],
+      logger_fn: loggers.LoggerFactory,
       environment_spec: Optional[specs.EnvironmentSpec],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -111,7 +111,7 @@ class ActorLearnerBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
       networks: struct describing the networks needed by the learner; this can
         be specific to the learner in question.
       dataset: iterator over samples from replay.
-      logger: logger used by the constructed learner for logging progress.
+      logger_fn: factory providing loggers used for logging progress.
       environment_spec: A container for all relevant environment specs.
       replay_client: client which allows communication with replay. Note that
         this is only intended to be used for updating priorities. Samples should

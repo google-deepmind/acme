@@ -61,7 +61,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
       random_key: networks_lib.PRNGKey,
       networks: networks_lib.FeedForwardNetwork,
       dataset: Iterator[reverb.ReplaySample],
-      logger: Optional[loggers.Logger],
+      logger_fn: loggers.LoggerFactory,
       environment_spec: Optional[specs.EnvironmentSpec],
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -80,7 +80,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
         replay_table_name=self._config.replay_table_name,
         counter=counter,
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
-        logger=logger)
+        logger=logger_fn('learner'))
 
   def make_actor(
       self,

@@ -15,7 +15,7 @@
 """Base logger."""
 
 import abc
-from typing import Any, Mapping
+from typing import Any, Mapping, Protocol, Optional
 
 import numpy as np
 import tree
@@ -33,6 +33,21 @@ class Logger(abc.ABC):
   @abc.abstractmethod
   def close(self) -> None:
     """Closes the logger, not expecting any further write."""
+
+
+TaskInstance = int
+# TODO(stanczyk): Turn LoggerLabel into an enum of [Learner, Actor, Evaluator].
+LoggerLabel = str
+LoggerStepsKey = str
+
+
+class LoggerFactory(Protocol):
+
+  def __call__(self,
+               label: LoggerLabel,
+               steps_key: Optional[LoggerStepsKey] = None,
+               instance: Optional[TaskInstance] = None) -> Logger:
+    ...
 
 
 class NoOpLogger(Logger):

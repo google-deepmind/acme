@@ -59,7 +59,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
       random_key: networks_lib.PRNGKey,
       networks: d4pg_networks.D4PGNetworks,
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -87,7 +87,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
         target_update_period=self._config.target_update_period,
         iterator=dataset,
         counter=counter,
-        logger=logger,
+        logger=logger_fn('learner'),
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step)
 
   def make_replay_tables(

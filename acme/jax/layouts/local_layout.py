@@ -107,7 +107,8 @@ class LocalLayout(agent.Agent):
         random_key=learner_key,
         networks=networks,
         dataset=dataset,
-        logger=learner_logger,
+        logger_fn=(
+            lambda label, steps_key=None, task_instance=None: learner_logger),
         environment_spec=environment_spec,
         replay_client=replay_client,
         counter=counter)

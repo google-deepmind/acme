@@ -132,7 +132,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
       random_key: networks_lib.PRNGKey,
       networks: impala_networks.IMPALANetworks,
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -157,7 +157,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
         baseline_cost=self._config.baseline_cost,
         max_abs_reward=self._config.max_abs_reward,
         counter=counter,
-        logger=logger,
+        logger=logger_fn('learner'),
     )
 
   def make_actor(

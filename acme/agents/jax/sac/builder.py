@@ -59,7 +59,7 @@ class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
       random_key: networks_lib.PRNGKey,
       networks: sac_networks.SACNetworks,
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -82,7 +82,7 @@ class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
         policy_optimizer=policy_optimizer,
         q_optimizer=q_optimizer,
         iterator=dataset,
-        logger=logger,
+        logger=logger_fn('learner'),
         counter=counter)
 
   def make_actor(

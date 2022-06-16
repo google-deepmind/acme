@@ -18,8 +18,12 @@ from acme.utils.loggers.aggregators import Dispatcher
 from acme.utils.loggers.asynchronous import AsyncLogger
 from acme.utils.loggers.auto_close import AutoCloseLogger
 from acme.utils.loggers.base import Logger
+from acme.utils.loggers.base import LoggerFactory
+from acme.utils.loggers.base import LoggerLabel
+from acme.utils.loggers.base import LoggerStepsKey
 from acme.utils.loggers.base import LoggingData
 from acme.utils.loggers.base import NoOpLogger
+from acme.utils.loggers.base import TaskInstance
 from acme.utils.loggers.base import to_numpy
 from acme.utils.loggers.constant import ConstantLogger
 from acme.utils.loggers.csv import CSVLogger

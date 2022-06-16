@@ -37,8 +37,8 @@ PolicyNetwork = experiments.config.PolicyNetwork
 NetworkFactory = experiments.config.NetworkFactory
 PolicyFactory = experiments.config.PolicyFactory
 MakeActorFn = experiments.config.MakeActorFn
-LoggerLabel = experiments.config.LoggerLabel
-LoggerStepsKey = experiments.config.LoggerStepsKey
+LoggerLabel = loggers.LoggerLabel
+LoggerStepsKey = loggers.LoggerStepsKey
 LoggerFn = Callable[[LoggerLabel, LoggerStepsKey], loggers.Logger]
 EvaluatorFactory = experiments.config.EvaluatorFactory
 
@@ -114,7 +114,13 @@ def logger_factory(
     log_every: float = 10.0) -> Callable[[str, str, int], loggers.Logger]:
   """Builds a logger factory used by the experiments.config."""
 
-  def factory(label: str, steps_key: str, task_id: int):
+  def factory(label: str,
+              steps_key: Optional[str] = None,
+              task_id: Optional[int] = None):
+    if task_id is None:
+      task_id = 0
+    if steps_key is None:
+      steps_key = f'{label}_steps'
     if label == 'learner' and learner_logger_fn:
       return learner_logger_fn()
     if label == 'actor':

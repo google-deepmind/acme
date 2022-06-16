@@ -60,7 +60,7 @@ class ValueDiceBuilder(
       random_key: networks_lib.PRNGKey,
       networks: value_dice_networks.ValueDiceNetworks,
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -83,7 +83,7 @@ class ValueDiceBuilder(
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
         iterator_replay=dataset,
         iterator_demonstrations=iterator_demonstration,
-        logger=logger,
+        logger=logger_fn('learner'),
         counter=counter,
     )
 

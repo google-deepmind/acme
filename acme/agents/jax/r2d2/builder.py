@@ -81,7 +81,7 @@ class R2D2Builder(
       random_key: networks_lib.PRNGKey,
       networks: r2d2_networks.R2D2Networks,
       dataset: Iterator[reverb.ReplaySample],
-      logger: loggers.Logger,
+      logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
@@ -107,7 +107,7 @@ class R2D2Builder(
         clip_rewards=self._config.clip_rewards,
         replay_client=replay_client,
         counter=counter,
-        logger=logger)
+        logger=logger_fn('learner'))
 
   def make_replay_tables(
       self,
