@@ -45,9 +45,6 @@ class PWILConfig:
   # When False, uses the reward signal from the dataset during prefilling.
   prefill_constant_reward: bool = True
 
-  # Replay buffer specific attributes
-  min_replay_size: int = 1000
-  samples_per_insert: float = 256
   num_sgd_steps_per_step: int = 1
 
 
