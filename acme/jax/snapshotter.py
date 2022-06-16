@@ -16,7 +16,7 @@
 
 import os
 import time
-from typing import Callable, Dict, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from absl import logging
 from acme import core
@@ -25,6 +25,8 @@ from acme.utils import signals
 from acme.utils import paths
 from jax.experimental import jax2tf
 import tensorflow as tf
+
+# Internal imports.
 
 
 class JAXSnapshotter(core.Worker):
@@ -38,10 +40,13 @@ class JAXSnapshotter(core.Worker):
                models: Dict[str, Callable[[core.VariableSource],
                                           types.ModelToSnapshot]],
                path: str,
+               max_to_keep: Optional[int] = None,
                add_uid: bool = False):
     self._variable_source = variable_source
     self._models = models
     self._path = paths.process_path(path, add_uid=add_uid)
+    self._max_to_keep = max_to_keep
+    self._snapshot_paths: Optional[List[str]] = None
 
   # Handle preemption signal. Note that this must happen in the main thread.
   def _signal_handler(self):
@@ -49,22 +54,36 @@ class JAXSnapshotter(core.Worker):
     self._save()
 
   def _save(self):
+    if not self._snapshot_paths:
+      # Lazy discovery of already existing snapshots.
+      self._snapshot_paths = os.listdir(self._path)
+      self._snapshot_paths.sort(key=int, reverse=True)
+
+    snapshot_location = os.path.join(self._path, time.strftime('%Y%m%d-%H%M%S'))
+    if self._snapshot_paths and self._snapshot_paths[0] == snapshot_location:
+      logging.info('Snapshot for the current time already exists.')
+      return
+
     # To make sure models are captured as close as possible from the same time
     # we gather all the `ModelToSnapshot` in a 1st loop. We then convert/saved
     # them in another loop as this operation can be slow.
-    models_and_paths = self._get_models_and_paths(
-        saving_time=time.strftime('%Y%m%d-%H%M%S'))
+    models_and_paths = self._get_models_and_paths(path=snapshot_location)
+    self._snapshot_paths.insert(0, snapshot_location)
 
     for model, saving_path in models_and_paths:
       self._snapshot_model(model=model, saving_path=saving_path)
 
+    # Delete any excess snapshots.
+    while self._max_to_keep and len(self._snapshot_paths) > self._max_to_keep:
+      paths.rmdir(self._snapshot_paths.pop())
+
   def _get_models_and_paths(
-      self, saving_time: str) -> Sequence[Tuple[types.ModelToSnapshot, str]]:
+      self, path: str) -> Sequence[Tuple[types.ModelToSnapshot, str]]:
     """Gets the models to save asssociated with their saving path."""
     models_and_paths = []
     for name, model_fn in self._models.items():
       model = model_fn(self._variable_source)
-      model_path = os.path.join(self._path, saving_time, name)
+      model_path = os.path.join(path, name)
       models_and_paths.append((model, model_path))
     return models_and_paths
 

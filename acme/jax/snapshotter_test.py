@@ -15,6 +15,7 @@
 """Tests for snapshotter."""
 
 import os
+import time
 from typing import Any, Sequence
 
 from acme import core
@@ -93,20 +94,26 @@ class SnapshotterTest(test_utils.TestCase):
         variable_source=_DummyVariableSource(),
         models=self._test_models,
         path=directory,
+        max_to_keep=1,
         add_uid=False,
     )
     models_snapshotter._save()
 
     # The snapshots are written in a folder of the form:
     # PATH/{time.strftime}/MODEL_NAME
+    snapshots = os.listdir(directory)
+    self.assertEqual(len(snapshots), 1)
+    snapshot_name = snapshots[0]
     self.assertTrue(
-        os.path.exists(
-            os.path.join(directory,
-                         os.listdir(directory)[0], 'model0')))
+        os.path.exists(os.path.join(directory, snapshot_name, 'model0')))
     self.assertTrue(
-        os.path.exists(
-            os.path.join(directory,
-                         os.listdir(directory)[0], 'model1')))
+        os.path.exists(os.path.join(directory, snapshot_name, 'model1')))
+    # Make sure that second snapshot has a different name.
+    time.sleep(1.1)
+    models_snapshotter._save()
+    snapshots = os.listdir(directory)
+    self.assertEqual(len(snapshots), 1)
+    self.assertNotEqual(snapshot_name, snapshots[0])
 
 
 if __name__ == '__main__':

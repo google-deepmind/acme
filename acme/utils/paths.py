@@ -16,6 +16,7 @@
 
 import os
 import os.path
+import shutil
 import time
 from typing import Optional, Tuple
 
@@ -72,3 +73,8 @@ def get_unique_id() -> Tuple[str, ...]:
 
   # Return as a tuple (for future proofing).
   return (identifier,)
+
+
+def rmdir(path: str):
+  """Remove directory recursively."""
+  shutil.rmtree(path)
