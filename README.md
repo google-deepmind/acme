@@ -49,7 +49,7 @@ in our [technical report][Paper].
 
 ## Installation
 
-We have tested Acme on Python 3.7, 3.8 and 3.9. To get up and running quickly just
+We have tested Acme on Python 3.8 and 3.9. To get up and running quickly just
 follow the steps below:
 
 1.  While you can install Acme in your standard python environment, we

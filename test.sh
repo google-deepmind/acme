@@ -18,10 +18,8 @@
 set -e
 set -x
 
-# Python must be 3.7 or higher.
-python --version
-
 # Set up a virtual environment.
+python --version
 python -m venv acme_testing
 source acme_testing/bin/activate
 
