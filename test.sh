@@ -14,6 +14,25 @@
 # limitations under the License.
 
 
+ARGS=()
+DEPS_ONLY=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -d|--deps_only)
+      DEPS_ONLY=1
+      shift
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# Restore the arguments.
+set -- "${ARGS[@]}"
+
 # Bash settings: fail on any error and display all commands being run.
 set -e
 set -x
@@ -27,6 +46,8 @@ source acme_testing/bin/activate
 pip install --upgrade pip setuptools wheel xmanager
 pip install .[jax,tf,launchpad,testing,envs]
 
+# Stop early if we only want to install the dependencies.
+[[ -n ${DEPS_ONLY} ]] && exit 0
 
 N_CPU=$(grep -c ^processor /proc/cpuinfo)
 EXAMPLES=$(find examples/ -mindepth 1 -type d -not -path examples/offline -not -path examples/open_spiel -not -path examples/baselines)
@@ -58,8 +79,3 @@ done
 if [ $TEST_COUNT -ne 4 ]; then
   exit 1
 fi
-
-# Clean-up.
-deactivate
-ls -l
-rm -rf acme_testing/
