@@ -422,7 +422,7 @@ TEST_CASES_FOR_TRANSITION_ADDER = [
         )),
 ]
 
-TEST_CASES_FOR_SEQUENCE_ADDER = [
+BASE_TEST_CASES_FOR_SEQUENCE_ADDER = [
     dict(
         testcase_name='PeriodOne',
         sequence_length=3,
@@ -640,6 +640,41 @@ TEST_CASES_FOR_SEQUENCE_ADDER = [
         end_behavior=sequence_adder.EndBehavior.TRUNCATE,
     ),
     dict(
+        testcase_name='EndBehavior_WRITE',
+        sequence_length=3,
+        period=2,
+        first=dm_env.restart(1),
+        steps=(
+            (0, dm_env.transition(reward=2.0, observation=2)),
+            (0, dm_env.transition(reward=3.0, observation=3)),
+            (0, dm_env.transition(reward=5.0, observation=4)),
+            (0, dm_env.transition(reward=7.0, observation=5)),
+            (0, dm_env.termination(reward=8.0, observation=6)),
+        ),
+        expected_sequences=(
+            # (observation, action, reward, discount, start_of_episode, extra)
+            [
+                (1, 0, 2.0, 1.0, True, ()),
+                (2, 0, 3.0, 1.0, False, ()),
+                (3, 0, 5.0, 1.0, False, ()),
+            ],
+            [
+                (3, 0, 5.0, 1.0, False, ()),
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 8.0, 0.0, False, ()),
+            ],
+            [
+                (4, 0, 7.0, 1.0, False, ()),
+                (5, 0, 8.0, 0.0, False, ()),
+                (6, 0, 0.0, 0.0, False, ()),
+            ],
+        ),
+        end_behavior=sequence_adder.EndBehavior.WRITE,
+    ),
+]
+
+TEST_CASES_FOR_SEQUENCE_ADDER = BASE_TEST_CASES_FOR_SEQUENCE_ADDER + [
+    dict(
         testcase_name='NonBreakingSequenceOnEpisodeReset',
         sequence_length=3,
         period=2,
@@ -809,36 +844,4 @@ TEST_CASES_FOR_SEQUENCE_ADDER = [
         ),
         end_behavior=sequence_adder.EndBehavior.CONTINUE,
         repeat_episode_times=3),
-    dict(
-        testcase_name='EndBehavior_WRITE',
-        sequence_length=3,
-        period=2,
-        first=dm_env.restart(1),
-        steps=(
-            (0, dm_env.transition(reward=2.0, observation=2)),
-            (0, dm_env.transition(reward=3.0, observation=3)),
-            (0, dm_env.transition(reward=5.0, observation=4)),
-            (0, dm_env.transition(reward=7.0, observation=5)),
-            (0, dm_env.termination(reward=8.0, observation=6)),
-        ),
-        expected_sequences=(
-            # (observation, action, reward, discount, start_of_episode, extra)
-            [
-                (1, 0, 2.0, 1.0, True, ()),
-                (2, 0, 3.0, 1.0, False, ()),
-                (3, 0, 5.0, 1.0, False, ()),
-            ],
-            [
-                (3, 0, 5.0, 1.0, False, ()),
-                (4, 0, 7.0, 1.0, False, ()),
-                (5, 0, 8.0, 0.0, False, ()),
-            ],
-            [
-                (4, 0, 7.0, 1.0, False, ()),
-                (5, 0, 8.0, 0.0, False, ()),
-                (6, 0, 0.0, 0.0, False, ()),
-            ],
-        ),
-        end_behavior=sequence_adder.EndBehavior.WRITE,
-    ),
 ]
