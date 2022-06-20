@@ -27,7 +27,7 @@ class CQLTest(absltest.TestCase):
 
   def test_train(self):
     seed = 0
-    num_iterations = 2
+    num_iterations = 6
     batch_size = 64
 
     # Create a fake environment to test with.
@@ -47,8 +47,10 @@ class CQLTest(absltest.TestCase):
         demonstrations=dataset(batch_size),
         policy_optimizer=optax.adam(3e-5),
         critic_optimizer=optax.adam(3e-4),
-        cql_lagrange_threshold=1.,
+        fixed_cql_coefficient=5.,
+        cql_lagrange_threshold=None,
         target_entropy=0.1,
+        num_bc_iters=2,
         num_sgd_steps_per_step=1)
 
     # Train the agent

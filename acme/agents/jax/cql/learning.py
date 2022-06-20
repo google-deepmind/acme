@@ -83,6 +83,7 @@ class CQLLearner(acme.Learner):
                discount: float = 0.99,
                fixed_entropy_coefficient: Optional[float] = None,
                target_entropy: Optional[float] = 0,
+               num_bc_iters: int = 50_000,
                counter: Optional[counting.Counter] = None,
                logger: Optional[loggers.Logger] = None):
     """Initializes the CQL learner.
@@ -109,9 +110,11 @@ class CQLLearner(acme.Learner):
       fixed_entropy_coefficient: coefficient applied to the entropy bonus. If
         None, an adaptative coefficient will be used.
       target_entropy: Target entropy when using adapdative entropy bonus.
+      num_bc_iters: Number of BC steps for actor initialization.
       counter: counter object used to keep track of steps.
       logger: logger object to be used by learner.
     """
+    self._num_bc_iters = num_bc_iters
     adaptive_entropy_coefficient = fixed_entropy_coefficient is None
     action_spec = networks.environment_specs.actions
     if adaptive_entropy_coefficient:
@@ -152,17 +155,16 @@ class CQLLearner(acme.Learner):
     def sac_critic_loss(q_old_action: jnp.ndarray,
                         policy_params: networks_lib.Params,
                         target_critic_params: networks_lib.Params,
-                        sac_alpha: jnp.ndarray, transitions: types.Transition,
+                        transitions: types.Transition,
                         key: networks_lib.PRNGKey) -> jnp.ndarray:
       """Computes the SAC part of the loss."""
       next_dist_params = networks.policy_network.apply(
           policy_params, transitions.next_observation)
       next_action = networks.sample(next_dist_params, key)
-      next_log_prob = networks.log_prob(next_dist_params, next_action)
       next_q = networks.critic_network.apply(target_critic_params,
                                              transitions.next_observation,
                                              next_action)
-      next_v = jnp.min(next_q, axis=-1) - sac_alpha * next_log_prob
+      next_v = jnp.min(next_q, axis=-1)
       target_q = jax.lax.stop_gradient(transitions.reward * reward_scale +
                                        transitions.discount * discount * next_v)
       return jnp.mean(jnp.square(q_old_action - jnp.expand_dims(target_q, -1)))
@@ -234,8 +236,7 @@ class CQLLearner(acme.Learner):
     def critic_loss(critic_params: networks_lib.Params,
                     policy_params: networks_lib.Params,
                     target_critic_params: networks_lib.Params,
-                    sac_alpha: jnp.ndarray, cql_alpha: jnp.ndarray,
-                    transitions: types.Transition,
+                    cql_alpha: jnp.ndarray, transitions: types.Transition,
                     key: networks_lib.PRNGKey) -> jnp.ndarray:
       """Computes the full critic loss."""
       key_cql, key_sac = jax.random.split(key, 2)
@@ -245,8 +246,7 @@ class CQLLearner(acme.Learner):
       cql_loss = cql_critic_loss(q_old_action, critic_params, policy_params,
                                  transitions, key_cql)
       sac_loss = sac_critic_loss(q_old_action, policy_params,
-                                 target_critic_params, sac_alpha, transitions,
-                                 key_sac)
+                                 target_critic_params, transitions, key_sac)
       return cql_alpha * cql_loss + sac_loss
 
     def cql_lagrange_loss(log_cql_alpha: jnp.ndarray,
@@ -265,17 +265,23 @@ class CQLLearner(acme.Learner):
 
     def actor_loss(policy_params: networks_lib.Params,
                    critic_params: networks_lib.Params, sac_alpha: jnp.ndarray,
-                   transitions: types.Transition,
-                   key: jnp.ndarray) -> jnp.ndarray:
+                   transitions: types.Transition, key: jnp.ndarray,
+                   in_initial_bc_iters: bool) -> jnp.ndarray:
       """Computes the loss for the policy."""
       dist_params = networks.policy_network.apply(policy_params,
                                                   transitions.observation)
-      action = networks.sample(dist_params, key)
-      log_prob = networks.log_prob(dist_params, action)
-      q_action = networks.critic_network.apply(critic_params,
-                                               transitions.observation, action)
-      min_q = jnp.min(q_action, axis=-1)
-      return jnp.mean(sac_alpha * log_prob - min_q)
+      if in_initial_bc_iters:
+        log_prob = networks.log_prob(dist_params, transitions.action)
+        actor_loss = -jnp.mean(log_prob)
+      else:
+        action = networks.sample(dist_params, key)
+        log_prob = networks.log_prob(dist_params, action)
+        q_action = networks.critic_network.apply(critic_params,
+                                                 transitions.observation,
+                                                 action)
+        min_q = jnp.min(q_action, axis=-1)
+        actor_loss = jnp.mean(sac_alpha * log_prob - min_q)
+      return actor_loss
 
     alpha_grad = jax.value_and_grad(alpha_loss)
     cql_lagrange_grad = jax.value_and_grad(cql_lagrange_loss)
@@ -285,6 +291,7 @@ class CQLLearner(acme.Learner):
     def update_step(
         state: TrainingState,
         rb_transitions: types.Transition,
+        in_initial_bc_iters: bool,
     ) -> Tuple[TrainingState, Dict[str, jnp.ndarray]]:
 
       key, key_alpha, key_critic, key_actor = jax.random.split(state.key, 4)
@@ -313,11 +320,12 @@ class CQLLearner(acme.Learner):
       critic_loss, critic_grads = critic_grad(state.critic_params,
                                               state.policy_params,
                                               state.target_critic_params,
-                                              sac_alpha, cql_alpha,
-                                              rb_transitions, key_critic)
+                                              cql_alpha, rb_transitions,
+                                              key_critic)
       actor_loss, actor_grads = actor_grad(state.policy_params,
                                            state.critic_params, sac_alpha,
-                                           rb_transitions, key_actor)
+                                           rb_transitions, key_actor,
+                                           in_initial_bc_iters)
 
       # Apply policy gradients
       actor_update, policy_optimizer_state = policy_optimizer.update(
@@ -345,9 +353,11 @@ class CQLLearner(acme.Learner):
           critic_params=critic_params,
           target_critic_params=new_target_critic_params,
           key=key,
+          alpha_optimizer_state=state.alpha_optimizer_state,
+          log_sac_alpha=state.log_sac_alpha,
           steps=state.steps + 1,
       )
-      if adaptive_entropy_coefficient:
+      if adaptive_entropy_coefficient and (not in_initial_bc_iters):
         # Apply sac_alpha gradients
         alpha_update, alpha_optimizer_state = alpha_optimizer.update(
             alpha_grads, state.alpha_optimizer_state)
@@ -359,6 +369,9 @@ class CQLLearner(acme.Learner):
         new_state = new_state._replace(
             alpha_optimizer_state=alpha_optimizer_state,
             log_sac_alpha=log_sac_alpha)
+      else:
+        metrics['alpha_loss'] = 0.
+        metrics['sac_alpha'] = fixed_cql_coefficient
 
       if adaptive_cql_coefficient:
         # Apply cql coeff gradients
@@ -387,9 +400,14 @@ class CQLLearner(acme.Learner):
     self._demonstrations = demonstrations
 
     # Use the JIT compiler.
-    self._update_step = utils.process_multiple_batches(update_step,
-                                                       num_sgd_steps_per_step)
-    self._update_step = jax.jit(self._update_step)
+    update_step_in_initial_bc_iters = utils.process_multiple_batches(
+        lambda x, y: update_step(x, y, True), num_sgd_steps_per_step)
+    update_step_rest = utils.process_multiple_batches(
+        lambda x, y: update_step(x, y, False), num_sgd_steps_per_step)
+
+    self._update_step_in_initial_bc_iters = jax.jit(
+        update_step_in_initial_bc_iters)
+    self._update_step_rest = jax.jit(update_step_rest)
 
     # Create initial state.
     key_policy, key_q, training_state_key = jax.random.split(random_key, 3)
@@ -426,7 +444,18 @@ class CQLLearner(acme.Learner):
     # extra data here because we do not insert any into Reverb.
     transitions = next(self._demonstrations)
 
-    self._state, metrics = self._update_step(self._state, transitions)
+    counts = self._counter.get_counts()
+    if 'learner_steps' not in counts:
+      cur_step = 0
+    else:
+      cur_step = counts['learner_steps']
+    in_initial_bc_iters = cur_step < self._num_bc_iters
+
+    if in_initial_bc_iters:
+      self._state, metrics = self._update_step_in_initial_bc_iters(
+          self._state, transitions)
+    else:
+      self._state, metrics = self._update_step_rest(self._state, transitions)
 
     # Compute elapsed time.
     timestamp = time.time()
