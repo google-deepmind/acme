@@ -100,7 +100,7 @@ class ActorLearnerBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
       networks: Networks,
       dataset: Iterator[Sample],
       logger_fn: loggers.LoggerFactory,
-      environment_spec: Optional[specs.EnvironmentSpec],
+      environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
