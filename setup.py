@@ -51,7 +51,7 @@ core_requirements = [
     'dm-env',
     'dm-launchpad==0.5.2',
     'dm-tree',
-    'numpy',
+    'numpy==1.22.4',
     'pillow',
     'typing-extensions',
 ]
