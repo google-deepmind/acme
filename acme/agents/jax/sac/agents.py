@@ -88,7 +88,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
             policy_factory=eval_policy_factory,
             save_logs=save_logs)
     ]
-  experiment = experiments.Config(
+  experiment = experiments.ExperimentConfig(
       builder=sac_builder,
       environment_factory=environment_factory,
       network_factory=network_factory,

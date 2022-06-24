@@ -44,7 +44,7 @@ def build_experiment_config():
 
   layer_sizes = (256, 256, 256)
   make_eval_policy = lambda network: ppo.make_inference_fn(network, True)
-  return experiments.Config(
+  return experiments.ExperimentConfig(
       builder=ppo_builder,
       environment_factory=lambda seed: helpers.make_environment(suite, task),
       network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),

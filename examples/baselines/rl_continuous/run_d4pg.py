@@ -65,7 +65,7 @@ def build_experiment_config():
 
   d4pg_builder = d4pg.D4PGBuilder(config)
 
-  return experiments.Config(
+  return experiments.ExperimentConfig(
       builder=d4pg_builder,
       environment_factory=lambda seed: helpers.make_environment(suite, task),
       network_factory=network_factory,

@@ -61,7 +61,7 @@ def build_experiment_config():
       is_sequence_based=False,
       batch_dims=batch_dims)
 
-  return experiments.Config(
+  return experiments.ExperimentConfig(
       builder=sac_builder,
       environment_factory=lambda seed: helpers.make_environment(suite, task),
       network_factory=network_factory,

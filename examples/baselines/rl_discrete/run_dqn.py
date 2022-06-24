@@ -64,7 +64,7 @@ def build_experiment_config():
 
   dqn_builder = dqn.DQNBuilder(config, loss_fn=loss_fn)
 
-  return experiments.Config(
+  return experiments.ExperimentConfig(
       builder=dqn_builder,
       environment_factory=lambda seed: environment,
       network_factory=lambda spec: network,

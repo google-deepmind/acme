@@ -161,7 +161,7 @@ class DistributedLayout:
       checkpointing_config: Optional[CheckpointingConfig] = None,
       make_snapshot_models: Optional[SnapshotModelFactory] = None):
     del prefetch_size
-    self._experiment_config = experiments.config.Config(
+    self._experiment_config = experiments.config.ExperimentConfig(
         builder=builder,
         environment_factory=environment_factory,
         environment_spec=environment_spec,

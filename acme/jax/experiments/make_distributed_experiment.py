@@ -66,7 +66,7 @@ class CheckpointingConfig:
 
 
 def make_distributed_experiment(
-    experiment: config.Config,
+    experiment: config.ExperimentConfig,
     num_actors: int,
     *,
     num_learner_nodes: int = 1,

@@ -15,10 +15,10 @@
 """JAX experiment utils."""
 
 from acme.jax.experiments.config import AgentNetwork
-from acme.jax.experiments.config import Config
 from acme.jax.experiments.config import default_evaluator_factory
 from acme.jax.experiments.config import DeprecatedPolicyFactory
 from acme.jax.experiments.config import EvaluatorFactory
+from acme.jax.experiments.config import ExperimentConfig
 from acme.jax.experiments.config import MakeActorFn
 from acme.jax.experiments.config import NetworkFactory
 from acme.jax.experiments.config import PolicyNetwork

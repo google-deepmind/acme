@@ -46,7 +46,7 @@ EvaluatorFactory = Callable[[
 
 
 @dataclasses.dataclass
-class Config:
+class ExperimentConfig:
   """Config which defines aspects of constructing an experiment.
 
   Attributes:
@@ -95,7 +95,7 @@ class Config:
     if self.evaluator_factories is not None:
       return self.evaluator_factories
     assert self.eval_policy_network_factory is not None, (
-        'You need to provide `eval_policy_network_factory` to Config'
+        'You need to provide `eval_policy_network_factory` to ExperimentConfig'
         ' when `evaluator_factories` are not specified. To disable evaluation '
         'altogether just set `evaluator_factories = []`')
     return [

@@ -54,7 +54,7 @@ def build_experiment_config():
   )
   td3_builder = td3.TD3Builder(config)
   # pylint:disable=g-long-lambda
-  return experiments.Config(
+  return experiments.ExperimentConfig(
       builder=td3_builder,
       environment_factory=lambda seed: helpers.make_environment(suite, task),
       network_factory=network_factory,
