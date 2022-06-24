@@ -20,10 +20,11 @@ from acme.agents.jax import dqn
 from acme.agents.jax.dqn import losses
 import helpers
 from absl import app
-from acme.utils import lp_utils
 from acme.jax import experiments
+from acme.utils import lp_utils
 import atari_py  # pylint:disable=unused-import
 import launchpad as lp
+
 
 FLAGS = flags.FLAGS
 

@@ -21,8 +21,8 @@ from acme.agents.jax import sac
 from acme.agents.jax.sac import builder
 import helpers
 from absl import app
-from acme.utils import lp_utils
 from acme.jax import experiments
+from acme.utils import lp_utils
 import launchpad as lp
 
 FLAGS = flags.FLAGS
