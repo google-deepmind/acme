@@ -21,7 +21,6 @@ from acme import environment_loop
 from acme import specs
 from acme.agents.jax import builders
 from acme.jax import experiments
-from acme.jax import inference_server
 from acme.jax import types
 from acme.jax import utils
 from acme.utils import counting
@@ -160,9 +159,7 @@ class DistributedLayout:
       observers: Sequence[observers_lib.EnvLoopObserver] = (),
       multithreading_colocate_learner_and_reverb: bool = False,
       checkpointing_config: Optional[CheckpointingConfig] = None,
-      make_snapshot_models: Optional[SnapshotModelFactory] = None,
-      inference_server_config: Optional[
-          inference_server.InferenceServerConfig] = None):
+      make_snapshot_models: Optional[SnapshotModelFactory] = None):
     del prefetch_size
     self._experiment_config = experiments.config.Config(
         builder=builder,
@@ -181,7 +178,6 @@ class DistributedLayout:
         multithreading_colocate_learner_and_reverb)
     self._checkpointing_config = checkpointing_config
     self._make_snapshot_models = make_snapshot_models
-    self._inference_server_config = inference_server_config
 
   def build(self, name='agent', program: Optional[lp.Program] = None):
     """Build the distributed agent topology."""
@@ -193,6 +189,5 @@ class DistributedLayout:
         ._multithreading_colocate_learner_and_reverb,
         checkpointing_config=self._checkpointing_config,
         make_snapshot_models=self._make_snapshot_models,
-        inference_server_config=self._inference_server_config,
         name=name,
         program=program)

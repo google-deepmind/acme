@@ -21,12 +21,10 @@ from typing import Callable, Dict, Optional
 from acme import core
 from acme import environment_loop
 from acme import specs
-from acme.jax import inference_server
 from acme.jax import networks as networks_lib
 from acme.jax import savers
 from acme.jax import types
 from acme.jax import utils
-from acme.jax import variable_utils
 from acme.jax.experiments import config
 from acme.jax import snapshotter
 from acme.utils import counting
@@ -37,10 +35,9 @@ import reverb
 
 ActorId = int
 
-
-SnapshotModelFactory = Callable[
-    [config.AgentNetwork, specs.EnvironmentSpec],
-    Dict[str, Callable[[core.VariableSource], types.ModelToSnapshot]]]
+SnapshotModelFactory = Callable[[config.AgentNetwork, specs.EnvironmentSpec],
+                                Dict[str, Callable[[core.VariableSource],
+                                                   types.ModelToSnapshot]]]
 
 
 @dataclasses.dataclass
@@ -56,11 +53,11 @@ class CheckpointingConfig:
     replay_checkpointing_time_delta_minutes: How frequently to write replay
       checkpoints; defaults to None, which disables periodic checkpointing.
       Warning! These are written asynchronously so as not to interrupt other
-      replay duties, however this does pose a risk of OOM since items that
-      would otherwise be removed are temporarily kept alive for checkpointing
+      replay duties, however this does pose a risk of OOM since items that would
+      otherwise be removed are temporarily kept alive for checkpointing
       purposes.
       Note: Since replay buffers tend to be quite large O(100GiB), writing can
-      take up to 10 minutes so keep that in mind when setting this frequency.
+        take up to 10 minutes so keep that in mind when setting this frequency.
   """
   max_to_keep: int = 1
   directory: str = '~/acme'
@@ -77,8 +74,6 @@ def make_distributed_experiment(
     multithreading_colocate_learner_and_reverb: bool = False,
     checkpointing_config: Optional[CheckpointingConfig] = None,
     make_snapshot_models: Optional[SnapshotModelFactory] = None,
-    inference_server_config: Optional[
-        inference_server.InferenceServerConfig] = None,
     name='agent',
     program: Optional[lp.Program] = None):
   """Builds distributed agent based on a builder."""
@@ -175,7 +170,6 @@ def make_distributed_experiment(
       variable_source: core.VariableSource,
       counter: counting.Counter,
       actor_id: ActorId,
-      inference_client: Optional[inference_server.InferenceServer] = None
   ) -> environment_loop.EnvironmentLoop:
     """The actor process."""
     adder = experiment.builder.make_adder(replay)
@@ -188,12 +182,8 @@ def make_distributed_experiment(
         utils.sample_uint32(environment_key))
     environment_spec = specs.make_environment_spec(environment)
 
-    if not inference_client:
-      networks = experiment.network_factory(environment_spec)
-      policy_network = experiment.policy_network_factory(networks)
-    else:
-      variable_source = variable_utils.ReferenceVariableSource()
-      policy_network = inference_client
+    networks = experiment.network_factory(environment_spec)
+    policy_network = experiment.policy_network_factory(networks)
     actor = experiment.builder.make_actor(actor_key, policy_network,
                                           environment_spec, variable_source,
                                           adder)
@@ -231,8 +221,9 @@ def make_distributed_experiment(
   variable_sources = [learner]
 
   if multithreading_colocate_learner_and_reverb:
-    program.add_node(lp.MultiThreadingColocation([learner_node, replay_node]),
-                     label='learner')
+    program.add_node(
+        lp.MultiThreadingColocation([learner_node, replay_node]),
+        label='learner')
   else:
     program.add_node(replay_node, label='replay')
 
@@ -257,59 +248,14 @@ def make_distributed_experiment(
         # NOTE: Do not pass the counter to the secondary learners to avoid
         # double counting of learner steps.
 
-  inference_server_node = None
-  if inference_server_config:
-
-    def build_inference_server(random_key: networks_lib.PRNGKey,
-                               variable_source: core.VariableSource):
-      """Creates an inference server node to be connected to by the actors."""
-
-      # Environments normally require uint32 as a seed.
-      environment = experiment.environment_factory(random_key)
-      networks = experiment.network_factory(
-          specs.make_environment_spec(environment))
-      policy_network = experiment.policy_network_factory(networks)
-
-      if not inference_server_config.batch_size:
-        # Inference batch size computation:
-        # - In case of 1 inference device it is efficient to use
-        #   `batch size == num_envs / 2`, so that inference can execute
-        #   in parallel with a subset of environments' steps (it also addresses
-        #   the problem of some environments running slower etc.)
-        # - In case of multiple inference devices, we just divide the above
-        #   batch size.
-        # - Batch size can't obviously be smaller than 1.
-        inference_server_config.batch_size = max(
-            1, num_actors // (2 * len(jax.local_devices())))
-
-      if not inference_server_config.update_period:
-        inference_server_config.update_period = (
-            1000 * num_actors // inference_server_config.batch_size)
-
-      return inference_server.InferenceServer(
-          config=inference_server_config,
-          handler=(policy_network
-                   if callable(policy_network) else vars(policy_network)),
-          variable_source=variable_source,
-          devices=jax.local_devices())
-
-    with program.group('inference_server'):
-      inference_server_key, key = jax.random.split(key)
-      inference_server_node = program.add_node(
-          lp.CourierNode(
-              build_inference_server,
-              inference_server_key,
-              learner,
-              courier_kwargs={'thread_pool_size': num_actors}))
-
   with program.group('actor'):
     # Create all actor threads.
     *actor_keys, key = jax.random.split(key, num_actors + 1)
     variable_sources = itertools.cycle(variable_sources)
     actor_nodes = [
-        lp.CourierNode(build_actor, akey, replay, vsource, counter, aid,
-                       inference_server_node)
-        for aid, (akey, vsource) in enumerate(zip(actor_keys, variable_sources))
+        lp.CourierNode(build_actor, akey, replay, vsource, counter, aid)
+        for aid, (akey,
+                  vsource) in enumerate(zip(actor_keys, variable_sources))
     ]
 
     # Create (maybe colocated) actor nodes.
@@ -319,8 +265,7 @@ def make_distributed_experiment(
     else:
       for i in range(0, num_actors, num_actors_per_node):
         program.add_node(
-            lp.MultiThreadingColocation(
-                actor_nodes[i:i + num_actors_per_node]))
+            lp.MultiThreadingColocation(actor_nodes[i:i + num_actors_per_node]))
 
   for evaluator in experiment.get_evaluator_factories():
     evaluator_key, key = jax.random.split(key)
@@ -330,7 +275,7 @@ def make_distributed_experiment(
         label='evaluator')
 
   if make_snapshot_models and checkpointing_config:
-    program.add_node(lp.CourierNode(build_model_saver, learner),
-                     label='model_saver')
+    program.add_node(
+        lp.CourierNode(build_model_saver, learner), label='model_saver')
 
   return program
