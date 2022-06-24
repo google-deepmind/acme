@@ -31,6 +31,7 @@ def _concat(values: types.NestedArray) -> np.ndarray:
 
   Args:
     values: the nested arrays to concatenate.
+
   Returns:
     The concatenated array.
   """
@@ -47,11 +48,15 @@ class ConcatObservationWrapper(base.EnvironmentWrapper):
   """Wrapper that concatenates observation fields.
 
   It takes an environment with nested observations and concatenates the fields
-  in a single tensor. The orginial fields should be 1-dimensional.
+  in a single tensor. The original fields should be 1-dimensional.
   Observation fields that are not in name_filter are dropped.
+
+  **NOTE**: The fields in the flattened observations will be in sorted order by
+  their names, see tree.flatten for more information.
   """
 
-  def __init__(self, environment: dm_env.Environment,
+  def __init__(self,
+               environment: dm_env.Environment,
                name_filter: Optional[Sequence[str]] = None):
     """Initializes a new ConcatObservationWrapper.
 
