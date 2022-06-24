@@ -108,6 +108,10 @@ class StepsLimiter:
           time.sleep(1)
 
 
+def is_local_run() -> bool:
+  return FLAGS.lp_launch_type.startswith('local')
+
+
 # Resources for each individual instance of the program.
 def make_xm_docker_resources(program,
                              requirements: Optional[str] = None):
