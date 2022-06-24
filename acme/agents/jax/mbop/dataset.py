@@ -55,22 +55,10 @@ def _expand_scalars(output):
   return tree.map_structure(tf.experimental.numpy.atleast_1d, output)
 
 
-def _flatten_observations(output):
-  """Flatten observations from dict to 1-d vector."""
-  observation = output[rlds.OBSERVATION]
-  dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
-  observation = tree.map_structure(
-      functools.partial(tf.cast, dtype=dtype), observation)
-  flat_leaves = tree.map_structure(tf.experimental.numpy.ravel, observation)
-  output[rlds.OBSERVATION] = tf.concat(tree.flatten(flat_leaves), axis=-1)
-  return output
-
-
 def episode_to_timestep_batch(
     episode: rlds.BatchedStep,
     return_horizon: int = 0,
     drop_return_horizon: bool = False,
-    flatten_observations: bool = False,
     calculate_episode_return: bool = False) -> tf.data.Dataset:
   """Converts an episode into multi-timestep batches.
 
@@ -80,8 +68,6 @@ def episode_to_timestep_batch(
       return.
     drop_return_horizon: bool whether we should drop the last `return_horizon`
       steps to avoid mis-calculated returns near the end of the episode.
-    flatten_observations: bool whether we should flatten dict-based observations
-      into a single 1-d vector.
     calculate_episode_return: Whether to calculate episode return.  Can be an
       expensive operation on datasets with many episodes.
 
@@ -138,8 +124,6 @@ def episode_to_timestep_batch(
             _append_episode_return, episode_return=episode_return))
 
   output = output.map(_expand_scalars)
-  if flatten_observations:
-    output = output.map(_flatten_observations)
 
   output = rlds.transformations.batch(
       output, size=3, shift=1, drop_remainder=True)
@@ -167,7 +151,6 @@ def episodes_to_timestep_batched_transitions(
     episode_dataset: tf.data.Dataset,
     return_horizon: int = 10,
     drop_return_horizon: bool = False,
-    flatten_observations: bool = True,
     min_return_filter: Optional[float] = None) -> tf.data.Dataset:
   """Process an existing dataset converting it to episode to 3-transitions.
 
@@ -180,7 +163,6 @@ def episodes_to_timestep_batched_transitions(
     episode_dataset: An RLDS dataset to process.
     return_horizon: The horizon we want calculate Monte-Carlo returns to.
     drop_return_horizon: Whether we should drop the last `return_horizon` steps.
-    flatten_observations: Whether structured observations should be flattened.
     min_return_filter: Minimum episode return below which we drop an episode.
 
   Returns:
@@ -191,7 +173,6 @@ def episodes_to_timestep_batched_transitions(
           episode_to_timestep_batch,
           return_horizon=return_horizon,
           drop_return_horizon=drop_return_horizon,
-          flatten_observations=flatten_observations,
           calculate_episode_return=min_return_filter is not None),
       num_parallel_calls=tf.data.experimental.AUTOTUNE,
       deterministic=False)
