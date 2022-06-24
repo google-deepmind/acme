@@ -34,7 +34,7 @@ EvaluatorFactory = experiments.config.EvaluatorFactory
 AgentNetwork = experiments.config.AgentNetwork
 PolicyNetwork = experiments.config.PolicyNetwork
 NetworkFactory = experiments.config.NetworkFactory
-PolicyFactory = experiments.config.PolicyFactory
+PolicyFactory = experiments.config.DeprecatedPolicyFactory
 MakeActorFn = experiments.config.MakeActorFn
 LoggerLabel = loggers.LoggerLabel
 LoggerStepsKey = loggers.LoggerStepsKey
@@ -147,7 +147,7 @@ class DistributedLayout:
       environment_factory: types.EnvironmentFactory,
       network_factory: experiments.config.NetworkFactory,
       builder: builders.ActorLearnerBuilder,
-      policy_network: experiments.config.PolicyFactory,
+      policy_network: experiments.config.DeprecatedPolicyFactory,
       num_actors: int,
       environment_spec: Optional[specs.EnvironmentSpec] = None,
       learner_logger_fn: Optional[Callable[[], loggers.Logger]] = None,

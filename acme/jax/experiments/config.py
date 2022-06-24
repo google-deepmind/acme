@@ -36,7 +36,7 @@ MakeActorFn = Callable[
     [types.PRNGKey, PolicyNetwork, specs.EnvironmentSpec, core.VariableSource],
     core.Actor]
 NetworkFactory = Callable[[specs.EnvironmentSpec], AgentNetwork]
-PolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
+DeprecatedPolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
 EvaluatorFactory = Callable[[
     types.PRNGKey,
     core.VariableSource,
@@ -74,7 +74,7 @@ class Config:
   # Below fields must be explicitly specified for any Agent.
   builder: builders.ActorLearnerBuilder
   network_factory: NetworkFactory
-  policy_network_factory: PolicyFactory
+  policy_network_factory: DeprecatedPolicyFactory
   environment_factory: types.EnvironmentFactory
   # Fields below are optional. If you just started with Acme do not worry about
   # them. You might need them later when you want to customize your RL agent.
@@ -82,7 +82,7 @@ class Config:
   evaluator_factories: Optional[Sequence[EvaluatorFactory]] = None
   # TODO(mwhoffman): Change the way network_factory, policy_network_factory
   # and eval_policy_network_factory are specified.
-  eval_policy_network_factory: Optional[PolicyFactory] = None
+  eval_policy_network_factory: Optional[DeprecatedPolicyFactory] = None
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
   seed: int = 0
@@ -111,7 +111,7 @@ class Config:
 def default_evaluator_factory(
     environment_factory: types.EnvironmentFactory,
     network_factory: NetworkFactory,
-    policy_factory: PolicyFactory,
+    policy_factory: DeprecatedPolicyFactory,
     logger_factory: loggers.LoggerFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
 ) -> EvaluatorFactory:
