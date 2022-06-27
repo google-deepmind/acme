@@ -54,7 +54,11 @@ def run_experiment(experiment: config.ExperimentConfig,
 
   # Create the networks and policy.
   networks = experiment.network_factory(environment_spec)
-  policy = experiment.policy_network_factory(networks)
+  policy = config.make_policy(
+      experiment=experiment,
+      networks=networks,
+      environment_spec=environment_spec,
+      evaluation=False)
 
   # Create the replay server and grab its address.
   replay_tables = experiment.builder.make_replay_tables(environment_spec,
@@ -118,15 +122,20 @@ def run_experiment(experiment: config.ExperimentConfig,
       observers=experiment.observers)
 
   eval_loop = None
-  if experiment.eval_policy_network_factory:
+  if num_eval_episodes:
     # Create the evaluation actor and loop.
     eval_counter = counting.Counter(
         parent_counter, prefix='eval', time_delta=0.)
     eval_logger = experiment.logger_factory('eval',
                                             eval_counter.get_steps_key(), 0)
+    eval_policy = config.make_policy(
+        experiment=experiment,
+        networks=networks,
+        environment_spec=environment_spec,
+        evaluation=True)
     eval_actor = experiment.builder.make_actor(
         random_key=jax.random.PRNGKey(experiment.seed),
-        policy=experiment.eval_policy_network_factory(networks),
+        policy=eval_policy,
         environment_spec=environment_spec,
         variable_source=learner)
     eval_loop = acme.EnvironmentLoop(

@@ -81,7 +81,9 @@ def main(_):
         experiment=config, num_actors=4)
     lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
   else:
-    experiments.run_experiment(experiment=config)
+    # TODO(b/230458884): Add num_eval_episodes and use the default policy for
+    # evaluation once this agent implements `make_policy`
+    experiments.run_experiment(experiment=config, num_eval_episodes=0)
 
 
 if __name__ == '__main__':

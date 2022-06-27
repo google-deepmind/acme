@@ -96,7 +96,12 @@ def make_distributed_experiment(
     spec = (
         experiment.environment_spec or
         specs.make_environment_spec(experiment.environment_factory(dummy_seed)))
-    policy = experiment.policy_network_factory(experiment.network_factory(spec))
+    network = experiment.network_factory(spec)
+    policy = config.make_policy(
+        experiment=experiment,
+        networks=network,
+        environment_spec=spec,
+        evaluation=False)
     return experiment.builder.make_replay_tables(spec, policy)
 
   def build_model_saver(variable_source: core.VariableSource):
@@ -183,7 +188,11 @@ def make_distributed_experiment(
     environment_spec = specs.make_environment_spec(environment)
 
     networks = experiment.network_factory(environment_spec)
-    policy_network = experiment.policy_network_factory(networks)
+    policy_network = config.make_policy(
+        experiment=experiment,
+        networks=networks,
+        environment_spec=environment_spec,
+        evaluation=False)
     actor = experiment.builder.make_actor(actor_key, policy_network,
                                           environment_spec, variable_source,
                                           adder)

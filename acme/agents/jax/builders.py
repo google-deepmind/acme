@@ -120,5 +120,30 @@ class ActorLearnerBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
         actor steps, etc.) distributed throughout the agent.
     """
 
+  def make_policy(self,
+                  networks: Networks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> Policy:
+    """Creates the agent policy.
+
+       Creates the agent policy given the collection of network components and
+       environment spec. An optional boolean can be given to indicate if the
+       policy will be used for evaluation.
+
+    Args:
+      networks: struct describing the networks needed to generate the policy.
+      environment_spec: struct describing the specs of the environment.
+      evaluation: when true, a version of the policy to use for evaluation
+        should be returned. This is algorithm-specific so if an algorithm makes
+        no distinction between behavior and evaluation policies this boolean may
+        be ignored.
+
+    Returns:
+      Behavior policy or evaluation policy for the agent.
+    """
+    # TODO(sabela): make abstract once all agents implement it.
+    del networks, environment_spec, evaluation
+    raise NotImplementedError
+
 # TODO(sinopalnikov): deprecated, migrate all users and remove.
 GenericActorLearnerBuilder = ActorLearnerBuilder

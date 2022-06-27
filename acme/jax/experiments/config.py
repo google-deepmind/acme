@@ -32,11 +32,14 @@ import jax
 
 AgentNetwork = Any
 PolicyNetwork = Any
+EvaluationFlag = bool
 MakeActorFn = Callable[
     [types.PRNGKey, PolicyNetwork, specs.EnvironmentSpec, core.VariableSource],
     core.Actor]
 NetworkFactory = Callable[[specs.EnvironmentSpec], AgentNetwork]
 DeprecatedPolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
+PolicyFactory = Callable[[AgentNetwork, specs.EnvironmentSpec, EvaluationFlag],
+                         PolicyNetwork]
 EvaluatorFactory = Callable[[
     types.PRNGKey,
     core.VariableSource,
@@ -74,14 +77,16 @@ class ExperimentConfig:
   # Below fields must be explicitly specified for any Agent.
   builder: builders.ActorLearnerBuilder
   network_factory: NetworkFactory
-  policy_network_factory: DeprecatedPolicyFactory
   environment_factory: types.EnvironmentFactory
+  # policy_network_factory is deprecated. Use builder.make_policy to
+  # create the policy.
+  policy_network_factory: Optional[DeprecatedPolicyFactory] = None
   # Fields below are optional. If you just started with Acme do not worry about
   # them. You might need them later when you want to customize your RL agent.
   # TODO(stanczyk): Introduce a marker for the default value (instead of None).
   evaluator_factories: Optional[Sequence[EvaluatorFactory]] = None
-  # TODO(mwhoffman): Change the way network_factory, policy_network_factory
-  # and eval_policy_network_factory are specified.
+  # eval_policy_network_factory is deprecated. Use builder.make_policy to
+  # create the policy.
   eval_policy_network_factory: Optional[DeprecatedPolicyFactory] = None
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
@@ -92,17 +97,29 @@ class ExperimentConfig:
 
   # TODO(stanczyk): Make get_evaluator_factories a standalone function.
   def get_evaluator_factories(self):
+    """Constructs the evaluator factories."""
     if self.evaluator_factories is not None:
       return self.evaluator_factories
-    assert self.eval_policy_network_factory is not None, (
-        'You need to provide `eval_policy_network_factory` to ExperimentConfig'
-        ' when `evaluator_factories` are not specified. To disable evaluation '
-        'altogether just set `evaluator_factories = []`')
+
+    def eval_policy_factory(networks: AgentNetwork,
+                            environment_spec: specs.EnvironmentSpec,
+                            evaluation: EvaluationFlag) -> PolicyNetwork:
+      del evaluation
+      # The config factory has precedence until all agents are migrated to use
+      # builder.make_policy
+      if self.eval_policy_network_factory is not None:
+        return self.eval_policy_network_factory(networks)
+      else:
+        return self.builder.make_policy(
+            networks=networks,
+            environment_spec=environment_spec,
+            evaluation=True)
+
     return [
         default_evaluator_factory(
             environment_factory=self.environment_factory,
             network_factory=self.network_factory,
-            policy_factory=self.eval_policy_network_factory,
+            policy_factory=eval_policy_factory,
             logger_factory=self.logger_factory,
             observers=self.observers)
     ]
@@ -111,7 +128,7 @@ class ExperimentConfig:
 def default_evaluator_factory(
     environment_factory: types.EnvironmentFactory,
     network_factory: NetworkFactory,
-    policy_factory: DeprecatedPolicyFactory,
+    policy_factory: PolicyFactory,
     logger_factory: loggers.LoggerFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
 ) -> EvaluatorFactory:
@@ -131,9 +148,8 @@ def default_evaluator_factory(
     environment = environment_factory(utils.sample_uint32(environment_key))
     environment_spec = specs.make_environment_spec(environment)
     networks = network_factory(environment_spec)
-
-    actor = make_actor(actor_key, policy_factory(networks), environment_spec,
-                       variable_source)
+    policy = policy_factory(networks, environment_spec, True)
+    actor = make_actor(actor_key, policy, environment_spec, variable_source)
 
     # Create logger and counter.
     counter = counting.Counter(counter, 'evaluator')
@@ -144,3 +160,19 @@ def default_evaluator_factory(
         environment, actor, counter, logger, observers=observers)
 
   return evaluator
+
+
+def make_policy(experiment: ExperimentConfig, networks: AgentNetwork,
+                environment_spec: specs.EnvironmentSpec,
+                evaluation: bool) -> PolicyNetwork:
+  """Constructs a policy. It is only meant to be used internally."""
+  # TODO(sabela): remove and update callers once all agents use
+  # builder.make_policy
+  if not evaluation and experiment.policy_network_factory:
+    return experiment.policy_network_factory(networks)
+  if evaluation and experiment.eval_policy_network_factory:
+    return experiment.eval_policy_network_factory(networks)
+  return experiment.builder.make_policy(
+      networks=networks,
+      environment_spec=environment_spec,
+      evaluation=evaluation)
