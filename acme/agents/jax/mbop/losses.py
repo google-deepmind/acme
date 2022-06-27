@@ -15,17 +15,21 @@
 """Loss function wrappers, assuming a leading batch axis."""
 
 import dataclasses
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple, Union
 
 from acme import types
 from acme.agents.jax.mbop import dataset
+from acme.jax import networks
 import jax
 import jax.numpy as jnp
 
-# The apply function takes an observation and an action as arguments, and is
+# The apply function takes an observation (and an action) as arguments, and is
 # usually a network with bound parameters.
-TransitionApplyFn = Callable[[jnp.ndarray, jnp.ndarray], Any]
-TransitionLoss = Callable[[TransitionApplyFn, types.Transition], jnp.ndarray]
+TransitionApplyFn = Callable[[networks.Observation, networks.Action], Any]
+ObservationOnlyTransitionApplyFn = Callable[[networks.Observation], Any]
+TransitionLoss = Callable[[
+    Union[TransitionApplyFn, ObservationOnlyTransitionApplyFn], types.Transition
+], jnp.ndarray]
 
 
 def mse(a: jnp.ndarray, b: jnp.ndarray) -> jnp.ndarray:
@@ -33,10 +37,11 @@ def mse(a: jnp.ndarray, b: jnp.ndarray) -> jnp.ndarray:
   return jnp.mean(jnp.square(a - b))
 
 
-def world_model_loss(apply_fn: Callable[[jnp.ndarray, jnp.ndarray],
-                                        Tuple[jnp.ndarray, jnp.ndarray]],
+def world_model_loss(apply_fn: Callable[[networks.Observation, networks.Action],
+                                        Tuple[networks.Observation,
+                                              jnp.ndarray]],
                      steps: types.Transition) -> jnp.ndarray:
-  """Loss wrapper for WorldModelMapper.
+  """Returns the loss for the world model.
 
   Args:
     apply_fn: applies a transition model (o_t, a_t) -> (o_t+1, r), expects the
@@ -66,14 +71,15 @@ def world_model_loss(apply_fn: Callable[[jnp.ndarray, jnp.ndarray],
       jnp.concatenate([observation_tp1, reward_t], axis=-1))
 
 
-def policy_prior_loss(apply_fn: Callable[[jnp.ndarray, jnp.ndarray],
-                                         jnp.ndarray], steps: types.Transition):
-  """Loss wrapper for PolicyPriorMapper.
+def policy_prior_loss(
+    apply_fn: Callable[[networks.Observation, networks.Action],
+                       networks.Action], steps: types.Transition):
+  """Returns the loss for the policy prior.
 
   Args:
-    apply_fn: applies a transition model (o_t, a_t) -> (o_t+1, r), expects the
-      leading axis to index the batch and the second axis to index the
-      transition triplet (t-1, t, t+1).
+    apply_fn: applies a policy prior (o_t, a_t) -> a_t+1, expects the leading
+      axis to index the batch and the second axis to index the transition
+      triplet (t-1, t, t+1).
     steps: RLDS dictionary of transition triplets as prepared by
       `rlds_loader.episode_to_timestep_batch`.
 
@@ -89,12 +95,12 @@ def policy_prior_loss(apply_fn: Callable[[jnp.ndarray, jnp.ndarray],
   return mse(predicted_action_t, action_t)
 
 
-def return_loss(apply_fn: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray],
-                steps: types.Transition):
-  """Loss wrapper for ReturnMapper.
+def return_loss(apply_fn: Callable[[networks.Observation, networks.Action],
+                                   jnp.ndarray], steps: types.Transition):
+  """Returns the loss for the n-step return model.
 
   Args:
-    apply_fn: applies a transition model (o_t, a_t) -> (o_t+1, r), expects the
+    apply_fn: applies an n-step return model (o_t, a_t) -> r, expects the
       leading axis to index the batch and the second axis to index the
       transition triplet (t-1, t, t+1).
     steps: RLDS dictionary of transition triplets as prepared by

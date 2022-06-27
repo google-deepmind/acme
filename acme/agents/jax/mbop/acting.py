@@ -30,6 +30,13 @@ from acme.jax import variable_utils
 import jax
 from jax import numpy as jnp
 
+# Recurrent state is the trajectory.
+Trajectory = jnp.ndarray
+
+ActorCore = actor_core_lib.ActorCore[
+    actor_core_lib.SimpleActorCoreRecurrentState[Trajectory],
+    Mapping[str, jnp.ndarray]]
+
 
 def make_actor_core(
     mppi_config: mppi.MPPIConfig,
@@ -38,9 +45,7 @@ def make_actor_core(
     n_step_return: models.NStepReturn,
     environment_spec: specs.EnvironmentSpec,
     mean_std: Optional[running_statistics.NestedMeanStd] = None,
-) -> actor_core_lib.ActorCore[
-    actor_core_lib.SimpleActorCoreRecurrentState[actor_core_lib.RecurrentState],
-    Mapping[str, jnp.ndarray]]:
+) -> ActorCore:
   """Creates an actor core wrapping the MBOP-configured MPPI planner.
 
   Args:
@@ -94,10 +99,11 @@ def make_actor_core(
     planner_n_step_return = n_step_return
 
   def recurrent_policy(
-      params_list: List[networks_lib.Params], random_key: networks_lib.PRNGKey,
+      params_list: List[networks_lib.Params],
+      random_key: networks_lib.PRNGKey,
       observation: networks_lib.Observation,
-      previous_trajectory: actor_core_lib.RecurrentState
-  ) -> Tuple[networks_lib.Action, actor_core_lib.RecurrentState]:
+      previous_trajectory: Trajectory,
+  ) -> Tuple[networks_lib.Action, Trajectory]:
     # Note that splitting the random key is handled by GenericActor.
     if mean_std is not None:
       observation = running_statistics.normalize(
@@ -129,39 +135,26 @@ def make_actor_core(
                                                         initial_trajectory)
 
 
-def make_ensemble_mbop_actor(
+def make_ensemble_actor_core(
     networks: mbop_networks.MBOPNetworks,
     mppi_config: mppi.MPPIConfig,
     environment_spec: specs.EnvironmentSpec,
-    random_key: networks_lib.PRNGKey,
-    variable_source: core.VariableSource,
-    adder: Optional[adders.Adder] = None,
     mean_std: Optional[running_statistics.NestedMeanStd] = None,
     use_round_robin: bool = True,
-) -> core.Actor:
-  """Creates an MBOP actor using the ensemble models.
+) -> ActorCore:
+  """Creates an actor core that uses ensemble models.
 
   Args:
     networks: MBOP networks.
     mppi_config: Planner hyperparameters.
     environment_spec: Used to initialize the initial trajectory data structure.
-    random_key: JAX Random key.
-    variable_source: The source to get networks parameters from.
-    adder: An adder to add experiences to. The `extras` of the adder holds the
-      state of the recurrent policy. If `has_extras=True` then the `extras` part
-      returned from the recurrent policy is appended to the state before added
-      to the adder.
     mean_std: Used to undo normalization if the networks trained normalized.
     use_round_robin: Whether to use round robin or mean to calculate the policy
       prior over the ensemble members.
 
   Returns:
-    A recurrent actor.
+    A recurrent actor core.
   """
-  variable_client = variable_utils.VariableClient(
-      client=variable_source,
-      key=['world_model-policy', 'policy_prior-policy', 'n_step_return-policy'])
-
   world_model = models.make_ensemble_world_model(networks.world_model_network)
   policy_prior = models.make_ensemble_policy_prior(
       networks.policy_prior_network,
@@ -170,7 +163,31 @@ def make_ensemble_mbop_actor(
   n_step_return = models.make_ensemble_n_step_return(
       networks.n_step_return_network)
 
-  actor_core = make_actor_core(mppi_config, world_model, policy_prior,
-                               n_step_return, environment_spec, mean_std)
+  return make_actor_core(mppi_config, world_model, policy_prior, n_step_return,
+                         environment_spec, mean_std)
+
+
+def make_actor(actor_core: ActorCore,
+               random_key: networks_lib.PRNGKey,
+               variable_source: core.VariableSource,
+               adder: Optional[adders.Adder] = None) -> core.Actor:
+  """Creates an MBOP actor from an actor core.
+
+  Args:
+    actor_core: An MBOP actor core.
+    random_key: JAX Random key.
+    variable_source: The source to get networks parameters from.
+    adder: An adder to add experiences to. The `extras` of the adder holds the
+      state of the recurrent policy. If `has_extras=True` then the `extras` part
+      returned from the recurrent policy is appended to the state before added
+      to the adder.
+
+  Returns:
+    A recurrent actor.
+  """
+  variable_client = variable_utils.VariableClient(
+      client=variable_source,
+      key=['world_model-policy', 'policy_prior-policy', 'n_step_return-policy'])
+
   return actors.GenericActor(
       actor_core, random_key, variable_client, adder, backend=None)

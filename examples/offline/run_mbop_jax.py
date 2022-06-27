@@ -115,14 +115,9 @@ def main(_):
   assert planning_config.n_trajectories % _NUM_NETWORKS.value == 0, (
       'Number of trajectories must be a multiple of the number of networks.')
 
-  evaluator = mbop.make_ensemble_mbop_actor(
-      networks,
-      planning_config,
-      spec,
-      evaluator_key,
-      variable_source=learner,
-      mean_std=mean_std,
-      use_round_robin=False)
+  actor_core = mbop.make_ensemble_actor_core(
+      networks, planning_config, spec, mean_std, use_round_robin=False)
+  evaluator = mbop.make_actor(actor_core, evaluator_key, learner)
 
   eval_loop = acme.EnvironmentLoop(
       environment=environment,
