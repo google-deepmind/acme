@@ -15,6 +15,7 @@
 """Lfd agent."""
 
 from acme.agents.jax.lfd.builder import LfdBuilder
+from acme.agents.jax.lfd.builder import LfdStep
 from acme.agents.jax.lfd.config import LfdConfig
 from acme.agents.jax.lfd.sacfd_agents import DistributedSACfD
 from acme.agents.jax.lfd.sacfd_agents import SACfD

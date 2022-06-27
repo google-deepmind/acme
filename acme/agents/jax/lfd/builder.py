@@ -14,7 +14,7 @@
 
 """Builder enabling off-policy algorithms to learn from demonstrations."""
 
-from typing import Any, Callable, Iterator, Tuple
+from typing import Any, Callable, Generic, Iterator, Tuple
 
 from acme.agents.jax import builders
 from acme.agents.jax.lfd import config as lfd_config
@@ -25,29 +25,32 @@ import dm_env
 LfdStep = Tuple[Any, dm_env.TimeStep]
 
 
-class LfdBuilder(builders.ActorLearnerBuilder):
+class LfdBuilder(builders.ActorLearnerBuilder[builders.Networks,
+                                              builders.Policy,
+                                              builders.Sample,],
+                 Generic[builders.Networks, builders.Policy, builders.Sample]):
   """Builder that enables Learning From demonstrations.
 
   This builder is not self contained and requires an underlying builder
   implementing an off-policy algorithm.
   """
 
-  def __init__(
-      self,
-      builder: builders.ActorLearnerBuilder,
-      demonstrations_factory: Callable[[], Iterator[LfdStep]],
-      config: lfd_config.LfdConfig):
+  def __init__(self, builder: builders.ActorLearnerBuilder[builders.Networks,
+                                                           builders.Policy,
+                                                           builders.Sample],
+               demonstrations_factory: Callable[[], Iterator[LfdStep]],
+               config: lfd_config.LfdConfig):
     """LfdBuilder constructor.
 
     Args:
       builder: The underlying builder implementing the off-policy algorithm.
-      demonstrations_factory: Factory returning an infinite stream
-        (as an iterator) of (action, next_timesteps). Episode boundaries
-        in this stream are given by timestep.first() and timestep.last().
-        Note that in the distributed version of this algorithm, each actor is
-        mixing the same demonstrations with its online experience. This
-        effectively results in the demonstrations being replicated in the
-        replay buffer as many times as the number of actors being used.
+      demonstrations_factory: Factory returning an infinite stream (as an
+        iterator) of (action, next_timesteps). Episode boundaries in this stream
+        are given by timestep.first() and timestep.last(). Note that in the
+        distributed version of this algorithm, each actor is mixing the same
+        demonstrations with its online experience. This effectively results in
+        the demonstrations being replicated in the replay buffer as many times
+        as the number of actors being used.
       config: LfD configuration.
     """
     self._builder = builder
