@@ -149,3 +149,12 @@ class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
         client=replay_client,
         n_step=self._config.n_step,
         discount=self._config.discount)
+
+  def make_policy(self,
+                  networks: td3_networks.TD3Networks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> actor_core_lib.FeedForwardPolicy:
+    """Creates a policy."""
+    sigma = 0 if evaluation else self._config.sigma
+    return td3_networks.get_default_behavior_policy(
+        networks=networks, action_specs=environment_spec.actions, sigma=sigma)
