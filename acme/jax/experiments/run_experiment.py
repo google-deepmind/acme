@@ -199,7 +199,11 @@ class _LearningActor(core.Actor):
         self._learner_steps += 1
         assert batches == 1, (
             'Learner step must retrieve exactly one element from the iterator'
-            f' (retrieved {batches}). Otherwise agent can deadlock.')
+            f' (retrieved {batches}). Otherwise agent can deadlock. Example '
+            'cause is that your chosen agent'
+            's Builder has a `make_learner` '
+            'factory that prefetches the data but it shouldn'
+            't.')
         trained = True
       else:
         # Wait for the iterator to fetch more data from the table(s) only

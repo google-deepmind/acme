@@ -102,7 +102,12 @@ class Agent(core.Actor, core.VariableSource):
         current_batches = self._iterator.retrieved_elements() - total_batches
         assert current_batches == 1, (
             'Learner step must retrieve exactly one element from the iterator'
-            f' (retrieved {current_batches}). Otherwise agent can deadlock.')
+            f' (retrieved {current_batches}). Otherwise agent can deadlock. '
+            'Example cause is that your chosen agent'
+            's Builder has a '
+            '`make_learner` factory that prefetches the data but it '
+            'shouldn'
+            't.')
         self._batch_size_upper_bounds = [
             math.ceil(t.info.rate_limiter_info.sample_stats.completed /
                       (total_batches + 1)) for t in self._replay_tables
