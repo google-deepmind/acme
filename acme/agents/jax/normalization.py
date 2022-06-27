@@ -239,3 +239,12 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
         max_abs_observation=self.max_abs_observation,
         update_period=self.statistics_update_period,
         backend='cpu')
+
+  def make_policy(self,
+                  networks: Networks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> PolicyNetwork:
+    return self.builder.make_policy(
+        networks=networks,
+        environment_spec=environment_spec,
+        evaluation=evaluation)

@@ -65,9 +65,6 @@ def build_experiment_config():
       builder=sac_builder,
       environment_factory=lambda seed: helpers.make_environment(suite, task),
       network_factory=network_factory,
-      policy_network_factory=sac.apply_policy_and_sample,
-      eval_policy_network_factory=(
-          lambda network: sac.apply_policy_and_sample(network, eval_mode=True)),
       seed=FLAGS.seed,
       max_number_of_steps=FLAGS.num_steps)
 

@@ -145,3 +145,11 @@ class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
         client=replay_client,
         n_step=self._config.n_step,
         discount=self._config.discount)
+
+  def make_policy(self,
+                  networks: sac_networks.SACNetworks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> actor_core_lib.FeedForwardPolicy:
+    """Construct the policy."""
+    del environment_spec
+    return sac_networks.apply_policy_and_sample(networks, eval_mode=evaluation)
