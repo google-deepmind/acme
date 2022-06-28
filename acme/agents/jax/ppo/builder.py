@@ -154,3 +154,11 @@ class PPOBuilder(
         update_period=self._config.variable_update_period)
     return actors.GenericActor(
         actor, random_key, variable_client, adder, backend='cpu')
+
+  def make_policy(
+      self,
+      networks: ppo_networks.PPONetworks,
+      environment_spec: specs.EnvironmentSpec,
+      evaluation: bool = False) -> actor_core_lib.FeedForwardPolicyWithExtra:
+    del environment_spec
+    return ppo_networks.make_inference_fn(networks, evaluation)
