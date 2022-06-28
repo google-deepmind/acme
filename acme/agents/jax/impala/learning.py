@@ -57,7 +57,6 @@ class IMPALALearner(acme.Learner):
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
       prefetch_size: int = 2,
-      num_prefetch_threads: Optional[int] = None,
   ):
     local_devices = jax.local_devices()
     process_id = jax.process_index()
@@ -67,6 +66,8 @@ class IMPALALearner(acme.Learner):
                  process_id, local_devices)
     self._devices = devices or local_devices
     self._local_devices = [d for d in self._devices if d in local_devices]
+
+    self._iterator = iterator
 
     loss_fn = losses.impala_loss(
         networks.unroll_fn,
@@ -120,15 +121,6 @@ class IMPALALearner(acme.Learner):
     state = make_initial_state(random_key)
     self._state = utils.replicate_in_all_devices(state, self._local_devices)
 
-    if num_prefetch_threads is None:
-      num_prefetch_threads = len(self._local_devices)
-    self._prefetched_iterator = utils.sharded_prefetch(
-        iterator,
-        buffer_size=prefetch_size,
-        devices=self._local_devices,
-        num_threads=num_prefetch_threads,
-    )
-
     self._sgd_step = jax.pmap(
         sgd_step, axis_name=_PMAP_AXIS_NAME, devices=self._devices)
 
@@ -139,19 +131,21 @@ class IMPALALearner(acme.Learner):
 
   def step(self):
     """Does a step of SGD and logs the results."""
-    samples = next(self._prefetched_iterator)
+    samples = next(self._iterator)
 
     # Do a batch of SGD.
     start = time.time()
     self._state, results = self._sgd_step(self._state, samples)
 
     # Take results from first replica.
+    # NOTE: This measure will be a noisy estimate for the purposes of the logs
+    # as it does not pmean over all devices.
     results = utils.get_from_first_device(results)
 
-    # Update our counts and record it.
+    # Update our counts and record them.
     counts = self._counter.increment(steps=1, time_elapsed=time.time() - start)
 
-    # Snapshot and attempt to write logs.
+    # Maybe write logs.
     self._logger.write({**results, **counts})
 
   def get_variables(self, names: Sequence[str]) -> List[networks_lib.Params]:

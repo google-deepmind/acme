@@ -113,7 +113,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
         server_address=replay_client.server_address,
         batch_size=self._num_sequences_per_batch,
         num_parallel_calls=None)
-    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
+    return utils.multi_device_put(dataset.as_numpy_iterator(), jax.devices())
 
   def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
     """Creates an adder which handles observations."""
