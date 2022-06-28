@@ -23,11 +23,12 @@ from typing import Callable, Iterable, Iterator, NamedTuple, Optional, Sequence,
 from absl import logging
 from acme import core
 from acme import types
-from acme.jax.types import PRNGKey, TrainingMetrics, TrainingStepOutput  # pylint: disable=g-multiple-import
+from acme.jax import types as jax_types
 import jax
 import jax.numpy as jnp
 import numpy as np
 import tree
+
 
 F = TypeVar('F', bound=Callable)
 N = TypeVar('N', bound=types.NestedArray)
@@ -407,8 +408,9 @@ def process_multiple_batches(
     process_one_batch: a function that takes 'state' and 'data', and returns
       'new_state' and 'aux' (for example 'metrics').
     num_batches: how many batches to process at once
-    postprocess_aux: how to merge the extra information, defaults to taking
-      the mean.
+    postprocess_aux: how to merge the extra information, defaults to taking the
+      mean.
+
   Returns:
     A function with the same interface as 'process_one_batch' which processes
     multiple batches at once.
@@ -438,17 +440,17 @@ def process_multiple_batches(
 
 def process_many_batches(
     process_one_batch: Callable[[_TrainingState, _TrainingData],
-                                TrainingStepOutput[_TrainingState]],
+                                jax_types.TrainingStepOutput[_TrainingState]],
     num_batches: int,
-    postprocess_aux: Optional[Callable[[TrainingMetrics],
-                                       TrainingMetrics]] = None
+    postprocess_aux: Optional[Callable[[jax_types.TrainingMetrics],
+                                       jax_types.TrainingMetrics]] = None
 ) -> Callable[[_TrainingState, _TrainingData],
-              TrainingStepOutput[_TrainingState]]:
+              jax_types.TrainingStepOutput[_TrainingState]]:
   """The version of 'process_multiple_batches' with stronger typing."""
 
   def _process_one_batch(
       state: _TrainingState,
-      data: _TrainingData) -> Tuple[_TrainingState, TrainingMetrics]:
+      data: _TrainingData) -> Tuple[_TrainingState, jax_types.TrainingMetrics]:
     result = process_one_batch(state, data)
     return result.state, result.metrics
 
@@ -457,9 +459,9 @@ def process_many_batches(
 
   def _process_many_batches(
       state: _TrainingState,
-      data: _TrainingData) -> TrainingStepOutput[_TrainingState]:
+      data: _TrainingData) -> jax_types.TrainingStepOutput[_TrainingState]:
     state, aux = func(state, data)
-    return TrainingStepOutput(state, aux)
+    return jax_types.TrainingStepOutput(state, aux)
 
   return _process_many_batches
 
@@ -470,7 +472,7 @@ def weighted_softmax(x: jnp.ndarray, weights: jnp.ndarray, axis: int = 0):
                                         axis=axis, keepdims=True)
 
 
-def sample_uint32(random_key: PRNGKey) -> int:
+def sample_uint32(random_key: jax_types.PRNGKey) -> int:
   """Returns an integer uniformly distributed in 0..2^32-1."""
   iinfo = jnp.iinfo(jnp.int32)
   # randint only accepts int32 values as min and max.
