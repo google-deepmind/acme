@@ -27,10 +27,63 @@ import reverb
 
 Networks = TypeVar('Networks')  # Container for all agent network components.
 Policy = TypeVar('Policy')  # Function or container for agent policy functions.
-Sample = TypeVar('Sample')  # Generic type for a sample from the replay buffer.
+Sample = TypeVar('Sample')  # Sample from the demonstrations or replay buffer.
 
 
-class ActorLearnerBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
+class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
+  """Interface for defining the components of an offline RL agent.
+
+  Implementations of this interface contain a complete specification of a
+  concrete offline RL agent. An instance of this class can be used to build an
+  offline RL agent that operates either locally or in a distributed setup.
+  """
+
+  @abc.abstractmethod
+  def make_learner(
+      self,
+      *,
+      random_key: networks_lib.PRNGKey,
+      networks: Networks,
+      dataset: Iterator[Sample],
+      logger_fn: loggers.LoggerFactory,
+      environment_spec: specs.EnvironmentSpec,
+      counter: Optional[counting.Counter] = None,
+  ) -> core.Learner:
+    """Creates an instance of the learner.
+
+    Args:
+      random_key: A key for random number generation.
+      networks: struct describing the networks needed by the learner; this is
+        specific to the learner in question.
+      dataset: iterator over demonstration samples.
+      logger_fn: factory providing loggers used for logging progress.
+      environment_spec: A container for all relevant environment specs.
+      counter: a Counter which allows for recording of counts (learner steps,
+        evaluator steps, etc.) distributed throughout the agent.
+    """
+
+  @abc.abstractmethod
+  def make_actor(
+      self,
+      *,
+      random_key: networks_lib.PRNGKey,
+      policy: Policy,
+      environment_spec: specs.EnvironmentSpec,
+      variable_source: Optional[core.VariableSource] = None,
+  ) -> core.Actor:
+    """Create an actor instance to be used for evaluation.
+
+    Args:
+      random_key: A key for random number generation.
+      policy: Instance of a policy expected by the algorithm corresponding to
+        this builder.
+      environment_spec: A container for all relevant environment specs.
+      variable_source: A source providing the necessary actor parameters.
+    """
+
+
+class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
+                          Generic[Networks, Policy, Sample]):
   """Defines an interface for defining the components of an RL agent.
 
   Implementations of this interface contain a complete specification of a

@@ -15,8 +15,7 @@
 """JAX experiment config."""
 
 import dataclasses
-import sys
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Generic, Iterator, Optional, Sequence
 
 from acme import core
 from acme import environment_loop
@@ -55,9 +54,11 @@ class ExperimentConfig:
   Attributes:
     builder: Builds components of an RL agent (Learner, Actor...).
     network_factory: Builds networks used by the agent.
+    environment_factory: Returns an instance of an environment.
+    max_number_of_steps: How many environment steps to perform.
+    seed: Seed used for agent initialization.
     policy_network_factory: Policy network factory which is used actors to
       perform inference.
-    environment_factory: Returns an instance of an environment.
     evaluator_factories: Factories of policy evaluators. When not specified the
       default evaluators are constructed using eval_policy_network_factory. Set
       to an empty list to disable evaluators.
@@ -68,9 +69,6 @@ class ExperimentConfig:
       reduce the number of times environment_factory is invoked (for performance
       or resource usage reasons).
     observers: Observers used for extending logs with custom information.
-    seed: Seed used for agent initialization.
-    max_number_of_steps: How many environment steps to perform. Infinite by
-      default.
     logger_factory: Loggers factory used to construct loggers for learner,
       actors and evaluators.
   """
@@ -78,6 +76,8 @@ class ExperimentConfig:
   builder: builders.ActorLearnerBuilder
   network_factory: NetworkFactory
   environment_factory: types.EnvironmentFactory
+  max_number_of_steps: int
+  seed: int
   # policy_network_factory is deprecated. Use builder.make_policy to
   # create the policy.
   policy_network_factory: Optional[DeprecatedPolicyFactory] = None
@@ -90,9 +90,6 @@ class ExperimentConfig:
   eval_policy_network_factory: Optional[DeprecatedPolicyFactory] = None
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
-  seed: int = 0
-  # TODO(stanczyk): Make this field required.
-  max_number_of_steps: int = sys.maxsize
   logger_factory: loggers.LoggerFactory = experiment_utils.make_experiment_logger
 
   # TODO(stanczyk): Make get_evaluator_factories a standalone function.
@@ -114,6 +111,83 @@ class ExperimentConfig:
             networks=networks,
             environment_spec=environment_spec,
             evaluation=True)
+
+    return [
+        default_evaluator_factory(
+            environment_factory=self.environment_factory,
+            network_factory=self.network_factory,
+            policy_factory=eval_policy_factory,
+            logger_factory=self.logger_factory,
+            observers=self.observers)
+    ]
+
+
+@dataclasses.dataclass
+class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
+                                      builders.Sample]):
+  """Config which defines aspects of constructing an offline RL experiment.
+
+  This class is similar to the ExperimentConfig, but is tailored to offline RL
+  setting, so it excludes attributes related to training via interaction with
+  the environment (max_number_of_steps, policy_network_factory) and instead
+  includes attributes specific to learning from demonstration.
+
+  Attributes:
+    builder: Builds components of an offline RL agent (Learner and Evaluator).
+    network_factory: Builds networks used by the agent.
+    demonstration_dataset_factory: Function that returns an iterator over
+      demonstrations.
+    environment_spec: Specification of the environment.
+    max_num_learner_steps: How many learner steps to perform.
+    seed: Seed used for agent initialization.
+    evaluator_factories: Factories of policy evaluators. When not specified the
+      default evaluators are constructed using eval_policy_network_factory. Set
+      to an empty list to disable evaluators.
+    eval_policy_factory: Policy factory used by evaluators. Should be specified
+      to use the default evaluators (when evaluator_factories is not provided).
+    environment_factory: Returns an instance of an environment to be used for
+      evaluation. Should be specified to use the default evaluators (when
+      evaluator_factories is not provided).
+    observers: Observers used for extending logs with custom information.
+    logger_factory: Loggers factory used to construct loggers for learner,
+      actors and evaluators.
+  """
+  # Below fields must be explicitly specified for any Agent.
+  builder: builders.OfflineBuilder[builders.Networks, builders.Policy,
+                                   builders.Sample]
+  network_factory: Callable[[specs.EnvironmentSpec], builders.Networks]
+  demonstration_dataset_factory: Callable[[types.PRNGKey],
+                                          Iterator[builders.Sample]]
+  environment_factory: types.EnvironmentFactory
+  max_num_learner_steps: int
+  seed: int
+  # Fields below are optional. If you just started with Acme do not worry about
+  # them. You might need them later when you want to customize your RL agent.
+  # TODO(stanczyk): Introduce a marker for the default value (instead of None).
+  evaluator_factories: Optional[Sequence[EvaluatorFactory]] = None
+  eval_policy_factory: Optional[Callable[[builders.Networks],
+                                         builders.Policy]] = None
+  environment_spec: Optional[specs.EnvironmentSpec] = None
+  observers: Sequence[observers_lib.EnvLoopObserver] = ()
+  logger_factory: loggers.LoggerFactory = experiment_utils.make_experiment_logger
+
+  # TODO(stanczyk): Make get_evaluator_factories a standalone function.
+  def get_evaluator_factories(self):
+    """Constructs the evaluator factories."""
+    if self.evaluator_factories is not None:
+      return self.evaluator_factories
+    if self.eval_policy_factory is None or self.environment_factory is None:
+      raise ValueError(
+          'You need to set `eval_policy_factory` and `environment_factory` '
+          'in `OfflineExperimentConfig` when `evaluator_factories` are not '
+          'specified. To disable evaluation altogether just set '
+          '`evaluator_factories = []`')
+
+    def eval_policy_factory(networks: AgentNetwork,
+                            environment_spec: specs.EnvironmentSpec,
+                            evaluation: EvaluationFlag) -> PolicyNetwork:
+      del environment_spec, evaluation
+      return self.eval_policy_factory(networks)
 
     return [
         default_evaluator_factory(
@@ -176,3 +250,28 @@ def make_policy(experiment: ExperimentConfig, networks: AgentNetwork,
       networks=networks,
       environment_spec=environment_spec,
       evaluation=evaluation)
+
+
+@dataclasses.dataclass
+class CheckpointingConfig:
+  """Configuration options for checkpointing.
+
+  Attributes:
+    max_to_keep: Maximum number of checkpoints to keep. Does not apply to replay
+      checkpointing.
+    directory: Where to store the checkpoints.
+    add_uid: Whether or not to add a unique identifier, see
+      `paths.get_unique_id()` for how it is generated.
+    replay_checkpointing_time_delta_minutes: How frequently to write replay
+      checkpoints; defaults to None, which disables periodic checkpointing.
+      Warning! These are written asynchronously so as not to interrupt other
+      replay duties, however this does pose a risk of OOM since items that would
+      otherwise be removed are temporarily kept alive for checkpointing
+      purposes.
+      Note: Since replay buffers tend to be quite large O(100GiB), writing can
+        take up to 10 minutes so keep that in mind when setting this frequency.
+  """
+  max_to_keep: int = 1
+  directory: str = '~/acme'
+  add_uid: bool = True
+  replay_checkpointing_time_delta_minutes: Optional[int] = None

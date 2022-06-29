@@ -14,7 +14,6 @@
 
 """Program definition for a distributed layout based on a builder."""
 
-import dataclasses
 import itertools
 from typing import Callable, Dict, Optional
 
@@ -40,31 +39,6 @@ SnapshotModelFactory = Callable[[config.AgentNetwork, specs.EnvironmentSpec],
                                                    types.ModelToSnapshot]]]
 
 
-@dataclasses.dataclass
-class CheckpointingConfig:
-  """Configuration options for checkpointing.
-
-  Attributes:
-    max_to_keep: Maximum number of checkpoints to keep. Does not apply to replay
-      checkpointing.
-    directory: Where to store the checkpoints.
-    add_uid: Whether or not to add a unique identifier, see
-      `paths.get_unique_id()` for how it is generated.
-    replay_checkpointing_time_delta_minutes: How frequently to write replay
-      checkpoints; defaults to None, which disables periodic checkpointing.
-      Warning! These are written asynchronously so as not to interrupt other
-      replay duties, however this does pose a risk of OOM since items that would
-      otherwise be removed are temporarily kept alive for checkpointing
-      purposes.
-      Note: Since replay buffers tend to be quite large O(100GiB), writing can
-        take up to 10 minutes so keep that in mind when setting this frequency.
-  """
-  max_to_keep: int = 1
-  directory: str = '~/acme'
-  add_uid: bool = True
-  replay_checkpointing_time_delta_minutes: Optional[int] = None
-
-
 def make_distributed_experiment(
     experiment: config.ExperimentConfig,
     num_actors: int,
@@ -72,7 +46,7 @@ def make_distributed_experiment(
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
     multithreading_colocate_learner_and_reverb: bool = False,
-    checkpointing_config: Optional[CheckpointingConfig] = None,
+    checkpointing_config: Optional[config.CheckpointingConfig] = None,
     make_snapshot_models: Optional[SnapshotModelFactory] = None,
     name='agent',
     program: Optional[lp.Program] = None):
@@ -88,7 +62,7 @@ def make_distributed_experiment(
         f'\tnum_learner_nodes={num_learner_nodes}.')
 
   if checkpointing_config is None:
-    checkpointing_config = CheckpointingConfig()
+    checkpointing_config = config.CheckpointingConfig()
 
   def build_replay():
     """The replay storage."""
