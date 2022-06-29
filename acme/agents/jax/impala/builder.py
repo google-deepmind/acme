@@ -178,3 +178,11 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
         adder=adder,
         rng=hk.PRNGSequence(random_key),
     )
+
+  def make_policy(
+      self,
+      networks: impala_networks.IMPALANetworks[Any],
+      environment_spec: specs.EnvironmentSpec,
+      evaluation: bool = False) -> impala_networks.IMPALANetworks[Any]:
+    del environment_spec, evaluation
+    return networks
