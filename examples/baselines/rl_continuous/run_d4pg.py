@@ -36,8 +36,8 @@ flags.DEFINE_integer('evaluation_episodes', 10, 'Evaluation episodes.')
 
 def build_experiment_config():
   """Builds D4PG experiment config which can be executed in different ways."""
-  # Create an environment, grab the spec, and use it to create networks.
 
+  # Create an environment, grab the spec, and use it to create networks.
   suite, task = FLAGS.env_name.split(':', 1)
 
   # Bound of the distributional critic. The reward for control environments is
@@ -57,20 +57,15 @@ def build_experiment_config():
         vmax=vmax,
     )
 
-  # Construct the agent.
-  config = d4pg.D4PGConfig(
-      learning_rate=3e-4,
-      sigma=0.2
-  )
-
-  d4pg_builder = d4pg.D4PGBuilder(config)
+  # Configure the agent.
+  d4pg_config = d4pg.D4PGConfig(learning_rate=3e-4, sigma=0.2)
 
   return experiments.ExperimentConfig(
-      builder=d4pg_builder,
+      builder=d4pg.D4PGBuilder(d4pg_config),
       environment_factory=lambda seed: helpers.make_environment(suite, task),
       network_factory=network_factory,
       policy_network_factory=(
-          lambda network: d4pg.get_default_behavior_policy(network, config)),
+          lambda net: d4pg.get_default_behavior_policy(net, d4pg_config)),
       eval_policy_network_factory=d4pg.get_default_eval_policy,
       seed=FLAGS.seed,
       max_number_of_steps=FLAGS.num_steps)
