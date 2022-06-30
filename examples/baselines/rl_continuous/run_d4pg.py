@@ -64,9 +64,6 @@ def build_experiment_config():
       builder=d4pg.D4PGBuilder(d4pg_config),
       environment_factory=lambda seed: helpers.make_environment(suite, task),
       network_factory=network_factory,
-      policy_network_factory=(
-          lambda net: d4pg.get_default_behavior_policy(net, d4pg_config)),
-      eval_policy_network_factory=d4pg.get_default_eval_policy,
       seed=FLAGS.seed,
       max_number_of_steps=FLAGS.num_steps)
 

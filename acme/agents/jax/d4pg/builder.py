@@ -156,3 +156,13 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
         variable_source, 'policy', device='cpu')
     return actors.GenericActor(
         actor_core, random_key, variable_client, adder, backend='cpu')
+
+  def make_policy(self,
+                  networks: d4pg_networks.D4PGNetworks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> actor_core_lib.FeedForwardPolicy:
+    """Create the policy."""
+    del environment_spec
+    if evaluation:
+      return d4pg_networks.get_default_eval_policy(networks)
+    return d4pg_networks.get_default_behavior_policy(networks, self._config)
