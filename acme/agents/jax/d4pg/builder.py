@@ -97,14 +97,18 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
   ) -> List[reverb.Table]:
     """Create tables to insert data into."""
     del policy
-    samples_per_insert_tolerance = (
-        self._config.samples_per_insert_tolerance_rate *
-        self._config.samples_per_insert)
-    error_buffer = self._config.min_replay_size * samples_per_insert_tolerance
-    limiter = rate_limiters.SampleToInsertRatio(
-        min_size_to_sample=self._config.min_replay_size,
-        samples_per_insert=self._config.samples_per_insert,
-        error_buffer=error_buffer)
+    # Create the rate limiter.
+    if self._config.samples_per_insert:
+      samples_per_insert_tolerance = (
+          self._config.samples_per_insert_tolerance_rate *
+          self._config.samples_per_insert)
+      error_buffer = self._config.min_replay_size * samples_per_insert_tolerance
+      limiter = rate_limiters.SampleToInsertRatio(
+          min_size_to_sample=self._config.min_replay_size,
+          samples_per_insert=self._config.samples_per_insert,
+          error_buffer=error_buffer)
+    else:
+      limiter = rate_limiters.MinSize(self._config.min_replay_size)
     return [
         reverb.Table(
             name=self._config.replay_table_name,

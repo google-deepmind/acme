@@ -14,6 +14,7 @@
 
 """Config classes for D4PG."""
 import dataclasses
+from typing import Optional
 from acme.adders import reverb as adders_reverb
 
 
@@ -22,7 +23,7 @@ class D4PGConfig:
   """Configuration options for D4PG."""
   sigma: float = 0.3
   target_update_period: int = 100
-  samples_per_insert: float = 32.0
+  samples_per_insert: Optional[float] = 32.0
 
   # Loss options
   n_step: int = 5
