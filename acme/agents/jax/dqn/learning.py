@@ -41,6 +41,7 @@ class DQNLearner(learning_lib.SGDLearner):
                iterator: Iterator[reverb.ReplaySample],
                optimizer: optax.GradientTransformation,
                random_key: networks_lib.PRNGKey,
+               stochastic_network: bool = False,
                max_abs_reward: float = 1.,
                huber_loss_parameter: float = 1.,
                replay_client: Optional[reverb.Client] = None,
@@ -53,6 +54,7 @@ class DQNLearner(learning_lib.SGDLearner):
         importance_sampling_exponent=importance_sampling_exponent,
         max_abs_reward=max_abs_reward,
         huber_loss_parameter=huber_loss_parameter,
+        stochastic_network=stochastic_network,
     )
     super().__init__(
         network=network,

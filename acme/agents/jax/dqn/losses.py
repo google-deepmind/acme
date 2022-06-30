@@ -32,6 +32,7 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
   importance_sampling_exponent: float = 0.2
   max_abs_reward: float = 1.
   huber_loss_parameter: float = 1.
+  stochastic_network: bool = False
 
   def __call__(
       self,
@@ -42,14 +43,19 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
       key: networks_lib.PRNGKey,
   ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
-    del key
     transitions: types.Transition = batch.data
     keys, probs, *_ = batch.info
 
     # Forward pass.
-    q_tm1 = network.apply(params, transitions.observation)
-    q_t_value = network.apply(target_params, transitions.next_observation)
-    q_t_selector = network.apply(params, transitions.next_observation)
+    if self.stochastic_network:
+      q_tm1 = network.apply(params, key, transitions.observation)
+      q_t_value = network.apply(target_params, key,
+                                transitions.next_observation)
+      q_t_selector = network.apply(params, key, transitions.next_observation)
+    else:
+      q_tm1 = network.apply(params, transitions.observation)
+      q_t_value = network.apply(target_params, transitions.next_observation)
+      q_t_selector = network.apply(params, transitions.next_observation)
 
     # Cast and clip rewards.
     d_t = (transitions.discount * self.discount).astype(jnp.float32)
