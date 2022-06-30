@@ -28,7 +28,9 @@ import haiku as hk
 def make_atari_environment(
     level: str = 'Pong',
     sticky_actions: bool = True,
-    zero_discount_on_life_loss: bool = False) -> dm_env.Environment:
+    zero_discount_on_life_loss: bool = False,
+    oar_wrapper: bool = False,
+) -> dm_env.Environment:
   """Loads the Atari environment."""
   version = 'v0' if sticky_actions else 'v4'
   level_name = f'{level}NoFrameskip-{version}'
@@ -42,9 +44,12 @@ def make_atari_environment(
           max_episode_len=108_000,
           zero_discount_on_life_loss=zero_discount_on_life_loss,
       ),
+      wrappers.SinglePrecisionWrapper,
   ]
 
-  wrapper_list.append(wrappers.SinglePrecisionWrapper)
+  if oar_wrapper:
+    # E.g. IMPALA and R2D2 use this particular variant.
+    wrapper_list.append(wrappers.ObservationActionRewardWrapper)
 
   return wrappers.wrap_all(env, wrapper_list)
 
