@@ -18,6 +18,7 @@ import functools
 from typing import Callable, Optional, Sequence
 
 from acme import specs
+from acme.agents.jax.r2d2 import actor as r2d2_actor
 from acme.agents.jax.r2d2 import builder
 from acme.agents.jax.r2d2 import config as r2d2_config
 from acme.agents.jax.r2d2 import networks as r2d2_networks
@@ -62,10 +63,10 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
     r2d2_builder = builder.R2D2Builder(
         networks=network_factory(environment_spec), config=config)
     policy_network_factory = (
-        lambda n: r2d2_networks.make_behavior_policy(n, config))
+        lambda n: r2d2_actor.make_behavior_policy(n, config))
     if evaluator_factories is None:
       evaluator_policy_network_factory = (
-          lambda n: r2d2_networks.make_behavior_policy(n, config, True))
+          lambda n: r2d2_actor.make_behavior_policy(n, config, True))
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
               environment_factory=environment_factory,
@@ -187,7 +188,7 @@ class R2D2(local_layout.LocalLayout):
         environment_spec=spec,
         builder=r2d2_builder,
         networks=networks,
-        policy_network=r2d2_networks.make_behavior_policy(networks, config),
+        policy_network=r2d2_actor.make_behavior_policy(networks, config),
         workdir=workdir,
         batch_size=config.batch_size,
         num_sgd_steps_per_step=config.sequence_period,

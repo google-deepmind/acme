@@ -33,6 +33,9 @@ import rlax
 import tree
 
 _PMAP_AXIS_NAME = 'data'
+# This type allows splitting a sample between the host and device, which avoids
+# putting item keys (uint64) on device for the purposes of priority updating.
+R2D2ReplaySample = utils.PrefetchingSplit
 
 
 class TrainingState(NamedTuple):
@@ -57,7 +60,7 @@ class R2D2Learner(acme.Learner):
                importance_sampling_exponent: float,
                max_priority_weight: float,
                target_update_period: int,
-               iterator: Iterator[reverb.ReplaySample],
+               iterator: Iterator[R2D2ReplaySample],
                optimizer: optax.GradientTransformation,
                bootstrap_n: int = 5,
                tx_pair: rlax.TxPair = rlax.SIGNED_HYPERBOLIC_PAIR,
@@ -200,6 +203,7 @@ class R2D2Learner(acme.Learner):
           updates=dict(zip(keys, priorities)))
 
     # Internalise components, hyperparameters, logger, counter, and methods.
+    self._iterator = iterator
     self._replay_client = replay_client
     self._target_update_period = target_update_period
     self._counter = counter or counting.Counter()
@@ -227,28 +231,16 @@ class R2D2Learner(acme.Learner):
     # Replicate parameters.
     self._state = utils.replicate_in_all_devices(state)
 
-    # Shard multiple inputs with on-device prefetching.
-    # We split samples in two outputs, the keys which need to be kept on-host
-    # since int64 arrays are not supported in TPUs, and the entire sample
-    # separately so it can be sent to the sgd_step method.
-    def split_sample(sample: reverb.ReplaySample) -> utils.PrefetchingSplit:
-      return utils.PrefetchingSplit(host=sample.info.key, device=sample)
-
-    self._prefetched_iterator = utils.sharded_prefetch(
-        iterator,
-        buffer_size=prefetch_size,
-        num_threads=jax.local_device_count(),
-        split_fn=split_sample)
-
   def step(self):
-    prefetching_split = next(self._prefetched_iterator)
+    prefetching_split = next(self._iterator)
     # The split_sample method passed to utils.sharded_prefetch specifies what
     # parts of the objects returned by the original iterator are kept in the
     # host and what parts are prefetched on-device.
     # In this case the host property of the prefetching split contains only the
     # replay keys and the device property is the prefetched full original
     # sample.
-    keys, samples = prefetching_split.host, prefetching_split.device
+    keys = prefetching_split.host
+    samples: reverb.ReplaySample = prefetching_split.device
 
     # Do a batch of SGD.
     start = time.time()

@@ -38,11 +38,10 @@ import optax
 import reverb
 
 
-class R2D2Builder(
-    Generic[actor_core_lib.RecurrentState],
-    builders.ActorLearnerBuilder[r2d2_networks.R2D2Networks,
-                                 r2d2_networks.EpsilonRecurrentPolicy,
-                                 reverb.ReplaySample]):
+class R2D2Builder(Generic[actor_core_lib.RecurrentState],
+                  builders.ActorLearnerBuilder[r2d2_networks.R2D2Networks,
+                                               r2d2_actor.R2D2Policy,
+                                               reverb.ReplaySample]):
   """R2D2 Builder.
 
   This is constructs all of the components for Recurrent Experience Replay in
@@ -80,7 +79,7 @@ class R2D2Builder(
       self,
       random_key: networks_lib.PRNGKey,
       networks: r2d2_networks.R2D2Networks,
-      dataset: Iterator[reverb.ReplaySample],
+      dataset: Iterator[r2d2_learning.R2D2ReplaySample],
       logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
       replay_client: Optional[reverb.Client] = None,
@@ -112,7 +111,7 @@ class R2D2Builder(
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
-      policy: r2d2_networks.EpsilonRecurrentPolicy,
+      policy: r2d2_actor.R2D2Policy,
   ) -> List[reverb.Table]:
     """Create tables to insert data into."""
     del policy
@@ -148,7 +147,17 @@ class R2D2Builder(
         batch_size=self._config.batch_size,
         prefetch_size=self._config.prefetch_size,
         num_parallel_calls=self._config.num_parallel_calls)
-    return dataset.as_numpy_iterator()
+
+    # We split samples in two outputs, the keys which need to be kept on-host
+    # since int64 arrays are not supported in TPUs, and the entire sample
+    # separately so it can be sent to the sgd_step method.
+    def split_sample(sample: reverb.ReplaySample) -> utils.PrefetchingSplit:
+      return utils.PrefetchingSplit(host=sample.info.key, device=sample)
+
+    return utils.multi_device_put(
+        dataset.as_numpy_iterator(),
+        devices=jax.local_devices(),
+        split_fn=split_sample)
 
   def make_adder(self,
                  replay_client: reverb.Client) -> Optional[adders.Adder]:
@@ -162,7 +171,7 @@ class R2D2Builder(
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy: r2d2_networks.EpsilonRecurrentPolicy,
+      policy: r2d2_actor.R2D2Policy,
       environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
@@ -174,21 +183,17 @@ class R2D2Builder(
         key='actor_variables',
         update_period=self._config.variable_update_period)
 
-    # TODO(b/186613827) move this to
-    # - the actor __init__ function - this is a good place if it is specific
-    #   for R2D2.
-    # - the EnvironmentLoop - this is a good place if it potentially applies
-    #   for all actors.
-    #
-
-    initial_state_key1, initial_state_key2, random_key = jax.random.split(
-        random_key, 3)
-    actor_initial_state_params = self._networks.initial_state.init(
-        initial_state_key1, 1)
-    actor_initial_state = self._networks.initial_state.apply(
-        actor_initial_state_params, initial_state_key2, 1)
-
-    actor_core = r2d2_actor.get_actor_core(policy, actor_initial_state,
-                                           self._config.num_epsilons)
     return actors.GenericActor(
-        actor_core, random_key, variable_client, adder, backend='cpu')
+        policy, random_key, variable_client, adder, backend='cpu')
+
+  def make_policy(self,
+                  networks: r2d2_networks.R2D2Networks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> r2d2_actor.R2D2Policy:
+    if evaluation:
+      return r2d2_actor.get_actor_core(
+          networks,
+          num_epsilons=None,
+          evaluation_epsilon=self._config.evaluation_epsilon)
+    else:
+      return r2d2_actor.get_actor_core(networks, self._config.num_epsilons)

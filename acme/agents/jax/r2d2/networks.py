@@ -15,24 +15,12 @@
 """R2D2 Networks."""
 
 import dataclasses
-
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Optional
 
 from acme import specs
-from acme import types
-from acme.agents.jax import actor_core as actor_core_lib
-from acme.agents.jax.r2d2 import config as r2d2_config
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 import haiku as hk
-import rlax
-
-
-Epsilon = float
-EpsilonRecurrentPolicy = Callable[[
-    networks_lib.Params, networks_lib.PRNGKey, networks_lib
-    .Observation, actor_core_lib.RecurrentState, Epsilon
-], Tuple[networks_lib.Action, actor_core_lib.RecurrentState]]
 
 
 @dataclasses.dataclass
@@ -43,12 +31,9 @@ class R2D2Networks:
   initial_state: networks_lib.FeedForwardNetwork
 
 
-def make_networks(
-    env_spec: specs.EnvironmentSpec,
-    forward_fn: Any,
-    initial_state_fn: Any,
-    unroll_fn: Any,
-    batch_size) -> R2D2Networks:
+def make_networks(env_spec: specs.EnvironmentSpec, forward_fn: Any,
+                  initial_state_fn: Any, unroll_fn: Any,
+                  batch_size: int) -> R2D2Networks:
   """Builds functional r2d2 network from recurrent model definitions."""
 
   # Make networks purely functional.
@@ -94,21 +79,3 @@ def make_atari_networks(batch_size, env_spec):
   return make_networks(env_spec=env_spec, forward_fn=forward_fn,
                        initial_state_fn=initial_state_fn, unroll_fn=unroll_fn,
                        batch_size=batch_size)
-
-
-def make_behavior_policy(
-    networks: R2D2Networks,
-    config: r2d2_config.R2D2Config,
-    evaluation: bool = False) -> EpsilonRecurrentPolicy:
-  """Selects action according to the policy."""
-
-  def behavior_policy(params: networks_lib.Params, key: networks_lib.PRNGKey,
-                      observation: types.NestedArray,
-                      core_state: types.NestedArray,
-                      epsilon):
-    q_values, core_state = networks.forward.apply(
-        params, key, observation, core_state)
-    epsilon = config.evaluation_epsilon if evaluation else epsilon
-    return rlax.epsilon_greedy(epsilon).sample(key, q_values), core_state
-
-  return behavior_policy
