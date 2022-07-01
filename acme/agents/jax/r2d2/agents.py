@@ -60,8 +60,6 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
         steps_key='learner_steps')
-    r2d2_builder = builder.R2D2Builder(
-        networks=network_factory(environment_spec), config=config)
     policy_network_factory = (
         lambda n: r2d2_actor.make_behavior_policy(n, config))
     if evaluator_factories is None:
@@ -78,7 +76,7 @@ class DistributedR2D2FromConfig(distributed_layout.DistributedLayout):
         seed=seed,
         environment_factory=environment_factory,
         network_factory=network_factory,
-        builder=r2d2_builder,
+        builder=builder.R2D2Builder(config),
         policy_network=policy_network_factory,
         evaluator_factories=evaluator_factories,
         num_actors=num_actors,
@@ -182,11 +180,10 @@ class R2D2(local_layout.LocalLayout):
       workdir: Optional[str] = '~/acme',
       counter: Optional[counting.Counter] = None,
   ):
-    r2d2_builder = builder.R2D2Builder(networks, config)
     super().__init__(
         seed=seed,
         environment_spec=spec,
-        builder=r2d2_builder,
+        builder=builder.R2D2Builder(config),
         networks=networks,
         policy_network=r2d2_actor.make_behavior_policy(networks, config),
         workdir=workdir,

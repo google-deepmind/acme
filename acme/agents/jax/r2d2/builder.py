@@ -49,21 +49,9 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
   https://openreview.net/pdf?id=r1lyTjAqYX.
   """
 
-  def __init__(
-      self,
-      networks: r2d2_networks.R2D2Networks,
-      config: r2d2_config.R2D2Config,
-  ):
-    """Creates a R2D2 learner, a behavior policy and an eval actor.
-
-    Args:
-      networks: R2D2 networks, used to build core state spec.
-      config: a config with R2D2 hps
-    """
-    self._networks = networks
+  def __init__(self, config: r2d2_config.R2D2Config):
+    """Creates a R2D2 learner, a behavior policy and an eval actor."""
     self._config = config
-
-    # Sequence length for dataset iterator.
     self._sequence_length = (
         self._config.burn_in_length + self._config.trace_length + 1)
 
