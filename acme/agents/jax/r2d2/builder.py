@@ -67,14 +67,6 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
     self._sequence_length = (
         self._config.burn_in_length + self._config.trace_length + 1)
 
-    # Construct the core state spec.
-    dummy_key = jax.random.PRNGKey(0)
-    initial_state_params = networks.initial_state.init(dummy_key, 1)
-    initial_state = networks.initial_state.apply(initial_state_params,
-                                                 dummy_key, 1)
-    core_state_spec = utils.squeeze_batch_dim(initial_state)
-    self._extra_spec = {'core_state': core_state_spec}
-
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
@@ -114,7 +106,9 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
       policy: r2d2_actor.R2D2Policy,
   ) -> List[reverb.Table]:
     """Create tables to insert data into."""
-    del policy
+    dummy_actor_state = policy.init(jax.random.PRNGKey(0))
+    extras_spec = policy.get_extras(dummy_actor_state)
+
     if self._config.samples_per_insert:
       samples_per_insert_tolerance = (
           self._config.samples_per_insert_tolerance_rate *
@@ -135,7 +129,7 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
             max_size=self._config.max_replay_size,
             rate_limiter=limiter,
             signature=adders_reverb.SequenceAdder.signature(
-                environment_spec, self._extra_spec))
+                environment_spec, extras_spec))
     ]
 
   def make_dataset_iterator(
