@@ -170,7 +170,7 @@ class DistributedLayout:
         evaluator_factories=evaluator_factories,
         observers=observers,
         seed=seed,
-        max_number_of_steps=max_number_of_steps,
+        max_num_actor_steps=max_number_of_steps,
         logger_factory=logger_factory(learner_logger_fn, actor_logger_fn,
                                       save_logs))
     self._num_actors = num_actors

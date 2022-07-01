@@ -55,7 +55,7 @@ class ExperimentConfig:
     builder: Builds components of an RL agent (Learner, Actor...).
     network_factory: Builds networks used by the agent.
     environment_factory: Returns an instance of an environment.
-    max_number_of_steps: How many environment steps to perform.
+    max_num_actor_steps: How many environment steps to perform.
     seed: Seed used for agent initialization.
     policy_network_factory: Policy network factory which is used actors to
       perform inference.
@@ -76,7 +76,7 @@ class ExperimentConfig:
   builder: builders.ActorLearnerBuilder
   network_factory: NetworkFactory
   environment_factory: types.EnvironmentFactory
-  max_number_of_steps: int
+  max_num_actor_steps: int
   seed: int
   # policy_network_factory is deprecated. Use builder.make_policy to
   # create the policy.
@@ -129,7 +129,7 @@ class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
 
   This class is similar to the ExperimentConfig, but is tailored to offline RL
   setting, so it excludes attributes related to training via interaction with
-  the environment (max_number_of_steps, policy_network_factory) and instead
+  the environment (max_num_actor_steps, policy_network_factory) and instead
   includes attributes specific to learning from demonstration.
 
   Attributes:

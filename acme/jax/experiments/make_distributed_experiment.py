@@ -192,10 +192,10 @@ def make_distributed_experiment(
 
   counter = program.add_node(lp.CourierNode(build_counter), label='counter')
 
-  if experiment.max_number_of_steps is not None:
+  if experiment.max_num_actor_steps is not None:
     program.add_node(
         lp.CourierNode(lp_utils.StepsLimiter, counter,
-                       experiment.max_number_of_steps),
+                       experiment.max_num_actor_steps),
         label='counter')
 
   learner_key, key = jax.random.split(key)

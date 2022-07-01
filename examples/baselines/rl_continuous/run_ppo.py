@@ -48,7 +48,7 @@ def build_experiment_config():
       environment_factory=lambda seed: helpers.make_environment(suite, task),
       network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),
       seed=FLAGS.seed,
-      max_number_of_steps=FLAGS.num_steps)
+      max_num_actor_steps=FLAGS.num_steps)
 
 
 def main(_):

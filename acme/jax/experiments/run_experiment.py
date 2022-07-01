@@ -146,7 +146,7 @@ def run_experiment(experiment: config.ExperimentConfig,
         observers=experiment.observers)
 
   steps = 0
-  while steps < experiment.max_number_of_steps:
+  while steps < experiment.max_num_actor_steps:
     if eval_loop:
       eval_loop.run(num_episodes=num_eval_episodes)
     train_loop.run(num_steps=eval_every)

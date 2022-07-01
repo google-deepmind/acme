@@ -71,7 +71,7 @@ def build_experiment_config():
       policy_network_factory=dqn.behavior_policy,
       evaluator_factories=[],
       seed=FLAGS.seed,
-      max_number_of_steps=FLAGS.num_steps)
+      max_num_actor_steps=FLAGS.num_steps)
 
 
 def main(_):

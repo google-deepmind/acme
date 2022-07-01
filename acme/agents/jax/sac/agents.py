@@ -95,7 +95,7 @@ def make_distributed_sac(environment_factory: jax_types.EnvironmentFactory,
       policy_network_factory=networks.apply_policy_and_sample,
       evaluator_factories=evaluator_factories,
       seed=seed,
-      max_number_of_steps=max_number_of_steps,
+      max_num_actor_steps=max_number_of_steps,
       logger_factory=distributed_layout.logger_factory(logger_fn, None,
                                                        save_logs, log_every))
   return experiments.make_distributed_experiment(
