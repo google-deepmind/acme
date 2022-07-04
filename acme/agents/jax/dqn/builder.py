@@ -151,3 +151,11 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
         client=replay_client,
         n_step=self._config.n_step,
         discount=self._config.discount)
+
+  def make_policy(self,
+                  networks: networks_lib.FeedForwardNetwork,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> dqn_actor.EpsilonPolicy:
+    """Creates the policy."""
+    del environment_spec, evaluation
+    return dqn_actor.behavior_policy(networks)

@@ -68,7 +68,6 @@ def build_experiment_config():
       builder=dqn_builder,
       environment_factory=lambda seed: environment,
       network_factory=lambda spec: network,
-      policy_network_factory=dqn.behavior_policy,
       evaluator_factories=[],
       seed=FLAGS.seed,
       max_num_actor_steps=FLAGS.num_steps)
