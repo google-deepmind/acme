@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Standard "Nature Atari" wrapper functionality for Python environments."""
+"""Atari wrappers functionality for Python environments."""
 
+import abc
 from typing import Tuple, List, Optional, Sequence, Union
 
 from acme.wrappers import base
 from acme.wrappers import frame_stacking
+
 import dm_env
 from dm_env import specs
 import numpy as np
@@ -28,8 +30,8 @@ LIVES_INDEX = 1  # Observation index holding the lives count.
 NUM_COLOR_CHANNELS = 3  # Number of color channels in RGB data.
 
 
-class AtariWrapper(base.EnvironmentWrapper):
-  """Standard "Nature Atari" wrapper for Python environments.
+class BaseAtariWrapper(abc.ABC, base.EnvironmentWrapper):
+  """Abstract base class for Atari wrappers.
 
   This assumes that the input environment is a dm_env.Environment instance in
   which observations are tuples whose first element is an RGB observation and
@@ -43,6 +45,9 @@ class AtariWrapper(base.EnvironmentWrapper):
     4. Conversion to grayscale and downscaling.
     5. Reward clipping.
     6. Observation stacking.
+
+  The details of grayscale conversion, downscaling, and frame pooling are
+  delegated to the concrete subclasses.
 
   This wrapper will raise an error if the underlying Atari environment does not:
 
@@ -178,25 +183,10 @@ class AtariWrapper(base.EnvironmentWrapper):
     self._frame_stacker.reset()
     timestep = self._environment.reset()
 
-    observation = self._observation_on_reset(timestep)
+    observation = self._observation_from_timestep_stack([timestep])
 
     return self._postprocess_observation(
         timestep._replace(observation=observation))
-
-  def _observation_on_reset(self, timestep: dm_env.TimeStep):
-    """Computes the current observation after a reset.
-
-    Args:
-      timestep: `TimeStep` returned by the raw_environment during a reset.
-
-    Returns:
-      A stack of processed pixel frames.
-    """
-    observation = timestep.observation
-    processed_pixels = self._postprocess_pixels(observation[RGB_INDEX])
-    if self._expose_lives_observation:
-      return (processed_pixels,) + observation[1:]
-    return processed_pixels
 
   def step(self, action: int) -> dm_env.TimeStep:
     """Steps up to action_repeat times and returns a post-processed step."""
@@ -257,52 +247,25 @@ class AtariWrapper(base.EnvironmentWrapper):
 
     return self._postprocess_observation(timestep)
 
+  @abc.abstractmethod
+  def _preprocess_pixels(self, timestep_stack: List[dm_env.TimeStep]):
+    """Process Atari pixels."""
+
   def _observation_from_timestep_stack(self,
                                        timestep_stack: List[dm_env.TimeStep]):
     """Compute the observation for a stack of timesteps."""
-    # We use last timestep for lives only.
-    observation = timestep_stack[-1].observation
-    pooled_obs = np.max(
-        np.stack([
-            s.observation[RGB_INDEX]
-            for s in timestep_stack[-self._pooled_frames:]
-        ]),
-        axis=0)
-    processed_pixels = self._postprocess_pixels(pooled_obs)
-    if self._expose_lives_observation:
-      return (processed_pixels,) + observation[1:]
-    return processed_pixels
-
-  def _postprocess_pixels(self, raw_pixels: np.ndarray):
-    """Grayscale, cast and normalize the pooled pixel observations."""
-
-    # Cache the raw i.e. un-(stacked|pooled|grayscaled|downscaled) observation.
-    # This is useful for e.g. making videos.
-    self._raw_observation = raw_pixels.copy()
-
-    if self._grayscaling:
-      processed_pixels = np.tensordot(raw_pixels,
-                                      [0.299, 0.587, 1 - (0.299 + 0.587)],
-                                      (-1, 0))
-    else:
-      processed_pixels = raw_pixels
-
-    # Convert to uint8, no copy if the type is already correct.
-    processed_pixels = processed_pixels.astype(np.uint8, copy=False)
-
-    if self._scale_dims != processed_pixels.shape[:2]:
-      # Image.resize takes (width, height) as output_shape argument.
-      dims = (self._width, self._height)
-      cast_observation = np.array(
-          Image.fromarray(processed_pixels).resize(dims, Image.BILINEAR),
-          dtype=np.uint8)
-    else:
-      cast_observation = processed_pixels
+    self._raw_observation = timestep_stack[-1].observation[RGB_INDEX].copy()
+    processed_pixels = self._preprocess_pixels(timestep_stack)
 
     if self._to_float:
-      stacked_observation = self._frame_stacker.step(cast_observation / 255.0)
+      stacked_observation = self._frame_stacker.step(processed_pixels / 255.0)
     else:
-      stacked_observation = self._frame_stacker.step(cast_observation)
+      stacked_observation = self._frame_stacker.step(processed_pixels)
+
+    # We use last timestep for lives only.
+    observation = timestep_stack[-1].observation
+    if self._expose_lives_observation:
+      return (stacked_observation,) + observation[1:]
 
     return stacked_observation
 
@@ -333,6 +296,56 @@ class AtariWrapper(base.EnvironmentWrapper):
   def raw_observation(self) -> np.ndarray:
     """Returns the raw observation, after any pooling has been applied."""
     return self._raw_observation
+
+
+class AtariWrapper(BaseAtariWrapper):
+  """Standard "Nature Atari" wrapper for Python environments.
+
+  Before being fed to a neural network, Atari frames go through a prepocessing,
+  implemented in this wrapper. For historical reasons, there were different
+  choices in the method to apply there between what was done in the Dopamine
+  library and what is done in Acme. During the processing of
+  Atari frames, three operations need to happen. Images are
+  transformed from RGB to grayscale, we perform a max-pooling on the time scale,
+  and images are resized to 84x84.
+
+  1. The `standard` style (this one, matches previous acme versions):
+     - does max pooling, then rgb -> grayscale
+     - uses Pillow inter area interpolation for resizing
+  2. The `dopamine` style:
+     - does rgb -> grayscale, then max pooling
+     - uses opencv bilinear interpolation for resizing.
+
+  This can change the behavior of RL agents on some games. The recommended
+  setting is to use the standard style with this class. The Dopamine setting is
+  available in `atari_wrapper_dopamine.py` for the
+  user that wishes to compare agents between librairies.
+  """
+
+  def _preprocess_pixels(self, timestep_stack: List[dm_env.TimeStep]):
+    """Preprocess Atari frames."""
+    # 1. Max pooling
+    processed_pixels = np.max(
+        np.stack([
+            s.observation[RGB_INDEX]
+            for s in timestep_stack[-self._pooled_frames:]
+        ]),
+        axis=0)
+
+    # 2. RGB to grayscale
+    if self._grayscaling:
+      processed_pixels = np.tensordot(processed_pixels,
+                                      [0.299, 0.587, 1 - (0.299 + 0.587)],
+                                      (-1, 0))
+
+    # 3. Resize
+    processed_pixels = processed_pixels.astype(np.uint8, copy=False)
+    if self._scale_dims != processed_pixels.shape[:2]:
+      processed_pixels = Image.fromarray(processed_pixels).resize(
+          (self._width, self._height), Image.BILINEAR)
+      processed_pixels = np.array(processed_pixels, dtype=np.uint8)
+
+    return processed_pixels
 
 
 class _ZeroDiscountOnLifeLoss(base.EnvironmentWrapper):
