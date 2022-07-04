@@ -81,6 +81,26 @@ class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
       variable_source: A source providing the necessary actor parameters.
     """
 
+  @abc.abstractmethod
+  def make_policy(self, networks: Networks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool) -> Policy:
+    """Creates the agent policy to be used for evaluation.
+
+    Args:
+      networks: struct describing the networks needed to generate the policy.
+      environment_spec: struct describing the specs of the environment.
+      evaluation: This flag is present for consistency with the
+        ActorLearnerBuilder, in which case data-generating actors and evaluation
+        actors can behave differently. For OfflineBuilders, this should be set
+        to True.
+
+    Returns:
+      Policy to be used for evaluation. The exact form of this object may differ
+      from one agent to the next; it could be a simple callable, a nest of
+      callables, or an ActorCore for instance.
+    """
+
 
 class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
                           Generic[Networks, Policy, Sample]):

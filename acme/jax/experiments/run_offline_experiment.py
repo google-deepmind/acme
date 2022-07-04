@@ -67,13 +67,13 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
 
   # Define the evaluation loop.
   eval_loop = None
-  if experiment.eval_policy_factory:
+  if num_eval_episodes > 0:
     # Create the evaluation actor and loop.
     eval_logger = experiment.logger_factory('eval', 'eval_steps', 0)
     eval_key, key = jax.random.split(key)
     eval_actor = experiment.builder.make_actor(
         random_key=eval_key,
-        policy=experiment.eval_policy_factory(networks),
+        policy=experiment.builder.make_policy(networks, environment_spec, True),
         environment_spec=environment_spec,
         variable_source=learner)
     eval_loop = acme.EnvironmentLoop(

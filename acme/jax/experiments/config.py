@@ -165,8 +165,6 @@ class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
   # them. You might need them later when you want to customize your RL agent.
   # TODO(stanczyk): Introduce a marker for the default value (instead of None).
   evaluator_factories: Optional[Sequence[EvaluatorFactory]] = None
-  eval_policy_factory: Optional[Callable[[builders.Networks],
-                                         builders.Policy]] = None
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
   logger_factory: loggers.LoggerFactory = experiment_utils.make_experiment_logger
@@ -176,24 +174,17 @@ class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
     """Constructs the evaluator factories."""
     if self.evaluator_factories is not None:
       return self.evaluator_factories
-    if self.eval_policy_factory is None or self.environment_factory is None:
+    if self.environment_factory is None:
       raise ValueError(
-          'You need to set `eval_policy_factory` and `environment_factory` '
-          'in `OfflineExperimentConfig` when `evaluator_factories` are not '
-          'specified. To disable evaluation altogether just set '
-          '`evaluator_factories = []`')
-
-    def eval_policy_factory(networks: AgentNetwork,
-                            environment_spec: specs.EnvironmentSpec,
-                            evaluation: EvaluationFlag) -> PolicyNetwork:
-      del environment_spec, evaluation
-      return self.eval_policy_factory(networks)
+          'You need to set `environment_factory` in `OfflineExperimentConfig` '
+          'when `evaluator_factories` are not specified. To disable evaluation '
+          'altogether just set `evaluator_factories = []`')
 
     return [
         default_evaluator_factory(
             environment_factory=self.environment_factory,
             network_factory=self.network_factory,
-            policy_factory=eval_policy_factory,
+            policy_factory=self.builder.make_policy,
             logger_factory=self.logger_factory,
             observers=self.observers)
     ]
