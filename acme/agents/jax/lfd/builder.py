@@ -75,3 +75,6 @@ class LfdBuilder(builders.ActorLearnerBuilder[builders.Networks,
 
   def make_learner(self, *args, **kwargs):
     return self._builder.make_learner(*args, **kwargs)
+
+  def make_policy(self, *args, **kwargs):
+    return self._builder.make_policy(*args, **kwargs)
