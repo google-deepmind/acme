@@ -75,13 +75,13 @@ def build_experiment_config():
 
 def main(_):
   config = build_experiment_config()
+  # Evaluation is disabled for performance reasons. Set `num_eval_episodes` to
+  # a positive number and remove `evaluator_factories=[]` to enable it.
   if FLAGS.run_distributed:
     program = experiments.make_distributed_experiment(
         experiment=config, num_actors=4)
     lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
   else:
-    # TODO(b/230458884): Add num_eval_episodes and use the default policy for
-    # evaluation once this agent implements `make_policy`
     experiments.run_experiment(experiment=config, num_eval_episodes=0)
 
 
