@@ -108,5 +108,10 @@ class CountingTest(absltest.TestCase):
     self.assertEqual(child1.get_counts().get(child1.get_steps_key()), 1)
     self.assertEqual(child2.get_counts().get(child2.get_steps_key()), 2)
 
+  def test_parent_prefix(self):
+    parent = counting.Counter(prefix='parent')
+    child = counting.Counter(parent, prefix='child', time_delta=0.)
+    self.assertEqual(child.get_steps_key(), 'child_steps')
+
 if __name__ == '__main__':
   absltest.main()
