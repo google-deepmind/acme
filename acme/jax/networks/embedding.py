@@ -16,7 +16,6 @@
 
 import dataclasses
 
-from acme.jax.networks import base
 from acme.wrappers import observation_action_reward
 import haiku as hk
 import jax
@@ -27,7 +26,7 @@ import jax.numpy as jnp
 class OAREmbedding(hk.Module):
   """Module for embedding (observation, action, reward) inputs together."""
 
-  torso: base.Module
+  torso: hk.SupportsCall
   num_actions: int
 
   def __call__(self, inputs: observation_action_reward.OAR) -> jnp.ndarray:

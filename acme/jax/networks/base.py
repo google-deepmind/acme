@@ -14,7 +14,6 @@
 
 """Base interfaces for networks."""
 
-import abc
 import dataclasses
 from typing import Callable, Tuple
 
@@ -59,11 +58,3 @@ class FeedForwardNetwork:
   init: Callable[..., Params]
   # Computes and returns the outputs of a forward pass.
   apply: Callable[..., NetworkOutput]
-
-
-class Module(hk.Module, abc.ABC):
-  """A base class for module with abstract __call__ method."""
-
-  @abc.abstractmethod
-  def __call__(self, *args, **kwargs):
-    """Forward pass of the module."""

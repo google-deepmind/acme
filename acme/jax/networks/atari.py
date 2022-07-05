@@ -40,7 +40,7 @@ import jax.numpy as jnp
 Images = jnp.ndarray
 
 
-class AtariTorso(base.Module):
+class AtariTorso(hk.Module):
   """Simple convolutional stack commonly used for Atari."""
 
   def __init__(self):
@@ -98,7 +98,7 @@ class ResidualBlock(hk.Module):
     return self._block(x) + x
 
 
-class DeepAtariTorso(base.Module):
+class DeepAtariTorso(hk.Module):
   """Deep torso for Atari, from the IMPALA paper."""
 
   def __init__(self, name: str = 'deep_atari_torso'):
@@ -202,5 +202,3 @@ class R2D2AtariNetwork(hk.RNNCore):
     core_outputs, new_states = hk.static_unroll(self._core, embeddings, state)
     q_values = hk.BatchApply(self._duelling_head)(core_outputs)  # [T, B, A]
     return q_values, new_states
-
-
