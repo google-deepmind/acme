@@ -160,3 +160,9 @@ class SQILBuilder(Generic[DirectRLNetworks, DirectPolicyNetwork],
   ) -> core.Actor:
     return self._rl_agent.make_actor(random_key, policy, environment_spec,
                                      variable_source, adder)
+
+  def make_policy(self,
+                  networks: DirectRLNetworks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> DirectPolicyNetwork:
+    return self._rl_agent.make_policy(networks, environment_spec, evaluation)
