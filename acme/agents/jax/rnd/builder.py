@@ -19,6 +19,7 @@ from typing import Callable, Generic, Iterator, List, Optional
 from acme import adders
 from acme import core
 from acme import specs
+from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import builders
 from acme.agents.jax.rnd import config as rnd_config
 from acme.agents.jax.rnd import learning as rnd_learning
@@ -123,3 +124,11 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
   ) -> core.Actor:
     return self._rl_agent.make_actor(random_key, policy, environment_spec,
                                      variable_source, adder)
+
+  def make_policy(self,
+                  networks: rnd_networks.RNDNetworks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> actor_core_lib.FeedForwardPolicy:
+    """Construct the policy."""
+    return self._rl_agent.make_policy(networks.direct_rl_networks,
+                                      environment_spec, evaluation)
