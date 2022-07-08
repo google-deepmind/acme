@@ -55,6 +55,13 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
     self._sequence_length = (
         self._config.burn_in_length + self._config.trace_length + 1)
 
+  @property
+  def _batch_size_per_device(self) -> int:
+    """Splits batch size across all learner devices evenly."""
+    # TODO(bshahr): Using jax.device_count will not be valid when colocating
+    # learning and inference.
+    return self._config.batch_size // jax.device_count()
+
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
@@ -71,7 +78,7 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
     return r2d2_learning.R2D2Learner(
         unroll=networks.unroll,
         initial_state=networks.initial_state,
-        batch_size=self._config.batch_size,
+        batch_size=self._batch_size_per_device,
         random_key=random_key,
         burn_in_length=self._config.burn_in_length,
         discount=self._config.discount,
@@ -126,7 +133,7 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
     dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
         server_address=replay_client.server_address,
-        batch_size=self._config.batch_size,
+        batch_size=self._batch_size_per_device,
         prefetch_size=self._config.prefetch_size,
         num_parallel_calls=self._config.num_parallel_calls)
 

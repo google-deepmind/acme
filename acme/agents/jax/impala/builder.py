@@ -54,7 +54,6 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
     self._config = config
     self._core_state_spec = core_state_spec
     self._sequence_length = self._config.sequence_length
-    self._num_sequences_per_batch = self._config.batch_size
     self._table_extension = table_extension
 
   def make_replay_tables(
@@ -108,11 +107,20 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
   def make_dataset_iterator(
       self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
     """Creates a dataset."""
+    batch_size_per_learner = self._config.batch_size // jax.process_count()
+    batch_size_per_device, ragged = divmod(self._config.batch_size,
+                                           jax.device_count())
+    if ragged:
+      raise ValueError(
+          'Learner batch size must be divisible by total number of devices!')
+
     dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
         server_address=replay_client.server_address,
-        batch_size=self._num_sequences_per_batch,
-        num_parallel_calls=None)
+        batch_size=batch_size_per_device,
+        num_parallel_calls=None,
+        max_in_flight_samples_per_worker=2 * batch_size_per_learner)
+
     return utils.multi_device_put(dataset.as_numpy_iterator(),
                                   jax.local_devices())
 
