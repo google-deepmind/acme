@@ -18,6 +18,7 @@ import functools
 import time
 from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
 
+from absl import logging
 import acme
 from acme.adders import reverb as adders
 from acme.jax import networks as networks_lib
@@ -221,6 +222,11 @@ class R2D2Learner(acme.Learner):
     random_key, key_init = jax.random.split(random_key)
     initial_params = unroll.init(key_init, initial_state)
     opt_state = optimizer.init(initial_params)
+
+    # Log how many parameters the network has.
+    sizes = tree.map_structure(jnp.size, initial_params)
+    logging.info('Total number of params: %d',
+                 sum(tree.flatten(sizes.values())))
 
     state = TrainingState(
         params=initial_params,
