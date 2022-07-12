@@ -82,10 +82,6 @@ class JaxUtilsTest(absltest.TestCase):
     jax.tree_map(lambda x: self.assertIsInstance(x, np.ndarray), numpy_arrays)
     jax.tree_map(np.testing.assert_array_equal, want, numpy_arrays)
 
-  def test_get_from_first_device_fails_if_sda_not_provided(self):
-    with self.assertRaises(ValueError):
-      utils.get_from_first_device({'a': np.arange(jax.local_device_count())})
-
 
 if __name__ == '__main__':
   absltest.main()

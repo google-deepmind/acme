@@ -19,6 +19,7 @@ from acme import types
 from acme.agents.jax.bc import learning
 from acme.agents.jax.bc import losses
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 import jax
 import optax
 
@@ -41,10 +42,17 @@ def train_with_bc(make_demonstrations: Callable[[int],
     The trained network params.
   """
   demonstration_iterator = make_demonstrations(256)
+  prefetching_iterator = utils.sharded_prefetch(
+      demonstration_iterator,
+      buffer_size=2,
+      num_threads=jax.local_device_count())
 
   learner = learning.BCLearner(
-      network=networks, random_key=jax.random.PRNGKey(0), loss_fn=loss,
-      demonstrations=demonstration_iterator, optimizer=optax.adam(1e-4),
+      network=networks,
+      random_key=jax.random.PRNGKey(0),
+      loss_fn=loss,
+      prefetching_iterator=prefetching_iterator,
+      optimizer=optax.adam(1e-4),
       num_sgd_steps_per_step=1)
 
   # Train the agent

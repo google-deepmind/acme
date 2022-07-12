@@ -28,6 +28,7 @@ from acme.agents.jax.mbop import losses as mbop_losses
 from acme.agents.jax.mbop import networks as mbop_networks
 from acme.jax import networks as networks_lib
 from acme.jax import types as jax_types
+from acme.jax import utils
 from acme.utils import counting
 from acme.utils import loggers
 import jax
@@ -166,8 +167,9 @@ class MBOPLearner(core.Learner):
 
     # Prepare iterators for the learners, to not split the data (preserve sample
     # efficiency).
+    sharded_prefetching_dataset = utils.sharded_prefetch(iterator)
     world_model_iterator, policy_prior_iterator, n_step_return_iterator = (
-        itertools.tee(iterator, 3))
+        itertools.tee(sharded_prefetching_dataset, 3))
 
     world_model_key, policy_prior_key, n_step_return_key = jax.random.split(
         rng_key, 3)

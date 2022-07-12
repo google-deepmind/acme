@@ -109,7 +109,7 @@ class BCTest(parameterized.TestCase):
           random_key=jax.random.PRNGKey(0),
           loss_fn=loss_fn,
           optimizer=optax.adam(0.01),
-          demonstrations=dataset_demonstration,
+          prefetching_iterator=utils.sharded_prefetch(dataset_demonstration),
           num_sgd_steps_per_step=num_sgd_steps_per_step)
 
       # Train the agent
@@ -163,7 +163,7 @@ class BCTest(parameterized.TestCase):
           random_key=jax.random.PRNGKey(0),
           loss_fn=loss_fn,
           optimizer=optax.adam(0.01),
-          demonstrations=dataset_demonstration,
+          prefetching_iterator=utils.sharded_prefetch(dataset_demonstration),
           num_sgd_steps_per_step=num_sgd_steps_per_step)
 
       # Train the agent

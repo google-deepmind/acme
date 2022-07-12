@@ -15,7 +15,7 @@
 """BC learner implementation."""
 
 import time
-from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union, Iterator
 
 import acme
 from acme import types
@@ -27,6 +27,8 @@ from acme.utils import loggers
 import jax
 import jax.numpy as jnp
 import optax
+
+_PMAP_AXIS_NAME = 'data'
 
 
 class TrainingState(NamedTuple):
@@ -81,7 +83,7 @@ class BCLearner(acme.Learner):
                random_key: networks_lib.PRNGKey,
                loss_fn: losses.Loss,
                optimizer: optax.GradientTransformation,
-               demonstrations: Iterator[types.Transition],
+               prefetching_iterator: Iterator[types.Transition],
                num_sgd_steps_per_step: int,
                loss_has_aux: bool = False,
                logger: Optional[loggers.Logger] = None,
@@ -89,14 +91,14 @@ class BCLearner(acme.Learner):
     """Behavior Cloning Learner.
 
     Args:
-      network: Networks with signature for apply:
-        (params, obs, is_training, key) -> jnp.ndarray
-        and for init:
-        (rng, is_training) -> params
+      network: Networks with signature for apply: (params, obs, is_training,
+        key) -> jnp.ndarray and for init: (rng, is_training) -> params
       random_key: RNG key.
       loss_fn: BC loss to use.
       optimizer: Optax optimizer.
-      demonstrations: Demonstrations iterator.
+      prefetching_iterator: A sharded prefetching iterator as outputted from
+        `acme.jax.utils.sharded_prefetch`. Please see the documentation for
+        `sharded_prefetch` for more details.
       num_sgd_steps_per_step: Number of gradient updates per step.
       loss_has_aux: Whether the loss function returns auxiliary metrics as a
         second argument.
@@ -116,6 +118,13 @@ class BCLearner(acme.Learner):
       loss_result, gradients = loss_and_grad(network.apply, state.policy_params,
                                              key_input, transitions)
 
+      # Combine the gradient across all devices (by taking their mean).
+      gradients = jax.lax.pmean(gradients, axis_name=_PMAP_AXIS_NAME)
+
+      # Compute and combine metrics across all devices.
+      metrics = _create_loss_metrics(loss_has_aux, loss_result, gradients)
+      metrics = jax.lax.pmean(metrics, axis_name=_PMAP_AXIS_NAME)
+
       policy_update, optimizer_state = optimizer.update(gradients,
                                                         state.optimizer_state,
                                                         state.policy_params)
@@ -128,8 +137,7 @@ class BCLearner(acme.Learner):
           steps=state.steps + 1,
       )
 
-      return new_state, _create_loss_metrics(loss_has_aux, loss_result,
-                                             gradients)
+      return new_state, metrics
 
     # General learner book-keeping and loggers.
     self._counter = counter or counting.Counter(prefix='learner')
@@ -139,32 +147,33 @@ class BCLearner(acme.Learner):
         serialize_fn=utils.fetch_devicearray,
         steps_key=self._counter.get_steps_key())
 
-    # Iterator on demonstration transitions.
-    self._demonstrations = demonstrations
-
     # Split the input batch to `num_sgd_steps_per_step` minibatches in order
     # to achieve better performance on accelerators.
-    self._sgd_step = jax.jit(utils.process_multiple_batches(
-        sgd_step, num_sgd_steps_per_step))
+    sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step)
+    self._sgd_step = jax.pmap(sgd_step, axis_name=_PMAP_AXIS_NAME)
 
     random_key, init_key = jax.random.split(random_key)
     policy_params = network.init(init_key)
     optimizer_state = optimizer.init(policy_params)
 
     # Create initial state.
-    self._state = TrainingState(
+    state = TrainingState(
         optimizer_state=optimizer_state,
         policy_params=policy_params,
         key=random_key,
         steps=0,
     )
+    self._state = utils.replicate_in_all_devices(state)
 
     self._timestamp = None
 
+    self._prefetching_iterator = prefetching_iterator
+
   def step(self):
     # Get a batch of Transitions.
-    transitions = next(self._demonstrations)
+    transitions = next(self._prefetching_iterator)
     self._state, metrics = self._sgd_step(self._state, transitions)
+    metrics = utils.get_from_first_device(metrics)
 
     # Compute elapsed time.
     timestamp = time.time()
@@ -179,12 +188,13 @@ class BCLearner(acme.Learner):
 
   def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
     variables = {
-        'policy': self._state.policy_params,
+        'policy': utils.get_from_first_device(self._state.policy_params),
     }
     return [variables[name] for name in names]
 
   def save(self) -> TrainingState:
-    return self._state
+    # Serialize only the first replica of parameters and optimizer state.
+    return jax.tree_map(utils.get_from_first_device, self._state)
 
   def restore(self, state: TrainingState):
-    self._state = state
+    self._state = utils.replicate_in_all_devices(state)

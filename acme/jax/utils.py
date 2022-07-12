@@ -343,15 +343,7 @@ def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
     the same device as the sharded device array). If `as_numpy=True` then the
     array will be copied to the host machine and converted into a `np.ndarray`.
   """
-
-  def _check_type_and_slice(x):
-    if not isinstance(x, jax.pxla.ShardedDeviceArray):
-      raise ValueError('get_from_first_device should only be used with '
-                       f'{jax.pxla.ShardedDeviceArray}, passed {type(x)}.')
-    return x[0]
-
-  zeroth_nest = jax.tree_map(_check_type_and_slice, nest)
-
+  zeroth_nest = jax.tree_map(lambda x: x[0], nest)
   return jax.device_get(zeroth_nest) if as_numpy else zeroth_nest
 
 

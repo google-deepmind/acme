@@ -25,6 +25,7 @@ from acme.agents.jax.bc import config as bc_config
 from acme.agents.jax.bc import learning
 from acme.agents.jax.bc import losses
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
@@ -71,7 +72,7 @@ class BCBuilder(builders.OfflineBuilder[networks_lib.FeedForwardNetwork,
         random_key=random_key,
         loss_fn=self._loss_fn,
         optimizer=optax.adam(learning_rate=self._config.learning_rate),
-        demonstrations=dataset,
+        prefetching_iterator=utils.sharded_prefetch(dataset),
         num_sgd_steps_per_step=self._config.num_sgd_steps_per_step,
         loss_has_aux=self._loss_has_aux,
         logger=logger_fn('learner'),

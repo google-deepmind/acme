@@ -22,6 +22,7 @@ from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax import bc
 from acme.examples.offline import bc_utils
+from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import loggers
 import haiku as hk
@@ -72,7 +73,7 @@ def main(_):
       random_key=key1,
       loss_fn=loss_fn,
       optimizer=optax.adam(FLAGS.learning_rate),
-      demonstrations=dataset,
+      prefetching_iterator=utils.sharded_prefetch(dataset),
       num_sgd_steps_per_step=1)
 
   def evaluator_network(params: hk.Params, key: jnp.DeviceArray,
