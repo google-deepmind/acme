@@ -12,14 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Implementation of the Critic Regularized Regression (CRR) agent."""
+"""Config classes for CRR."""
+import dataclasses
 
-from acme.agents.jax.crr.builder import CRRBuilder
-from acme.agents.jax.crr.config import CRRConfig
-from acme.agents.jax.crr.learning import CRRLearner
-from acme.agents.jax.crr.losses import policy_loss_coeff_advantage_exp
-from acme.agents.jax.crr.losses import policy_loss_coeff_advantage_indicator
-from acme.agents.jax.crr.losses import policy_loss_coeff_constant
-from acme.agents.jax.crr.losses import PolicyLossCoeff
-from acme.agents.jax.crr.networks import CRRNetworks
-from acme.agents.jax.crr.networks import make_networks
+
+@dataclasses.dataclass
+class CRRConfig:
+  """Configuration options for CRR.
+
+  Attributes:
+    learning_rate: Learning rate.
+    discount: discount to use for TD updates.
+    target_update_period: period to update target's parameters.
+  """
+  learning_rate: float = 3e-4
+  discount: float = 0.99
+  target_update_period: int = 100
