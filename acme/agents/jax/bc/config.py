@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Implementation of a behavior cloning (BC) agent."""
+"""Config classes for BC."""
+import dataclasses
 
-from acme.agents.jax.bc import pretraining
-from acme.agents.jax.bc.builder import BCBuilder
-from acme.agents.jax.bc.config import BCConfig
-from acme.agents.jax.bc.learning import BCLearner
-from acme.agents.jax.bc.losses import logp
-from acme.agents.jax.bc.losses import Loss
-from acme.agents.jax.bc.losses import mse
-from acme.agents.jax.bc.losses import peerbc
-from acme.agents.jax.bc.losses import rcal
+
+@dataclasses.dataclass
+class BCConfig:
+  """Configuration options for BC.
+
+  Attributes:
+    learning_rate: Learning rate.
+    num_sgd_steps_per_step: How many gradient updates to perform per step.
+  """
+  learning_rate: float = 1e-4
+  num_sgd_steps_per_step: int = 1

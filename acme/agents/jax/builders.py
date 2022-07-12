@@ -41,12 +41,12 @@ class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
   @abc.abstractmethod
   def make_learner(
       self,
-      *,
       random_key: networks_lib.PRNGKey,
       networks: Networks,
       dataset: Iterator[Sample],
       logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
+      *,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
     """Creates an instance of the learner.
@@ -65,7 +65,6 @@ class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
   @abc.abstractmethod
   def make_actor(
       self,
-      *,
       random_key: networks_lib.PRNGKey,
       policy: Policy,
       environment_spec: specs.EnvironmentSpec,
