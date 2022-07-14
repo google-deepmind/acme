@@ -15,14 +15,19 @@
 """Shared helpers for different discrete RL experiment flavours."""
 
 import functools
+import os
+from absl import flags
 
 from acme import specs
 from acme import wrappers
 from acme.jax import networks
 from acme.jax import utils
+import atari_py  # pylint:disable=unused-import
 import dm_env
 import gym
 import haiku as hk
+
+FLAGS = flags.FLAGS
 
 
 def make_atari_environment(
@@ -32,6 +37,7 @@ def make_atari_environment(
     oar_wrapper: bool = False,
 ) -> dm_env.Environment:
   """Loads the Atari environment."""
+# Internal logic.
   version = 'v0' if sticky_actions else 'v4'
   level_name = f'{level}NoFrameskip-{version}'
   env = gym.make(level_name, full_action_space=True)

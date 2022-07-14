@@ -22,7 +22,6 @@ import helpers
 from absl import app
 from acme.jax import experiments
 from acme.utils import lp_utils
-import atari_py  # pylint:disable=unused-import
 import launchpad as lp
 
 
@@ -39,11 +38,14 @@ flags.DEFINE_integer('num_steps', 1_000_000, 'Number of env steps to run.')
 def build_experiment_config():
   """Builds MDQN experiment config which can be executed in different ways."""
   # Create an environment, grab the spec, and use it to create networks.
-  environment = helpers.make_atari_environment(
-      level=FLAGS.env_name,
-      sticky_actions=True,
-      zero_discount_on_life_loss=False)
-  environment_spec = specs.make_environment_spec(environment)
+  env_name = FLAGS.env_name
+
+  def env_factory(seed):
+    del seed
+    return helpers.make_atari_environment(
+        level=env_name, sticky_actions=True, zero_discount_on_life_loss=False)
+
+  environment_spec = specs.make_environment_spec(env_factory(0))
 
   # Create network.
   network = helpers.make_dqn_atari_network(environment_spec)
@@ -67,7 +69,7 @@ def build_experiment_config():
 
   return experiments.ExperimentConfig(
       builder=dqn_builder,
-      environment_factory=lambda seed: environment,
+      environment_factory=env_factory,
       network_factory=lambda spec: network,
       evaluator_factories=[],
       seed=FLAGS.seed,
