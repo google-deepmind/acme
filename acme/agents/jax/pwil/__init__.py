@@ -14,8 +14,6 @@
 
 """PWIL agent."""
 
-from acme.agents.jax.pwil.agents import DistributedPWIL
-from acme.agents.jax.pwil.agents import PWIL
 from acme.agents.jax.pwil.builder import PWILBuilder
 from acme.agents.jax.pwil.config import PWILConfig
 from acme.agents.jax.pwil.config import PWILDemonstrations
