@@ -184,7 +184,7 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
         # since it avoids Host - Device communications.
         data_sample = jax.lax.all_gather(
             data_sample, axis_name=_PMAP_AXIS_NAME, axis=0, tiled=True)
-        data_sample = jax.tree_multimap(_unpad, data_sample, shapes)
+        data_sample = jax.tree_map(_unpad, data_sample, shapes)
         return data_sample, key
 
       pmapped_sample = jax.pmap(sample, axis_name=_PMAP_AXIS_NAME)
