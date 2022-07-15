@@ -14,8 +14,10 @@
 
 """Functions for making TensorFlow datasets for sampling from Reverb replay."""
 
+import collections
+from collections.abc import Mapping
 import os
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from acme import specs
 from acme import types
@@ -30,7 +32,7 @@ def make_reverb_dataset(
     server_address: str,
     batch_size: Optional[int] = None,
     prefetch_size: Optional[int] = None,
-    table: str = adders.DEFAULT_PRIORITY_TABLE,
+    table: Union[str, Mapping[str, float]] = adders.DEFAULT_PRIORITY_TABLE,
     num_parallel_calls: Optional[int] = 12,
     max_in_flight_samples_per_worker: Optional[int] = None,
     postprocess: Optional[Transform] = None,
@@ -49,7 +51,9 @@ def make_reverb_dataset(
     batch_size: Batch size of the returned dataset.
     prefetch_size: The number of elements to prefetch from the original dataset.
       Note that Reverb may do some internal prefetching in addition to this.
-    table: The name of the Reverb table to use.
+    table: The name of the Reverb table to use, or a mapping of (table_name,
+      float_weight) for mixing multiple tables in the input (e.g. mixing online
+      and offline experiences).
     num_parallel_calls: The parralelism to use. Setting it to `tf.data.AUTOTUNE`
       will allow `tf.data` to automatically find a reasonable value.
     max_in_flight_samples_per_worker: see reverb.TrajectoryDataset for details.
@@ -66,7 +70,8 @@ def make_reverb_dataset(
     A `tf.data.Dataset` iterating over the contents of the Reverb table.
 
   Raises:
-    ValueError if `environment_spec` or `extra_spec` are set.
+    ValueError if `environment_spec` or `extra_spec` are set, or `table` is a
+    mapping with no positive weight values.
   """
 
   if environment_spec or extra_spec:
@@ -91,11 +96,37 @@ def make_reverb_dataset(
   elif max_in_flight_samples_per_worker is None:
     max_in_flight_samples_per_worker = 2 * batch_size
 
+  # Create mapping from tables to non-zero weights.
+  if isinstance(table, str):
+    tables = collections.OrderedDict([(table, 1.)])
+  else:
+    tables = collections.OrderedDict([
+        (name, weight) for name, weight in table.items() if weight > 0.
+    ])
+    if len(tables) <= 0:
+      raise ValueError(f'No positive weights in input tables {tables}')
+
+  # Normalize weights.
+  total_weight = sum(tables.values())
+  tables = collections.OrderedDict([
+      (name, weight / total_weight) for name, weight in tables.items()
+  ])
+
   def _make_dataset(unused_idx: tf.Tensor) -> tf.data.Dataset:
-    dataset = reverb.TrajectoryDataset.from_table_signature(
-        server_address=server_address,
-        table=table,
-        max_in_flight_samples_per_worker=max_in_flight_samples_per_worker)
+    datasets = ()
+    for table_name, weight in tables.items():
+      max_in_flight_samples = max(
+          1, int(max_in_flight_samples_per_worker * weight))
+      dataset = reverb.TrajectoryDataset.from_table_signature(
+          server_address=server_address,
+          table=table_name,
+          max_in_flight_samples_per_worker=max_in_flight_samples)
+      datasets += (dataset,)
+    if len(datasets) > 1:
+      dataset = tf.data.Dataset.sample_from_datasets(
+          datasets, weights=tables.values())
+    else:
+      dataset = datasets[0]
 
     # Post-process each element if a post-processing function is passed, e.g.
     # observation-stacking or data augmenting transformations.
