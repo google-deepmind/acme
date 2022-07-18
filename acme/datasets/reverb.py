@@ -15,9 +15,8 @@
 """Functions for making TensorFlow datasets for sampling from Reverb replay."""
 
 import collections
-from collections.abc import Mapping
 import os
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Mapping, Union
 
 from acme import specs
 from acme import types
