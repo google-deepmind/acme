@@ -22,8 +22,7 @@ Glossary of shapes:
 - X?: X is optional (e.g. optional batch/sequence dimension).
 
 """
-import functools
-from typing import Tuple
+from typing import Sequence, Tuple
 
 from acme.jax.networks import base
 from acme.jax.networks import duelling
@@ -98,37 +97,58 @@ class ResidualBlock(hk.Module):
     return self._block(x) + x
 
 
+class ResNetTorso(hk.Module):
+  """ResNetTorso for visual inputs, inspired by the IMPALA paper."""
+
+  def __init__(self,
+               channels_per_group: Sequence[int] = (16, 32, 32),
+               blocks_per_group: Sequence[int] = (2, 2, 2),
+               name: str = 'resnet_torso'):
+    super().__init__(name=name)
+    self._channels_per_group = channels_per_group
+    self._blocks_per_group = blocks_per_group
+
+    if len(channels_per_group) != len(blocks_per_group):
+      raise ValueError(
+          'Length of channels_per_group and blocks_per_group must be equal. '
+          f'Got channels_per_group={channels_per_group} and '
+          f'blocks_per_group={blocks_per_group}.')
+
+  def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
+    output = inputs
+    channels_and_blocks = zip(self._channels_per_group, self._blocks_per_group)
+
+    for i, (num_channels, num_blocks) in enumerate(channels_and_blocks):
+      output = hk.Conv2D(
+          num_channels, kernel_shape=3, stride=1, padding='SAME')(
+              output)
+      output = hk.max_pool(
+          output,
+          window_shape=[1, 3, 3, 1],
+          strides=[1, 2, 2, 1],
+          padding='SAME')
+
+      for j in range(num_blocks):
+        output = ResidualBlock(num_channels, name=f'residual_{i}_{j}')(output)
+
+    return output
+
+
 class DeepAtariTorso(hk.Module):
   """Deep torso for Atari, from the IMPALA paper."""
 
   def __init__(self, name: str = 'deep_atari_torso'):
     super().__init__(name=name)
-    layers = []
-    for i, (num_channels, num_blocks) in enumerate([(16, 2), (32, 2), (32, 2)]):
-      conv = hk.Conv2D(
-          num_channels, kernel_shape=[3, 3], stride=[1, 1], padding='SAME')
-      pooling = functools.partial(
-          hk.max_pool,
-          window_shape=[1, 3, 3, 1],
-          strides=[1, 2, 2, 1],
-          padding='SAME')
-      layers.append(conv)
-      layers.append(pooling)
-
-      for j in range(num_blocks):
-        block = ResidualBlock(num_channels, name='residual_{}_{}'.format(i, j))
-        layers.append(block)
-
-    layers.extend([
-        jax.nn.relu,
-        hk.Flatten(),
-        hk.Linear(256),
-        jax.nn.relu,
-    ])
-    self._network = hk.Sequential(layers)
 
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-    return self._network(x)
+    output = ResNetTorso(
+        channels_per_group=(16, 32, 32), blocks_per_group=(2, 2, 2))(
+            x)
+    output = jax.nn.relu(output)
+    output = hk.Flatten()(output)
+    output = hk.Linear(256)(output)
+    output = jax.nn.relu(output)
+    return output
 
 
 class DeepIMPALAAtariNetwork(hk.RNNCore):
