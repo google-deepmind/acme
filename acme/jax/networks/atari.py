@@ -22,21 +22,25 @@ Glossary of shapes:
 - X?: X is optional (e.g. optional batch/sequence dimension).
 
 """
-from typing import Sequence, Tuple
+
+import functools
+from typing import Callable, Sequence, Tuple, Union
 
 from acme.jax.networks import base
 from acme.jax.networks import duelling
 from acme.jax.networks import embedding
 from acme.jax.networks import policy_value
-
 from acme.wrappers import observation_action_reward
-
 import haiku as hk
 import jax
 import jax.numpy as jnp
 
+
 # Useful type aliases.
 Images = jnp.ndarray
+InnerOp = Union[hk.Module, Callable[..., jnp.ndarray]]
+MakeInnerOp = Callable[..., InnerOp]
+NonLinearity = Callable[[jnp.ndarray], jnp.ndarray]
 
 
 class AtariTorso(hk.Module):
@@ -80,21 +84,40 @@ def dqn_atari_network(num_actions: int) -> base.QNetwork:
 
 
 class ResidualBlock(hk.Module):
-  """Residual block."""
+  """Residual block of operations, e.g. convolutional or MLP."""
 
-  def __init__(self, num_channels: int, name: str = 'residual_block'):
+  def __init__(self,
+               make_inner_op: MakeInnerOp,
+               non_linearity: NonLinearity = jax.nn.relu,
+               use_layer_norm: bool = True,
+               name: str = 'residual_block'):
     super().__init__(name=name)
-    self._block = hk.Sequential([
-        jax.nn.relu,
-        hk.Conv2D(
-            num_channels, kernel_shape=[3, 3], stride=[1, 1], padding='SAME'),
-        jax.nn.relu,
-        hk.Conv2D(
-            num_channels, kernel_shape=[3, 3], stride=[1, 1], padding='SAME'),
-    ])
+    self.inner_op1 = make_inner_op()
+    self.inner_op2 = make_inner_op()
+    self.non_linearity = non_linearity
+    self.use_layer_norm = use_layer_norm
 
-  def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-    return self._block(x) + x
+    if use_layer_norm:
+      self.layernorm1 = hk.LayerNorm(
+          axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6)
+      self.layernorm2 = hk.LayerNorm(
+          axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6)
+
+  def __call__(self, x: jnp.ndarray):
+    output = x
+
+    # First layer in residual block.
+    if self.use_layer_norm:
+      output = self.layernorm1(output)
+    output = self.non_linearity(output)
+    output = self.inner_op1(output)
+
+    # Second layer in residual block.
+    if self.use_layer_norm:
+      output = self.layernorm2(output)
+    output = self.non_linearity(output)
+    output = self.inner_op2(output)
+    return x + output
 
 
 class ResNetTorso(hk.Module):
@@ -129,7 +152,11 @@ class ResNetTorso(hk.Module):
           padding='SAME')
 
       for j in range(num_blocks):
-        output = ResidualBlock(num_channels, name=f'residual_{i}_{j}')(output)
+        output = ResidualBlock(
+            make_inner_op=functools.partial(
+                hk.Conv2D, output_channels=num_channels, kernel_shape=3),
+            name=f'residual_{i}_{j}')(
+                output)
 
     return output
 
