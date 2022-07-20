@@ -62,7 +62,7 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
     # learning and inference.
     return self._config.batch_size // jax.device_count()
 
-  def make_learner(
+  def make_learner(  # pytype: disable=signature-mismatch
       self,
       random_key: networks_lib.PRNGKey,
       networks: r2d2_networks.R2D2Networks,
