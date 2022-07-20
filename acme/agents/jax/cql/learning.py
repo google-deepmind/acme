@@ -89,7 +89,7 @@ class CQLLearner(acme.Learner):
     """Initializes the CQL learner.
 
     Args:
-      batch_size: bath size.
+      batch_size: batch size.
       networks: CQL networks.
       random_key: a key for random number generation.
       demonstrations: an iterator over training data.
