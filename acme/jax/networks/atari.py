@@ -35,7 +35,6 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 
-
 # Useful type aliases.
 Images = jnp.ndarray
 InnerOp = Union[hk.Module, Callable[..., jnp.ndarray]]
@@ -49,12 +48,9 @@ class AtariTorso(hk.Module):
   def __init__(self):
     super().__init__(name='atari_torso')
     self._network = hk.Sequential([
-        hk.Conv2D(32, [8, 8], 4),
-        jax.nn.relu,
-        hk.Conv2D(64, [4, 4], 2),
-        jax.nn.relu,
-        hk.Conv2D(64, [3, 3], 1),
-        jax.nn.relu
+        hk.Conv2D(32, [8, 8], 4), jax.nn.relu,
+        hk.Conv2D(64, [4, 4], 2), jax.nn.relu,
+        hk.Conv2D(64, [3, 3], 1), jax.nn.relu
     ])
 
   def __call__(self, inputs: Images) -> jnp.ndarray:
@@ -89,7 +85,7 @@ class ResidualBlock(hk.Module):
   def __init__(self,
                make_inner_op: MakeInnerOp,
                non_linearity: NonLinearity = jax.nn.relu,
-               use_layer_norm: bool = True,
+               use_layer_norm: bool = False,
                name: str = 'residual_block'):
     super().__init__(name=name)
     self.inner_op1 = make_inner_op()
@@ -126,10 +122,12 @@ class ResNetTorso(hk.Module):
   def __init__(self,
                channels_per_group: Sequence[int] = (16, 32, 32),
                blocks_per_group: Sequence[int] = (2, 2, 2),
+               use_layer_norm: bool = False,
                name: str = 'resnet_torso'):
     super().__init__(name=name)
     self._channels_per_group = channels_per_group
     self._blocks_per_group = blocks_per_group
+    self._use_layer_norm = use_layer_norm
 
     if len(channels_per_group) != len(blocks_per_group):
       raise ValueError(
@@ -155,8 +153,10 @@ class ResNetTorso(hk.Module):
         output = ResidualBlock(
             make_inner_op=functools.partial(
                 hk.Conv2D, output_channels=num_channels, kernel_shape=3),
-            name=f'residual_{i}_{j}')(
-                output)
+            use_layer_norm=self._use_layer_norm,
+            name=f'residual_{i}_{j}',
+        )(
+            output)
 
     return output
 
