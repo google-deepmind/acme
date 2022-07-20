@@ -47,7 +47,8 @@ class DQNLearner(learning_lib.SGDLearner):
                replay_client: Optional[reverb.Client] = None,
                replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
                counter: Optional[counting.Counter] = None,
-               logger: Optional[loggers.Logger] = None):
+               logger: Optional[loggers.Logger] = None,
+               num_sgd_steps_per_step: int = 1):
     """Initializes the learner."""
     loss_fn = losses.PrioritizedDoubleQLearning(
         discount=discount,
@@ -67,4 +68,5 @@ class DQNLearner(learning_lib.SGDLearner):
         replay_table_name=replay_table_name,
         counter=counter,
         logger=logger,
+        num_sgd_steps_per_step=num_sgd_steps_per_step,
     )
