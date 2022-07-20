@@ -75,7 +75,7 @@ class VariableSource(core.VariableSource):
       self._variables = variables
     self._barrier = barrier
 
-  def get_variables(self, names: List[str]) -> List[types.NestedArray]:
+  def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
     if self._barrier is not None:
       self._barrier.wait()
     return [self._variables[name] for name in names]

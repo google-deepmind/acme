@@ -39,7 +39,7 @@ class ReferenceVariableSource(core.VariableSource):
   actor to the inference server.
   """
 
-  def get_variables(self, names: List[str]) -> List[VariableReference]:
+  def get_variables(self, names: Sequence[str]) -> List[VariableReference]:
     return [VariableReference(name) for name in names]
 
 

@@ -15,7 +15,7 @@
 """The base agent interface."""
 
 import math
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from acme import core
 from acme import types
@@ -132,5 +132,5 @@ class Agent(core.Actor, core.VariableSource):
       # Update the actor weights when learner updates.
       self._actor.update()
 
-  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
+  def get_variables(self, names: Sequence[str]) -> List[List[np.ndarray]]:
     return self._learner.get_variables(names)

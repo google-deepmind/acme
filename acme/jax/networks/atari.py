@@ -24,7 +24,7 @@ Glossary of shapes:
 """
 
 import functools
-from typing import Callable, Sequence, Tuple, Union
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 from acme.jax.networks import base
 from acme.jax.networks import duelling
@@ -200,7 +200,8 @@ class DeepIMPALAAtariNetwork(hk.RNNCore):
 
     return (logits, value), new_state
 
-  def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
+  def initial_state(self, batch_size: Optional[int],
+                    **unused_kwargs) -> hk.LSTMState:
     return self._core.initial_state(batch_size)
 
   def unroll(self, inputs: observation_action_reward.OAR,
@@ -236,7 +237,8 @@ class R2D2AtariNetwork(hk.RNNCore):
     q_values = self._duelling_head(core_outputs)
     return q_values, new_state
 
-  def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
+  def initial_state(self, batch_size: Optional[int],
+                    **unused_kwargs) -> hk.LSTMState:
     return self._core.initial_state(batch_size)
 
   def unroll(
