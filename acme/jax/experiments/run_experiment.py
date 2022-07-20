@@ -121,38 +121,37 @@ def run_experiment(experiment: config.ExperimentConfig,
       logger=train_logger,
       observers=experiment.observers)
 
-  eval_loop = None
-  if num_eval_episodes:
-    # Create the evaluation actor and loop.
-    eval_counter = counting.Counter(
-        parent_counter, prefix='eval', time_delta=0.)
-    eval_logger = experiment.logger_factory('eval',
-                                            eval_counter.get_steps_key(), 0)
-    eval_policy = config.make_policy(
-        experiment=experiment,
-        networks=networks,
-        environment_spec=environment_spec,
-        evaluation=True)
-    eval_actor = experiment.builder.make_actor(
-        random_key=jax.random.PRNGKey(experiment.seed),
-        policy=eval_policy,
-        environment_spec=environment_spec,
-        variable_source=learner)
-    eval_loop = acme.EnvironmentLoop(
-        environment,
-        eval_actor,
-        counter=eval_counter,
-        logger=eval_logger,
-        observers=experiment.observers)
+  if num_eval_episodes == 0:
+    # No evaluation. Just run the training loop.
+    train_loop.run(num_steps=experiment.max_num_actor_steps)
+    return
+
+  # Create the evaluation actor and loop.
+  eval_counter = counting.Counter(parent_counter, prefix='eval', time_delta=0.)
+  eval_logger = experiment.logger_factory('eval', eval_counter.get_steps_key(),
+                                          0)
+  eval_policy = config.make_policy(
+      experiment=experiment,
+      networks=networks,
+      environment_spec=environment_spec,
+      evaluation=True)
+  eval_actor = experiment.builder.make_actor(
+      random_key=jax.random.PRNGKey(experiment.seed),
+      policy=eval_policy,
+      environment_spec=environment_spec,
+      variable_source=learner)
+  eval_loop = acme.EnvironmentLoop(
+      environment,
+      eval_actor,
+      counter=eval_counter,
+      logger=eval_logger,
+      observers=experiment.observers)
 
   steps = 0
   while steps < experiment.max_num_actor_steps:
-    if eval_loop:
-      eval_loop.run(num_episodes=num_eval_episodes)
-    train_loop.run(num_steps=eval_every)
-    steps += eval_every
-  if eval_loop:
     eval_loop.run(num_episodes=num_eval_episodes)
+    steps += train_loop.run(num_steps=eval_every)
+  eval_loop.run(num_episodes=num_eval_episodes)
 
 
 class _LearningActor(core.Actor):

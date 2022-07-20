@@ -159,6 +159,9 @@ class EnvironmentLoop(core.Worker):
       num_episodes: number of episodes to run the loop for.
       num_steps: minimal number of steps to run the loop for.
 
+    Returns:
+      Actual number of steps the loop executed.
+
     Raises:
       ValueError: If both 'num_episodes' and 'num_steps' are not None.
     """
@@ -179,7 +182,8 @@ class EnvironmentLoop(core.Worker):
         # Log the given episode results.
         self._logger.write(result)
 
+    return step_count
+
 
 def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
   return np.zeros(spec.shape, spec.dtype)
-
