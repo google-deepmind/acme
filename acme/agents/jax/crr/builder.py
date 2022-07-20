@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""BC Builder."""
+"""CRR Builder."""
 from typing import Iterator, Optional
 
 from acme import core
@@ -45,7 +45,7 @@ class CRRBuilder(builders.OfflineBuilder[crr_networks.CRRNetworks,
     """Creates a CRR learner, an evaluation policy and an eval actor.
 
     Args:
-      config: a config with BC hps.
+      config: a config with CRR hps.
       policy_loss_coeff_fn: set the loss function for the policy.
     """
     self._config = config
@@ -72,6 +72,7 @@ class CRRBuilder(builders.OfflineBuilder[crr_networks.CRRNetworks,
         policy_loss_coeff_fn=self._policy_loss_coeff_fn,
         policy_optimizer=optax.adam(self._config.learning_rate),
         critic_optimizer=optax.adam(self._config.learning_rate),
+        logger=logger_fn('learner'),
         counter=counter)
 
   def make_actor(
@@ -89,10 +90,9 @@ class CRRBuilder(builders.OfflineBuilder[crr_networks.CRRNetworks,
     return actors.GenericActor(
         actor_core, random_key, variable_client, backend='cpu')
 
-  def make_policy(self,
-                  networks: crr_networks.CRRNetworks,
+  def make_policy(self, networks: crr_networks.CRRNetworks,
                   environment_spec: specs.EnvironmentSpec,
-                  evaluation: bool = False) -> actor_core_lib.FeedForwardPolicy:
+                  evaluation: bool) -> actor_core_lib.FeedForwardPolicy:
     """Construct the policy."""
     del environment_spec, evaluation
 
