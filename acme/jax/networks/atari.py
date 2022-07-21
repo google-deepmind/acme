@@ -22,14 +22,13 @@ Glossary of shapes:
 - X?: X is optional (e.g. optional batch/sequence dimension).
 
 """
-
-import functools
-from typing import Callable, Optional, Sequence, Tuple, Union
+from typing import Optional, Tuple
 
 from acme.jax.networks import base
 from acme.jax.networks import duelling
 from acme.jax.networks import embedding
 from acme.jax.networks import policy_value
+from acme.jax.networks import resnet
 from acme.wrappers import observation_action_reward
 import haiku as hk
 import jax
@@ -37,9 +36,6 @@ import jax.numpy as jnp
 
 # Useful type aliases.
 Images = jnp.ndarray
-InnerOp = Union[hk.Module, Callable[..., jnp.ndarray]]
-MakeInnerOp = Callable[..., InnerOp]
-NonLinearity = Callable[[jnp.ndarray], jnp.ndarray]
 
 
 class AtariTorso(hk.Module):
@@ -79,88 +75,6 @@ def dqn_atari_network(num_actions: int) -> base.QNetwork:
   return network
 
 
-class ResidualBlock(hk.Module):
-  """Residual block of operations, e.g. convolutional or MLP."""
-
-  def __init__(self,
-               make_inner_op: MakeInnerOp,
-               non_linearity: NonLinearity = jax.nn.relu,
-               use_layer_norm: bool = False,
-               name: str = 'residual_block'):
-    super().__init__(name=name)
-    self.inner_op1 = make_inner_op()
-    self.inner_op2 = make_inner_op()
-    self.non_linearity = non_linearity
-    self.use_layer_norm = use_layer_norm
-
-    if use_layer_norm:
-      self.layernorm1 = hk.LayerNorm(
-          axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6)
-      self.layernorm2 = hk.LayerNorm(
-          axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6)
-
-  def __call__(self, x: jnp.ndarray):
-    output = x
-
-    # First layer in residual block.
-    if self.use_layer_norm:
-      output = self.layernorm1(output)
-    output = self.non_linearity(output)
-    output = self.inner_op1(output)
-
-    # Second layer in residual block.
-    if self.use_layer_norm:
-      output = self.layernorm2(output)
-    output = self.non_linearity(output)
-    output = self.inner_op2(output)
-    return x + output
-
-
-class ResNetTorso(hk.Module):
-  """ResNetTorso for visual inputs, inspired by the IMPALA paper."""
-
-  def __init__(self,
-               channels_per_group: Sequence[int] = (16, 32, 32),
-               blocks_per_group: Sequence[int] = (2, 2, 2),
-               use_layer_norm: bool = False,
-               name: str = 'resnet_torso'):
-    super().__init__(name=name)
-    self._channels_per_group = channels_per_group
-    self._blocks_per_group = blocks_per_group
-    self._use_layer_norm = use_layer_norm
-
-    if len(channels_per_group) != len(blocks_per_group):
-      raise ValueError(
-          'Length of channels_per_group and blocks_per_group must be equal. '
-          f'Got channels_per_group={channels_per_group} and '
-          f'blocks_per_group={blocks_per_group}.')
-
-  def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
-    output = inputs
-    channels_and_blocks = zip(self._channels_per_group, self._blocks_per_group)
-
-    for i, (num_channels, num_blocks) in enumerate(channels_and_blocks):
-      output = hk.Conv2D(
-          num_channels, kernel_shape=3, stride=1, padding='SAME')(
-              output)
-      output = hk.max_pool(
-          output,
-          window_shape=[1, 3, 3, 1],
-          strides=[1, 2, 2, 1],
-          padding='SAME')
-
-      for j in range(num_blocks):
-        output = ResidualBlock(
-            make_inner_op=functools.partial(
-                hk.Conv2D, output_channels=num_channels, kernel_shape=3),
-            use_layer_norm=self._use_layer_norm,
-            name=f'residual_{i}_{j}',
-        )(
-            output)
-
-    return output
-
-
 class DeepAtariTorso(hk.Module):
   """Deep torso for Atari, from the IMPALA paper."""
 
@@ -168,7 +82,7 @@ class DeepAtariTorso(hk.Module):
     super().__init__(name=name)
 
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-    output = ResNetTorso(
+    output = resnet.ResNetTorso(
         channels_per_group=(16, 32, 32), blocks_per_group=(2, 2, 2))(
             x)
     output = jax.nn.relu(output)
