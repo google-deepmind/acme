@@ -83,11 +83,12 @@ def make_distributed_experiment(
     spec = specs.make_environment_spec(environment)
     networks = experiment.network_factory(spec)
     models = make_snapshot_models(networks, spec)
-    # TODO(raveman): Decouple checkpointing and snahpshotting configs.
+    # TODO(raveman): Decouple checkpointing and snapshotting configs.
     return snapshotter.JAXSnapshotter(
         variable_source=variable_source,
         models=models,
         path=checkpointing_config.directory,
+        subdirectory='snapshots',
         add_uid=checkpointing_config.add_uid)
 
   def build_counter():

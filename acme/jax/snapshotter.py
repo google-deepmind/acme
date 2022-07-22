@@ -40,11 +40,15 @@ class JAXSnapshotter(core.Worker):
                models: Dict[str, Callable[[core.VariableSource],
                                           types.ModelToSnapshot]],
                path: str,
+               subdirectory: Optional[str] = None,
                max_to_keep: Optional[int] = None,
                add_uid: bool = False):
     self._variable_source = variable_source
     self._models = models
-    self._path = paths.process_path(path, add_uid=add_uid)
+    if subdirectory is not None:
+      self._path = paths.process_path(path, subdirectory, add_uid=add_uid)
+    else:
+      self._path = paths.process_path(path, add_uid=add_uid)
     self._max_to_keep = max_to_keep
     self._snapshot_paths: Optional[List[str]] = None
 
