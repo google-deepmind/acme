@@ -144,8 +144,14 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
         prefetch_size=self._config.prefetch_size)
     return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
-  def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
+  def make_adder(
+      self,
+      replay_client: reverb.Client,
+      environment_spec: Optional[specs.EnvironmentSpec],
+      policy: Optional[dqn_actor.EpsilonPolicy],
+  ) -> Optional[adders.Adder]:
     """Creates an adder which handles observations."""
+    del environment_spec, policy
     return adders_reverb.NStepTransitionAdder(
         priority_fns={self._config.replay_table_name: None},
         client=replay_client,

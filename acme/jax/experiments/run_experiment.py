@@ -95,7 +95,7 @@ def run_experiment(experiment: config.ExperimentConfig,
       replay_client=replay_client,
       counter=counting.Counter(parent_counter, prefix='learner', time_delta=0.))
 
-  adder = experiment.builder.make_adder(replay_client)
+  adder = experiment.builder.make_adder(replay_client, environment_spec, policy)
   actor_key, key = jax.random.split(key)
   actor = experiment.builder.make_actor(
       actor_key, policy, environment_spec, variable_source=learner, adder=adder)

@@ -96,7 +96,7 @@ class LocalLayout(agent.Agent):
 
     # Create actor, dataset, and learner for generating, storing, and consuming
     # data respectively.
-    adder = builder.make_adder(replay_client)
+    adder = builder.make_adder(replay_client, environment_spec, policy_network)
 
     dataset = builder.make_dataset_iterator(replay_client)
     # We always use prefetch, as it provides an iterator with additional

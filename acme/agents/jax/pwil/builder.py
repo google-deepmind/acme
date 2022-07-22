@@ -157,7 +157,7 @@ class PWILBuilder(builders.ActorLearnerBuilder[DirectRLNetworks,
             self._config.alpha
             if self._config.prefill_constant_reward else None)
         _prefill_with_demonstrations(
-            adder=self._rl_agent.make_adder(replay_client),
+            adder=self._rl_agent.make_adder(replay_client, None, None),
             demonstrations=list(self._demonstrations_fn().demonstrations),
             min_num_transitions=self._config.num_transitions_rb,
             reward=prefill_reward)
@@ -167,11 +167,17 @@ class PWILBuilder(builders.ActorLearnerBuilder[DirectRLNetworks,
 
     return self._rl_agent.make_dataset_iterator(replay_client)
 
-  def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
+  def make_adder(
+      self,
+      replay_client: reverb.Client,
+      environment_spec: Optional[specs.EnvironmentSpec],
+      policy: Optional[DirectPolicyNetwork],
+  ) -> Optional[adders.Adder]:
     """Creates the adder substituting imitation reward."""
     pwil_demonstrations = self._demonstrations_fn()
     return pwil_adder.PWILAdder(
-        direct_rl_adder=self._rl_agent.make_adder(replay_client),
+        direct_rl_adder=self._rl_agent.make_adder(replay_client,
+                                                  environment_spec, policy),
         pwil_rewarder=rewarder.WassersteinDistanceRewarder(
             demonstrations_it=pwil_demonstrations.demonstrations,
             episode_length=pwil_demonstrations.episode_length,

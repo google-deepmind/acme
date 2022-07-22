@@ -146,9 +146,11 @@ class SQILBuilder(Generic[DirectRLNetworks, DirectPolicyNetwork],
         _generate_sqil_samples(demonstration_iterator, rb_iterator),
         jax.devices()[0])
 
-  def make_adder(self,
-                 replay_client: reverb.Client) -> Optional[adders.Adder]:
-    return self._rl_agent.make_adder(replay_client)
+  def make_adder(
+      self, replay_client: reverb.Client,
+      environment_spec: Optional[specs.EnvironmentSpec],
+      policy: Optional[DirectPolicyNetwork]) -> Optional[adders.Adder]:
+    return self._rl_agent.make_adder(replay_client, environment_spec, policy)
 
   def make_actor(
       self,

@@ -151,8 +151,6 @@ def make_distributed_experiment(
       actor_id: ActorId,
   ) -> environment_loop.EnvironmentLoop:
     """The actor process."""
-    adder = experiment.builder.make_adder(replay)
-
     environment_key, actor_key = jax.random.split(random_key)
     # Create environment and policy core.
 
@@ -167,6 +165,8 @@ def make_distributed_experiment(
         networks=networks,
         environment_spec=environment_spec,
         evaluation=False)
+    adder = experiment.builder.make_adder(replay, environment_spec,
+                                          policy_network)
     actor = experiment.builder.make_actor(actor_key, policy_network,
                                           environment_spec, variable_source,
                                           adder)

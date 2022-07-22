@@ -297,8 +297,12 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
         discriminator_iterator, direct_iterator, iterator_demonstration)),
                             jax.devices()[0])
 
-  def make_adder(self, replay_client: reverb.Client) -> Optional[adders.Adder]:
-    direct_rl_adder = self._rl_agent.make_adder(replay_client)
+  def make_adder(
+      self, replay_client: reverb.Client,
+      environment_spec: Optional[specs.EnvironmentSpec],
+      policy: Optional[DirectPolicyNetwork]) -> Optional[adders.Adder]:
+    direct_rl_adder = self._rl_agent.make_adder(replay_client, environment_spec,
+                                                policy)
     if self._config.share_iterator:
       return direct_rl_adder
     ail_adder = adders_reverb.NStepTransitionAdder(

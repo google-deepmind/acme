@@ -191,9 +191,10 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
       self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
     return self.builder.make_dataset_iterator(replay_client)
 
-  def make_adder(self,
-                 replay_client: reverb.Client) -> Optional[adders.Adder]:
-    return self.builder.make_adder(replay_client)
+  def make_adder(self, replay_client: reverb.Client,
+                 environment_spec: Optional[specs.EnvironmentSpec],
+                 policy: Optional[PolicyNetwork]) -> Optional[adders.Adder]:
+    return self.builder.make_adder(replay_client, environment_spec, policy)
 
   def make_learner(
       self,

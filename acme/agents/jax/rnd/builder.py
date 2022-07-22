@@ -110,9 +110,10 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
       replay_client: reverb.Client) -> Optional[Iterator[reverb.ReplaySample]]:
     return self._rl_agent.make_dataset_iterator(replay_client)
 
-  def make_adder(self,
-                 replay_client: reverb.Client) -> Optional[adders.Adder]:
-    return self._rl_agent.make_adder(replay_client)
+  def make_adder(self, replay_client: reverb.Client,
+                 environment_spec: Optional[specs.EnvironmentSpec],
+                 policy: Optional[PolicyNetwork]) -> Optional[adders.Adder]:
+    return self._rl_agent.make_adder(replay_client, environment_spec, policy)
 
   def make_actor(
       self,

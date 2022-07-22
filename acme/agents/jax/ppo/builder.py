@@ -82,8 +82,14 @@ class PPOBuilder(
         num_parallel_calls=None)
     return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
-  def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
+  def make_adder(
+      self,
+      replay_client: reverb.Client,
+      environment_spec: Optional[specs.EnvironmentSpec],
+      policy: Optional[actor_core_lib.FeedForwardPolicyWithExtra],
+  ) -> Optional[adders.Adder]:
     """Creates an adder which handles observations."""
+    del environment_spec, policy
     # Note that the last transition in the sequence is used for bootstrapping
     # only and is ignored otherwise. So we need to make sure that sequences
     # overlap on one transition, thus "-1" in the period length computation.

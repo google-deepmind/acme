@@ -124,8 +124,14 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
     return utils.multi_device_put(dataset.as_numpy_iterator(),
                                   jax.local_devices())
 
-  def make_adder(self, replay_client: reverb.Client) -> adders.Adder:
+  def make_adder(
+      self,
+      replay_client: reverb.Client,
+      environment_spec: Optional[specs.EnvironmentSpec],
+      policy: Optional[impala_networks.IMPALANetworks],
+  ) -> Optional[adders.Adder]:
     """Creates an adder which handles observations."""
+    del environment_spec, policy
     # Note that the last transition in the sequence is used for bootstrapping
     # only and is ignored otherwise. So we need to make sure that sequences
     # overlap on one transition, thus "-1" in the period length computation.
