@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Defines distributed and local Rainbow agents, using JAX."""
+"""Defines Rainbow DQN, using JAX."""
 
 import dataclasses
-import functools
-from typing import Callable, Optional, Sequence
+from typing import Callable
+
 
 from acme import specs
 from acme.agents.jax.dqn import actor as dqn_actor
@@ -25,10 +25,6 @@ from acme.agents.jax.dqn import config as dqn_config
 from acme.agents.jax.dqn import losses
 from acme.jax import networks as networks_lib
 from acme.jax import utils
-from acme.jax.layouts import distributed_layout
-from acme.jax.layouts import local_layout
-from acme.utils import loggers
-import dm_env
 import rlax
 
 NetworkFactory = Callable[[specs.EnvironmentSpec],
@@ -97,77 +93,3 @@ def make_builder(config: RainbowConfig):
       max_abs_reward=config.max_abs_reward,
   )
   return builder.DQNBuilder(config, loss_fn=loss_fn)
-
-
-class DistributedRainbow(distributed_layout.DistributedLayout):
-  """Distributed program definition for Rainbow."""
-
-  def __init__(
-      self,
-      environment_factory: Callable[[bool], dm_env.Environment],
-      network_factory: NetworkFactory,
-      config: RainbowConfig,
-      seed: int,
-      num_actors: int,
-      max_number_of_steps: Optional[int] = None,
-      save_logs: bool = False,
-      log_every: float = 10.0,
-      eval_epsilon: float = 0.0,
-      evaluator_factories: Optional[Sequence[
-          distributed_layout.EvaluatorFactory]] = None,
-  ):
-    logger_fn = functools.partial(
-        loggers.make_default_logger,
-        'learner',
-        save_logs,
-        time_delta=log_every,
-        asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
-        steps_key='learner_steps')
-    dqn_builder = make_builder(config)
-    train_policy_factory = apply_policy_and_sample
-    if evaluator_factories is None:
-      eval_policy_factory = lambda n: eval_policy(n, eval_epsilon)
-      evaluator_factories = [
-          distributed_layout.default_evaluator_factory(
-              environment_factory=lambda seed: environment_factory(True),
-              network_factory=network_factory,
-              policy_factory=eval_policy_factory,
-              save_logs=save_logs)
-      ]
-    super().__init__(
-        seed=seed,
-        environment_factory=lambda seed: environment_factory(False),
-        learner_logger_fn=logger_fn,
-        network_factory=network_factory,
-        builder=dqn_builder,
-        policy_network=train_policy_factory,
-        evaluator_factories=evaluator_factories,
-        num_actors=num_actors,
-        max_number_of_steps=max_number_of_steps,
-        prefetch_size=config.prefetch_size,
-        save_logs=save_logs,
-        actor_logger_fn=distributed_layout.get_default_logger_fn(
-            save_logs, log_every))
-
-
-class RainbowDQN(local_layout.LocalLayout):
-  """Local agent for Rainbow."""
-
-  def __init__(
-      self,
-      spec: specs.EnvironmentSpec,
-      network: networks_lib.FeedForwardNetwork,
-      config: RainbowConfig,
-      seed: int,
-  ):
-    self.builder = make_builder(config)
-    super().__init__(
-        seed=seed,
-        environment_spec=spec,
-        builder=self.builder,
-        networks=network,
-        policy_network=apply_policy_and_sample(network),
-        batch_size=config.batch_size,
-        num_sgd_steps_per_step=config.num_sgd_steps_per_step,
-    )
