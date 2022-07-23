@@ -14,8 +14,6 @@
 
 """SAC agent."""
 
-from acme.agents.jax.sac.agents import DistributedSAC
-from acme.agents.jax.sac.agents import SAC
 from acme.agents.jax.sac.builder import SACBuilder
 from acme.agents.jax.sac.config import SACConfig
 from acme.agents.jax.sac.config import target_entropy_from_env_spec
