@@ -14,6 +14,4 @@
 
 """SQIL agent."""
 
-from acme.agents.jax.sqil.agents import DistributedSQIL
-from acme.agents.jax.sqil.agents import SQIL
 from acme.agents.jax.sqil.builder import SQILBuilder
