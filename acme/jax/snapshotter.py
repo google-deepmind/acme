@@ -61,7 +61,7 @@ class JAXSnapshotter(core.Worker):
     if not self._snapshot_paths:
       # Lazy discovery of already existing snapshots.
       self._snapshot_paths = os.listdir(self._path)
-      self._snapshot_paths.sort(key=int, reverse=True)
+      self._snapshot_paths.sort(reverse=True)
 
     snapshot_location = os.path.join(self._path, time.strftime('%Y%m%d-%H%M%S'))
     if self._snapshot_paths and self._snapshot_paths[0] == snapshot_location:
@@ -79,7 +79,7 @@ class JAXSnapshotter(core.Worker):
 
     # Delete any excess snapshots.
     while self._max_to_keep and len(self._snapshot_paths) > self._max_to_keep:
-      paths.rmdir(self._snapshot_paths.pop())
+      paths.rmdir(os.path.join(self._path, self._snapshot_paths.pop()))
 
   def _get_models_and_paths(
       self, path: str) -> Sequence[Tuple[types.ModelToSnapshot, str]]:
@@ -91,9 +91,8 @@ class JAXSnapshotter(core.Worker):
       models_and_paths.append((model, model_path))
     return models_and_paths
 
-  def _snapshot_model(
-      self, model: types.ModelToSnapshot,
-      saving_path: str) -> None:
+  def _snapshot_model(self, model: types.ModelToSnapshot,
+                      saving_path: str) -> None:
     module = model_to_tf_module(model)
     tf.saved_model.save(module, saving_path)
 
