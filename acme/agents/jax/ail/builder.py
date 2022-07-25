@@ -159,10 +159,8 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
       rl_agent: builders.ActorLearnerBuilder[ail_networks.DirectRLNetworks,
                                              DirectPolicyNetwork,
                                              reverb.ReplaySample],
-      config: ail_config.AILConfig,
-      discriminator_loss: losses.Loss,
-      make_demonstrations: Callable[[int], Iterator[types.Transition]],
-      logger_fn: Callable[[], loggers.Logger] = lambda: None):
+      config: ail_config.AILConfig, discriminator_loss: losses.Loss,
+      make_demonstrations: Callable[[int], Iterator[types.Transition]]):
     """Implements a builder for AIL using rl_agent as forward RL algorithm.
 
     Args:
@@ -171,13 +169,11 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
       discriminator_loss: The loss function for the discriminator to minimize.
       make_demonstrations: A function that returns an iterator with
         demonstrations to be imitated.
-      logger_fn: a logger factory for the learner
     """
     self._rl_agent = rl_agent
     self._config = config
     self._discriminator_loss = discriminator_loss
     self._make_demonstrations = make_demonstrations
-    self._logger_fn = logger_fn
 
   def make_learner(self,
                    random_key: jax_types.PRNGKey,
