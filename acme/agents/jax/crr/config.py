@@ -24,7 +24,11 @@ class CRRConfig:
     learning_rate: Learning rate.
     discount: discount to use for TD updates.
     target_update_period: period to update target's parameters.
+    use_sarsa_target: compute on-policy target using iterator's actions rather
+      than sampled actions.
+      Useful for 1-step offline RL (https://arxiv.org/pdf/2106.08909.pdf).
   """
   learning_rate: float = 3e-4
   discount: float = 0.99
   target_update_period: int = 100
+  use_sarsa_target: bool = False

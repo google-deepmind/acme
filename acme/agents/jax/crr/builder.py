@@ -72,6 +72,7 @@ class CRRBuilder(builders.OfflineBuilder[crr_networks.CRRNetworks,
         policy_loss_coeff_fn=self._policy_loss_coeff_fn,
         policy_optimizer=optax.adam(self._config.learning_rate),
         critic_optimizer=optax.adam(self._config.learning_rate),
+        use_sarsa_target=self._config.use_sarsa_target,
         logger=logger_fn('learner'),
         counter=counter)
 
