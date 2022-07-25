@@ -14,8 +14,6 @@
 
 """RND agent."""
 
-from acme.agents.jax.rnd.agents import DistributedRND
-from acme.agents.jax.rnd.agents import RND
 from acme.agents.jax.rnd.builder import RNDBuilder
 from acme.agents.jax.rnd.config import RNDConfig
 from acme.agents.jax.rnd.learning import rnd_loss

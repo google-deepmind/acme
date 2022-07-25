@@ -14,7 +14,6 @@
 
 """ARS agent."""
 
-from acme.agents.jax.ars.agents import DistributedARS
 from acme.agents.jax.ars.builder import ARSBuilder
 from acme.agents.jax.ars.config import ARSConfig
 from acme.agents.jax.ars.networks import make_networks

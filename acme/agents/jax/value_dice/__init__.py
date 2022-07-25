@@ -14,8 +14,6 @@
 
 """ValueDice agent."""
 
-from acme.agents.jax.value_dice.agents import DistributedValueDice
-from acme.agents.jax.value_dice.agents import ValueDice
 from acme.agents.jax.value_dice.builder import ValueDiceBuilder
 from acme.agents.jax.value_dice.config import ValueDiceConfig
 from acme.agents.jax.value_dice.learning import ValueDiceLearner
