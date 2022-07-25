@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Lfd agent."""
+"""Lfd agents."""
 
 from acme.agents.jax.lfd.builder import LfdBuilder
 from acme.agents.jax.lfd.builder import LfdStep
 from acme.agents.jax.lfd.config import LfdConfig
-from acme.agents.jax.lfd.sacfd_agents import DistributedSACfD
-from acme.agents.jax.lfd.sacfd_agents import SACfD
-from acme.agents.jax.lfd.sacfd_agents import SACfDConfig
-from acme.agents.jax.lfd.td3fd_agents import DistributedTD3fD
-from acme.agents.jax.lfd.td3fd_agents import TD3fD
-from acme.agents.jax.lfd.td3fd_agents import TD3fDConfig
+from acme.agents.jax.lfd.sacfd import SACfDBuilder
+from acme.agents.jax.lfd.sacfd import SACfDConfig
+from acme.agents.jax.lfd.td3fd import TD3fDBuilder
+from acme.agents.jax.lfd.td3fd import TD3fDConfig
