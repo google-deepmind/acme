@@ -14,8 +14,6 @@
 
 """Importance-weighted actor-learner architecture (IMPALA) agent."""
 
-from acme.agents.jax.impala.agent import IMPALA
-from acme.agents.jax.impala.agent import IMPALAFromConfig
 from acme.agents.jax.impala.builder import IMPALABuilder
 from acme.agents.jax.impala.config import IMPALAConfig
 from acme.agents.jax.impala.learning import IMPALALearner
