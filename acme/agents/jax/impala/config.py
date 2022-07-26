@@ -26,20 +26,24 @@ import optax
 class IMPALAConfig:
   """Configuration options for IMPALA."""
   seed: int = 0
-
-  # Loss options
-  batch_size: int = 16
+  discount: float = 0.99
   sequence_length: int = 20
   sequence_period: Optional[int] = None
-  learning_rate: Union[float, optax.Schedule] = 1e-4
+  variable_update_period: int = 100
+
+  # Optimizer configuration.
+  batch_size: int = 32
+  learning_rate: Union[float, optax.Schedule] = 2e-4
   adam_momentum_decay: float = 0.0
   adam_variance_decay: float = 0.99
-  discount: float = 0.99
-  entropy_cost: float = 0.01
+  adam_eps: float = 1e-8
+  adam_eps_root: float = 0.0
+  max_gradient_norm: float = 40.0
+
+  # Loss configuration.
   baseline_cost: float = 0.5
+  entropy_cost: float = 0.01
   max_abs_reward: float = np.inf
-  max_gradient_norm: float = np.inf
-  variable_update_period: int = 1000
 
   # Replay options
   replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE

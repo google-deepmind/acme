@@ -159,8 +159,9 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
         optax.adam(
             self._config.learning_rate,
             b1=self._config.adam_momentum_decay,
-            b2=self._config.adam_variance_decay),
-    )
+            b2=self._config.adam_variance_decay,
+            eps=self._config.adam_eps,
+            eps_root=self._config.adam_eps_root))
 
     return learning.IMPALALearner(
         networks=networks,
