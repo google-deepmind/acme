@@ -41,7 +41,7 @@ import reverb
 class R2D2Builder(Generic[actor_core_lib.RecurrentState],
                   builders.ActorLearnerBuilder[r2d2_networks.R2D2Networks,
                                                r2d2_actor.R2D2Policy,
-                                               reverb.ReplaySample]):
+                                               r2d2_learning.R2D2ReplaySample]):
   """R2D2 Builder.
 
   This is constructs all of the components for Recurrent Experience Replay in
@@ -62,7 +62,7 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
     # learning and inference.
     return self._config.batch_size // jax.device_count()
 
-  def make_learner(  # pytype: disable=signature-mismatch
+  def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
       networks: r2d2_networks.R2D2Networks,
@@ -128,7 +128,8 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
     ]
 
   def make_dataset_iterator(
-      self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
+      self,
+      replay_client: reverb.Client) -> Iterator[r2d2_learning.R2D2ReplaySample]:
     """Create a dataset iterator to use for learning/updating the agent."""
     dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
