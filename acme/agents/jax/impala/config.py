@@ -29,7 +29,6 @@ class IMPALAConfig:
 
   # Loss options
   batch_size: int = 16
-  prefetch_size: int = 2
   sequence_length: int = 20
   sequence_period: Optional[int] = None
   learning_rate: Union[float, optax.Schedule] = 1e-4
@@ -40,6 +39,7 @@ class IMPALAConfig:
   baseline_cost: float = 0.5
   max_abs_reward: float = np.inf
   max_gradient_norm: float = np.inf
+  variable_update_period: int = 1000
 
   # Replay options
   replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE

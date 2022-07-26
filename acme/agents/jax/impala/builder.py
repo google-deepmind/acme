@@ -185,7 +185,10 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
   ) -> acme.Actor:
     del environment_spec
     variable_client = variable_utils.VariableClient(
-        client=variable_source, key='network', update_period=1000, device='cpu')
+        client=variable_source,
+        key='network',
+        update_period=self._config.variable_update_period,
+        device='cpu')
     return acting.IMPALAActor(
         forward_fn=policy.forward_fn,
         initial_state_fn=policy.initial_state_fn,
