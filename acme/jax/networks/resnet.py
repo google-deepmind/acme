@@ -32,7 +32,7 @@ class ResidualBlock(hk.Module):
   def __init__(self,
                make_inner_op: MakeInnerOp,
                non_linearity: NonLinearity = jax.nn.relu,
-               use_layer_norm: bool = True,
+               use_layer_norm: bool = False,
                name: str = 'residual_block'):
     super().__init__(name=name)
     self.inner_op1 = make_inner_op()
@@ -109,11 +109,13 @@ class ResNetTorso(hk.Module):
                blocks_per_group: Sequence[int] = (2, 2, 2),
                downsampling_strategies: Sequence[DownsamplingStrategy] = (
                    DownsamplingStrategy.CONV_MAX,) * 3,
+               use_layer_norm: bool = False,
                name: str = 'resnet_torso'):
     super().__init__(name=name)
     self._channels_per_group = channels_per_group
     self._blocks_per_group = blocks_per_group
     self._downsampling_strategies = downsampling_strategies
+    self._use_layer_norm = use_layer_norm
 
     if len(channels_per_group) != len(blocks_per_group) != len(
         downsampling_strategies):
@@ -136,6 +138,7 @@ class ResNetTorso(hk.Module):
         output = ResidualBlock(
             make_inner_op=functools.partial(
                 hk.Conv2D, output_channels=num_channels, kernel_shape=3),
+            use_layer_norm=self._use_layer_norm,
             name=f'residual_{i}_{j}')(
                 output)
 
