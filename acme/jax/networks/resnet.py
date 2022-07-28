@@ -69,12 +69,12 @@ class DownsamplingStrategy(enum.Enum):
   AVG_POOL = 'avg_pool'
   CONV_MAX = 'conv+max'  # Used in IMPALA
   CONV_LAYERNORM_RELU = 'conv+layernorm+relu'  # Used in MuZero
+  CONV = 'conv'
 
 
 def make_downsampling_layer(
     strategy: Union[str, DownsamplingStrategy],
     output_channels: int,
-    w_init: hk.initializers.Initializer = hk.initializers.TruncatedNormal(1e-2),
 ) -> hk.SupportsCall:
   """Returns a sequence of modules corresponding to the desired downsampling."""
   strategy = DownsamplingStrategy(strategy)
@@ -82,17 +82,30 @@ def make_downsampling_layer(
   if strategy is DownsamplingStrategy.AVG_POOL:
     return hk.AvgPool(window_shape=(3, 3, 1), strides=(2, 2, 1), padding='SAME')
 
+  elif strategy is DownsamplingStrategy.CONV:
+    return hk.Sequential([
+        hk.Conv2D(
+            output_channels,
+            kernel_shape=3,
+            stride=2,
+            w_init=hk.initializers.TruncatedNormal(1e-2)),
+    ])
+
   elif strategy is DownsamplingStrategy.CONV_LAYERNORM_RELU:
     return hk.Sequential([
-        hk.Conv2D(output_channels, kernel_shape=3, stride=2, w_init=w_init),
         hk.LayerNorm(
             axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6),
         jax.nn.relu,
+        hk.Conv2D(
+            output_channels,
+            kernel_shape=3,
+            stride=2,
+            w_init=hk.initializers.TruncatedNormal(1e-2)),
     ])
 
   elif strategy is DownsamplingStrategy.CONV_MAX:
     return hk.Sequential([
-        hk.Conv2D(output_channels, kernel_shape=3, stride=1, w_init=w_init),
+        hk.Conv2D(output_channels, kernel_shape=3, stride=1),
         hk.MaxPool(window_shape=(3, 3, 1), strides=(2, 2, 1), padding='SAME')
     ])
   else:
@@ -133,7 +146,8 @@ class ResNetTorso(hk.Module):
 
     for i, (num_channels, num_blocks,
             strategy) in enumerate(channels_blocks_strategies):
-      output = make_downsampling_layer(strategy, num_channels)(inputs)
+      output = make_downsampling_layer(strategy, num_channels)(output)
+
       for j in range(num_blocks):
         output = ResidualBlock(
             make_inner_op=functools.partial(
