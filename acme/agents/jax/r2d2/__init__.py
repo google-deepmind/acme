@@ -16,9 +16,6 @@
 
 from acme.agents.jax.r2d2.actor import EpsilonRecurrentPolicy
 from acme.agents.jax.r2d2.actor import make_behavior_policy
-from acme.agents.jax.r2d2.agents import DistributedR2D2
-from acme.agents.jax.r2d2.agents import DistributedR2D2FromConfig
-from acme.agents.jax.r2d2.agents import R2D2
 from acme.agents.jax.r2d2.builder import R2D2Builder
 from acme.agents.jax.r2d2.config import R2D2Config
 from acme.agents.jax.r2d2.learning import R2D2Learner
