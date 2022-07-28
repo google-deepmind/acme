@@ -68,7 +68,7 @@ class ResidualBlock(hk.Module):
 class DownsamplingStrategy(enum.Enum):
   AVG_POOL = 'avg_pool'
   CONV_MAX = 'conv+max'  # Used in IMPALA
-  CONV_LAYERNORM_RELU = 'conv+layernorm+relu'  # Used in MuZero
+  LAYERNORM_RELU_CONV = 'layernorm+relu+conv'  # Used in MuZero
   CONV = 'conv'
 
 
@@ -91,7 +91,7 @@ def make_downsampling_layer(
             w_init=hk.initializers.TruncatedNormal(1e-2)),
     ])
 
-  elif strategy is DownsamplingStrategy.CONV_LAYERNORM_RELU:
+  elif strategy is DownsamplingStrategy.LAYERNORM_RELU_CONV:
     return hk.Sequential([
         hk.LayerNorm(
             axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6),
