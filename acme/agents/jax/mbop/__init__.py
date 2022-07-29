@@ -36,6 +36,9 @@ from acme.agents.jax.mbop.losses import world_model_loss
 from acme.agents.jax.mbop.models import make_ensemble_n_step_return
 from acme.agents.jax.mbop.models import make_ensemble_policy_prior
 from acme.agents.jax.mbop.models import make_ensemble_world_model
+from acme.agents.jax.mbop.models import MakeNStepReturn
+from acme.agents.jax.mbop.models import MakePolicyPrior
+from acme.agents.jax.mbop.models import MakeWorldModel
 from acme.agents.jax.mbop.mppi import mppi_planner
 from acme.agents.jax.mbop.mppi import MPPIConfig
 from acme.agents.jax.mbop.mppi import return_top_k_average

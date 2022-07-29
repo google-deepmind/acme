@@ -30,11 +30,15 @@ import jax
 # corresponding networks.
 WorldModel = Callable[[networks.Params, networks.Observation, networks.Action],
                       Tuple[networks.Observation, networks.Value]]
+MakeWorldModel = Callable[[mbop_networks.WorldModelNetwork], WorldModel]
 
 PolicyPrior = actor_core.ActorCore
+MakePolicyPrior = Callable[
+    [mbop_networks.PolicyPriorNetwork, specs.EnvironmentSpec], PolicyPrior]
 
 NStepReturn = Callable[[networks.Params, networks.Observation, networks.Action],
                        networks.Value]
+MakeNStepReturn = Callable[[mbop_networks.NStepReturnNetwork], NStepReturn]
 
 
 @chex.dataclass(frozen=True, mappable_dataclass=False)
