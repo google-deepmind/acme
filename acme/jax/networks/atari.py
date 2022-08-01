@@ -78,12 +78,17 @@ def dqn_atari_network(num_actions: int) -> base.QNetwork:
 class DeepAtariTorso(hk.Module):
   """Deep torso for Atari, from the IMPALA paper."""
 
-  def __init__(self, name: str = 'deep_atari_torso'):
+  def __init__(self,
+               use_layer_norm: bool = False,
+               name: str = 'deep_atari_torso'):
     super().__init__(name=name)
+    self._use_layer_norm = use_layer_norm
 
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
     output = resnet.ResNetTorso(
-        channels_per_group=(16, 32, 32), blocks_per_group=(2, 2, 2))(
+        channels_per_group=(16, 32, 32),
+        blocks_per_group=(2, 2, 2),
+        use_layer_norm=self._use_layer_norm)(
             x)
     output = jax.nn.relu(output)
     output = hk.Flatten()(output)
@@ -100,8 +105,9 @@ class DeepIMPALAAtariNetwork(hk.RNNCore):
 
   def __init__(self, num_actions: int):
     super().__init__(name='impala_atari_network')
-    self._embed = embedding.OAREmbedding(DeepAtariTorso(), num_actions)
-    self._core = hk.LSTM(256)
+    self._embed = embedding.OAREmbedding(
+        DeepAtariTorso(use_layer_norm=True), num_actions)
+    self._core = hk.GRU(256)
     self._head = policy_value.PolicyValueHead(num_actions)
     self._num_actions = num_actions
 

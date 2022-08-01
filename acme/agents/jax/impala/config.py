@@ -29,7 +29,7 @@ class IMPALAConfig:
   discount: float = 0.99
   sequence_length: int = 20
   sequence_period: Optional[int] = None
-  variable_update_period: int = 100
+  variable_update_period: int = 1000
 
   # Optimizer configuration.
   batch_size: int = 32
