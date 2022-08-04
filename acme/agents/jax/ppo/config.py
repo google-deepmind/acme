@@ -14,10 +14,9 @@
 
 """PPO config."""
 import dataclasses
-from typing import Callable, Union
+from typing import Callable, Union, Optional
 
 from acme.adders import reverb as adders_reverb
-import numpy as np
 
 
 @dataclasses.dataclass
@@ -27,41 +26,54 @@ class PPOConfig:
   Attributes:
     unroll_length: Length of sequences added to the replay buffer.
     num_minibatches: The number of minibatches to split an epoch into.
-      i.e. minibatch size = batch_size / num_minibatches.
-    TODO(sinopalnikov): Consider changing config to support setting minibatch
-      size directly.
+      i.e. minibatch size = batch_size * unroll_length / num_minibatches.
     num_epochs: How many times to loop over the set of minibatches.
-    TODO(sinopalnikov): Consider completing these descriptions.
-
-    batch_size: int
-    clip_value: bool
+    batch_size: Number of trajectory segments of length unroll_length to gather
+      for use in a call to the learner's step function.
     replay_table_name: Replay table name.
-    ppo_clipping_epsilon: float
-    gae_lambda: float
-    discount: float
-    learning_rate:
-    adam_epsilon: float
-    entropy_cost: float
-    value_cost: float
-    max_abs_reward: float
-    max_gradient_norm: float
-    variable_update_period: int
+    ppo_clipping_epsilon: PPO clipping epsilon.
+    normalize_advantage: Whether to normalize the advantages in the batch.
+    normalize_value: Whether the critic should predict normalized values.
+    normalization_ema_tau: Float tau for the exponential moving average used to
+      maintain statistics for normalizing advantages and values.
+    clip_value: Whether to clip the values as described in "What Matters in
+      On-Policy Reinforcement Learning?".
+    value_clipping_epsilon: Epsilon for value clipping.
+    max_abs_reward: If provided clips the rewards in the trajectory to have
+      absolute value less than or equal to max_abs_reward.
+    gae_lambda: Lambda parameter in Generalized Advantage Estimation.
+    discount: Discount factor.
+    learning_rate: Learning rate for updating the policy and critic networks.
+    adam_epsilon: Adam epsilon parameter.
+    entropy_cost: Weight of the entropy regularizer term in policy optimization.
+    value_cost: Weight of the value loss term in optimization.
+    max_gradient_norm: Threshold for clipping the gradient norm.
+    variable_update_period: Determines how frequently actors pull the parameters
+      from the learner.
+    log_global_norm_metrics: Whether to log global norm of gradients and
+      updates.
+    metrics_logging_period: How often metrics should be aggregated to host and
+      logged.
   """
-  # TODO(dulacarnold): Update some of these after sweeps.
-  unroll_length: int = 16
-  num_minibatches: int = 32
-  num_epochs: int = 5
-
-  batch_size: int = 128
-  clip_value: bool = False
+  unroll_length: int = 8
+  num_minibatches: int = 8
+  num_epochs: int = 2
+  batch_size: int = 256
   replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
   ppo_clipping_epsilon: float = 0.2
+  normalize_advantage: bool = False
+  normalize_value: bool = False
+  normalization_ema_tau: float = 0.995
+  clip_value: bool = False
+  value_clipping_epsilon: float = 0.2
+  max_abs_reward: Optional[float] = None
   gae_lambda: float = 0.95
   discount: float = 0.99
   learning_rate: Union[float, Callable[[int], float]] = 3e-4
-  adam_epsilon: float = 1e-5
-  entropy_cost: float = 0.01
+  adam_epsilon: float = 1e-7
+  entropy_cost: float = 3e-4
   value_cost: float = 1.
-  max_abs_reward: float = np.inf
   max_gradient_norm: float = 0.5
   variable_update_period: int = 1
+  log_global_norm_metrics: bool = False
+  metrics_logging_period: int = 100

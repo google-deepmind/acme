@@ -21,6 +21,7 @@ from acme.jax.networks.atari import R2D2AtariNetwork
 from acme.jax.networks.base import Action
 from acme.jax.networks.base import FeedForwardNetwork
 from acme.jax.networks.base import Logits
+from acme.jax.networks.base import LogProb
 from acme.jax.networks.base import LogProbFn
 from acme.jax.networks.base import LSTMOutputs
 from acme.jax.networks.base import NetworkOutput
@@ -40,6 +41,7 @@ from acme.jax.networks.distributional import DiscreteValued
 from acme.jax.networks.distributional import GaussianMixture
 from acme.jax.networks.distributional import MultivariateNormalDiagHead
 from acme.jax.networks.distributional import NormalTanhDistribution
+from acme.jax.networks.distributional import TanhTransformedDistribution
 from acme.jax.networks.duelling import DuellingMLP
 from acme.jax.networks.multiplexers import CriticMultiplexer
 from acme.jax.networks.policy_value import PolicyValueHead

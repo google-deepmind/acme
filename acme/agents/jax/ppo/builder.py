@@ -25,7 +25,6 @@ from acme.agents.jax import builders
 from acme.agents.jax.ppo import config as ppo_config
 from acme.agents.jax.ppo import learning
 from acme.agents.jax.ppo import networks as ppo_networks
-from acme.datasets import reverb as datasets
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.jax import variable_utils
@@ -74,13 +73,49 @@ class PPOBuilder(
 
   def make_dataset_iterator(
       self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
-    """Creates a dataset."""
-    dataset = datasets.make_reverb_dataset(
-        table=self._config.replay_table_name,
+    """Creates a dataset.
+
+    The iterator batch size is computed as follows:
+
+    Let:
+      B := learner batch size (config.batch_size)
+      H := number of hosts (jax.process_count())
+      D := number of local devices per host
+
+    The Reverb iterator will load batches of size B // (H * D). After wrapping
+    the iterator with utils.multi_device_put, this will result in an iterable
+    that provides B // H samples per item, with B // (H * D) samples placed on
+    each local device. In a multi-host setup, each host has its own learner
+    node and builds its own instance of the iterator. This will result
+    in a total batch size of H * (B // H) == B being consumed per learner
+    step (since the learner is pmapped across all devices). Note that
+    jax.device_count() returns the total number of devices across hosts,
+    i.e. H * D.
+
+    Args:
+      replay_client: the reverb replay client
+
+    Returns:
+      A replay buffer iterator to be used by the local devices.
+    """
+    iterator_batch_size, ragged = divmod(self._config.batch_size,
+                                         jax.device_count())
+    if ragged:
+      raise ValueError(
+          'Learner batch size must be divisible by total number of devices!')
+
+    # We don't use datasets.make_reverb_dataset() here to avoid interleaving
+    # and prefetching, that doesn't work well with can_sample() check on update.
+    # NOTE: Value for max_in_flight_samples_per_worker comes from a
+    # recommendation here: https://git.io/JYzXB
+    dataset = reverb.TrajectoryDataset.from_table_signature(
         server_address=replay_client.server_address,
-        batch_size=self._config.batch_size,
-        num_parallel_calls=None)
-    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
+        table=self._config.replay_table_name,
+        max_in_flight_samples_per_worker=(2 * self._config.batch_size /
+                                          jax.process_count()))
+    dataset = dataset.batch(iterator_batch_size, drop_remainder=True)
+    dataset = dataset.as_numpy_iterator()
+    return utils.multi_device_put(iterable=dataset, devices=jax.local_devices())
 
   def make_adder(
       self,
@@ -129,9 +164,13 @@ class PPOBuilder(
         discount=self._config.discount,
         entropy_cost=self._config.entropy_cost,
         value_cost=self._config.value_cost,
-        max_abs_reward=self._config.max_abs_reward,
         ppo_clipping_epsilon=self._config.ppo_clipping_epsilon,
+        normalize_advantage=self._config.normalize_advantage,
+        normalize_value=self._config.normalize_value,
+        normalization_ema_tau=self._config.normalization_ema_tau,
         clip_value=self._config.clip_value,
+        value_clipping_epsilon=self._config.value_clipping_epsilon,
+        max_abs_reward=self._config.max_abs_reward,
         gae_lambda=self._config.gae_lambda,
         counter=counter,
         random_key=random_key,
@@ -139,6 +178,8 @@ class PPOBuilder(
         num_epochs=self._config.num_epochs,
         num_minibatches=self._config.num_minibatches,
         logger=logger_fn('learner'),
+        log_global_norm_metrics=self._config.log_global_norm_metrics,
+        metrics_logging_period=self._config.metrics_logging_period,
     )
 
   def make_actor(
