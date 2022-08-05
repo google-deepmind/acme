@@ -26,14 +26,11 @@ Suite, will require a [MuJoCo license](https://www.roboti.us/license.html) in
 order to run. See our [tutorial] for more details or see refer to the
 [dm_control] repository for further information.
 
--   [D4PG](control/run_d4pg.py): a deterministic policy gradient (D4PG) agent
-    which includes a determinstic policy and a distributional critic running on
-    the DeepMind Control Suite.
--   [D4PG (gym)](control/run_d4pg_gym.py): this example runs the same algorithm
-    on a number of tasks defined in the [OpenAI Gym]. By default this will run
-    the "mountain car" domain which does not require a MuJoCo license.
--   [DMPO](control/run_dmpo.py): a maximum-a-posterior policy optimization
-    agent which combines both a distributional critic and a stochastic policy.
+-   [D4PG](https://github.com/deepmind/acme/blob/master/examples/baselines/rl_continuous/run_d4pg.py): a deterministic policy gradient (D4PG) agent which includes a determinstic
+ policy and a distributional critic running on the DeepMind Control Suite or
+ the [OpenAI Gym]. By default it runs on the "half cheetah" environment from the
+ OpenAI Gym.
+-   [MPO](https://github.com/deepmind/acme/blob/master/examples/baselines/rl_continuous/run_mpo.py): a maximum-a-posterior policy optimization agent which combines both a distributional critic and a stochastic policy.
 
 [dm_control]: https://github.com/deepmind/dm_control
 [OpenAI Gym]: https://github.com/openai/gym
