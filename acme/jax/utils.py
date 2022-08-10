@@ -24,6 +24,7 @@ from absl import logging
 from acme import core
 from acme import types
 from acme.jax import types as jax_types
+import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -119,6 +120,26 @@ def tile_nested(inputs: types.Nest, multiple: int) -> types.Nest:
   """Tiles tensors in a nested structure along a new leading axis."""
   tile = functools.partial(tile_array, multiple=multiple)
   return jax.tree_map(tile, inputs)
+
+
+def maybe_recover_lstm_type(state: types.NestedArray) -> types.NestedArray:
+  """Recovers the type hk.LSTMState if LSTMState is in the type name.
+
+  When the recurrent state of recurrent neural networks (RNN) is deserialized,
+  for example when it is sampled from replay, it is sometimes repacked in a type
+  that is identical to the source type but not the correct type itself. When
+  using this state as the initial state in an hk.dynamic_unroll, this will
+  cause hk.dynamic_unroll to raise an error as it requires its input and output
+  states to be identical.
+
+  Args:
+    state: a nested structure of arrays representing the state of an RNN.
+
+  Returns:
+    Either the state unchanged if it is anything but an LSTMState, otherwise
+    returns the state arrays properly contained in an hk.LSTMState.
+  """
+  return hk.LSTMState(*state) if type(state).__name__ == 'LSTMState' else state
 
 
 def prefetch(

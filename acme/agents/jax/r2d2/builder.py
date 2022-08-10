@@ -131,12 +131,13 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
       self,
       replay_client: reverb.Client) -> Iterator[r2d2_learning.R2D2ReplaySample]:
     """Create a dataset iterator to use for learning/updating the agent."""
+    batch_size_per_learner = self._config.batch_size // jax.process_count()
     dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
         server_address=replay_client.server_address,
         batch_size=self._batch_size_per_device,
-        prefetch_size=self._config.prefetch_size,
-        num_parallel_calls=self._config.num_parallel_calls)
+        num_parallel_calls=None,
+        max_in_flight_samples_per_worker=2 * batch_size_per_learner)
 
     # We split samples in two outputs, the keys which need to be kept on-host
     # since int64 arrays are not supported in TPUs, and the entire sample
