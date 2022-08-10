@@ -28,7 +28,6 @@ from acme.utils import loggers
 import haiku as hk
 import jax
 import jax.numpy as jnp
-from jax.scipy import special
 import optax
 import rlax
 
@@ -55,21 +54,15 @@ def main(_):
   dataset = dataset.as_numpy_iterator()
 
   # Create the networks to optimize.
-  network = bc_utils.make_network(environment_spec)
+  bc_networks = bc_utils.make_network(environment_spec)
 
   key = jax.random.PRNGKey(FLAGS.seed)
   key, key1 = jax.random.split(key, 2)
 
-  def logp_fn(logits, actions):
-    logits_actions = jnp.sum(
-        jax.nn.one_hot(actions, logits.shape[-1]) * logits, axis=-1)
-    logits_actions = logits_actions - special.logsumexp(logits, axis=-1)
-    return logits_actions
-
-  loss_fn = bc.logp(logp_fn=logp_fn)
+  loss_fn = bc.logp()
 
   learner = bc.BCLearner(
-      network=network,
+      networks=bc_networks,
       random_key=key1,
       loss_fn=loss_fn,
       optimizer=optax.adam(FLAGS.learning_rate),
@@ -78,7 +71,7 @@ def main(_):
 
   def evaluator_network(params: hk.Params, key: jnp.DeviceArray,
                         observation: jnp.DeviceArray) -> jnp.DeviceArray:
-    dist_params = network.apply(params, observation)
+    dist_params = bc_networks.policy_network.apply(params, observation)
     return rlax.epsilon_greedy(FLAGS.evaluation_epsilon).sample(
         key, dist_params)
 

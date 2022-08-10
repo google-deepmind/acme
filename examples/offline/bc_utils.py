@@ -24,8 +24,10 @@ from acme import specs
 from acme import types
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
+from acme.agents.jax import bc
 from acme.agents.tf.dqfd import bsuite_demonstrations
 from acme.jax import networks as networks_lib
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax import variable_utils
 from acme.jax.layouts import offline_distributed_layout
@@ -35,12 +37,15 @@ from acme.wrappers import single_precision
 import bsuite
 import dm_env
 import haiku as hk
+import jax
+import jax.numpy as jnp
+from jax.scipy import special
+import rlax
 import tensorflow as tf
 import tree
 
 
-def make_network(
-    spec: specs.EnvironmentSpec) -> networks_lib.FeedForwardNetwork:
+def make_network(spec: specs.EnvironmentSpec) -> bc.BCNetworks:
   """Creates networks used by the agent."""
   num_actions = spec.actions.num_values
 
@@ -60,10 +65,21 @@ def make_network(
   dummy_obs = utils.zeros_like(spec.observations)
   dummy_obs = utils.add_batch_dim(dummy_obs)
 
-  network = networks_lib.FeedForwardNetwork(
-      lambda key: policy.init(key, dummy_obs), policy.apply)
+  policy_network = bc.BCPolicyNetwork(lambda key: policy.init(key, dummy_obs),
+                                      policy.apply)
 
-  return network
+  def sample_fn(logits: networks_lib.NetworkOutput,
+                key: jax_types.PRNGKey) -> networks_lib.Action:
+    return rlax.epsilon_greedy(epsilon=0.0).sample(key, logits)
+
+  def log_prob(logits: networks_lib.Params,
+               actions: networks_lib.Action) -> networks_lib.LogProb:
+    logits_actions = jnp.sum(
+        jax.nn.one_hot(actions, logits.shape[-1]) * logits, axis=-1)
+    logits_actions = logits_actions - special.logsumexp(logits, axis=-1)
+    return logits_actions
+
+  return bc.BCNetworks(policy_network, sample_fn, log_prob)
 
 
 def _n_step_transition_from_episode(

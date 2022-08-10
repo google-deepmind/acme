@@ -13,71 +13,56 @@
 # limitations under the License.
 
 """Offline losses used in variants of BC."""
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 from acme import types
+from acme.agents.jax.bc import networks as bc_networks
 from acme.jax import networks as networks_lib
+from acme.jax import types as jax_types
 from acme.utils import loggers
 import jax
 import jax.numpy as jnp
 
 
-ModelOutput = Any
-SampleFn = Callable[[ModelOutput, networks_lib.PRNGKey], networks_lib.Action]
-LogProb = jnp.ndarray
-LogProbFn = Callable[[ModelOutput, networks_lib.Action], LogProb]
 loss_args = [
-    Callable[..., networks_lib.NetworkOutput], networks_lib.Params,
-    networks_lib.PRNGKey, types.Transition
+    bc_networks.BCNetworks, networks_lib.Params, networks_lib.PRNGKey,
+    types.Transition
 ]
-LossWithoutAux = Callable[loss_args, jnp.ndarray]
-LossWithAux = Callable[loss_args, Tuple[jnp.ndarray, loggers.LoggingData]]
-Loss = Union[LossWithoutAux, LossWithAux]
+BCLossWithoutAux = Callable[loss_args, jnp.ndarray]
+BCLossWithAux = Callable[loss_args, Tuple[jnp.ndarray, loggers.LoggingData]]
+BCLoss = Union[BCLossWithoutAux, BCLossWithAux]
 
 
-def mse(sample_fn: SampleFn) -> LossWithoutAux:
-  """Mean Squared Error loss.
+def mse() -> BCLossWithoutAux:
+  """Mean Squared Error loss."""
 
-  Args:
-    sample_fn: a method that samples an action.
-  Returns:
-    The loss.
-  """
-
-  def loss(apply_fn: Callable[..., networks_lib.NetworkOutput],
-           params: networks_lib.Params, key: jnp.ndarray,
+  def loss(networks: bc_networks.BCNetworks, params: networks_lib.Params,
+           key: jax_types.PRNGKey,
            transitions: types.Transition) -> jnp.ndarray:
     key, key_dropout = jax.random.split(key)
-    dist_params = apply_fn(
+    dist_params = networks.policy_network.apply(
         params, transitions.observation, is_training=True, key=key_dropout)
-    action = sample_fn(dist_params, key)
+    action = networks.sample_fn(dist_params, key)
     return jnp.mean(jnp.square(action - transitions.action))
 
   return loss
 
 
-def logp(logp_fn: LogProbFn) -> LossWithoutAux:
-  """Log probability loss.
+def logp() -> BCLossWithoutAux:
+  """Log probability loss."""
 
-  Args:
-    logp_fn: a method that returns the log probability of an action.
-
-  Returns:
-    The loss.
-  """
-
-  def loss(apply_fn: Callable[..., networks_lib.NetworkOutput],
-           params: networks_lib.Params, key: jnp.ndarray,
+  def loss(networks: bc_networks.BCNetworks, params: networks_lib.Params,
+           key: jax_types.PRNGKey,
            transitions: types.Transition) -> jnp.ndarray:
-    logits = apply_fn(
+    logits = networks.policy_network.apply(
         params, transitions.observation, is_training=True, key=key)
-    logp_action = logp_fn(logits, transitions.action)
+    logp_action = networks.log_prob(logits, transitions.action)
     return -jnp.mean(logp_action)
 
   return loss
 
 
-def peerbc(base_loss_fn: Loss, zeta: float) -> LossWithoutAux:
+def peerbc(base_loss_fn: BCLossWithoutAux, zeta: float) -> BCLossWithoutAux:
   """Peer-BC loss from https://arxiv.org/pdf/2010.01748.pdf.
 
   Args:
@@ -87,8 +72,8 @@ def peerbc(base_loss_fn: Loss, zeta: float) -> LossWithoutAux:
     The loss.
   """
 
-  def loss(apply_fn: Callable[..., networks_lib.NetworkOutput],
-           params: networks_lib.Params, key: jnp.ndarray,
+  def loss(networks: bc_networks.BCNetworks, params: networks_lib.Params,
+           key: jax_types.PRNGKey,
            transitions: types.Transition) -> jnp.ndarray:
     key_perm, key_bc_loss, key_permuted_loss = jax.random.split(key, 3)
 
@@ -97,18 +82,18 @@ def peerbc(base_loss_fn: Loss, zeta: float) -> LossWithoutAux:
         jax.random.permutation, in_axes=(0, 0))(permutation_keys,
                                                 transitions.action)
     permuted_transition = transitions._replace(action=permuted_actions)
-    bc_loss = base_loss_fn(apply_fn, params, key_bc_loss, transitions)
-    permuted_loss = base_loss_fn(apply_fn, params, key_permuted_loss,
+    bc_loss = base_loss_fn(networks, params, key_bc_loss, transitions)
+    permuted_loss = base_loss_fn(networks, params, key_permuted_loss,
                                  permuted_transition)
     return bc_loss - zeta * permuted_loss
 
   return loss
 
 
-def rcal(base_loss_fn: Loss,
+def rcal(base_loss_fn: BCLossWithoutAux,
          discount: float,
          alpha: float,
-         num_bins: Optional[int] = None) -> LossWithoutAux:
+         num_bins: Optional[int] = None) -> BCLossWithoutAux:
   """https://www.cristal.univ-lille.fr/~pietquin/pdf/AAMAS_2014_BPMGOP.pdf.
 
   Args:
@@ -121,13 +106,15 @@ def rcal(base_loss_fn: Loss,
     The loss function.
   """
 
-  def loss(
-      apply_fn: Callable[..., networks_lib.NetworkOutput],
-      params: networks_lib.Params, key: jnp.ndarray,
-      transitions: types.Transition) -> jnp.ndarray:
+  def loss(networks: bc_networks.BCNetworks, params: networks_lib.Params,
+           key: jax_types.PRNGKey,
+           transitions: types.Transition) -> jnp.ndarray:
 
-    def logits_fn(key, observations, actions=None):
-      logits = apply_fn(params, observations, key=key, is_training=True)
+    def logits_fn(key: jax_types.PRNGKey,
+                  observations: networks_lib.Observation,
+                  actions: Optional[networks_lib.Action] = None):
+      logits = networks.policy_network.apply(
+          params, observations, key=key, is_training=True)
       if num_bins:
         logits = jnp.reshape(logits, list(logits.shape[:-1]) + [-1, num_bins])
       if actions is None:
@@ -150,7 +137,7 @@ def rcal(base_loss_fn: Loss,
         jnp.abs(logits_a_tm1 - discount * logits_a_t)
         )
 
-    loss = base_loss_fn(apply_fn, params, key, transitions)
+    loss = base_loss_fn(networks, params, key, transitions)
     return loss + alpha * regularization_loss
 
   return loss

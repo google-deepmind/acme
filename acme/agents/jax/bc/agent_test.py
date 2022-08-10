@@ -18,6 +18,7 @@ from acme import specs
 from acme import types
 from acme.agents.jax import bc
 from acme.jax import networks as networks_lib
+from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.testing import fakes
 import chex
@@ -27,14 +28,14 @@ import jax.numpy as jnp
 from jax.scipy import special
 import numpy as np
 import optax
+import rlax
 
 from absl.testing import absltest
 from absl.testing import parameterized
 
 
-def make_networks(
-    spec: specs.EnvironmentSpec,
-    discrete_actions: bool = False) -> networks_lib.FeedForwardNetwork:
+def make_networks(spec: specs.EnvironmentSpec,
+                  discrete_actions: bool = False) -> bc.BCNetworks:
   """Creates networks used by the agent."""
 
   if discrete_actions:
@@ -61,9 +62,37 @@ def make_networks(
   # Create dummy observations and actions to create network parameters.
   dummy_obs = utils.zeros_like(spec.observations)
   dummy_obs = utils.add_batch_dim(dummy_obs)
-  network = networks_lib.FeedForwardNetwork(
+  policy_network = networks_lib.FeedForwardNetwork(
       lambda key: policy.init(key, dummy_obs), policy.apply)
-  return network
+  bc_policy_network = bc.convert_to_bc_network(policy_network)
+
+  if discrete_actions:
+
+    def sample_fn(logits: networks_lib.NetworkOutput,
+                  key: jax_types.PRNGKey) -> networks_lib.Action:
+      return rlax.epsilon_greedy(epsilon=0.0).sample(key, logits)
+
+    def log_prob(logits: networks_lib.NetworkOutput,
+                 actions: networks_lib.Action) -> networks_lib.LogProb:
+      max_logits = jnp.max(logits, axis=-1, keepdims=True)
+      logits = logits - max_logits
+      logits_actions = jnp.sum(
+          jax.nn.one_hot(actions, spec.actions.num_values) * logits, axis=-1)
+
+      log_prob = logits_actions - special.logsumexp(logits, axis=-1)
+      return log_prob
+
+  else:
+
+    def sample_fn(distribution: networks_lib.NetworkOutput,
+                  key: jax_types.PRNGKey) -> networks_lib.Action:
+      return distribution.sample(seed=key)
+
+    def log_prob(distribuition: networks_lib.NetworkOutput,
+                 actions: networks_lib.Action) -> networks_lib.LogProb:
+      return distribuition.log_prob(actions)
+
+  return bc.BCNetworks(bc_policy_network, sample_fn, log_prob)
 
 
 class BCTest(parameterized.TestCase):
@@ -89,23 +118,19 @@ class BCTest(parameterized.TestCase):
       dataset_demonstration = dataset_demonstration.batch(8).as_numpy_iterator()
 
       # Construct the agent.
-      network = make_networks(spec)
+      networks = make_networks(spec)
 
       if loss_name == 'logp':
-        loss_fn = bc.logp(
-            logp_fn=lambda dist_params, actions: dist_params.log_prob(actions))
+        loss_fn = bc.logp()
       elif loss_name == 'mse':
-        loss_fn = bc.mse(
-            sample_fn=lambda dist_params, key: dist_params.sample(seed=key))
+        loss_fn = bc.mse()
       elif loss_name == 'peerbc':
-        base_loss_fn = bc.logp(
-            logp_fn=lambda dist_params, actions: dist_params.log_prob(actions))
-        loss_fn = bc.peerbc(base_loss_fn, zeta=0.1)
+        loss_fn = bc.peerbc(bc.logp(), zeta=0.1)
       else:
         raise ValueError
 
       learner = bc.BCLearner(
-          network=network,
+          networks=networks,
           random_key=jax.random.PRNGKey(0),
           loss_fn=loss_fn,
           optimizer=optax.adam(0.01),
@@ -137,29 +162,20 @@ class BCTest(parameterized.TestCase):
       dataset_demonstration = dataset_demonstration.batch(8).as_numpy_iterator()
 
       # Construct the agent.
-      network = make_networks(spec, discrete_actions=True)
-
-      def logp_fn(logits, actions):
-        max_logits = jnp.max(logits, axis=-1, keepdims=True)
-        logits = logits - max_logits
-        logits_actions = jnp.sum(
-            jax.nn.one_hot(actions, spec.actions.num_values) * logits, axis=-1)
-
-        log_prob = logits_actions - special.logsumexp(logits, axis=-1)
-        return log_prob
+      networks = make_networks(spec, discrete_actions=True)
 
       if loss_name == 'logp':
-        loss_fn = bc.logp(logp_fn=logp_fn)
+        loss_fn = bc.logp()
 
       elif loss_name == 'rcal':
-        base_loss_fn = bc.logp(logp_fn=logp_fn)
+        base_loss_fn = bc.logp()
         loss_fn = bc.rcal(base_loss_fn, discount=0.99, alpha=0.1)
 
       else:
         raise ValueError
 
       learner = bc.BCLearner(
-          network=network,
+          networks=networks,
           random_key=jax.random.PRNGKey(0),
           loss_fn=loss_fn,
           optimizer=optax.adam(0.01),

@@ -24,15 +24,17 @@ from acme.agents.jax import builders
 from acme.agents.jax.bc import config as bc_config
 from acme.agents.jax.bc import learning
 from acme.agents.jax.bc import losses
+from acme.agents.jax.bc import networks as bc_networks
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
+import jax
 import optax
 
 
-class BCBuilder(builders.OfflineBuilder[networks_lib.FeedForwardNetwork,
+class BCBuilder(builders.OfflineBuilder[bc_networks.BCNetworks,
                                         actor_core_lib.FeedForwardPolicy,
                                         types.Transition]):
   """BC Builder."""
@@ -40,7 +42,7 @@ class BCBuilder(builders.OfflineBuilder[networks_lib.FeedForwardNetwork,
   def __init__(
       self,
       config: bc_config.BCConfig,
-      loss_fn: losses.Loss,
+      loss_fn: losses.BCLoss,
       loss_has_aux: bool = False,
   ):
     """Creates a BC learner, an evaluation policy and an eval actor.
@@ -58,7 +60,7 @@ class BCBuilder(builders.OfflineBuilder[networks_lib.FeedForwardNetwork,
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks: networks_lib.FeedForwardNetwork,
+      networks: bc_networks.BCNetworks,
       dataset: Iterator[types.Transition],
       logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
@@ -68,7 +70,7 @@ class BCBuilder(builders.OfflineBuilder[networks_lib.FeedForwardNetwork,
     del environment_spec
 
     return learning.BCLearner(
-        network=networks,
+        networks=networks,
         random_key=random_key,
         loss_fn=self._loss_fn,
         optimizer=optax.adam(learning_rate=self._config.learning_rate),
@@ -94,7 +96,7 @@ class BCBuilder(builders.OfflineBuilder[networks_lib.FeedForwardNetwork,
         actor_core, random_key, variable_client, backend='cpu')
 
   def make_policy(self,
-                  networks: networks_lib.FeedForwardNetwork,
+                  networks: bc_networks.BCNetworks,
                   environment_spec: specs.EnvironmentSpec,
                   evaluation: bool = False) -> actor_core_lib.FeedForwardPolicy:
     """Construct the policy."""
@@ -103,7 +105,9 @@ class BCBuilder(builders.OfflineBuilder[networks_lib.FeedForwardNetwork,
     def evaluation_policy(
         params: networks_lib.Params, key: networks_lib.PRNGKey,
         observation: networks_lib.Observation) -> networks_lib.Action:
-      del key
-      return networks.apply(params, observation, is_training=False)
+      apply_key, sample_key = jax.random.split(key)
+      network_output = networks.policy_network.apply(
+          params, observation, is_training=False, key=apply_key)
+      return networks.sample_fn(network_output, sample_key)
 
     return evaluation_policy

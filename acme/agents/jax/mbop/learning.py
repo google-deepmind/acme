@@ -113,15 +113,19 @@ def make_ensemble_regressor_learner(
   local_logger = logger_fn(name,
                            local_counter.get_steps_key()) if logger_fn else None
 
-  def loss_fn(apply_fn: Callable[..., networks_lib.NetworkOutput],
-              params: networks_lib.Params, key: jnp.ndarray,
+  def loss_fn(networks: bc.BCNetworks, params: networks_lib.Params,
+              key: jax_types.PRNGKey,
               transitions: types.Transition) -> jnp.ndarray:
     del key
-    return loss(functools.partial(apply_fn, params), transitions)
+    return loss(
+        functools.partial(networks.policy_network.apply, params), transitions)
+
+  bc_policy_network = bc.convert_to_bc_network(mbop_ensemble)
+  bc_networks = bc.BCNetworks(bc_policy_network)
 
   # This is effectively a regressor learner.
   return bc.BCLearner(
-      mbop_ensemble,
+      bc_networks,
       rng_key,
       loss_fn,
       optimizer,

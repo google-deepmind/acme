@@ -18,6 +18,7 @@ from typing import Callable, Iterator
 from acme import types
 from acme.agents.jax.bc import learning
 from acme.agents.jax.bc import losses
+from acme.agents.jax.bc import networks as bc_networks
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 import jax
@@ -26,8 +27,8 @@ import optax
 
 def train_with_bc(make_demonstrations: Callable[[int],
                                                 Iterator[types.Transition]],
-                  networks: networks_lib.FeedForwardNetwork,
-                  loss: losses.Loss,
+                  networks: bc_networks.BCNetworks,
+                  loss: losses.BCLoss,
                   num_steps: int = 100000) -> networks_lib.Params:
   """Trains the given network with BC and returns the params.
 
@@ -48,7 +49,7 @@ def train_with_bc(make_demonstrations: Callable[[int],
       num_threads=jax.local_device_count())
 
   learner = learning.BCLearner(
-      network=networks,
+      networks=networks,
       random_key=jax.random.PRNGKey(0),
       loss_fn=loss,
       prefetching_iterator=prefetching_iterator,
@@ -60,43 +61,3 @@ def train_with_bc(make_demonstrations: Callable[[int],
     learner.step()
 
   return learner.get_variables(['policy'])[0]
-
-
-def convert_to_bc_network(
-    policy_network: networks_lib.FeedForwardNetwork
-) -> networks_lib.FeedForwardNetwork:
-  """Converts a policy_network from SAC/TD3/D4PG/.. into a BC policy network.
-
-  Args:
-    policy_network: FeedForwardNetwork taking the observation as input and
-      returning action representation compatible with one of the BC losses.
-
-  Returns:
-    The BC policy network taking observation, is_training, key as input.
-  """
-
-  def apply(params, obs, is_training=False, key=None):
-    del is_training, key
-    return policy_network.apply(params, obs)
-
-  return networks_lib.FeedForwardNetwork(policy_network.init, apply)
-
-
-def convert_policy_value_to_bc_network(
-    policy_value_network: networks_lib.FeedForwardNetwork
-) -> networks_lib.FeedForwardNetwork:
-  """Converts a network from e.g. PPO into a BC policy network.
-
-  Args:
-    policy_value_network: FeedForwardNetwork taking the observation as input.
-
-  Returns:
-    The BC policy network taking observation, is_training, key as input.
-  """
-
-  def apply(params, obs, is_training=False, key=None):
-    del is_training, key
-    actions, _ = policy_value_network.apply(params, obs)
-    return actions
-
-  return networks_lib.FeedForwardNetwork(policy_value_network.init, apply)

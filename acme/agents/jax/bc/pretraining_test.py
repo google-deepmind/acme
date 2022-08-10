@@ -27,8 +27,7 @@ import numpy as np
 from absl.testing import absltest
 
 
-def make_networks(
-    spec: specs.EnvironmentSpec) -> networks_lib.FeedForwardNetwork:
+def make_networks(spec: specs.EnvironmentSpec) -> bc.BCNetworks:
   """Creates networks used by the agent."""
 
   final_layer_size = np.prod(spec.actions.shape, dtype=int)
@@ -47,9 +46,10 @@ def make_networks(
   # Create dummy observations and actions to create network parameters.
   dummy_obs = utils.zeros_like(spec.observations)
   dummy_obs = utils.add_batch_dim(dummy_obs)
-  network = networks_lib.FeedForwardNetwork(
-      lambda key: policy.init(key, dummy_obs), policy.apply)
-  return network
+  policy_network = bc.BCPolicyNetwork(lambda key: policy.init(key, dummy_obs),
+                                      policy.apply)
+
+  return bc.BCNetworks(policy_network)
 
 
 class BcPretrainingTest(absltest.TestCase):
@@ -63,7 +63,7 @@ class BcPretrainingTest(absltest.TestCase):
     # Construct the agent.
     nets = make_networks(spec)
 
-    loss = bc.mse(sample_fn=lambda x, unused_key: x)
+    loss = bc.mse()
 
     bc.pretraining.train_with_bc(
         fakes.transition_iterator(environment), nets, loss, num_steps=100)
@@ -75,7 +75,7 @@ class BcPretrainingTest(absltest.TestCase):
     spec = specs.make_environment_spec(environment)
 
     sac_nets = sac.make_networks(spec, hidden_layer_sizes=(4, 4))
-    bc_nets = bc.pretraining.convert_to_bc_network(sac_nets.policy_network)
+    bc_nets = bc.convert_to_bc_network(sac_nets.policy_network)
 
     rng = jax.random.PRNGKey(0)
     dummy_obs = utils.zeros_like(spec.observations)

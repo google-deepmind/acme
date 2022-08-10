@@ -20,6 +20,7 @@ from typing import Dict, List, NamedTuple, Optional, Tuple, Union, Iterator
 import acme
 from acme import types
 from acme.agents.jax.bc import losses
+from acme.agents.jax.bc import networks as bc_networks
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.utils import counting
@@ -79,9 +80,9 @@ class BCLearner(acme.Learner):
   _state: TrainingState
 
   def __init__(self,
-               network: networks_lib.FeedForwardNetwork,
+               networks: bc_networks.BCNetworks,
                random_key: networks_lib.PRNGKey,
-               loss_fn: losses.Loss,
+               loss_fn: losses.BCLoss,
                optimizer: optax.GradientTransformation,
                prefetching_iterator: Iterator[types.Transition],
                num_sgd_steps_per_step: int,
@@ -91,8 +92,7 @@ class BCLearner(acme.Learner):
     """Behavior Cloning Learner.
 
     Args:
-      network: Networks with signature for apply: (params, obs, is_training,
-        key) -> jnp.ndarray and for init: (rng, is_training) -> params
+      networks: BC networks
       random_key: RNG key.
       loss_fn: BC loss to use.
       optimizer: Optax optimizer.
@@ -115,7 +115,7 @@ class BCLearner(acme.Learner):
 
       # Compute losses and their gradients.
       key, key_input = jax.random.split(state.key)
-      loss_result, gradients = loss_and_grad(network.apply, state.policy_params,
+      loss_result, gradients = loss_and_grad(networks, state.policy_params,
                                              key_input, transitions)
 
       # Combine the gradient across all devices (by taking their mean).
@@ -153,7 +153,7 @@ class BCLearner(acme.Learner):
     self._sgd_step = jax.pmap(sgd_step, axis_name=_PMAP_AXIS_NAME)
 
     random_key, init_key = jax.random.split(random_key)
-    policy_params = network.init(init_key)
+    policy_params = networks.policy_network.init(init_key)
     optimizer_state = optimizer.init(policy_params)
 
     # Create initial state.
