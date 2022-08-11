@@ -243,7 +243,7 @@ class PPOLearner(acme.Learner):
       # Update the EMA counter and obtain the zero debiasing multiplier
       if normalize_advantage or normalize_value:
         ema_counter = state.ema_counter + 1
-        state._replace(ema_counter=ema_counter)
+        state = state._replace(ema_counter=ema_counter)
         zero_debias = 1. / (1. - jnp.power(normalization_ema_tau, ema_counter))
 
       # Extract the data.
