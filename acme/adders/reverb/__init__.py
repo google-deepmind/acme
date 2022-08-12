@@ -21,6 +21,7 @@ from acme.adders.reverb.base import PriorityFn
 from acme.adders.reverb.base import PriorityFnInput
 from acme.adders.reverb.base import ReverbAdder
 from acme.adders.reverb.base import Step
+from acme.adders.reverb.base import Trajectory
 
 from acme.adders.reverb.episode import EpisodeAdder
 from acme.adders.reverb.sequence import EndBehavior
