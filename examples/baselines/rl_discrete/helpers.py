@@ -16,12 +16,20 @@
 
 import functools
 import os
-from absl import flags
+from typing import Union
 
+from absl import flags
+from acme import core
+from acme import environment_loop
 from acme import specs
 from acme import wrappers
-from acme.jax import networks
+from acme.agents.jax import builders
+from acme.jax import experiments as experiments_lib
+from acme.jax import networks as networks_lib
+from acme.jax import types as jax_types
 from acme.jax import utils
+from acme.utils import counting
+from acme.utils import experiment_utils
 import atari_py  # pylint:disable=unused-import
 import dm_env
 import gym
@@ -60,17 +68,51 @@ def make_atari_environment(
   return wrappers.wrap_all(env, wrapper_list)
 
 
+def make_atari_evaluator_factory(
+    level_name: str,
+    network_factory: experiments_lib.NetworkFactory,
+    agent_builder: Union[builders.ActorLearnerBuilder, builders.OfflineBuilder],
+) -> experiments_lib.EvaluatorFactory:
+  """Returns an Atari evaluator process."""
+
+  def evaluator_factory(
+      random_key: jax_types.PRNGKey,
+      variable_source: core.VariableSource,
+      counter: counting.Counter,
+      make_actor: experiments_lib.MakeActorFn,
+  ) -> environment_loop.EnvironmentLoop:
+    """The evaluation process."""
+
+    environment = make_atari_environment(
+        level_name,
+        sticky_actions=False,  # Turn off sticky actions for evaluation.
+        oar_wrapper=True)
+    environment_spec = specs.make_environment_spec(environment)
+    networks = network_factory(environment_spec)
+    policy = agent_builder.make_policy(
+        networks, environment_spec, evaluation=True)
+    actor = make_actor(random_key, policy, environment_spec, variable_source)
+
+    # Create logger and counter.
+    counter = counting.Counter(counter, 'evaluator')
+    logger = experiment_utils.make_experiment_logger('evaluator', 'actor_steps')
+
+    # Create the run loop and return it.
+    return environment_loop.EnvironmentLoop(environment, actor, counter, logger)
+
+  return evaluator_factory
+
+
 def make_dqn_atari_network(
-    environment_spec: specs.EnvironmentSpec) -> networks.FeedForwardNetwork:
+    environment_spec: specs.EnvironmentSpec) -> networks_lib.FeedForwardNetwork:
   """Creates networks for training DQN on Atari."""
   def network(inputs):
     model = hk.Sequential([
-        networks.AtariTorso(),
+        networks_lib.AtariTorso(),
         hk.nets.MLP([512, environment_spec.actions.num_values]),
     ])
     return model(inputs)
   network_hk = hk.without_apply_rng(hk.transform(network))
   obs = utils.add_batch_dim(utils.zeros_like(environment_spec.observations))
-  return networks.FeedForwardNetwork(
-      init=lambda rng: network_hk.init(rng, obs),
-      apply=network_hk.apply)
+  return networks_lib.FeedForwardNetwork(
+      init=lambda rng: network_hk.init(rng, obs), apply=network_hk.apply)
