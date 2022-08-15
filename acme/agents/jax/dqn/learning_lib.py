@@ -33,6 +33,10 @@ import tree
 import typing_extensions
 
 
+# The pmap axis name. Data means data parallelization.
+PMAP_AXIS_NAME = 'data'
+
+
 class ReverbUpdate(NamedTuple):
   """Tuple for updating reverb priority information."""
   keys: jnp.ndarray
@@ -96,18 +100,24 @@ class SGDLearner(acme.Learner):
                  batch: reverb.ReplaySample) -> Tuple[TrainingState, LossExtra]:
       next_rng_key, rng_key = jax.random.split(state.rng_key)
       # Implements one SGD step of the loss and updates training state
-      (loss, extra), grads = jax.value_and_grad(self._loss, has_aux=True)(
-          state.params, state.target_params, batch, rng_key)
-      extra.metrics.update({'total_loss': loss})
+      (loss, extra), grads = jax.value_and_grad(
+          self._loss, has_aux=True)(state.params, state.target_params, batch,
+                                    rng_key)
 
+      loss = jax.lax.pmean(loss, axis_name=PMAP_AXIS_NAME)
+      # Average gradients over pmap replicas before optimizer update.
+      grads = jax.lax.pmean(grads, axis_name=PMAP_AXIS_NAME)
       # Apply the optimizer updates
       updates, new_opt_state = optimizer.update(grads, state.opt_state)
       new_params = optax.apply_updates(state.params, updates)
+
+      extra.metrics.update({'total_loss': loss})
 
       # Periodically update target networks.
       steps = state.steps + 1
       target_params = optax.periodic_update(new_params, state.target_params,
                                             steps, target_update_period)
+
       new_training_state = TrainingState(
           new_params, target_params, new_opt_state, steps, next_rng_key)
       return new_training_state, extra
@@ -122,7 +132,8 @@ class SGDLearner(acme.Learner):
     self._num_sgd_steps_per_step = num_sgd_steps_per_step
     sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step,
                                               postprocess_aux)
-    self._sgd_step = jax.jit(sgd_step)
+    self._sgd_step = jax.pmap(
+        sgd_step, axis_name=PMAP_AXIS_NAME, devices=jax.local_devices())
 
     # Internalise agent components
     self._data_iterator = data_iterator
@@ -139,20 +150,22 @@ class SGDLearner(acme.Learner):
     key_params, key_target, key_state = jax.random.split(random_key, 3)
     initial_params = self.network.init(key_params)
     initial_target_params = self.network.init(key_target)
-    self._state = TrainingState(
+    state = TrainingState(
         params=initial_params,
         target_params=initial_target_params,
         opt_state=optimizer.init(initial_params),
         steps=0,
         rng_key=key_state,
     )
+    self._state = utils.replicate_in_all_devices(state, jax.local_devices())
 
     # Update replay priorities
     def update_priorities(reverb_update: ReverbUpdate) -> None:
       if replay_client is None:
         return
       keys, priorities = tree.map_structure(
-          utils.fetch_devicearray,
+          # Fetch array and combine device and batch dimensions.
+          lambda x: utils.fetch_devicearray(x).reshape((-1,) + x.shape[2:]),
           (reverb_update.keys, reverb_update.priorities))
       replay_client.mutate_priorities(
           table=replay_table_name,
@@ -177,19 +190,22 @@ class SGDLearner(acme.Learner):
         self._async_priority_updater.put(reverb_update)
 
       steps_per_sec = (self._num_sgd_steps_per_step / elapsed) if elapsed else 0
-      extra.metrics['steps_per_second'] = steps_per_sec
+      metrics = utils.get_from_first_device(extra.metrics)
+      metrics['steps_per_second'] = steps_per_sec
 
       # Update our counts and record it.
       result = self._counter.increment(
           steps=self._num_sgd_steps_per_step, walltime=elapsed)
-      result.update(extra.metrics)
+      result.update(metrics)
       self._logger.write(result)
 
   def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
-    return [self._state.params]
+    # Return first replica of parameters.
+    return utils.get_from_first_device([self._state.params])
 
   def save(self) -> TrainingState:
-    return self._state
+    # Serialize only the first replica of parameters and optimizer state.
+    return utils.get_from_first_device(self._state)
 
   def restore(self, state: TrainingState):
-    self._state = state
+    self._state = utils.replicate_in_all_devices(state, jax.local_devices())
