@@ -22,7 +22,7 @@ Glossary of shapes:
 - X?: X is optional (e.g. optional batch/sequence dimension).
 
 """
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Sequence
 
 from acme.jax.networks import base
 from acme.jax.networks import duelling
@@ -78,22 +78,31 @@ def dqn_atari_network(num_actions: int) -> base.QNetwork:
 class DeepAtariTorso(hk.Module):
   """Deep torso for Atari, from the IMPALA paper."""
 
-  def __init__(self,
-               use_layer_norm: bool = False,
-               name: str = 'deep_atari_torso'):
+  def __init__(
+      self,
+      channels_per_group: Sequence[int] = (16, 32, 32),
+      blocks_per_group: Sequence[int] = (2, 2, 2),
+      downsampling_strategies: Sequence[resnet.DownsamplingStrategy] = (
+          resnet.DownsamplingStrategy.CONV_MAX,) * 3,
+      hidden_sizes: Sequence[int] = (256,),
+      use_layer_norm: bool = False,
+      name: str = 'deep_atari_torso'):
     super().__init__(name=name)
     self._use_layer_norm = use_layer_norm
+    self.resnet = resnet.ResNetTorso(
+        channels_per_group=channels_per_group,
+        blocks_per_group=blocks_per_group,
+        downsampling_strategies=downsampling_strategies,
+        use_layer_norm=use_layer_norm)
+    # Make sure to activate the last layer as this torso is expected to feed
+    # into the rest of a bigger network.
+    self.mlp_head = hk.nets.MLP(output_sizes=hidden_sizes, activate_final=True)
 
   def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-    output = resnet.ResNetTorso(
-        channels_per_group=(16, 32, 32),
-        blocks_per_group=(2, 2, 2),
-        use_layer_norm=self._use_layer_norm)(
-            x)
+    output = self.resnet(x)
     output = jax.nn.relu(output)
-    output = hk.Flatten()(output)
-    output = hk.Linear(256)(output)
-    output = jax.nn.relu(output)
+    output = hk.Flatten(preserve_dims=-3)(output)
+    output = self.mlp_head(output)
     return output
 
 
