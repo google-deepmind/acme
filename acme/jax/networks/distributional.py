@@ -147,10 +147,15 @@ class GaussianMixture(hk.Module):
     locs = locs.reshape(shape)
     scales = scales.reshape(shape)
 
+    if self._multivariate:
+      components_distribution = components_class(loc=locs, scale_diag=scales)
+    else:
+      components_distribution = components_class(loc=locs, scale=scales)
+
     # Create the mixture distribution.
     distribution = tfd.MixtureSameFamily(
         mixture_distribution=tfd.Categorical(logits=logits),
-        components_distribution=components_class(loc=locs, scale=scales))
+        components_distribution=components_distribution)
 
     if not self._multivariate:
       distribution = tfd.Independent(
