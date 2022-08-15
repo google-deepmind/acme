@@ -130,13 +130,13 @@ class ResNetTorso(hk.Module):
     self._downsampling_strategies = downsampling_strategies
     self._use_layer_norm = use_layer_norm
 
-    if len(channels_per_group) != len(blocks_per_group) != len(
-        downsampling_strategies):
-      raise ValueError(
-          'Length of channels_per_group and blocks_per_group must be equal. '
-          f'Got channels_per_group={channels_per_group}, '
-          f'blocks_per_group={blocks_per_group}, and'
-          f'downsampling_strategies={downsampling_strategies}.')
+    if (len(channels_per_group) != len(blocks_per_group) or
+        len(channels_per_group) != len(downsampling_strategies)):
+      raise ValueError('Length of channels_per_group, blocks_per_group, and '
+                       'downsampling_strategies must be equal. '
+                       f'Got channels_per_group={channels_per_group}, '
+                       f'blocks_per_group={blocks_per_group}, and'
+                       f'downsampling_strategies={downsampling_strategies}.')
 
   def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
     output = inputs
