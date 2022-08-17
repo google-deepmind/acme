@@ -52,10 +52,8 @@ class LossExtra(NamedTuple):
 class LossFn(typing_extensions.Protocol):
   """A LossFn calculates a loss on a single batch of data."""
 
-  def __call__(self,
-               network: networks_lib.FeedForwardNetwork,
-               params: networks_lib.Params,
-               target_params: networks_lib.Params,
+  def __call__(self, network: networks_lib.TypedFeedForwardNetwork,
+               params: networks_lib.Params, target_params: networks_lib.Params,
                batch: reverb.ReplaySample,
                key: networks_lib.PRNGKey) -> Tuple[jnp.DeviceArray, LossExtra]:
     """Calculates a loss on a single batch of data."""
@@ -78,7 +76,7 @@ class SGDLearner(acme.Learner):
   """
 
   def __init__(self,
-               network: networks_lib.FeedForwardNetwork,
+               network: networks_lib.TypedFeedForwardNetwork,
                loss_fn: LossFn,
                optimizer: optax.GradientTransformation,
                data_iterator: Iterator[reverb.ReplaySample],

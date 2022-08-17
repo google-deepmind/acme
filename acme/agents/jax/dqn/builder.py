@@ -24,6 +24,7 @@ from acme.agents.jax import builders
 from acme.agents.jax.dqn import actor as dqn_actor
 from acme.agents.jax.dqn import config as dqn_config
 from acme.agents.jax.dqn import learning_lib
+from acme.agents.jax.dqn import networks as dqn_networks
 from acme.datasets import reverb as datasets
 from acme.jax import networks as networks_lib
 from acme.jax import utils
@@ -36,8 +37,8 @@ import reverb
 from reverb import rate_limiters
 
 
-class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
-                                              dqn_actor.EpsilonPolicy,
+class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
+                                              dqn_networks.EpsilonPolicy,
                                               reverb.ReplaySample]):
   """DQN Builder."""
 
@@ -59,7 +60,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks: networks_lib.FeedForwardNetwork,
+      networks: dqn_networks.DQNNetworks,
       dataset: Iterator[reverb.ReplaySample],
       logger_fn: loggers.LoggerFactory,
       environment_spec: Optional[specs.EnvironmentSpec],
@@ -69,7 +70,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
     del environment_spec
 
     return learning_lib.SGDLearner(
-        network=networks,
+        network=networks.policy_network,
         random_key=random_key,
         optimizer=optax.adam(
             self._config.learning_rate, eps=self._config.adam_eps),
@@ -174,9 +175,9 @@ class DQNBuilder(builders.ActorLearnerBuilder[networks_lib.FeedForwardNetwork,
         discount=self._config.discount)
 
   def make_policy(self,
-                  networks: networks_lib.FeedForwardNetwork,
+                  networks: dqn_networks.DQNNetworks,
                   environment_spec: specs.EnvironmentSpec,
-                  evaluation: bool = False) -> dqn_actor.EpsilonPolicy:
+                  evaluation: bool = False) -> dqn_networks.EpsilonPolicy:
     """Creates the policy."""
     del environment_spec, evaluation
     return dqn_actor.behavior_policy(networks)

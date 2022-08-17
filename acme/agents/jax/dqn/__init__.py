@@ -27,3 +27,4 @@ from acme.agents.jax.dqn.learning_lib import ReverbUpdate
 from acme.agents.jax.dqn.learning_lib import SGDLearner
 from acme.agents.jax.dqn.losses import PrioritizedDoubleQLearning
 from acme.agents.jax.dqn.losses import QrDqn
+from acme.agents.jax.dqn.networks import DQNNetworks

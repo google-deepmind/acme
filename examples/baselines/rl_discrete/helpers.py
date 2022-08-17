@@ -24,6 +24,7 @@ from acme import environment_loop
 from acme import specs
 from acme import wrappers
 from acme.agents.jax import builders
+from acme.agents.jax import dqn
 from acme.jax import experiments as experiments_lib
 from acme.jax import networks as networks_lib
 from acme.jax import types as jax_types
@@ -104,7 +105,7 @@ def make_atari_evaluator_factory(
 
 
 def make_dqn_atari_network(
-    environment_spec: specs.EnvironmentSpec) -> networks_lib.FeedForwardNetwork:
+    environment_spec: specs.EnvironmentSpec) -> dqn.DQNNetworks:
   """Creates networks for training DQN on Atari."""
   def network(inputs):
     model = hk.Sequential([
@@ -114,5 +115,7 @@ def make_dqn_atari_network(
     return model(inputs)
   network_hk = hk.without_apply_rng(hk.transform(network))
   obs = utils.add_batch_dim(utils.zeros_like(environment_spec.observations))
-  return networks_lib.FeedForwardNetwork(
+  network = networks_lib.FeedForwardNetwork(
       init=lambda rng: network_hk.init(rng, obs), apply=network_hk.apply)
+  typed_network = networks_lib.non_stochastic_network_to_typed(network)
+  return dqn.DQNNetworks(policy_network=typed_network)

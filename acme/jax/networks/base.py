@@ -15,7 +15,7 @@
 """Base interfaces for networks."""
 
 import dataclasses
-from typing import Callable, Tuple
+from typing import Callable, Optional, Protocol, Tuple
 
 from acme import types
 from acme.jax import types as jax_types
@@ -58,3 +58,53 @@ class FeedForwardNetwork:
   init: Callable[..., Params]
   # Computes and returns the outputs of a forward pass.
   apply: Callable[..., NetworkOutput]
+
+
+class ApplyFn(Protocol):
+
+  def __call__(self,
+               params: Params,
+               observation: Observation,
+               *args,
+               is_training: bool,
+               key: Optional[PRNGKey] = None,
+               **kwargs) -> NetworkOutput:
+    ...
+
+
+@dataclasses.dataclass
+class TypedFeedForwardNetwork:
+  """FeedForwardNetwork with more specific types of the member functions.
+
+  Attributes:
+    init: A pure function. Initializes and returns the networks parameters.
+    apply: A pure function. Computes and returns the outputs of a forward pass.
+  """
+  init: Callable[[PRNGKey], Params]
+  apply: ApplyFn
+
+
+def non_stochastic_network_to_typed(
+    network: FeedForwardNetwork) -> TypedFeedForwardNetwork:
+  """Converts non-stochastic FeedForwardNetwork to TypedFeedForwardNetwork.
+
+  Non-stochastic network is the one that doesn't take a random key as an input
+  for its `apply` method.
+
+  Arguments:
+    network: non-stochastic feed-forward network.
+
+  Returns:
+    corresponding TypedFeedForwardNetwork
+  """
+
+  def apply(params: Params,
+            observation: Observation,
+            *args,
+            is_training: bool,
+            key: Optional[PRNGKey] = None,
+            **kwargs) -> NetworkOutput:
+    del is_training, key
+    return network.apply(params, observation, *args, **kwargs)
+
+  return TypedFeedForwardNetwork(init=network.init, apply=apply)

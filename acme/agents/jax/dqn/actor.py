@@ -17,12 +17,12 @@
 from typing import Callable, Sequence
 
 from acme.agents.jax import actor_core as actor_core_lib
+from acme.agents.jax.dqn import networks as dqn_networks
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 import chex
 import jax
 import jax.numpy as jnp
-import rlax
 
 
 Epsilon = float
@@ -70,8 +70,7 @@ def alternating_epsilons_actor_core(
       get_extras=lambda _: None)
 
 
-def behavior_policy(network: networks_lib.FeedForwardNetwork
-                    ) -> EpsilonPolicy:
+def behavior_policy(networks: dqn_networks.DQNNetworks) -> EpsilonPolicy:
   """A policy with parameterized epsilon-greedy exploration."""
 
   def apply_and_sample(params: networks_lib.Params, key: networks_lib.PRNGKey,
@@ -79,20 +78,21 @@ def behavior_policy(network: networks_lib.FeedForwardNetwork
                        ) -> networks_lib.Action:
     # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
     observation = utils.add_batch_dim(observation)
-    action_values = network.apply(params, observation)
+    action_values = networks.policy_network.apply(
+        params, observation, is_training=False)
     action_values = utils.squeeze_batch_dim(action_values)
-    return rlax.epsilon_greedy(epsilon).sample(key, action_values)
+    return networks.sample_fn(action_values, key, epsilon)
 
   return apply_and_sample
 
 
-def default_behavior_policy(network: networks_lib.FeedForwardNetwork,
+def default_behavior_policy(networks: dqn_networks.DQNNetworks,
                             epsilon: Epsilon) -> EpsilonPolicy:
   """A policy with a fixed-epsilon epsilon-greedy exploration.
 
   DEPRECATED: use behavior_policy instead.
   Args:
-    network: network producing observation -> action values or logits
+    networks: DQN networks
     epsilon: sampling parameter that overrides the one in EpsilonPolicy
   Returns:
     epsilon-greedy behavior policy with fixed epsilon
@@ -104,8 +104,9 @@ def default_behavior_policy(network: networks_lib.FeedForwardNetwork,
                        ) -> networks_lib.Action:
     # TODO(b/161332815): Make JAX Actor work with batched or unbatched inputs.
     observation = utils.add_batch_dim(observation)
-    action_values = network.apply(params, observation)
+    action_values = networks.policy_network.apply(
+        params, observation, is_training=False)
     action_values = utils.squeeze_batch_dim(action_values)
-    return rlax.epsilon_greedy(epsilon).sample(key, action_values)
+    return networks.sample_fn(action_values, key, epsilon)
 
   return apply_and_sample
