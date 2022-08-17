@@ -37,6 +37,7 @@ from acme.jax.networks.base import TypedFeedForwardNetwork
 from acme.jax.networks.base import Value
 from acme.jax.networks.continuous import LayerNormMLP
 from acme.jax.networks.continuous import NearZeroInitializedLinear
+from acme.jax.networks.distributional import CategoricalCriticHead
 from acme.jax.networks.distributional import CategoricalHead
 from acme.jax.networks.distributional import CategoricalValueHead
 from acme.jax.networks.distributional import DiscreteValued
