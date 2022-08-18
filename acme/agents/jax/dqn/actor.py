@@ -38,9 +38,11 @@ class EpsilonActorState:
   epsilon: jnp.ndarray
 
 
-def alternating_epsilons_actor_core(
-    policy_network: EpsilonPolicy, epsilons: Sequence[float],
-) -> actor_core_lib.ActorCore[EpsilonActorState, None]:
+DQNPolicy = actor_core_lib.ActorCore[EpsilonActorState, None]
+
+
+def alternating_epsilons_actor_core(policy_network: EpsilonPolicy,
+                                    epsilons: Sequence[float]) -> DQNPolicy:
   """Returns actor components for alternating epsilon exploration.
 
   Args:

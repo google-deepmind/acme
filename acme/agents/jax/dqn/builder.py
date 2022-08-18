@@ -38,7 +38,7 @@ from reverb import rate_limiters
 
 
 class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
-                                              dqn_networks.EpsilonPolicy,
+                                              dqn_actor.DQNPolicy,
                                               reverb.ReplaySample]):
   """DQN Builder."""
 
@@ -86,7 +86,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy: dqn_actor.EpsilonPolicy,
+      policy: dqn_actor.DQNPolicy,
       environment_spec: Optional[specs.EnvironmentSpec],
       variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
@@ -96,12 +96,8 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
     # Inference happens on CPU, so it's better to move variables there too.
     variable_client = variable_utils.VariableClient(
         variable_source, '', device='cpu')
-    epsilon = self._config.epsilon
-    epsilons = epsilon if epsilon is Sequence else (epsilon,)
-    actor_core = dqn_actor.alternating_epsilons_actor_core(
-        policy, epsilons=epsilons)
     return actors.GenericActor(
-        actor=actor_core,
+        actor=policy,
         random_key=random_key,
         variable_client=variable_client,
         adder=adder,
@@ -110,7 +106,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
-      policy: dqn_actor.EpsilonPolicy,
+      policy: dqn_actor.DQNPolicy,
   ) -> List[reverb.Table]:
     """Creates reverb tables for the algorithm."""
     del policy
@@ -164,7 +160,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
       self,
       replay_client: reverb.Client,
       environment_spec: Optional[specs.EnvironmentSpec],
-      policy: Optional[dqn_actor.EpsilonPolicy],
+      policy: Optional[dqn_actor.DQNPolicy],
   ) -> Optional[adders.Adder]:
     """Creates an adder which handles observations."""
     del environment_spec, policy
@@ -177,7 +173,15 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
   def make_policy(self,
                   networks: dqn_networks.DQNNetworks,
                   environment_spec: specs.EnvironmentSpec,
-                  evaluation: bool = False) -> dqn_networks.EpsilonPolicy:
+                  evaluation: bool = False) -> dqn_actor.DQNPolicy:
     """Creates the policy."""
-    del environment_spec, evaluation
-    return dqn_actor.behavior_policy(networks)
+    del environment_spec
+
+    if evaluation and self._config.eval_epsilon:
+      epsilon = self._config.eval_epsilon
+    else:
+      epsilon = self._config.epsilon
+    epsilons = epsilon if epsilon is Sequence else (epsilon,)
+
+    return dqn_actor.alternating_epsilons_actor_core(
+        dqn_actor.behavior_policy(networks), epsilons=epsilons)

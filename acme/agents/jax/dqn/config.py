@@ -15,7 +15,7 @@
 """DQN config."""
 
 import dataclasses
-from typing import Callable, Sequence, Union
+from typing import Callable, Optional, Sequence, Union
 
 from acme.adders import reverb as adders_reverb
 import jax.numpy as jnp
@@ -29,6 +29,7 @@ class DQNConfig:
   Attributes:
     epsilon: for use by epsilon-greedy policies. If multiple, the epsilons are
       alternated randomly per-episode.
+    eval_epsilon: for use by evaluation epsilon-greedy policies.
     seed: Random seed.
     learning_rate: Learning rate for Adam optimizer. Could be a number or a
       function defining a schedule.
@@ -52,6 +53,7 @@ class DQNConfig:
       step.
   """
   epsilon: Union[float, Sequence[float]] = 0.05
+  eval_epsilon: Optional[float] = None
   # TODO(b/191706065): update all clients and remove this field.
   seed: int = 1
 
