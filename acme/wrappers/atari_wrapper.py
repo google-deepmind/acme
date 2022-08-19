@@ -342,7 +342,7 @@ class AtariWrapper(BaseAtariWrapper):
     processed_pixels = processed_pixels.astype(np.uint8, copy=False)
     if self._scale_dims != processed_pixels.shape[:2]:
       processed_pixels = Image.fromarray(processed_pixels).resize(
-          (self._width, self._height), Image.BILINEAR)
+          (self._width, self._height), Image.Resampling.BILINEAR)
       processed_pixels = np.array(processed_pixels, dtype=np.uint8)
 
     return processed_pixels
