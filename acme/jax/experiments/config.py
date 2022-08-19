@@ -243,7 +243,7 @@ def make_policy(experiment: ExperimentConfig, networks: AgentNetwork,
       evaluation=evaluation)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class CheckpointingConfig:
   """Configuration options for checkpointing.
 

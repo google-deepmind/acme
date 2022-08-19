@@ -39,16 +39,15 @@ SnapshotModelFactory = Callable[[builders.Networks, specs.EnvironmentSpec],
 def make_distributed_offline_experiment(
     experiment: config.OfflineExperimentConfig,
     *,
-    checkpointing_config: Optional[config.CheckpointingConfig] = None,
+    checkpointing_config: Optional[
+        config.CheckpointingConfig] = config.CheckpointingConfig(),
     make_snapshot_models: Optional[SnapshotModelFactory] = None,
     name='agent',
     program: Optional[lp.Program] = None):
   """Builds distributed agent based on a builder."""
 
-  if checkpointing_config is None:
-    checkpointing_config = config.CheckpointingConfig()
-
   def build_model_saver(variable_source: core.VariableSource):
+    assert checkpointing_config
     environment = experiment.environment_factory(0)
     spec = specs.make_environment_spec(environment)
     networks = experiment.network_factory(spec)
@@ -61,14 +60,17 @@ def make_distributed_offline_experiment(
         add_uid=checkpointing_config.add_uid)
 
   def build_counter():
-    return savers.CheckpointingRunner(
-        counting.Counter(),
-        key='counter',
-        subdirectory='counter',
-        time_delta_minutes=5,
-        directory=checkpointing_config.directory,
-        add_uid=checkpointing_config.add_uid,
-        max_to_keep=checkpointing_config.max_to_keep)
+    counter = counting.Counter()
+    if checkpointing_config:
+      counter = savers.CheckpointingRunner(
+          counter,
+          key='counter',
+          subdirectory='counter',
+          time_delta_minutes=5,
+          directory=checkpointing_config.directory,
+          add_uid=checkpointing_config.add_uid,
+          max_to_keep=checkpointing_config.max_to_keep)
+    return counter
 
   def build_learner(
       random_key: networks_lib.PRNGKey,
@@ -99,14 +101,15 @@ def make_distributed_offline_experiment(
         environment_spec=spec,
         counter=counter)
 
-    learner = savers.CheckpointingRunner(
-        learner,
-        key='learner',
-        subdirectory='learner',
-        time_delta_minutes=5,
-        directory=checkpointing_config.directory,
-        add_uid=checkpointing_config.add_uid,
-        max_to_keep=checkpointing_config.max_to_keep)
+    if checkpointing_config:
+      learner = savers.CheckpointingRunner(
+          learner,
+          key='learner',
+          subdirectory='learner',
+          time_delta_minutes=5,
+          directory=checkpointing_config.directory,
+          add_uid=checkpointing_config.add_uid,
+          max_to_keep=checkpointing_config.max_to_keep)
 
     return learner
 

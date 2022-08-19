@@ -46,7 +46,8 @@ def make_distributed_experiment(
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
     multithreading_colocate_learner_and_reverb: bool = False,
-    checkpointing_config: Optional[config.CheckpointingConfig] = None,
+    checkpointing_config: Optional[
+        config.CheckpointingConfig] = config.CheckpointingConfig(),
     make_snapshot_models: Optional[SnapshotModelFactory] = None,
     name='agent',
     program: Optional[lp.Program] = None):
@@ -60,9 +61,6 @@ def make_distributed_experiment(
         '\tmultithreading_colocate_learner_and_reverb='
         f'{multithreading_colocate_learner_and_reverb}'
         f'\tnum_learner_nodes={num_learner_nodes}.')
-
-  if checkpointing_config is None:
-    checkpointing_config = config.CheckpointingConfig()
 
   def build_replay():
     """The replay storage."""
@@ -79,6 +77,7 @@ def make_distributed_experiment(
     return experiment.builder.make_replay_tables(spec, policy)
 
   def build_model_saver(variable_source: core.VariableSource):
+    assert checkpointing_config
     environment = experiment.environment_factory(0)
     spec = specs.make_environment_spec(environment)
     networks = experiment.network_factory(spec)
@@ -92,14 +91,17 @@ def make_distributed_experiment(
         add_uid=checkpointing_config.add_uid)
 
   def build_counter():
-    return savers.CheckpointingRunner(
-        counting.Counter(),
-        key='counter',
-        subdirectory='counter',
-        time_delta_minutes=5,
-        directory=checkpointing_config.directory,
-        add_uid=checkpointing_config.add_uid,
-        max_to_keep=checkpointing_config.max_to_keep)
+    counter = counting.Counter()
+    if checkpointing_config:
+      counter = savers.CheckpointingRunner(
+          counter,
+          key='counter',
+          subdirectory='counter',
+          time_delta_minutes=5,
+          directory=checkpointing_config.directory,
+          add_uid=checkpointing_config.add_uid,
+          max_to_keep=checkpointing_config.max_to_keep)
+    return counter
 
   def build_learner(
       random_key: networks_lib.PRNGKey,
@@ -127,20 +129,21 @@ def make_distributed_experiment(
                                               experiment.logger_factory, spec,
                                               replay, counter)
 
-    if primary_learner is None:
-      learner = savers.CheckpointingRunner(
-          learner,
-          key='learner',
-          subdirectory='learner',
-          time_delta_minutes=5,
-          directory=checkpointing_config.directory,
-          add_uid=checkpointing_config.add_uid,
-          max_to_keep=checkpointing_config.max_to_keep)
-    else:
-      learner.restore(primary_learner.save())
-      # NOTE: This initially synchronizes secondary learner states with the
-      # primary one. Further synchronization should be handled by the learner
-      # properly doing a pmap/pmean on the loss/gradients, respectively.
+    if checkpointing_config:
+      if primary_learner is None:
+        learner = savers.CheckpointingRunner(
+            learner,
+            key='learner',
+            subdirectory='learner',
+            time_delta_minutes=5,
+            directory=checkpointing_config.directory,
+            add_uid=checkpointing_config.add_uid,
+            max_to_keep=checkpointing_config.max_to_keep)
+      else:
+        learner.restore(primary_learner.save())
+        # NOTE: This initially synchronizes secondary learner states with the
+        # primary one. Further synchronization should be handled by the learner
+        # properly doing a pmap/pmean on the loss/gradients, respectively.
 
     return learner
 
@@ -185,10 +188,11 @@ def make_distributed_experiment(
 
   key = jax.random.PRNGKey(experiment.seed)
 
+  checkpoint_time_delta_minutes: Optional[int] = (
+      checkpointing_config.replay_checkpointing_time_delta_minutes
+      if checkpointing_config else None)
   replay_node = lp.ReverbNode(
-      build_replay,
-      checkpoint_time_delta_minutes=(
-          checkpointing_config.replay_checkpointing_time_delta_minutes))
+      build_replay, checkpoint_time_delta_minutes=checkpoint_time_delta_minutes)
   replay = replay_node.create_handle()
 
   counter = program.add_node(lp.CourierNode(build_counter), label='counter')
