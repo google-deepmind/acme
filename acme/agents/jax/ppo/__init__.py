@@ -25,3 +25,7 @@ from acme.agents.jax.ppo.networks import make_mvn_diag_ppo_networks
 from acme.agents.jax.ppo.networks import make_networks
 from acme.agents.jax.ppo.networks import make_ppo_networks
 from acme.agents.jax.ppo.networks import PPONetworks
+from acme.agents.jax.ppo.normalization import build_ema_mean_std_normalizer
+from acme.agents.jax.ppo.normalization import build_mean_std_normalizer
+from acme.agents.jax.ppo.normalization import NormalizationActorWrapper
+from acme.agents.jax.ppo.normalization import NormalizationFns

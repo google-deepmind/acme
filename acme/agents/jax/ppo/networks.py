@@ -15,18 +15,16 @@
 """PPO network definitions."""
 
 import dataclasses
-from typing import Any, Callable, Optional, Sequence, NamedTuple
+from typing import Any, Callable, NamedTuple, Optional, Sequence
 
 from acme import specs
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.jax import networks as networks_lib
 from acme.jax import utils
-
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
-
 import tensorflow_probability
 
 tfp = tensorflow_probability.substrates.jax

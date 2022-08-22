@@ -16,7 +16,9 @@
 import dataclasses
 from typing import Callable, Union, Optional
 
+from acme import types
 from acme.adders import reverb as adders_reverb
+from acme.agents.jax.ppo import normalization
 
 
 @dataclasses.dataclass
@@ -54,6 +56,10 @@ class PPOConfig:
       updates.
     metrics_logging_period: How often metrics should be aggregated to host and
       logged.
+    pmap_axis_name: The name of the axis used for pmapping
+    obs_normalization_fns_factory: The factory used for create observation
+      normalization functions. Setting to None (default) disables observation
+      normalization.
   """
   unroll_length: int = 8
   num_minibatches: int = 8
@@ -77,3 +83,6 @@ class PPOConfig:
   variable_update_period: int = 1
   log_global_norm_metrics: bool = False
   metrics_logging_period: int = 100
+  pmap_axis_name: str = 'devices'
+  obs_normalization_fns_factory: Optional[Callable[
+      [types.NestedSpec], normalization.NormalizationFns]] = None

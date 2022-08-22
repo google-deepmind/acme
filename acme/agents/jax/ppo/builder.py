@@ -25,6 +25,7 @@ from acme.agents.jax import builders
 from acme.agents.jax.ppo import config as ppo_config
 from acme.agents.jax.ppo import learning
 from acme.agents.jax.ppo import networks as ppo_networks
+from acme.agents.jax.ppo import normalization
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.jax import variable_utils
@@ -145,7 +146,7 @@ class PPOBuilder(
       replay_client: Optional[reverb.Client] = None,
       counter: Optional[counting.Counter] = None,
   ) -> core.Learner:
-    del environment_spec, replay_client
+    del replay_client
 
     if callable(self._config.learning_rate):
       optimizer = optax.chain(
@@ -157,6 +158,11 @@ class PPOBuilder(
           optax.clip_by_global_norm(self._config.max_gradient_norm),
           optax.scale_by_adam(eps=self._config.adam_epsilon),
           optax.scale(-self._config.learning_rate))
+
+    obs_normalization_fns = None
+    if self._config.obs_normalization_fns_factory is not None:
+      obs_normalization_fns = self._config.obs_normalization_fns_factory(
+          environment_spec.observations)
 
     return learning.PPOLearner(
         ppo_networks=networks,
@@ -180,6 +186,8 @@ class PPOBuilder(
         logger=logger_fn('learner'),
         log_global_norm_metrics=self._config.log_global_norm_metrics,
         metrics_logging_period=self._config.metrics_logging_period,
+        pmap_axis_name=self._config.pmap_axis_name,
+        obs_normalization_fns=obs_normalization_fns,
     )
 
   def make_actor(
@@ -190,17 +198,28 @@ class PPOBuilder(
       variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
-    del environment_spec
     assert variable_source is not None
-    actor = actor_core_lib.batched_feed_forward_with_extras_to_actor_core(
-        policy)
-    variable_client = variable_utils.VariableClient(
+    policy_variable_client = variable_utils.VariableClient(
         variable_source,
-        'network',
+        'params',
         device='cpu',
         update_period=self._config.variable_update_period)
-    return actors.GenericActor(
-        actor, random_key, variable_client, adder, backend='cpu')
+    actor = actor_core_lib.batched_feed_forward_with_extras_to_actor_core(
+        policy)
+    actor = actors.GenericActor(
+        actor, random_key, policy_variable_client, adder, backend='cpu')
+
+    if self._config.obs_normalization_fns_factory is not None:
+      obs_normalization_fns = self._config.obs_normalization_fns_factory(
+          environment_spec.observations)
+      obs_norm_variable_client = variable_utils.VariableClient(
+          variable_source,
+          'obs_normalization_params',
+          device='cpu',
+          update_period=self._config.variable_update_period)
+      actor = normalization.NormalizationActorWrapper(
+          actor, obs_normalization_fns, obs_norm_variable_client, backend='cpu')
+    return actor
 
   def make_policy(
       self,

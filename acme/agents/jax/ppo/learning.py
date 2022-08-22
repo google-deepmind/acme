@@ -19,6 +19,7 @@ from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
 import acme
 from acme import types
 from acme.agents.jax.ppo import networks
+from acme.agents.jax.ppo import normalization
 from acme.jax import networks as networks_lib
 from acme.jax.utils import get_from_first_device
 from acme.utils import counting
@@ -65,6 +66,9 @@ class TrainingState(NamedTuple):
   value_mean: Optional[networks_lib.Params] = None
   value_std: Optional[networks_lib.Params] = None
 
+  # Optional parameters for observation normalization
+  obs_normalization_params: Optional[normalization.NormalizationParams] = None
+
 
 class PPOLearner(acme.Learner):
   """Learner for PPO."""
@@ -92,6 +96,8 @@ class PPOLearner(acme.Learner):
       logger: Optional[loggers.Logger] = None,
       log_global_norm_metrics: bool = False,
       metrics_logging_period: int = 100,
+      pmap_axis_name: str = 'devices',
+      obs_normalization_fns: Optional[normalization.NormalizationFns] = None,
   ):
     self.local_learner_devices = jax.local_devices()
     self.num_local_learner_devices = jax.local_device_count()
@@ -101,6 +107,10 @@ class PPOLearner(acme.Learner):
     self.metrics_logging_period = metrics_logging_period
     self._num_full_update_steps = 0
     self._iterator = iterator
+
+    normalize_obs = obs_normalization_fns is not None
+    if normalize_obs:
+      assert obs_normalization_fns is not None
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()
@@ -187,7 +197,7 @@ class PPOLearner(acme.Learner):
       )
 
       # Apply updates
-      loss_grad = jax.lax.pmean(loss_grad, axis_name='devices')
+      loss_grad = jax.lax.pmean(loss_grad, axis_name=pmap_axis_name)
       updates, opt_state = optimizer.update(loss_grad, state.opt_state)
       params = optax.apply_updates(state.params, updates)
 
@@ -195,10 +205,9 @@ class PPOLearner(acme.Learner):
         metrics['norm_grad'] = optax.global_norm(loss_grad)
         metrics['norm_updates'] = optax.global_norm(updates)
 
-      new_state = state._replace(
-          params=params, opt_state=opt_state, random_key=key)
+      state = state._replace(params=params, opt_state=opt_state, random_key=key)
 
-      return new_state, metrics
+      return state, metrics
 
     def epoch_update(
         carry: Tuple[TrainingState, Batch],
@@ -253,6 +262,14 @@ class PPOLearner(acme.Learner):
                                                             data.reward,
                                                             data.discount,
                                                             data.extras)
+
+      if normalize_obs:
+        obs_norm_params = obs_normalization_fns.update(
+            state.obs_normalization_params, observations, pmap_axis_name)
+        state = state._replace(obs_normalization_params=obs_norm_params)
+        observations = obs_normalization_fns.normalize(
+            observations, state.obs_normalization_params)
+
       if max_abs_reward is not None:
         # Apply reward clipping.
         rewards = jnp.clip(rewards, -1. * max_abs_reward, max_abs_reward)
@@ -265,7 +282,7 @@ class PPOLearner(acme.Learner):
         batch_value_second_moment = jnp.mean(behavior_values**2)
         batch_value_first_moment, batch_value_second_moment = jax.lax.pmean(
             (batch_value_first_moment, batch_value_second_moment),
-            axis_name='devices')
+            axis_name=pmap_axis_name)
 
         biased_value_first_moment = (
             normalization_ema_tau * state.biased_value_first_moment +
@@ -320,7 +337,8 @@ class PPOLearner(acme.Learner):
 
       if normalize_advantage:
         batch_advantage_scale = jnp.mean(jnp.abs(batch.advantages))
-        batch_advantage_scale = jax.lax.pmean(batch_advantage_scale, 'devices')
+        batch_advantage_scale = jax.lax.pmean(batch_advantage_scale,
+                                              pmap_axis_name)
 
         # update the running statistics
         biased_advantage_scale = (
@@ -351,7 +369,9 @@ class PPOLearner(acme.Learner):
       return state, metrics
 
     pmapped_update_step = jax.pmap(
-        single_device_update, axis_name='devices', devices=self.learner_devices)
+        single_device_update,
+        axis_name=pmap_axis_name,
+        devices=self.learner_devices)
 
     def full_update_step(
         state: TrainingState,
@@ -414,6 +434,13 @@ class PPOLearner(acme.Learner):
             value_mean=value_mean,
             value_std=value_std)
 
+      if normalize_obs:
+        obs_norm_params = obs_normalization_fns.init()  # pytype: disable=attribute-error
+        obs_norm_params = jax.device_put_replicated(obs_norm_params,
+                                                    self.local_learner_devices)
+        init_state = init_state._replace(
+            obs_normalization_params=obs_norm_params)
+
       return init_state
 
     # Initialise training state (parameters and optimizer state).
@@ -440,8 +467,9 @@ class PPOLearner(acme.Learner):
     self._num_full_update_steps += 1
 
   def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
-    params = get_from_first_device(self._state.params, as_numpy=False)
-    return [params]
+    state = get_from_first_device(self._state, as_numpy=False)
+    variables = state._asdict()
+    return [variables[name] for name in names]
 
   def save(self) -> TrainingState:
     return get_from_first_device(self._state, as_numpy=False)
