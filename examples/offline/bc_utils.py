@@ -30,7 +30,7 @@ from acme.jax import networks as networks_lib
 from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.jax import variable_utils
-from acme.jax.layouts import offline_distributed_layout
+from acme.jax.deprecated import offline_distributed_layout
 from acme.utils import counting
 from acme.utils import loggers
 from acme.wrappers import single_precision
