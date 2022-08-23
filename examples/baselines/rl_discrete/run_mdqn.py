@@ -15,7 +15,6 @@
 """Example running Munchausen-DQN on discrete control tasks."""
 
 from absl import flags
-from acme import specs
 from acme.agents.jax import dqn
 from acme.agents.jax.dqn import losses
 import helpers
@@ -25,34 +24,29 @@ from acme.utils import lp_utils
 import launchpad as lp
 
 
-FLAGS = flags.FLAGS
-
-flags.DEFINE_bool(
+RUN_DISTRIBUTED = flags.DEFINE_bool(
     'run_distributed', False, 'Should an agent be executed in a '
     'distributed way (the default is a single-threaded agent)')
-flags.DEFINE_string('env_name', 'Pong', 'What environment to run')
-flags.DEFINE_integer('seed', 0, 'Random seed.')
-flags.DEFINE_integer('num_steps', 1_000_000, 'Number of env steps to run.')
+ENV_NAME = flags.DEFINE_string('env_name', 'Pong', 'What environment to run')
+SEED = flags.DEFINE_integer('seed', 0, 'Random seed.')
+NUM_STEPS = flags.DEFINE_integer('num_steps', 1_000_000,
+                                 'Number of env steps to run.')
 
 
 def build_experiment_config():
   """Builds MDQN experiment config which can be executed in different ways."""
   # Create an environment, grab the spec, and use it to create networks.
-  env_name = FLAGS.env_name
+  env_name = ENV_NAME.value
 
   def env_factory(seed):
     del seed
     return helpers.make_atari_environment(
         level=env_name, sticky_actions=True, zero_discount_on_life_loss=False)
 
-  environment_spec = specs.make_environment_spec(env_factory(0))
-
-  # Create network.
-  network = helpers.make_dqn_atari_network(environment_spec)
-
   # Construct the agent.
   config = dqn.DQNConfig(
       discount=0.99,
+      eval_epsilon=0.,
       learning_rate=5e-5,
       n_step=1,
       epsilon=0.01,
@@ -70,22 +64,20 @@ def build_experiment_config():
   return experiments.ExperimentConfig(
       builder=dqn_builder,
       environment_factory=env_factory,
-      network_factory=lambda spec: network,
-      evaluator_factories=[],
-      seed=FLAGS.seed,
-      max_num_actor_steps=FLAGS.num_steps)
+      network_factory=helpers.make_dqn_atari_network,
+      seed=SEED.value,
+      max_num_actor_steps=NUM_STEPS.value)
 
 
 def main(_):
-  config = build_experiment_config()
-  # Evaluation is disabled for performance reasons. Set `num_eval_episodes` to
-  # a positive number and remove `evaluator_factories=[]` to enable it.
-  if FLAGS.run_distributed:
+  experiment_config = build_experiment_config()
+  if RUN_DISTRIBUTED.value:
     program = experiments.make_distributed_experiment(
-        experiment=config, num_actors=4)
+        experiment=experiment_config,
+        num_actors=4 if lp_utils.is_local_run() else 128)
     lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
   else:
-    experiments.run_experiment(experiment=config, num_eval_episodes=0)
+    experiments.run_experiment(experiment_config)
 
 
 if __name__ == '__main__':
