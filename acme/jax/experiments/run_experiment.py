@@ -16,7 +16,7 @@
 
 import sys
 import time
-from typing import Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 import acme
 from acme import core
@@ -24,6 +24,7 @@ from acme import specs
 from acme import types
 from acme.jax import utils
 from acme.jax.experiments import config
+from acme.tf import savers
 from acme.utils import counting
 import dm_env
 import jax
@@ -106,13 +107,25 @@ def run_experiment(experiment: config.ExperimentConfig,
   train_logger = experiment.logger_factory('train',
                                            train_counter.get_steps_key(), 0)
 
+  checkpointer = None
+  if experiment.checkpointing is not None:
+    checkpointer = savers.Checkpointer(
+        objects_to_save={
+            'learner': learner,
+            'counter': parent_counter
+        },
+        time_delta_minutes=5,
+        directory=experiment.checkpointing.directory,
+        add_uid=experiment.checkpointing.add_uid,
+        max_to_keep=experiment.checkpointing.max_to_keep)
+
   # Replace the actor with a LearningActor. This makes sure that every time
   # that `update` is called on the actor it checks to see whether there is
   # any new data to learn from and if so it runs a learner step. The rate
   # at which new data is released is controlled by the replay table's
   # rate_limiter which is created by the builder.make_replay_tables call above.
   actor = _LearningActor(actor, learner, dataset, replay_tables,
-                         rate_limiters_max_diff)
+                         rate_limiters_max_diff, checkpointer)
 
   train_loop = acme.EnvironmentLoop(
       environment,
@@ -168,7 +181,8 @@ class _LearningActor(core.Actor):
   def __init__(self, actor: core.Actor, learner: core.Learner,
                iterator: core.PrefetchingIterator,
                replay_tables: Sequence[reverb.Table],
-               sample_sizes: Sequence[int]):
+               sample_sizes: Sequence[int],
+               checkpointer: Optional[savers.Checkpointer]):
     """Initializes _LearningActor.
 
     Args:
@@ -181,6 +195,7 @@ class _LearningActor(core.Actor):
         table should have available for sampling to wait for the `iterator` to
         prefetch a batch of data. Otherwise more experience needs to be
         collected by the actor.
+      checkpointer: Checkpointer to save the state on update.
     """
     self._actor = actor
     self._learner = learner
@@ -188,6 +203,7 @@ class _LearningActor(core.Actor):
     self._replay_tables = replay_tables
     self._sample_sizes = sample_sizes
     self._learner_steps = 0
+    self._checkpointer = checkpointer
 
   def select_action(self, observation: types.NestedArray) -> types.NestedArray:
     return self._actor.select_action(observation)
@@ -226,6 +242,8 @@ class _LearningActor(core.Actor):
     if self._maybe_train():
       # Update the actor weights only when learner was updated.
       self._actor.update()
+      if self._checkpointer:
+        self._checkpointer.save()
 
 
 def _disable_insert_blocking(

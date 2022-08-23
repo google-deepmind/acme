@@ -17,6 +17,7 @@
 import acme
 from acme import specs
 from acme.jax.experiments import config
+from acme.tf import savers
 from acme.utils import counting
 import jax
 
@@ -83,6 +84,18 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
         logger=eval_logger,
         observers=experiment.observers)
 
+  checkpointer = None
+  if experiment.checkpointing is not None:
+    checkpointer = savers.Checkpointer(
+        objects_to_save={
+            'learner': learner,
+            'counter': parent_counter
+        },
+        time_delta_minutes=5,
+        directory=experiment.checkpointing.directory,
+        add_uid=experiment.checkpointing.add_uid,
+        max_to_keep=experiment.checkpointing.max_to_keep)
+
   # Run the training loop.
   if eval_loop:
     eval_loop.run(num_eval_episodes)
@@ -91,6 +104,8 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
     learner_steps = min(eval_every, experiment.max_num_learner_steps - steps)
     for _ in range(learner_steps):
       learner.step()
+      if checkpointer is not None:
+        checkpointer.save()
     if eval_loop:
       eval_loop.run(num_eval_episodes)
     steps += learner_steps

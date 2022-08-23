@@ -172,11 +172,11 @@ class DistributedLayout:
         seed=seed,
         max_num_actor_steps=max_number_of_steps,
         logger_factory=logger_factory(learner_logger_fn, actor_logger_fn,
-                                      save_logs))
+                                      save_logs),
+        checkpointing=checkpointing_config)
     self._num_actors = num_actors
     self._multithreading_colocate_learner_and_reverb = (
         multithreading_colocate_learner_and_reverb)
-    self._checkpointing_config = checkpointing_config
     self._make_snapshot_models = make_snapshot_models
 
   def build(self, name='agent', program: Optional[lp.Program] = None):
@@ -187,7 +187,6 @@ class DistributedLayout:
         self._num_actors,
         multithreading_colocate_learner_and_reverb=self
         ._multithreading_colocate_learner_and_reverb,
-        checkpointing_config=self._checkpointing_config,
         make_snapshot_models=self._make_snapshot_models,
         name=name,
         program=program)

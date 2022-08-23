@@ -39,15 +39,13 @@ SnapshotModelFactory = Callable[[builders.Networks, specs.EnvironmentSpec],
 def make_distributed_offline_experiment(
     experiment: config.OfflineExperimentConfig,
     *,
-    checkpointing_config: Optional[
-        config.CheckpointingConfig] = config.CheckpointingConfig(),
     make_snapshot_models: Optional[SnapshotModelFactory] = None,
     name='agent',
     program: Optional[lp.Program] = None):
   """Builds distributed agent based on a builder."""
 
   def build_model_saver(variable_source: core.VariableSource):
-    assert checkpointing_config
+    assert experiment.checkpointing
     environment = experiment.environment_factory(0)
     spec = specs.make_environment_spec(environment)
     networks = experiment.network_factory(spec)
@@ -56,20 +54,20 @@ def make_distributed_offline_experiment(
     return snapshotter.JAXSnapshotter(
         variable_source=variable_source,
         models=models,
-        path=checkpointing_config.directory,
-        add_uid=checkpointing_config.add_uid)
+        path=experiment.checkpointing.directory,
+        add_uid=experiment.checkpointing.add_uid)
 
   def build_counter():
     counter = counting.Counter()
-    if checkpointing_config:
+    if experiment.checkpointing:
       counter = savers.CheckpointingRunner(
           counter,
           key='counter',
           subdirectory='counter',
           time_delta_minutes=5,
-          directory=checkpointing_config.directory,
-          add_uid=checkpointing_config.add_uid,
-          max_to_keep=checkpointing_config.max_to_keep)
+          directory=experiment.checkpointing.directory,
+          add_uid=experiment.checkpointing.add_uid,
+          max_to_keep=experiment.checkpointing.max_to_keep)
     return counter
 
   def build_learner(
@@ -101,15 +99,15 @@ def make_distributed_offline_experiment(
         environment_spec=spec,
         counter=counter)
 
-    if checkpointing_config:
+    if experiment.checkpointing:
       learner = savers.CheckpointingRunner(
           learner,
           key='learner',
           subdirectory='learner',
           time_delta_minutes=5,
-          directory=checkpointing_config.directory,
-          add_uid=checkpointing_config.add_uid,
-          max_to_keep=checkpointing_config.max_to_keep)
+          directory=experiment.checkpointing.directory,
+          add_uid=experiment.checkpointing.add_uid,
+          max_to_keep=experiment.checkpointing.max_to_keep)
 
     return learner
 
@@ -141,7 +139,7 @@ def make_distributed_offline_experiment(
                        experiment.builder.make_actor),
         label='evaluator')
 
-  if make_snapshot_models and checkpointing_config:
+  if make_snapshot_models and experiment.checkpointing:
     program.add_node(lp.CourierNode(build_model_saver, learner),
                      label='model_saver')
 

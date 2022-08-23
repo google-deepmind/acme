@@ -47,6 +47,31 @@ EvaluatorFactory = Callable[[
 ], core.Worker]
 
 
+@dataclasses.dataclass(frozen=True)
+class CheckpointingConfig:
+  """Configuration options for checkpointing.
+
+  Attributes:
+    max_to_keep: Maximum number of checkpoints to keep. Does not apply to replay
+      checkpointing.
+    directory: Where to store the checkpoints.
+    add_uid: Whether or not to add a unique identifier, see
+      `paths.get_unique_id()` for how it is generated.
+    replay_checkpointing_time_delta_minutes: How frequently to write replay
+      checkpoints; defaults to None, which disables periodic checkpointing.
+      Warning! These are written asynchronously so as not to interrupt other
+      replay duties, however this does pose a risk of OOM since items that would
+      otherwise be removed are temporarily kept alive for checkpointing
+      purposes.
+      Note: Since replay buffers tend to be quite large O(100GiB), writing can
+        take up to 10 minutes so keep that in mind when setting this frequency.
+  """
+  max_to_keep: int = 1
+  directory: str = '~/acme'
+  add_uid: bool = True
+  replay_checkpointing_time_delta_minutes: Optional[int] = None
+
+
 @dataclasses.dataclass
 class ExperimentConfig:
   """Config which defines aspects of constructing an experiment.
@@ -71,6 +96,8 @@ class ExperimentConfig:
     observers: Observers used for extending logs with custom information.
     logger_factory: Loggers factory used to construct loggers for learner,
       actors and evaluators.
+    checkpointing: Configuration options for checkpointing. If None,
+      checkpointing and snapshotting is disabled.
   """
   # Below fields must be explicitly specified for any Agent.
   builder: builders.ActorLearnerBuilder
@@ -91,6 +118,7 @@ class ExperimentConfig:
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
   logger_factory: loggers.LoggerFactory = experiment_utils.make_experiment_logger
+  checkpointing: Optional[CheckpointingConfig] = CheckpointingConfig()
 
   # TODO(stanczyk): Make get_evaluator_factories a standalone function.
   def get_evaluator_factories(self):
@@ -151,6 +179,8 @@ class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
     observers: Observers used for extending logs with custom information.
     logger_factory: Loggers factory used to construct loggers for learner,
       actors and evaluators.
+    checkpointing: Configuration options for checkpointing. If None,
+      checkpointing and snapshotting is disabled.
   """
   # Below fields must be explicitly specified for any Agent.
   builder: builders.OfflineBuilder[builders.Networks, builders.Policy,
@@ -168,6 +198,7 @@ class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
   logger_factory: loggers.LoggerFactory = experiment_utils.make_experiment_logger
+  checkpointing: Optional[CheckpointingConfig] = CheckpointingConfig()
 
   # TODO(stanczyk): Make get_evaluator_factories a standalone function.
   def get_evaluator_factories(self):
@@ -241,28 +272,3 @@ def make_policy(experiment: ExperimentConfig, networks: AgentNetwork,
       networks=networks,
       environment_spec=environment_spec,
       evaluation=evaluation)
-
-
-@dataclasses.dataclass(frozen=True)
-class CheckpointingConfig:
-  """Configuration options for checkpointing.
-
-  Attributes:
-    max_to_keep: Maximum number of checkpoints to keep. Does not apply to replay
-      checkpointing.
-    directory: Where to store the checkpoints.
-    add_uid: Whether or not to add a unique identifier, see
-      `paths.get_unique_id()` for how it is generated.
-    replay_checkpointing_time_delta_minutes: How frequently to write replay
-      checkpoints; defaults to None, which disables periodic checkpointing.
-      Warning! These are written asynchronously so as not to interrupt other
-      replay duties, however this does pose a risk of OOM since items that would
-      otherwise be removed are temporarily kept alive for checkpointing
-      purposes.
-      Note: Since replay buffers tend to be quite large O(100GiB), writing can
-        take up to 10 minutes so keep that in mind when setting this frequency.
-  """
-  max_to_keep: int = 1
-  directory: str = '~/acme'
-  add_uid: bool = True
-  replay_checkpointing_time_delta_minutes: Optional[int] = None
