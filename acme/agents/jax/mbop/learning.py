@@ -167,7 +167,7 @@ class MBOPLearner(core.Learner):
     """
     # General learner book-keeping and loggers.
     self._counter = counter or counting.Counter()
-    self._logger = logger_fn('', 'steps')
+    self._logger = logger_fn('mbop', 'steps')
 
     # Prepare iterators for the learners, to not split the data (preserve sample
     # efficiency).

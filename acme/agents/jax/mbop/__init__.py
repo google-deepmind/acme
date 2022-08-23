@@ -18,6 +18,8 @@ from acme.agents.jax.mbop.acting import ActorCore
 from acme.agents.jax.mbop.acting import make_actor
 from acme.agents.jax.mbop.acting import make_actor_core
 from acme.agents.jax.mbop.acting import make_ensemble_actor_core
+from acme.agents.jax.mbop.builder import MBOPBuilder
+from acme.agents.jax.mbop.config import MBOPConfig
 from acme.agents.jax.mbop.dataset import EPISODE_RETURN
 from acme.agents.jax.mbop.dataset import episodes_to_timestep_batched_transitions
 from acme.agents.jax.mbop.dataset import get_normalization_stats
