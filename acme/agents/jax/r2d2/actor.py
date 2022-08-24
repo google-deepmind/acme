@@ -40,6 +40,7 @@ class R2D2ActorState(Generic[actor_core_lib.RecurrentState]):
   rng: networks_lib.PRNGKey
   epsilon: jnp.ndarray
   recurrent_state: actor_core_lib.RecurrentState
+  prev_recurrent_state: actor_core_lib.RecurrentState
 
 
 R2D2Policy = actor_core_lib.ActorCore[
@@ -70,7 +71,11 @@ def get_actor_core(
                                                        state.recurrent_state)
     action = rlax.epsilon_greedy(state.epsilon).sample(policy_rng, q_values)
 
-    return action, R2D2ActorState(rng, state.epsilon, recurrent_state)
+    return action, R2D2ActorState(
+        rng=rng,
+        epsilon=state.epsilon,
+        recurrent_state=recurrent_state,
+        prev_recurrent_state=state.recurrent_state)
 
   def init(
       rng: networks_lib.PRNGKey
@@ -82,11 +87,15 @@ def get_actor_core(
     else:
       epsilon = evaluation_epsilon
     initial_core_state = networks.initial_state.apply(None, state_rng, None)
-    return R2D2ActorState(rng, epsilon, initial_core_state)
+    return R2D2ActorState(
+        rng=rng,
+        epsilon=epsilon,
+        recurrent_state=initial_core_state,
+        prev_recurrent_state=initial_core_state)
 
   def get_extras(
       state: R2D2ActorState[actor_core_lib.RecurrentState]) -> R2D2Extras:
-    return {'core_state': state.recurrent_state}
+    return {'core_state': state.prev_recurrent_state}
 
   return actor_core_lib.ActorCore(init=init, select_action=select_action,
                                   get_extras=get_extras)
