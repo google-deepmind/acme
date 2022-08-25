@@ -14,13 +14,15 @@
 
 """IMPALA Builder."""
 
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Any, Callable, Generic, Iterator, List, Optional
 
 import acme
 from acme import adders
 from acme import core
 from acme import specs
 from acme.adders import reverb as reverb_adders
+from acme.agents.jax import actor_core as actor_core_lib
+from acme.agents.jax import actors as actors_lib
 from acme.agents.jax import builders
 from acme.agents.jax.impala import acting
 from acme.agents.jax.impala import config as impala_config
@@ -39,8 +41,9 @@ import optax
 import reverb
 
 
-class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
-                                                 impala_networks.IMPALANetworks,
+class IMPALABuilder(Generic[actor_core_lib.RecurrentState],
+                    builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
+                                                 acting.ImpalaPolicy,
                                                  reverb.ReplaySample]):
   """IMPALA Builder."""
 
@@ -59,7 +62,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
-      policy: impala_networks.IMPALANetworks,
+      policy: acting.ImpalaPolicy,
   ) -> List[reverb.Table]:
     """The queue; use XData or INFO log."""
     del policy
@@ -128,7 +131,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
       self,
       replay_client: reverb.Client,
       environment_spec: Optional[specs.EnvironmentSpec],
-      policy: Optional[impala_networks.IMPALANetworks],
+      policy: Optional[acting.ImpalaPolicy],
   ) -> Optional[adders.Adder]:
     """Creates an adder which handles observations."""
     del environment_spec, policy
@@ -179,7 +182,7 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy: impala_networks.IMPALANetworks,
+      policy: acting.ImpalaPolicy,
       environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
@@ -188,20 +191,11 @@ class IMPALABuilder(builders.ActorLearnerBuilder[impala_networks.IMPALANetworks,
     variable_client = variable_utils.VariableClient(
         client=variable_source,
         key='network',
-        update_period=self._config.variable_update_period,
-        device='cpu')
-    return acting.IMPALAActor(
-        forward_fn=policy.forward_fn,
-        initial_state_fn=policy.initial_state_fn,
-        variable_client=variable_client,
-        adder=adder,
-        rng=hk.PRNGSequence(random_key),
-    )
+        update_period=self._config.variable_update_period)
+    return actors_lib.GenericActor(policy, random_key, variable_client, adder)
 
-  def make_policy(
-      self,
-      networks: impala_networks.IMPALANetworks[Any],
-      environment_spec: specs.EnvironmentSpec,
-      evaluation: bool = False) -> impala_networks.IMPALANetworks[Any]:
-    del environment_spec, evaluation
-    return networks
+  def make_policy(self,
+                  networks: impala_networks.IMPALANetworks[Any],
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> acting.ImpalaPolicy:
+    return acting.get_actor_core(networks, environment_spec, evaluation)
