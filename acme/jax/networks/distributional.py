@@ -14,7 +14,7 @@
 
 """Haiku modules that output tfd.Distributions."""
 
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, List, Optional, Sequence, Union, Callable
 
 import chex
 import haiku as hk
@@ -62,6 +62,8 @@ class GaussianMixture(hk.Module):
                init_scale: Optional[float] = None,
                append_singleton_event_dim: bool = False,
                reinterpreted_batch_ndims: Optional[int] = None,
+               transformation_fn: Optional[Callable[[tfd.Distribution],
+                                                    tfd.Distribution]] = None,
                name: str = 'GaussianMixture'):
     """Initialization.
 
@@ -74,6 +76,8 @@ class GaussianMixture(hk.Module):
         singleton dimension to the event shape.
       reinterpreted_batch_ndims: (univariate only) Number of batch dimensions to
         reinterpret as event dimensions.
+      transformation_fn: Distribution transform such as TanhTransformation
+        applied to individual components.
       name: name of the module passed to snt.Module parent class.
     """
     super().__init__(name=name)
@@ -88,6 +92,8 @@ class GaussianMixture(hk.Module):
       self._scale_factor = init_scale / jax.nn.softplus(0.)
     else:
       self._scale_factor = 1.0  # Corresponds to init_scale = softplus(0).
+
+    self._transformation_fn = transformation_fn
 
   def __call__(self,
                inputs: jnp.ndarray,
@@ -152,6 +158,10 @@ class GaussianMixture(hk.Module):
       components_distribution = components_class(loc=locs, scale_diag=scales)
     else:
       components_distribution = components_class(loc=locs, scale=scales)
+
+    # Transformed the component distributions in the mixture.
+    if self._transformation_fn:
+      components_distribution = self._transformation_fn(components_distribution)
 
     # Create the mixture distribution.
     distribution = tfd.MixtureSameFamily(
