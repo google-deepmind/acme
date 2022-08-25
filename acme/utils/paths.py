@@ -59,10 +59,13 @@ def process_path(path: str,
   return path
 
 
+_DATETIME = time.strftime('%Y%m%d-%H%M%S')
+
+
 def get_unique_id() -> Tuple[str, ...]:
   """Makes a unique identifier for this process; override with --acme_id."""
   # By default we'll use the global id.
-  identifier = time.strftime('%Y%m%d-%H%M%S')
+  identifier = _DATETIME
 
   # If the --acme_id flag is given prefer that; ignore if flag processing has
   # been skipped (this happens in colab or in tests).
