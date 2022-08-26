@@ -25,6 +25,7 @@ from acme.jax.experiments.config import NetworkFactory
 from acme.jax.experiments.config import OfflineExperimentConfig
 from acme.jax.experiments.config import PolicyNetwork
 from acme.jax.experiments.make_distributed_experiment import make_distributed_experiment
+from acme.jax.experiments.make_distributed_experiment import SnapshotModelFactory
 from acme.jax.experiments.make_distributed_offline_experiment import make_distributed_offline_experiment
 from acme.jax.experiments.run_experiment import run_experiment
 from acme.jax.experiments.run_offline_experiment import run_offline_experiment
