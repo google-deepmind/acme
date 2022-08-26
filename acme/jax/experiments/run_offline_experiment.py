@@ -91,17 +91,21 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
             'learner': learner,
             'counter': parent_counter
         },
-        time_delta_minutes=5,
+        time_delta_minutes=experiment.checkpointing.time_delta_minutes,
         directory=experiment.checkpointing.directory,
         add_uid=experiment.checkpointing.add_uid,
         max_to_keep=experiment.checkpointing.max_to_keep)
+
+  max_num_learner_steps = (
+      experiment.max_num_learner_steps -
+      parent_counter.get_counts().get('learner_steps', 0))
 
   # Run the training loop.
   if eval_loop:
     eval_loop.run(num_eval_episodes)
   steps = 0
-  while steps < experiment.max_num_learner_steps:
-    learner_steps = min(eval_every, experiment.max_num_learner_steps - steps)
+  while steps < max_num_learner_steps:
+    learner_steps = min(eval_every, max_num_learner_steps - steps)
     for _ in range(learner_steps):
       learner.step()
       if checkpointer is not None:

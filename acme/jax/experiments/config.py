@@ -65,11 +65,13 @@ class CheckpointingConfig:
       purposes.
       Note: Since replay buffers tend to be quite large O(100GiB), writing can
         take up to 10 minutes so keep that in mind when setting this frequency.
+    time_delta_minutes: How often to save the checkpoint, in minutes.
   """
   max_to_keep: int = 1
   directory: str = '~/acme'
   add_uid: bool = True
   replay_checkpointing_time_delta_minutes: Optional[int] = None
+  time_delta_minutes: int = 5
 
 
 @dataclasses.dataclass

@@ -114,7 +114,7 @@ def run_experiment(experiment: config.ExperimentConfig,
             'learner': learner,
             'counter': parent_counter
         },
-        time_delta_minutes=5,
+        time_delta_minutes=experiment.checkpointing.time_delta_minutes,
         directory=experiment.checkpointing.directory,
         add_uid=experiment.checkpointing.add_uid,
         max_to_keep=experiment.checkpointing.max_to_keep)
@@ -134,9 +134,13 @@ def run_experiment(experiment: config.ExperimentConfig,
       logger=train_logger,
       observers=experiment.observers)
 
+  max_num_actor_steps = (
+      experiment.max_num_actor_steps -
+      parent_counter.get_counts().get('train_steps', 0))
+
   if num_eval_episodes == 0:
     # No evaluation. Just run the training loop.
-    train_loop.run(num_steps=experiment.max_num_actor_steps)
+    train_loop.run(num_steps=max_num_actor_steps)
     return
 
   # Create the evaluation actor and loop.
@@ -161,7 +165,7 @@ def run_experiment(experiment: config.ExperimentConfig,
       observers=experiment.observers)
 
   steps = 0
-  while steps < experiment.max_num_actor_steps:
+  while steps < max_num_actor_steps:
     eval_loop.run(num_episodes=num_eval_episodes)
     steps += train_loop.run(num_steps=eval_every)
   eval_loop.run(num_episodes=num_eval_episodes)
@@ -242,8 +246,8 @@ class _LearningActor(core.Actor):
     if self._maybe_train():
       # Update the actor weights only when learner was updated.
       self._actor.update()
-      if self._checkpointer:
-        self._checkpointer.save()
+    if self._checkpointer:
+      self._checkpointer.save()
 
 
 def _disable_insert_blocking(
