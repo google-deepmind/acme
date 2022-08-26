@@ -34,9 +34,7 @@ from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
-import haiku as hk
 import jax
-import jax.numpy as jnp
 import optax
 import reverb
 
@@ -50,12 +48,10 @@ class IMPALABuilder(Generic[actor_core_lib.RecurrentState],
   def __init__(
       self,
       config: impala_config.IMPALAConfig,
-      core_state_spec: hk.LSTMState,
       table_extension: Optional[Callable[[], Any]] = None,
   ):
     """Creates an IMPALA learner."""
     self._config = config
-    self._core_state_spec = core_state_spec
     self._sequence_length = self._config.sequence_length
     self._table_extension = table_extension
 
@@ -65,15 +61,10 @@ class IMPALABuilder(Generic[actor_core_lib.RecurrentState],
       policy: acting.ImpalaPolicy,
   ) -> List[reverb.Table]:
     """The queue; use XData or INFO log."""
-    del policy
-    num_actions = environment_spec.actions.num_values
-    extra_spec = {
-        'core_state': self._core_state_spec,
-        'logits': jnp.ones(shape=(num_actions,), dtype=jnp.float32)
-    }
+    dummy_actor_state = policy.init(jax.random.PRNGKey(0))
     signature = reverb_adders.SequenceAdder.signature(
         environment_spec,
-        extra_spec,
+        policy.get_extras(dummy_actor_state),
         sequence_length=self._config.sequence_length)
 
     # Maybe create rate limiter.
