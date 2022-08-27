@@ -123,7 +123,7 @@ class DecentralizedMultiAgentBuilder(
     def _make_logger_fn(agent_id: ma_types.AgentID):
       """Returns agent logger function while avoiding cell-var-from-loop bugs."""
       return (
-          lambda label, steps_key=None, task_instance=None: loggers[agent_id])
+          lambda label, steps_key=None, task_instance=None: loggers[agent_id])  # pytype: disable=unsupported-operands
 
     loggers = logger_fn(label='')  # label is unused at the parent level
     if loggers is None:
