@@ -14,14 +14,13 @@
 
 """Program definition for a distributed layout for an offline RL experiment."""
 
-from typing import Callable, Dict, Optional
+from typing import Any, Optional
 
 from acme import core
 from acme import specs
 from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.jax import savers
-from acme.jax import types
 from acme.jax import utils
 from acme.jax.experiments import config
 from acme.jax import snapshotter
@@ -31,15 +30,11 @@ import jax
 import launchpad as lp
 
 
-SnapshotModelFactory = Callable[[builders.Networks, specs.EnvironmentSpec],
-                                Dict[str, Callable[[core.VariableSource],
-                                                   types.ModelToSnapshot]]]
-
-
 def make_distributed_offline_experiment(
-    experiment: config.OfflineExperimentConfig,
+    experiment: config.OfflineExperimentConfig[builders.Networks, Any, Any],
     *,
-    make_snapshot_models: Optional[SnapshotModelFactory] = None,
+    make_snapshot_models: Optional[config.SnapshotModelFactory[
+        builders.Networks]] = None,
     name='agent',
     program: Optional[lp.Program] = None):
   """Builds distributed agent based on a builder."""

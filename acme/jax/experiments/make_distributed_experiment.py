@@ -15,14 +15,14 @@
 """Program definition for a distributed layout based on a builder."""
 
 import itertools
-from typing import Callable, Dict, Optional
+from typing import Any, Optional
 
 from acme import core
 from acme import environment_loop
 from acme import specs
+from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.jax import savers
-from acme.jax import types
 from acme.jax import utils
 from acme.jax.experiments import config
 from acme.jax import snapshotter
@@ -34,19 +34,16 @@ import reverb
 
 ActorId = int
 
-SnapshotModelFactory = Callable[[config.AgentNetwork, specs.EnvironmentSpec],
-                                Dict[str, Callable[[core.VariableSource],
-                                                   types.ModelToSnapshot]]]
-
 
 def make_distributed_experiment(
-    experiment: config.ExperimentConfig,
+    experiment: config.ExperimentConfig[builders.Networks, Any, Any],
     num_actors: int,
     *,
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
     multithreading_colocate_learner_and_reverb: bool = False,
-    make_snapshot_models: Optional[SnapshotModelFactory] = None,
+    make_snapshot_models: Optional[config.SnapshotModelFactory[
+        builders.Networks]] = None,
     name='agent',
     program: Optional[lp.Program] = None):
   """Builds distributed agent based on a builder."""

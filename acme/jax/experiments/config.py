@@ -15,7 +15,7 @@
 """JAX experiment config."""
 
 import dataclasses
-from typing import Any, Callable, Generic, Iterator, Optional, Sequence
+from typing import Any, Callable, Dict, Generic, Iterator, Optional, Protocol, Sequence
 
 from acme import core
 from acme import environment_loop
@@ -29,22 +29,51 @@ from acme.utils import observers as observers_lib
 from acme.utils import experiment_utils
 import jax
 
-AgentNetwork = Any
-PolicyNetwork = Any
-EvaluationFlag = bool
-MakeActorFn = Callable[
-    [types.PRNGKey, PolicyNetwork, specs.EnvironmentSpec, core.VariableSource],
-    core.Actor]
-NetworkFactory = Callable[[specs.EnvironmentSpec], AgentNetwork]
-DeprecatedPolicyFactory = Callable[[AgentNetwork], PolicyNetwork]
-PolicyFactory = Callable[[AgentNetwork, specs.EnvironmentSpec, EvaluationFlag],
-                         PolicyNetwork]
-EvaluatorFactory = Callable[[
-    types.PRNGKey,
-    core.VariableSource,
-    counting.Counter,
-    MakeActorFn,
-], core.Worker]
+
+class MakeActorFn(Protocol, Generic[builders.Policy]):
+
+  def __call__(self, random_key: types.PRNGKey, policy: builders.Policy,
+               environment_spec: specs.EnvironmentSpec,
+               variable_source: core.VariableSource) -> core.Actor:
+    ...
+
+
+class NetworkFactory(Protocol, Generic[builders.Networks]):
+
+  def __call__(self,
+               environment_spec: specs.EnvironmentSpec) -> builders.Networks:
+    ...
+
+
+class DeprecatedPolicyFactory(Protocol, Generic[builders.Networks,
+                                                builders.Policy]):
+
+  def __call__(self, networks: builders.Networks) -> builders.Policy:
+    ...
+
+
+class PolicyFactory(Protocol, Generic[builders.Networks, builders.Policy]):
+
+  def __call__(self, networks: builders.Networks,
+               environment_spec: specs.EnvironmentSpec,
+               evaluation: bool) -> builders.Policy:
+    ...
+
+
+class EvaluatorFactory(Protocol, Generic[builders.Policy]):
+
+  def __call__(self, random_key: types.PRNGKey,
+               variable_source: core.VariableSource, counter: counting.Counter,
+               make_actor_fn: MakeActorFn[builders.Policy]) -> core.Worker:
+    ...
+
+
+class SnapshotModelFactory(Protocol, Generic[builders.Networks]):
+
+  def __call__(
+      self, networks: builders.Networks, environment_spec: specs.EnvironmentSpec
+  ) -> Dict[str, Callable[[core.VariableSource], types.ModelToSnapshot]]:
+    ...
 
 
 @dataclasses.dataclass(frozen=True)
@@ -74,8 +103,9 @@ class CheckpointingConfig:
   time_delta_minutes: int = 5
 
 
-@dataclasses.dataclass
-class ExperimentConfig:
+@dataclasses.dataclass(frozen=True)
+class ExperimentConfig(Generic[builders.Networks, builders.Policy,
+                               builders.Sample]):
   """Config which defines aspects of constructing an experiment.
 
   Attributes:
@@ -102,21 +132,25 @@ class ExperimentConfig:
       checkpointing and snapshotting is disabled.
   """
   # Below fields must be explicitly specified for any Agent.
-  builder: builders.ActorLearnerBuilder
-  network_factory: NetworkFactory
+  builder: builders.ActorLearnerBuilder[builders.Networks, builders.Policy,
+                                        builders.Sample]
+  network_factory: NetworkFactory[builders.Networks]
   environment_factory: types.EnvironmentFactory
   max_num_actor_steps: int
   seed: int
   # policy_network_factory is deprecated. Use builder.make_policy to
   # create the policy.
-  policy_network_factory: Optional[DeprecatedPolicyFactory] = None
+  policy_network_factory: Optional[DeprecatedPolicyFactory[
+      builders.Networks, builders.Policy]] = None
   # Fields below are optional. If you just started with Acme do not worry about
   # them. You might need them later when you want to customize your RL agent.
   # TODO(stanczyk): Introduce a marker for the default value (instead of None).
-  evaluator_factories: Optional[Sequence[EvaluatorFactory]] = None
+  evaluator_factories: Optional[Sequence[EvaluatorFactory[
+      builders.Policy]]] = None
   # eval_policy_network_factory is deprecated. Use builder.make_policy to
   # create the policy.
-  eval_policy_network_factory: Optional[DeprecatedPolicyFactory] = None
+  eval_policy_network_factory: Optional[DeprecatedPolicyFactory[
+      builders.Networks, builders.Policy]] = None
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
   logger_factory: loggers.LoggerFactory = experiment_utils.make_experiment_logger
@@ -128,9 +162,9 @@ class ExperimentConfig:
     if self.evaluator_factories is not None:
       return self.evaluator_factories
 
-    def eval_policy_factory(networks: AgentNetwork,
+    def eval_policy_factory(networks: builders.Networks,
                             environment_spec: specs.EnvironmentSpec,
-                            evaluation: EvaluationFlag) -> PolicyNetwork:
+                            evaluation: bool) -> builders.Policy:
       del evaluation
       # The config factory has precedence until all agents are migrated to use
       # builder.make_policy
@@ -225,18 +259,18 @@ class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
 
 def default_evaluator_factory(
     environment_factory: types.EnvironmentFactory,
-    network_factory: NetworkFactory,
-    policy_factory: PolicyFactory,
+    network_factory: NetworkFactory[builders.Networks],
+    policy_factory: PolicyFactory[builders.Networks, builders.Policy],
     logger_factory: loggers.LoggerFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
-) -> EvaluatorFactory:
+) -> EvaluatorFactory[builders.Policy]:
   """Returns a default evaluator process."""
 
   def evaluator(
       random_key: types.PRNGKey,
       variable_source: core.VariableSource,
       counter: counting.Counter,
-      make_actor: MakeActorFn,
+      make_actor: MakeActorFn[builders.Policy],
   ):
     """The evaluation process."""
 
@@ -260,9 +294,10 @@ def default_evaluator_factory(
   return evaluator
 
 
-def make_policy(experiment: ExperimentConfig, networks: AgentNetwork,
+def make_policy(experiment: ExperimentConfig[builders.Networks, builders.Policy,
+                                             Any], networks: builders.Networks,
                 environment_spec: specs.EnvironmentSpec,
-                evaluation: bool) -> PolicyNetwork:
+                evaluation: bool) -> builders.Policy:
   """Constructs a policy. It is only meant to be used internally."""
   # TODO(sabela): remove and update callers once all agents use
   # builder.make_policy

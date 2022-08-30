@@ -14,7 +14,7 @@
 
 """Program definition for a distributed layout based on a builder."""
 
-from typing import Callable, Dict, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 from acme import core
 from acme import environment_loop
@@ -30,22 +30,20 @@ import jax
 import launchpad as lp
 
 # TODO(stanczyk): Remove when use cases are ported to the new location.
-EvaluatorFactory = experiments.config.EvaluatorFactory
-AgentNetwork = experiments.config.AgentNetwork
-PolicyNetwork = experiments.config.PolicyNetwork
-NetworkFactory = experiments.config.NetworkFactory
-PolicyFactory = experiments.config.DeprecatedPolicyFactory
-MakeActorFn = experiments.config.MakeActorFn
+EvaluatorFactory = experiments.EvaluatorFactory
+AgentNetwork = Any
+PolicyNetwork = Any
+NetworkFactory = experiments.NetworkFactory
+PolicyFactory = experiments.DeprecatedPolicyFactory
+MakeActorFn = experiments.MakeActorFn
 LoggerLabel = loggers.LoggerLabel
 LoggerStepsKey = loggers.LoggerStepsKey
 LoggerFn = Callable[[LoggerLabel, LoggerStepsKey], loggers.Logger]
-EvaluatorFactory = experiments.config.EvaluatorFactory
+EvaluatorFactory = experiments.EvaluatorFactory
 
 ActorId = int
 
-SnapshotModelFactory = Callable[
-    [experiments.config.AgentNetwork, specs.EnvironmentSpec],
-    Dict[str, Callable[[core.VariableSource], types.ModelToSnapshot]]]
+SnapshotModelFactory = experiments.SnapshotModelFactory
 
 CheckpointingConfig = experiments.CheckpointingConfig
 
