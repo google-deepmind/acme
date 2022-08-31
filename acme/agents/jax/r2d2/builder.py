@@ -95,7 +95,7 @@ def _zero_pad(sequence_length: int) -> datasets.Transform:
 
 
 def _make_adder_config(step_spec: reverb_base.Step, seq_len: int,
-                       seq_period: int) -> list[sw.Config]:
+                       seq_period: int) -> List[sw.Config]:
   return structured.create_sequence_config(
       step_spec=step_spec,
       sequence_length=seq_len,
