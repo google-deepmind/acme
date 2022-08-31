@@ -119,7 +119,7 @@ class BaseAtariWrapper(abc.ABC, base.EnvironmentWrapper):
       max_episode_len = np.inf
 
     self._frame_stacker = frame_stacking.FrameStacker(
-        num_frames=num_stacked_frames)
+        num_frames=num_stacked_frames, flatten=num_stacked_frames == 1)
     self._action_repeats = action_repeats
     self._pooled_frames = pooled_frames
     self._scale_dims = scale_dims
