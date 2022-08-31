@@ -69,8 +69,16 @@ class IMPALALearner(acme.Learner):
 
     self._iterator = iterator
 
+    def unroll_without_rng(
+        params: networks_lib.Params, observations: networks_lib.Observation,
+        initial_state: networks_lib.RecurrentState
+    ) -> Tuple[networks_lib.NetworkOutput, networks_lib.RecurrentState]:
+      unused_rng = jax.random.PRNGKey(0)
+      return networks.unroll(params, unused_rng, observations, initial_state)
+
     loss_fn = losses.impala_loss(
-        networks.unroll_fn,
+        # TODO(b/244319884): Consider supporting the use of RNG in impala_loss.
+        unroll_fn=unroll_without_rng,
         discount=discount,
         max_abs_reward=max_abs_reward,
         baseline_cost=baseline_cost,
@@ -105,17 +113,9 @@ class IMPALALearner(acme.Learner):
 
     def make_initial_state(key: jnp.ndarray) -> TrainingState:
       """Initialises the training state (parameters and optimiser state)."""
-      key, key_initial_state = jax.random.split(key)
-      # Note: parameters do not depend on the batch size, so initial_state below
-      # does not need a batch dimension.
-      # TODO(jferret): as it stands, we do not yet support
-      # training the initial state params.
-      initial_state = networks.initial_state_fn(key_initial_state)
-
-      initial_params = networks.unroll_init_fn(key, initial_state)
-      initial_opt_state = optimizer.init(initial_params)
+      initial_params = networks.init(key)
       return TrainingState(
-          params=initial_params, opt_state=initial_opt_state)
+          params=initial_params, opt_state=optimizer.init(initial_params))
 
     # Initialise training state (parameters and optimiser state).
     state = make_initial_state(random_key)

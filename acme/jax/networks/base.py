@@ -27,6 +27,7 @@ import jax.numpy as jnp
 PRNGKey = jax_types.PRNGKey
 
 # Commonly-used types.
+BatchSize = int
 Observation = types.NestedArray
 Action = types.NestedArray
 Params = types.NestedArray
@@ -35,6 +36,7 @@ QValues = jnp.ndarray
 Logits = jnp.ndarray
 LogProb = jnp.ndarray
 Value = jnp.ndarray
+RecurrentState = types.NestedArray
 
 # Commonly-used function/network signatures.
 QNetwork = Callable[[Observation], QValues]
@@ -82,6 +84,19 @@ class TypedFeedForwardNetwork:
   """
   init: Callable[[PRNGKey], Params]
   apply: ApplyFn
+
+
+@dataclasses.dataclass
+class UnrollableNetwork:
+  """Network that can unroll over an input sequence."""
+  init: Callable[[PRNGKey], Params]
+  apply: Callable[[Params, PRNGKey, Observation, RecurrentState],
+                  Tuple[NetworkOutput, RecurrentState]]
+  unroll: Callable[[Params, PRNGKey, Observation, RecurrentState],
+                   Tuple[NetworkOutput, RecurrentState]]
+  init_recurrent_state: Callable[[PRNGKey, Optional[BatchSize]], RecurrentState]
+  # TODO(b/244311990): Consider supporting parameterized and learnable initial
+  # state functions.
 
 
 def non_stochastic_network_to_typed(

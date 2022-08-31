@@ -48,18 +48,18 @@ def get_actor_core(
 ) -> ImpalaPolicy:
   """Creates an Impala ActorCore."""
 
-  dummy_seed = jax.random.PRNGKey(0)
-  dummy_initial_state = networks.initial_state_fn(dummy_seed)
   dummy_logits = jnp.zeros(environment_spec.actions.num_values)
 
   def init(
       rng: jax_types.PRNGKey
   ) -> ImpalaActorState[actor_core_lib.RecurrentState]:
+    rng, init_state_rng = jax.random.split(rng)
+    initial_state = networks.init_recurrent_state(init_state_rng, None)
     return ImpalaActorState(
         rng=rng,
         logits=dummy_logits,
-        recurrent_state=dummy_initial_state,
-        prev_recurrent_state=dummy_initial_state)
+        recurrent_state=initial_state,
+        prev_recurrent_state=initial_state)
 
   def select_action(
       params: networks_lib.Params,
@@ -68,9 +68,13 @@ def get_actor_core(
   ) -> Tuple[networks_lib.Action,
              ImpalaActorState[actor_core_lib.RecurrentState]]:
 
-    rng, policy_rng = jax.random.split(state.rng)
-    (logits, _), recurrent_state = networks.forward_fn(params, observation,
-                                                       state.recurrent_state)
+    rng, apply_rng, policy_rng = jax.random.split(state.rng, 3)
+    (logits, _), new_recurrent_state = networks.apply(
+        params,
+        apply_rng,
+        observation,
+        state.recurrent_state,
+    )
 
     if evaluation:
       action = jnp.argmax(logits, axis=-1)
@@ -80,7 +84,7 @@ def get_actor_core(
     return action, ImpalaActorState(
         rng=rng,
         logits=logits,
-        recurrent_state=recurrent_state,
+        recurrent_state=new_recurrent_state,
         prev_recurrent_state=state.recurrent_state)
 
   def get_extras(

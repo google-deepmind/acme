@@ -186,7 +186,7 @@ class IMPALABuilder(Generic[actor_core_lib.RecurrentState],
     return actors_lib.GenericActor(policy, random_key, variable_client, adder)
 
   def make_policy(self,
-                  networks: impala_networks.IMPALANetworks[Any],
+                  networks: impala_networks.IMPALANetworks,
                   environment_spec: specs.EnvironmentSpec,
                   evaluation: bool = False) -> acting.ImpalaPolicy:
     return acting.get_actor_core(networks, environment_spec, evaluation)

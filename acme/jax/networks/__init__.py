@@ -32,8 +32,10 @@ from acme.jax.networks.base import PolicyValueRNN
 from acme.jax.networks.base import PRNGKey
 from acme.jax.networks.base import QNetwork
 from acme.jax.networks.base import RecurrentQNetwork
+from acme.jax.networks.base import RecurrentState
 from acme.jax.networks.base import SampleFn
 from acme.jax.networks.base import TypedFeedForwardNetwork
+from acme.jax.networks.base import UnrollableNetwork
 from acme.jax.networks.base import Value
 from acme.jax.networks.continuous import LayerNormMLP
 from acme.jax.networks.continuous import NearZeroInitializedLinear
