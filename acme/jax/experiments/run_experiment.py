@@ -103,8 +103,8 @@ def run_experiment(experiment: config.ExperimentConfig,
 
   # Create the environment loop used for training.
   train_counter = counting.Counter(
-      parent_counter, prefix='train', time_delta=0.)
-  train_logger = experiment.logger_factory('train',
+      parent_counter, prefix='actor', time_delta=0.)
+  train_logger = experiment.logger_factory('actor',
                                            train_counter.get_steps_key(), 0)
 
   checkpointer = None
@@ -136,7 +136,7 @@ def run_experiment(experiment: config.ExperimentConfig,
 
   max_num_actor_steps = (
       experiment.max_num_actor_steps -
-      parent_counter.get_counts().get('train_steps', 0))
+      parent_counter.get_counts().get(train_counter.get_steps_key(), 0))
 
   if num_eval_episodes == 0:
     # No evaluation. Just run the training loop.
@@ -144,9 +144,10 @@ def run_experiment(experiment: config.ExperimentConfig,
     return
 
   # Create the evaluation actor and loop.
-  eval_counter = counting.Counter(parent_counter, prefix='eval', time_delta=0.)
-  eval_logger = experiment.logger_factory('eval', eval_counter.get_steps_key(),
-                                          0)
+  eval_counter = counting.Counter(
+      parent_counter, prefix='evaluator', time_delta=0.)
+  eval_logger = experiment.logger_factory('evaluator',
+                                          eval_counter.get_steps_key(), 0)
   eval_policy = config.make_policy(
       experiment=experiment,
       networks=networks,

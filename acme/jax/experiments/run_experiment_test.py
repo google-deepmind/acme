@@ -54,8 +54,8 @@ class RunExperimentTest(test_utils.TestCase):
 
     checkpoint_counter = experiment_test_utils.restore_counter(
         experiment_config.checkpointing)
-    self.assertIn('train_steps', checkpoint_counter.get_counts())
-    self.assertGreater(checkpoint_counter.get_counts()['train_steps'], 0)
+    self.assertIn('actor_steps', checkpoint_counter.get_counts())
+    self.assertGreater(checkpoint_counter.get_counts()['actor_steps'], 0)
 
     # Run the second experiment with the same checkpointing config to verify
     # that it restores from the latest saved checkpoint.
@@ -64,9 +64,9 @@ class RunExperimentTest(test_utils.TestCase):
 
     checkpoint_counter = experiment_test_utils.restore_counter(
         experiment_config.checkpointing)
-    self.assertIn('train_steps', checkpoint_counter.get_counts())
+    self.assertIn('actor_steps', checkpoint_counter.get_counts())
     # Verify that the steps done in the first run are taken into account.
-    self.assertLessEqual(checkpoint_counter.get_counts()['train_steps'],
+    self.assertLessEqual(checkpoint_counter.get_counts()['actor_steps'],
                          num_train_steps)
 
 
