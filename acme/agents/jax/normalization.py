@@ -92,8 +92,7 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
   def __init__(self, learner_factory: Callable[[Iterator[reverb.ReplaySample]],
                                                acme.Learner],
                iterator: Iterator[reverb.ReplaySample],
-               environment_spec: specs.EnvironmentSpec, is_sequence_based: bool,
-               batch_dims: Optional[Tuple[int, ...]],
+               environment_spec: specs.EnvironmentSpec,
                max_abs_observation: Optional[float]):
 
     def normalize_sample(
@@ -107,19 +106,16 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
           observation,
           observation_statistics,
           max_abs_value=max_abs_observation)
-      if is_sequence_based:
-        assert not hasattr(sample.data, 'next_observation')
-        sample = reverb.ReplaySample(
-            sample.info, sample.data._replace(observation=observation))
-      else:
+      sample = reverb.ReplaySample(
+          sample.info, sample.data._replace(observation=observation))
+      if hasattr(sample.data, 'next_observation'):
         next_observation = running_statistics.normalize(
             sample.data.next_observation,
             observation_statistics,
             max_abs_value=max_abs_observation)
         sample = reverb.ReplaySample(
             sample.info,
-            sample.data._replace(
-                observation=observation, next_observation=next_observation))
+            sample.data._replace(next_observation=next_observation))
 
       return observation_statistics, sample
 
@@ -175,8 +171,6 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
   """Builder wrapper that normalizes observations using running mean/std."""
   builder: builders.ActorLearnerBuilder[Networks, PolicyNetwork,
                                         reverb.ReplaySample]
-  is_sequence_based: bool
-  batch_dims: Optional[Tuple[int, ...]]
   max_abs_observation: Optional[float] = 10.0
   statistics_update_period: int = 100
 
@@ -220,8 +214,6 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
         learner_factory=learner_factory,
         iterator=dataset,
         environment_spec=environment_spec,
-        is_sequence_based=self.is_sequence_based,
-        batch_dims=self.batch_dims,
         max_abs_observation=self.max_abs_observation)
 
   def make_actor(

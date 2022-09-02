@@ -54,12 +54,7 @@ def build_experiment_config():
       n_step=2,
       target_entropy=sac.target_entropy_from_env_spec(environment_spec))
   sac_builder = builder.SACBuilder(config)
-  # One batch dimension: [batch_size, ...]
-  batch_dims = (0,)
-  sac_builder = normalization.NormalizationBuilder(
-      sac_builder,
-      is_sequence_based=False,
-      batch_dims=batch_dims)
+  sac_builder = normalization.NormalizationBuilder(sac_builder)
 
   return experiments.ExperimentConfig(
       builder=sac_builder,
