@@ -171,10 +171,11 @@ class SGDLearner(acme.Learner):
     self._replay_client = replay_client
     self._async_priority_updater = async_utils.AsyncExecutor(update_priorities)
 
+    self._current_step = 0
+
   def step(self):
     """Takes one SGD step on the learner."""
-    with jax.profiler.StepTraceAnnotation('step',
-                                          step_num=self._state.steps):
+    with jax.profiler.StepTraceAnnotation('step', step_num=self._current_step):
       batch = next(self._data_iterator)
       self._state, extra = self._sgd_step(self._state, batch)
 
@@ -188,7 +189,8 @@ class SGDLearner(acme.Learner):
         self._async_priority_updater.put(reverb_update)
 
       steps_per_sec = (self._num_sgd_steps_per_step / elapsed) if elapsed else 0
-      metrics = utils.get_from_first_device(extra.metrics)
+      self._current_step, metrics = utils.get_from_first_device(
+          (self._state.steps, extra.metrics))
       metrics['steps_per_second'] = steps_per_sec
 
       # Update our counts and record it.
