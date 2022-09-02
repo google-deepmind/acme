@@ -150,11 +150,11 @@ class IMPALALearner(acme.Learner):
 
   def get_variables(self, names: Sequence[str]) -> List[networks_lib.Params]:
     # Return first replica of parameters.
-    return [utils.get_from_first_device(self._state.params, as_numpy=False)]
+    return utils.get_from_first_device([self._state.params], as_numpy=False)
 
   def save(self) -> TrainingState:
     # Serialize only the first replica of parameters and optimizer state.
-    return jax.tree_map(utils.get_from_first_device, self._state)
+    return utils.get_from_first_device(self._state)
 
   def restore(self, state: TrainingState):
     self._state = utils.replicate_in_all_devices(state, self._local_devices)

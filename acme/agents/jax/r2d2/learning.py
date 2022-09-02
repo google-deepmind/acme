@@ -21,6 +21,7 @@ from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
 from absl import logging
 import acme
 from acme.adders import reverb as adders
+from acme.agents.jax.r2d2 import networks as r2d2_networks
 from acme.jax import networks as networks_lib
 from acme.jax import utils
 from acme.utils import async_utils
@@ -52,8 +53,7 @@ class R2D2Learner(acme.Learner):
   """R2D2 learner."""
 
   def __init__(self,
-               unroll: networks_lib.FeedForwardNetwork,
-               initial_state: networks_lib.FeedForwardNetwork,
+               networks: r2d2_networks.R2D2Networks,
                batch_size: int,
                random_key: networks_lib.PRNGKey,
                burn_in_length: int,
@@ -74,11 +74,6 @@ class R2D2Learner(acme.Learner):
                logger: Optional[loggers.Logger] = None):
     """Initializes the learner."""
 
-    random_key, key_initial_1, key_initial_2 = jax.random.split(random_key, 3)
-    initial_state_params = initial_state.init(key_initial_1, batch_size)
-    initial_state = initial_state.apply(initial_state_params, key_initial_2,
-                                        batch_size)
-
     def loss(
         params: networks_lib.Params,
         target_params: networks_lib.Params,
@@ -96,7 +91,9 @@ class R2D2Learner(acme.Learner):
         online_state = utils.maybe_recover_lstm_type(
             sample.data.extras.get('core_state'))
       else:
-        online_state = initial_state
+        key_grad, initial_state_rng = jax.random.split(key_grad)
+        online_state = networks.init_recurrent_state(initial_state_rng,
+                                                     batch_size)
       target_state = online_state
 
       # Convert sample data to sequence-major format [T, B, ...].
@@ -106,18 +103,19 @@ class R2D2Learner(acme.Learner):
       if burn_in_length:
         burn_obs = jax.tree_map(lambda x: x[:burn_in_length], data.observation)
         key_grad, key1, key2 = jax.random.split(key_grad, 3)
-        _, online_state = unroll.apply(params, key1, burn_obs, online_state)
-        _, target_state = unroll.apply(target_params, key2, burn_obs,
-                                       target_state)
+        _, online_state = networks.unroll(params, key1, burn_obs, online_state)
+        _, target_state = networks.unroll(target_params, key2, burn_obs,
+                                          target_state)
 
       # Only get data to learn on from after the end of the burn in period.
       data = jax.tree_map(lambda seq: seq[burn_in_length:], data)
 
       # Unroll on sequences to get online and target Q-Values.
       key1, key2 = jax.random.split(key_grad)
-      online_q, _ = unroll.apply(params, key1, data.observation, online_state)
-      target_q, _ = unroll.apply(target_params, key2, data.observation,
-                                 target_state)
+      online_q, _ = networks.unroll(params, key1, data.observation,
+                                    online_state)
+      target_q, _ = networks.unroll(target_params, key2, data.observation,
+                                    target_state)
 
       # Get value-selector actions from online Q-values for double Q-learning.
       selector_actions = jnp.argmax(online_q, axis=-1)
@@ -136,8 +134,6 @@ class R2D2Learner(acme.Learner):
               tx_pair=tx_pair),
           in_axes=1,
           out_axes=1)
-      # TODO(b/183945808): when this bug is fixed, truncations of actions,
-      # rewards, and discounts will no longer be necessary.
       batch_td_error = batch_td_error_fn(
           online_q[:-1],
           data.action[:-1],
@@ -224,7 +220,7 @@ class R2D2Learner(acme.Learner):
 
     # Initialise and internalise training state (parameters/optimiser state).
     random_key, key_init = jax.random.split(random_key)
-    initial_params = unroll.init(key_init, initial_state)
+    initial_params = networks.init(key_init)
     opt_state = optimizer.init(initial_params)
 
     # Log how many parameters the network has.
@@ -268,12 +264,13 @@ class R2D2Learner(acme.Learner):
     self._logger.write({**metrics, **counts})
 
   def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
+    del names  # There's only one available set of params in this agent.
     # Return first replica of parameters.
-    return [utils.get_from_first_device(self._state.params)]
+    return utils.get_from_first_device([self._state.params])
 
   def save(self) -> TrainingState:
     # Serialize only the first replica of parameters and optimizer state.
-    return jax.tree_map(utils.get_from_first_device, self._state)
+    return utils.get_from_first_device(self._state)
 
   def restore(self, state: TrainingState):
     self._state = utils.replicate_in_all_devices(state)

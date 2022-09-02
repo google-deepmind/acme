@@ -66,9 +66,8 @@ def get_actor_core(
                     state: R2D2ActorState[actor_core_lib.RecurrentState]):
     rng, policy_rng = jax.random.split(state.rng)
 
-    q_values, recurrent_state = networks.forward.apply(params, policy_rng,
-                                                       observation,
-                                                       state.recurrent_state)
+    q_values, recurrent_state = networks.apply(params, policy_rng, observation,
+                                               state.recurrent_state)
     action = rlax.epsilon_greedy(state.epsilon).sample(policy_rng, q_values)
 
     return action, R2D2ActorState(
@@ -86,7 +85,7 @@ def get_actor_core(
                                   np.logspace(1, 3, num_epsilons, base=0.1))
     else:
       epsilon = evaluation_epsilon
-    initial_core_state = networks.initial_state.apply(None, state_rng, None)
+    initial_core_state = networks.init_recurrent_state(state_rng, None)
     return R2D2ActorState(
         rng=rng,
         epsilon=epsilon,
@@ -110,8 +109,7 @@ def make_behavior_policy(networks: r2d2_networks.R2D2Networks,
   def behavior_policy(params: networks_lib.Params, key: networks_lib.PRNGKey,
                       observation: types.NestedArray,
                       core_state: types.NestedArray, epsilon: float):
-    q_values, core_state = networks.forward.apply(params, key, observation,
-                                                  core_state)
+    q_values, core_state = networks.apply(params, key, observation, core_state)
     epsilon = config.evaluation_epsilon if evaluation else epsilon
     return rlax.epsilon_greedy(epsilon).sample(key, q_values), core_state
 
