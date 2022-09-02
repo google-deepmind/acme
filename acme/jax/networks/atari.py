@@ -151,7 +151,8 @@ class R2D2AtariNetwork(hk.RNNCore):
 
   def __init__(self, num_actions: int):
     super().__init__(name='r2d2_atari_network')
-    self._embed = embedding.OAREmbedding(DeepAtariTorso(), num_actions)
+    self._embed = embedding.OAREmbedding(
+        DeepAtariTorso(hidden_sizes=[512], use_layer_norm=True), num_actions)
     self._core = hk.LSTM(512)
     self._duelling_head = duelling.DuellingMLP(num_actions, hidden_sizes=[512])
     self._num_actions = num_actions

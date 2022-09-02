@@ -83,7 +83,7 @@ def get_actor_core(
     rng, epsilon_rng, state_rng = jax.random.split(rng, 3)
     if num_epsilons:
       epsilon = jax.random.choice(epsilon_rng,
-                                  np.logspace(1, 8, num_epsilons, base=0.4))
+                                  np.logspace(1, 3, num_epsilons, base=0.1))
     else:
       epsilon = evaluation_epsilon
     initial_core_state = networks.initial_state.apply(None, state_rng, None)
