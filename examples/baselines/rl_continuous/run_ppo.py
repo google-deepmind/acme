@@ -39,7 +39,10 @@ def build_experiment_config():
   # Create an environment, grab the spec, and use it to create networks.
   suite, task = FLAGS.env_name.split(':', 1)
 
-  config = ppo.PPOConfig(entropy_cost=0, learning_rate=1e-4)
+  config = ppo.PPOConfig(
+      entropy_cost=0,
+      learning_rate=1e-4,
+      obs_normalization_fns_factory=ppo.build_ema_mean_std_normalizer)
   ppo_builder = ppo.PPOBuilder(config)
 
   layer_sizes = (256, 256, 256)
