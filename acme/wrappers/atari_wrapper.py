@@ -71,6 +71,7 @@ class BaseAtariWrapper(abc.ABC, base.EnvironmentWrapper):
                zero_discount_on_life_loss: bool = False,
                expose_lives_observation: bool = False,
                num_stacked_frames: int = 4,
+               flatten_frame_stack: bool = False,
                max_episode_len: Optional[int] = None,
                to_float: bool = False,
                grayscaling: bool = True):
@@ -95,6 +96,8 @@ class BaseAtariWrapper(abc.ABC, base.EnvironmentWrapper):
         tuple (pixel_array, lives).
       num_stacked_frames: Number of recent (pooled) observations to stack into
         the returned observation.
+      flatten_frame_stack: Whether to flatten the stack of frames such that
+        the channel (RGB) and stacking dimensions are merged.
       max_episode_len: Number of frames before truncating episode. By default,
         there is no maximum length.
       to_float: If `True`, rescales RGB observations to floats in [0, 1].
@@ -119,7 +122,7 @@ class BaseAtariWrapper(abc.ABC, base.EnvironmentWrapper):
       max_episode_len = np.inf
 
     self._frame_stacker = frame_stacking.FrameStacker(
-        num_frames=num_stacked_frames, flatten=num_stacked_frames == 1)
+        num_frames=num_stacked_frames, flatten=flatten_frame_stack)
     self._action_repeats = action_repeats
     self._pooled_frames = pooled_frames
     self._scale_dims = scale_dims
