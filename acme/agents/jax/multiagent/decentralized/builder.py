@@ -14,7 +14,7 @@
 
 """JAX multiagent builders."""
 
-from typing import Dict, Iterator, List, Optional, Sequence
+from typing import Dict, Iterator, List, Mapping, Optional, Sequence
 
 from acme import adders
 from acme import core
@@ -22,6 +22,7 @@ from acme import specs
 from acme import types
 from acme.agents.jax import builders as acme_builders
 from acme.agents.jax.multiagent.decentralized import actor
+from acme.agents.jax.multiagent.decentralized import factories as decentralized_factories
 from acme.agents.jax.multiagent.decentralized import learner_set
 from acme.jax import networks as networks_lib
 from acme.multiagent import types as ma_types
@@ -54,16 +55,26 @@ class DecentralizedMultiAgentBuilder(
         ma_types.MultiAgentSample]):
   """Builder for decentralized multiagent setup."""
 
-  def __init__(self, builders: Dict[ma_types.AgentID,
-                                    acme_builders.GenericActorLearnerBuilder]):
+  def __init__(
+      self,
+      agent_types: Dict[ma_types.AgentID, ma_types.GenericAgent],
+      agent_configs: Dict[ma_types.AgentID, ma_types.AgentConfig],
+      init_policy_network_fn: Optional[ma_types.InitPolicyNetworkFn] = None):
     """Initializer.
 
     Args:
-      builders: a dict specifying the builders for all sub-agents.
+      agent_types: Dict mapping agent IDs to their types.
+      agent_configs: Dict mapping agent IDs to their configs.
+      init_policy_network_fn: Optional custom policy network initializer
+        function.
     """
 
-    self._builders = builders
+    self._agent_types = agent_types
+    self._agent_configs = agent_configs
+    self._builders = decentralized_factories.builder_factory(
+        agent_types, agent_configs)
     self._num_agents = len(self._builders)
+    self._init_policy_network_fn = init_policy_network_fn
 
   def make_replay_tables(
       self,
@@ -146,10 +157,11 @@ class DecentralizedMultiAgentBuilder(
         sub_learners, separator=VARIABLE_SEPARATOR)
 
   def make_adder(  # Internal pytype check.
-      self, replay_client: reverb.Client,
+      self,
+      replay_client: reverb.Client,
       environment_spec: Optional[specs.EnvironmentSpec] = None,
       policy: Optional[ma_types.MultiAgentPolicyNetworks] = None,
-  ) -> Dict[ma_types.AgentID, Optional[adders.Adder]]:
+  ) -> Mapping[ma_types.AgentID, Optional[adders.Adder]]:
     del environment_spec, policy  # Unused.
     return {
         agent_id:
@@ -163,7 +175,7 @@ class DecentralizedMultiAgentBuilder(
       policy_networks: ma_types.MultiAgentPolicyNetworks,
       environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
-      adder: Optional[Dict[ma_types.AgentID, adders.Adder]] = None,
+      adder: Optional[Mapping[ma_types.AgentID, adders.Adder]] = None,
   ) -> core.Actor:
     """Returns simultaneous-acting multiagent actor instance.
 
@@ -194,3 +206,16 @@ class DecentralizedMultiAgentBuilder(
                                                 sub_variable_source,
                                                 adder[agent_id])
     return actor.SimultaneousActingMultiAgentActor(sub_actors)
+
+  def make_policy(
+      self,
+      networks: ma_types.MultiAgentNetworks,
+      environment_spec: specs.EnvironmentSpec,
+      evaluation: bool = False) -> ma_types.MultiAgentPolicyNetworks:
+    return decentralized_factories.policy_network_factory(
+        networks,
+        environment_spec,
+        self._agent_types,
+        self._agent_configs,
+        eval_mode=evaluation,
+        init_policy_network_fn=self._init_policy_network_fn)

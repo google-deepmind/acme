@@ -14,7 +14,6 @@
 
 """Defines distributed and local multiagent decentralized agents."""
 
-import functools
 from typing import Any, Dict, Optional, Sequence, Tuple
 
 from acme import specs
@@ -37,8 +36,7 @@ class DistributedDecentralizedMultiAgent(distributed_layout.DistributedLayout):
       agent_types: Dict[ma_types.AgentID, ma_types.GenericAgent],
       environment_factory: types.EnvironmentFactory,
       network_factory: ma_types.NetworkFactory,
-      policy_factory: ma_types.PolicyFactory,
-      builder_factory: ma_types.BuilderFactory,
+      builder: decentralized_builders.DecentralizedMultiAgentBuilder,
       config: decentralized_config.DecentralizedMultiagentConfig,
       seed: int,
       num_parallel_actors_per_agent: int,
@@ -60,11 +58,19 @@ class DistributedDecentralizedMultiAgent(distributed_layout.DistributedLayout):
         asynchronous=True,
         serialize_fn=utils.fetch_devicearray,
         steps_key='learner_steps')
-    builders = builder_factory(agent_types, config.sub_agent_configs)
 
-    train_policy_factory = functools.partial(policy_factory, eval_mode=False)
+    def train_policy_factory(
+        networks: ma_types.MultiAgentNetworks
+    ) -> ma_types.MultiAgentPolicyNetworks:
+      return builder.make_policy(
+          networks, environment_spec=environment_spec, evaluation=False)
     if evaluator_factories is None:
-      eval_network_fn = functools.partial(policy_factory, eval_mode=True)
+
+      def eval_network_fn(
+          networks: ma_types.MultiAgentNetworks
+      ) -> ma_types.MultiAgentPolicyNetworks:
+        return builder.make_policy(
+            networks, environment_spec=environment_spec, evaluation=True)
       evaluator_factories = [
           distributed_layout.default_evaluator_factory(
               environment_factory=environment_factory,
@@ -72,8 +78,7 @@ class DistributedDecentralizedMultiAgent(distributed_layout.DistributedLayout):
               policy_factory=eval_network_fn,
               save_logs=log_to_bigtable)
       ]
-    self.builder = decentralized_builders.DecentralizedMultiAgentBuilder(
-        builders)
+    self.builder = builder
     # pytype: disable=wrong-arg-types
     super().__init__(
         seed=seed,
@@ -97,19 +102,16 @@ class DistributedDecentralizedMultiAgent(distributed_layout.DistributedLayout):
 class DecentralizedMultiAgent(local_layout.LocalLayout):
   """Local definition for decentralized multiagent learning."""
 
-  def __init__(
-      self,
-      agent_types: Dict[ma_types.AgentID, ma_types.GenericAgent],
-      spec: specs.EnvironmentSpec,
-      builder_factory: ma_types.BuilderFactory,
-      networks: ma_types.MultiAgentNetworks,
-      policy_networks: ma_types.MultiAgentPolicyNetworks,
-      config: decentralized_config.DecentralizedMultiagentConfig,
-      seed: int,
-      workdir: Optional[str] = '~/acme',
-      counter: Optional[counting.Counter] = None,
-      save_data: bool = True
-  ):
+  def __init__(self,
+               agent_types: Dict[ma_types.AgentID, ma_types.GenericAgent],
+               spec: specs.EnvironmentSpec,
+               builder: decentralized_builders.DecentralizedMultiAgentBuilder,
+               networks: ma_types.MultiAgentNetworks,
+               config: decentralized_config.DecentralizedMultiagentConfig,
+               seed: int,
+               workdir: Optional[str] = '~/acme',
+               counter: Optional[counting.Counter] = None,
+               save_data: bool = True):
     assert len(set(agent_types.values())) == 1, (
         f'Sub-agent types must be identical, but are {agent_types}.')
     # TODO(somidshafiei): add input normalizer. However, this may require
@@ -124,9 +126,8 @@ class DecentralizedMultiAgent(local_layout.LocalLayout):
         steps_key='learner_steps')
     learner_loggers = {agent_id: learner_logger_fns[agent_id]()
                        for agent_id in agent_types.keys()}
-    builders = builder_factory(agent_types, config.sub_agent_configs)
-    self.builder = decentralized_builders.DecentralizedMultiAgentBuilder(
-        builders)
+    policy_networks = builder.make_policy(networks, spec, evaluation=False)
+    self.builder = builder
     # pytype: disable=wrong-arg-types
     super().__init__(
         seed=seed,
@@ -177,23 +178,21 @@ def init_decentralized_multiagent(
   networks = decentralized_factories.network_factory(environment_spec,
                                                      agent_types,
                                                      init_network_fn)
-  policy_networks = decentralized_factories.policy_network_factory(
-      networks, environment_spec, agent_types, configs, eval_mode=False,
-      init_policy_network_fn=init_policy_network_fn)
-  eval_policy_networks = decentralized_factories.policy_network_factory(
-      networks, environment_spec, agent_types, configs, eval_mode=True,
-      init_policy_network_fn=init_policy_network_fn)
   config = decentralized_config.DecentralizedMultiagentConfig(
       batch_size=batch_size, sub_agent_configs=configs)
+  builder = decentralized_builders.DecentralizedMultiAgentBuilder(
+      agent_types=agent_types,
+      agent_configs=configs,
+      init_policy_network_fn=init_policy_network_fn)
+  eval_policy_networks = builder.make_policy(
+      networks, environment_spec, evaluation=True)
   decentralized_multi_agent = DecentralizedMultiAgent(
       agent_types=agent_types,
       spec=environment_spec,
-      builder_factory=decentralized_factories.builder_factory,
+      builder=builder,
       networks=networks,
-      policy_networks=policy_networks,
       seed=seed,
       config=config,
       workdir=workdir,
-      save_data=save_data
-  )
+      save_data=save_data)
   return decentralized_multi_agent, eval_policy_networks
