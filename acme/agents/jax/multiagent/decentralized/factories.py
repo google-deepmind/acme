@@ -18,8 +18,7 @@ Used to unify agent initialization for both local and distributed layouts.
 """
 
 import enum
-import functools
-from typing import Any, Callable, Dict, Mapping, Optional
+from typing import Any, Dict, Optional
 
 from acme import specs
 from acme.adders import reverb as adders_reverb
@@ -29,7 +28,6 @@ from acme.agents.jax import sac
 from acme.agents.jax import td3
 from acme.multiagent import types as ma_types
 from acme.multiagent import utils as ma_utils
-from acme.utils import loggers
 
 
 class DefaultSupportedAgent(enum.Enum):
@@ -102,32 +100,6 @@ def init_default_config(
     return ppo.PPOConfig(**config_overrides)
   else:
     raise ValueError(f'Unsupported agent type: {agent_type}.')
-
-
-def default_logger_factory(
-    agent_types: Dict[ma_types.AgentID, DefaultSupportedAgent],
-    base_label: str,
-    save_data: bool,
-    time_delta: float = 1.0,
-    asynchronous: bool = False,
-    print_fn: Optional[Callable[[str], None]] = None,
-    serialize_fn: Optional[Callable[[Mapping[str, Any]], str]] = None,
-    steps_key: str = 'steps',
-) -> ma_types.MultiAgentLoggerFn:
-  """Returns callable that constructs default logger for all agents."""
-  logger_fns = {}
-  for agent_id in agent_types.keys():
-    logger_fns[agent_id] = functools.partial(
-        loggers.make_default_logger,
-        f'{base_label}{agent_id}',
-        save_data=save_data,
-        time_delta=time_delta,
-        asynchronous=asynchronous,
-        print_fn=print_fn,
-        serialize_fn=serialize_fn,
-        steps_key=steps_key,
-    )
-  return logger_fns
 
 
 def default_config_factory(
