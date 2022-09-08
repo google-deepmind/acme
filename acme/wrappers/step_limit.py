@@ -34,9 +34,21 @@ class StepLimitWrapper(base.EnvironmentWrapper):
     return self._environment.reset()
 
   def step(self, action: types.NestedArray) -> dm_env.TimeStep:
-    timestep = self._environment.step(action)
+    if self._elapsed_steps == -1:
+      # The previous episode was truncated by the wrapper, so start a new one.
+      timestep = self._environment.reset()
+    else:
+      timestep = self._environment.step(action)
+    # If this is the first timestep, then this `step()` call was done on a new,
+    # terminated or truncated environment instance without calling `reset()`
+    # first. In this case this `step()` call should be treated as `reset()`,
+    # so should not increment step count.
+    if timestep.first():
+      self._elapsed_steps = 0
+      return timestep
     self._elapsed_steps += 1
     if self._step_limit is not None and self._elapsed_steps >= self._step_limit:
+      self._elapsed_steps = -1
       return dm_env.truncation(
           timestep.reward, timestep.observation, timestep.discount)
     return timestep
