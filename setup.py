@@ -80,7 +80,7 @@ envs_requirements = [
     'atari-py',
     'bsuite',
     'dm-control==0.0.364896371',  # TODO(b/206925413): update to new version.
-    'gym',
+    'gym==0.25.0',
     'gym[atari]',
     'pygame==2.1.0',
     'tensorflow-datasets==4.5.2',
