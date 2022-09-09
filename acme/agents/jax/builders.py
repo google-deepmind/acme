@@ -15,6 +15,7 @@
 """RL agent Builder interface."""
 
 import abc
+import dataclasses
 from typing import Generic, Iterator, List, Optional, TypeVar
 
 from acme import adders
@@ -221,6 +222,66 @@ class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
     # TODO(sabela): make abstract once all agents implement it.
     del networks, environment_spec, evaluation
     raise NotImplementedError
+
+
+@dataclasses.dataclass(frozen=True)
+class ActorLearnerBuilderWrapper(ActorLearnerBuilder[Networks, Policy, Sample],
+                                 Generic[Networks, Policy, Sample]):
+  """An empty wrapper for ActorLearnerBuilder."""
+
+  wrapped: ActorLearnerBuilder[Networks, Policy, Sample]
+
+  def make_replay_tables(
+      self,
+      environment_spec: specs.EnvironmentSpec,
+      policy: Policy,
+  ) -> List[reverb.Table]:
+    return self.wrapped.make_replay_tables(environment_spec, policy)
+
+  def make_dataset_iterator(
+      self,
+      replay_client: reverb.Client,
+  ) -> Iterator[Sample]:
+    return self.wrapped.make_dataset_iterator(replay_client)
+
+  def make_adder(
+      self,
+      replay_client: reverb.Client,
+      environment_spec: Optional[specs.EnvironmentSpec],
+      policy: Optional[Policy],
+  ) -> Optional[adders.Adder]:
+    return self.wrapped.make_adder(replay_client, environment_spec, policy)
+
+  def make_actor(
+      self,
+      random_key: networks_lib.PRNGKey,
+      policy: Policy,
+      environment_spec: specs.EnvironmentSpec,
+      variable_source: Optional[core.VariableSource] = None,
+      adder: Optional[adders.Adder] = None,
+  ) -> core.Actor:
+    return self.wrapped.make_actor(random_key, policy, environment_spec,
+                                   variable_source, adder)
+
+  def make_learner(
+      self,
+      random_key: networks_lib.PRNGKey,
+      networks: Networks,
+      dataset: Iterator[Sample],
+      logger_fn: loggers.LoggerFactory,
+      environment_spec: specs.EnvironmentSpec,
+      replay_client: Optional[reverb.Client] = None,
+      counter: Optional[counting.Counter] = None,
+  ) -> core.Learner:
+    return self.wrapped.make_learner(random_key, networks, dataset, logger_fn,
+                                     environment_spec, replay_client, counter)
+
+  def make_policy(self,
+                  networks: Networks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> Policy:
+    return self.wrapped.make_policy(networks, environment_spec, evaluation)
+
 
 # TODO(sinopalnikov): deprecated, migrate all users and remove.
 GenericActorLearnerBuilder = ActorLearnerBuilder

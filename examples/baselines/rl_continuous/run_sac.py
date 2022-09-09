@@ -52,9 +52,9 @@ def build_experiment_config():
   config = sac.SACConfig(
       learning_rate=3e-4,
       n_step=2,
-      target_entropy=sac.target_entropy_from_env_spec(environment_spec))
+      target_entropy=sac.target_entropy_from_env_spec(environment_spec),
+      input_normalization=normalization.NormalizationConfig())
   sac_builder = builder.SACBuilder(config)
-  sac_builder = normalization.NormalizationBuilder(sac_builder)
 
   return experiments.ExperimentConfig(
       builder=sac_builder,

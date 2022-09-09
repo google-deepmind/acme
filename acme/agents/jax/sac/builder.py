@@ -23,6 +23,7 @@ from acme.adders import reverb as adders_reverb
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.agents.jax import builders
+from acme.agents.jax import normalization
 from acme.agents.jax.sac import config as sac_config
 from acme.agents.jax.sac import learning
 from acme.agents.jax.sac import networks as sac_networks
@@ -38,6 +39,7 @@ import reverb
 from reverb import rate_limiters
 
 
+@normalization.input_normalization_builder
 class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
                                               actor_core_lib.FeedForwardPolicy,
                                               reverb.ReplaySample]):

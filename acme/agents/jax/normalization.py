@@ -16,7 +16,7 @@
 
 import dataclasses
 import functools
-from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Generic, Iterator, List, Optional, Protocol, Tuple
 
 import acme
 from acme import adders
@@ -241,3 +241,49 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
         networks=networks,
         environment_spec=environment_spec,
         evaluation=evaluation)
+
+
+@dataclasses.dataclass(frozen=True)
+class NormalizationConfig:
+  """Configuration for normalization based on running statistics.
+
+  Attributes:
+    max_abs: Maximum value for clipping.
+    statistics_update_period: How often to update running statistics used for
+      normalization.
+  """
+  max_abs: int = 10
+  statistics_update_period: int = 100
+
+
+class InputNormalizerConfig(Protocol):
+  """Protocol for the config of the agent that uses the normalization decorator.
+
+  If the agent builder is decorated with the `input_normalization_builder`
+  the agent config class must implement this protocol.
+  """
+
+  @property
+  def input_normalization(self) -> Optional[NormalizationConfig]:
+    ...
+
+
+def input_normalization_builder(
+    actor_learner_builder_class: Callable[[InputNormalizerConfig],
+                                          builders.ActorLearnerBuilder]):
+  """Builder class decorator that adds support for input normalization."""
+
+  class InputNormalizationBuilder(builders.ActorLearnerBuilderWrapper):
+    """Builder wrapper that adds input normalization based on the config."""
+
+    def __init__(self, config: InputNormalizerConfig):
+      builder = actor_learner_builder_class(config)
+      if config.input_normalization:
+        builder = NormalizationBuilder(
+            builder,
+            max_abs_observation=config.input_normalization.max_abs,
+            statistics_update_period=config.input_normalization
+            .statistics_update_period)
+      super().__init__(builder)
+
+  return InputNormalizationBuilder

@@ -18,11 +18,12 @@ from typing import Any, Optional
 
 from acme import specs
 from acme.adders import reverb as adders_reverb
+from acme.agents.jax import normalization
 import numpy as onp
 
 
 @dataclasses.dataclass
-class SACConfig:
+class SACConfig(normalization.InputNormalizerConfig):
   """Configuration options for SAC."""
   # Loss options
   batch_size: int = 256
@@ -49,6 +50,8 @@ class SACConfig:
 
   # How many gradient updates to perform per step.
   num_sgd_steps_per_step: int = 1
+
+  input_normalization: Optional[normalization.NormalizationConfig] = None
 
 
 def target_entropy_from_env_spec(
