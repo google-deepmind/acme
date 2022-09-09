@@ -44,9 +44,31 @@ def make_distributed_experiment(
     multithreading_colocate_learner_and_reverb: bool = False,
     make_snapshot_models: Optional[config.SnapshotModelFactory[
         builders.Networks]] = None,
-    name='agent',
-    program: Optional[lp.Program] = None):
-  """Builds distributed agent based on a builder."""
+    name: str = 'agent',
+    program: Optional[lp.Program] = None) -> lp.Program:
+  """Builds a Launchpad program for running the experiment.
+
+  Args:
+    experiment: configuration of the experiment.
+    num_actors: number of actors to run.
+    num_learner_nodes: number of learner nodes to run. When using multiple
+      learner nodes, make sure the learner class does the appropriate pmap/pmean
+      operations on the loss/gradients, respectively.
+    num_actors_per_node: number of actors per one program node. Actors within
+      one node are colocated in one process.
+    multithreading_colocate_learner_and_reverb: whether to colocate the learner
+      and reverb nodes in one process. Not supported if the learner is spread
+      across multiple nodes (num_learner_nodes > 1). False by default, which
+      means no colocation.
+    make_snapshot_models: a factory that defines what is saved in snapshots.
+    name: name of the constructed program. Ignored if an existing program is
+      passed.
+    program: a program where agent nodes are added to. If None, a new program is
+      created.
+
+  Returns:
+    The Launchpad program with all the nodes needed for running the experiment.
+  """
 
   if multithreading_colocate_learner_and_reverb and num_learner_nodes > 1:
     raise ValueError(

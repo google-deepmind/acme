@@ -35,9 +35,21 @@ def make_distributed_offline_experiment(
     *,
     make_snapshot_models: Optional[config.SnapshotModelFactory[
         builders.Networks]] = None,
-    name='agent',
-    program: Optional[lp.Program] = None):
-  """Builds distributed agent based on a builder."""
+    name: str = 'agent',
+    program: Optional[lp.Program] = None) -> lp.Program:
+  """Builds a Launchpad program for running the experiment.
+
+  Args:
+    experiment: configuration for the experiment.
+    make_snapshot_models: a factory that defines what is saved in snapshots.
+    name: name of the constructed program. Ignored if an existing program is
+      passed.
+    program: a program where agent nodes are added to. If None, a new program is
+      created.
+
+  Returns:
+    The Launchpad program with all the nodes needed for running the experiment.
+  """
 
   def build_model_saver(variable_source: core.VariableSource):
     assert experiment.checkpointing
