@@ -133,17 +133,21 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
   @property
   def batch_size_per_device(self) -> int:
     """Splits the batch size across local devices."""
+
     # Account for the number of SGD steps per step.
     batch_size = self._config.batch_size * self._config.num_sgd_steps_per_step
-    batch_size = self._config.batch_size
+
     num_devices = jax.local_device_count()
+    # TODO(bshahr): Using jax.device_count will not be valid when colocating
+    # learning and inference.
+
     if batch_size % num_devices != 0:
       raise ValueError(
           'The DQN learner received a batch size that is not divisible by the '
           f'number of available learner devices. Got: batch_size={batch_size}, '
           f'num_devices={num_devices}.')
-    batch_size_per_device = batch_size // num_devices
-    return batch_size_per_device
+
+    return batch_size // num_devices
 
   def make_dataset_iterator(
       self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
