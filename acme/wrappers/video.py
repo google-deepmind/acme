@@ -33,8 +33,9 @@ import numpy as np
 # Internal imports.
 # Make sure you have FFMpeg configured.
 
-def make_animation(frames: Sequence[np.ndarray], frame_rate: float,
-                   figsize: Union[float, Tuple[int, int]]) -> anim.Animation:
+def make_animation(
+    frames: Sequence[np.ndarray], frame_rate: float,
+    figsize: Optional[Union[float, Tuple[int, int]]]) -> anim.Animation:
   """Generates an animation from a stack of frames."""
 
   # Set animation characteristics.
