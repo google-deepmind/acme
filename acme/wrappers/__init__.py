@@ -29,6 +29,8 @@ from acme.wrappers.noop_starts import NoopStartsWrapper
 from acme.wrappers.observation_action_reward import ObservationActionRewardWrapper
 from acme.wrappers.single_precision import SinglePrecisionWrapper
 from acme.wrappers.step_limit import StepLimitWrapper
+from acme.wrappers.video import MujocoVideoWrapper
+from acme.wrappers.video import VideoWrapper
 
 try:
   # pylint: disable=g-import-not-at-top

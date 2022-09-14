@@ -36,7 +36,7 @@ import numpy as np
 def make_animation(
     frames: Sequence[np.ndarray], frame_rate: float,
     figsize: Optional[Union[float, Tuple[int, int]]]) -> anim.Animation:
-  """Generates an animation from a stack of frames."""
+  """Generates a matplotlib animation from a stack of frames."""
 
   # Set animation characteristics.
   if figsize is None:
