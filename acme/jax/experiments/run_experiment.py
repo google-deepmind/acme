@@ -80,12 +80,15 @@ def run_experiment(experiment: config.ExperimentConfig,
   # value as a function of the number of training episodes.
   parent_counter = counting.Counter(time_delta=0.)
 
-  # Create actor, and learner for generating, storing, and consuming
-  # data respectively.
   dataset = experiment.builder.make_dataset_iterator(replay_client)
-  # We always use prefetch, as it provides an iterator with additional
+  # We always use prefetch as it provides an iterator with an additional
   # 'ready' method.
   dataset = utils.prefetch(dataset, buffer_size=1)
+
+  # Create actor, adder, and learner for generating, storing, and consuming
+  # data respectively.
+  # NOTE: These are created in reverse order as the actor needs to be given the
+  # adder and the learner (as a source of variables).
   learner_key, key = jax.random.split(key)
   learner = experiment.builder.make_learner(
       random_key=learner_key,
@@ -97,6 +100,7 @@ def run_experiment(experiment: config.ExperimentConfig,
       counter=counting.Counter(parent_counter, prefix='learner', time_delta=0.))
 
   adder = experiment.builder.make_adder(replay_client, environment_spec, policy)
+
   actor_key, key = jax.random.split(key)
   actor = experiment.builder.make_actor(
       actor_key, policy, environment_spec, variable_source=learner, adder=adder)
