@@ -185,7 +185,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
       epsilon = self._config.eval_epsilon
     else:
       epsilon = self._config.epsilon
-    epsilons = epsilon if epsilon is Sequence else (epsilon,)
+    epsilons = epsilon if isinstance(epsilon, Sequence) else (epsilon,)
 
     return dqn_actor.alternating_epsilons_actor_core(
         dqn_actor.behavior_policy(networks), epsilons=epsilons)
