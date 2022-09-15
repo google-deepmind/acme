@@ -131,7 +131,7 @@ class SGDLearner(acme.Learner):
     sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step,
                                               postprocess_aux)
     self._sgd_step = jax.pmap(
-        sgd_step, axis_name=PMAP_AXIS_NAME, devices=jax.local_devices())
+        sgd_step, axis_name=PMAP_AXIS_NAME, devices=jax.devices())
 
     # Internalise agent components
     self._data_iterator = data_iterator
