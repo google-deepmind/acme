@@ -14,11 +14,14 @@
 
 """Atari wrapper using Opencv for pixel prepocessing.
 
-Note that the AtariWrapper comes with several options, including the legacy
-style that allows reproducing behavior of previous Acme versions.
+Note that the default Atari wrapper in Acme does not use Opencv, and has
+slightly different operations (see docstrings). This is available to match
+the preprocessing from the Dopamine [1] library.
 
 To reproduce accurate standard result, we recommend using the default
-configuration.
+configuration using the wrapper defined in atari_wrapper.py.
+
+[1]: https://github.com/google/dopamine
 """
 
 from typing import List
@@ -34,7 +37,7 @@ import numpy as np
 class AtariWrapperDopamine(atari_wrapper.BaseAtariWrapper):
   """Atari wrapper that matches exactly Dopamine's prepocessing.
 
-  Wraning: using this wrapper requires that you have opencv and its dependencies
+  Warning: using this wrapper requires that you have opencv and its dependencies
   installed. In general, opencv is not required for Acme.
   """
 
