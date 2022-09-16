@@ -64,8 +64,7 @@ Policy = Union[FeedForwardPolicy, FeedForwardPolicyWithExtra, RecurrentPolicy]
 
 
 def batched_feed_forward_to_actor_core(
-    policy: FeedForwardPolicy
-) -> ActorCore[PRNGKey, NoneType]:
+    policy: FeedForwardPolicy) -> ActorCore[PRNGKey, Tuple[()]]:
   """A convenience adaptor from FeedForwardPolicy to ActorCore."""
 
   def select_action(params: networks_lib.Params,
@@ -80,8 +79,8 @@ def batched_feed_forward_to_actor_core(
   def init(rng: PRNGKey) -> PRNGKey:
     return rng
 
-  def get_extras(unused_rng: PRNGKey) -> NoneType:
-    return None
+  def get_extras(unused_rng: PRNGKey) -> Tuple[()]:
+    return ()
   return ActorCore(init=init, select_action=select_action,
                    get_extras=get_extras)
 
