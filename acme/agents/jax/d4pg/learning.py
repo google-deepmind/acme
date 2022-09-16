@@ -29,6 +29,8 @@ import optax
 import reverb
 import rlax
 
+_PMAP_AXIS_NAME = 'data'
+
 
 class TrainingState(NamedTuple):
   """Contains training state for the learner."""
@@ -130,6 +132,12 @@ class D4PGLearner(acme.Learner):
       critic_loss_value, critic_gradients = critic_loss_and_grad(
           state.critic_params, state, transitions)
 
+      # Average over all devices.
+      policy_loss_value, policy_gradients = jax.lax.pmean(
+          (policy_loss_value, policy_gradients), _PMAP_AXIS_NAME)
+      critic_loss_value, critic_gradients = jax.lax.pmean(
+          (critic_loss_value, critic_gradients), _PMAP_AXIS_NAME)
+
       # Get optimizer updates and state.
       policy_updates, policy_opt_state = policy_optimizer.update(  # pytype: disable=attribute-error
           policy_gradients, state.policy_opt_state)
@@ -181,7 +189,9 @@ class D4PGLearner(acme.Learner):
 
     # Maybe use the JIT compiler.
     sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step)
-    self._sgd_step = jax.jit(sgd_step) if jit else sgd_step
+    self._sgd_step = (
+        jax.pmap(sgd_step, _PMAP_AXIS_NAME, devices=jax.devices())
+        if jit else sgd_step)
 
     # Create the network parameters and copy into the target network parameters.
     key_policy, key_critic = jax.random.split(random_key)
@@ -198,16 +208,17 @@ class D4PGLearner(acme.Learner):
     initial_policy_opt_state = policy_optimizer.init(initial_policy_params)  # pytype: disable=attribute-error
     initial_critic_opt_state = critic_optimizer.init(initial_critic_params)  # pytype: disable=attribute-error
 
-    # Create initial state.
-    self._state = TrainingState(
-        policy_params=initial_policy_params,
-        target_policy_params=initial_target_policy_params,
-        critic_params=initial_critic_params,
-        target_critic_params=initial_target_critic_params,
-        policy_opt_state=initial_policy_opt_state,
-        critic_opt_state=initial_critic_opt_state,
-        steps=0,
-    )
+    # Create the initial state and replicate it in all devices.
+    self._state = utils.replicate_in_all_devices(
+        TrainingState(
+            policy_params=initial_policy_params,
+            target_policy_params=initial_target_policy_params,
+            critic_params=initial_critic_params,
+            target_critic_params=initial_target_critic_params,
+            policy_opt_state=initial_policy_opt_state,
+            critic_opt_state=initial_critic_opt_state,
+            steps=0,
+        ))
 
     # Do not record timestamps until after the first learning step is done.
     # This is to avoid including the time it takes for actors to come online and
@@ -215,12 +226,15 @@ class D4PGLearner(acme.Learner):
     self._timestamp = None
 
   def step(self):
-    # Get data from replay (dropping extras if any). Note there is no
-    # extra data here because we do not insert any into Reverb.
+    # Sample from replay and pack the data in a Transition.
     sample = next(self._iterator)
     transitions = types.Transition(*sample.data)
 
     self._state, metrics = self._sgd_step(self._state, transitions)
+
+    # Take the metrics from the first device, since they've been pmeaned over
+    # all devices and are therefore identical.
+    metrics = utils.get_from_first_device(metrics)
 
     # Compute elapsed time.
     timestamp = time.time()
@@ -238,10 +252,10 @@ class D4PGLearner(acme.Learner):
         'policy': self._state.target_policy_params,
         'critic': self._state.target_critic_params,
     }
-    return [variables[name] for name in names]
+    return utils.get_from_first_device([variables[name] for name in names])
 
   def save(self) -> TrainingState:
-    return self._state
+    return utils.get_from_first_device(self._state)
 
   def restore(self, state: TrainingState):
-    self._state = state
+    self._state = utils.replicate_in_all_devices(state)

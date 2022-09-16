@@ -215,15 +215,17 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
         flat_trajectory: reverb.ReplaySample) -> reverb.ReplaySample:
       return _as_n_step_transition(flat_trajectory, self._config.discount)
 
+    batch_size_per_device = self._config.batch_size // jax.device_count()
+
     dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
         server_address=replay_client.server_address,
-        batch_size=self._config.batch_size *
-        self._config.num_sgd_steps_per_step,
+        batch_size=batch_size_per_device * self._config.num_sgd_steps_per_step,
         prefetch_size=self._config.prefetch_size,
         postprocess=postprocess,
     )
-    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
+    return utils.multi_device_put(dataset.as_numpy_iterator(),
+                                  jax.local_devices())
 
   def make_adder(
       self,
