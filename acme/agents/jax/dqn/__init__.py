@@ -26,6 +26,8 @@ from acme.agents.jax.dqn.learning_lib import LossExtra
 from acme.agents.jax.dqn.learning_lib import LossFn
 from acme.agents.jax.dqn.learning_lib import ReverbUpdate
 from acme.agents.jax.dqn.learning_lib import SGDLearner
+from acme.agents.jax.dqn.losses import PrioritizedCategoricalDoubleQLearning
 from acme.agents.jax.dqn.losses import PrioritizedDoubleQLearning
+from acme.agents.jax.dqn.losses import QLearning
 from acme.agents.jax.dqn.losses import QrDqn
 from acme.agents.jax.dqn.networks import DQNNetworks
