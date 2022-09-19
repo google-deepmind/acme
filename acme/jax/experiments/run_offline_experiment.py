@@ -70,7 +70,10 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
   eval_loop = None
   if num_eval_episodes > 0:
     # Create the evaluation actor and loop.
-    eval_logger = experiment.logger_factory('evaluator', 'eval_steps', 0)
+    eval_counter = counting.Counter(
+        parent_counter, prefix='evaluator', time_delta=0.)
+    eval_logger = experiment.logger_factory('evaluator',
+                                            eval_counter.get_steps_key(), 0)
     eval_key, key = jax.random.split(key)
     eval_actor = experiment.builder.make_actor(
         random_key=eval_key,
@@ -80,8 +83,7 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
     eval_loop = acme.EnvironmentLoop(
         environment,
         eval_actor,
-        counter=counting.Counter(
-            parent_counter, prefix='evaluator', time_delta=0.),
+        counter=eval_counter,
         logger=eval_logger,
         observers=experiment.observers)
 
