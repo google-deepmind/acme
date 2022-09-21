@@ -131,6 +131,7 @@ class ReverbAdder(base.Adder):
             'Timeout (%d ms) exceeded when flushing the writer before '
             'deleting it. Caught Reverb exception: %s', timeout_ms, str(e))
       self.__writer.close()
+      self.__writer = None
 
   @property
   def _writer(self) -> reverb.TrajectoryWriter:
