@@ -81,6 +81,6 @@ for TEST in run_*.py; do
 done
 # Make sure number of executed examples is expected. This makes sure
 # we will not forget to update this code when examples are renamed for example.
-if [ $TEST_COUNT -ne 4 ]; then
+if [ $TEST_COUNT -ne 7 ]; then
   exit 1
 fi
