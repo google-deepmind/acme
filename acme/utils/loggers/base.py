@@ -15,10 +15,11 @@
 """Base logger."""
 
 import abc
-from typing import Any, Mapping, Protocol, Optional
+from typing import Any, Mapping, Optional
 
 import numpy as np
 import tree
+from typing_extensions import Protocol
 
 LoggingData = Mapping[str, Any]
 

@@ -15,7 +15,7 @@
 """JAX experiment config."""
 
 import dataclasses
-from typing import Any, Callable, Dict, Generic, Iterator, Optional, Protocol, Sequence
+from typing import Any, Callable, Dict, Generic, Iterator, Optional, Sequence
 
 from acme import core
 from acme import environment_loop
@@ -28,6 +28,7 @@ from acme.utils import loggers
 from acme.utils import observers as observers_lib
 from acme.utils import experiment_utils
 import jax
+from typing_extensions import Protocol
 
 
 class MakeActorFn(Protocol, Generic[builders.Policy]):

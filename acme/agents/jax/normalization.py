@@ -16,7 +16,7 @@
 
 import dataclasses
 import functools
-from typing import Any, Callable, Generic, Iterator, List, Optional, Protocol, Tuple
+from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple
 
 import acme
 from acme import adders
@@ -33,6 +33,7 @@ from acme.utils import loggers
 import dm_env
 import jax
 import reverb
+from typing_extensions import Protocol
 
 _NORMALIZATION_VARIABLES = 'normalization_variables'
 

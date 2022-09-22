@@ -15,7 +15,7 @@
 """Base interfaces for networks."""
 
 import dataclasses
-from typing import Callable, Optional, Protocol, Tuple
+from typing import Callable, Optional, Tuple
 
 from acme import specs
 from acme import types
@@ -23,6 +23,7 @@ from acme.jax import types as jax_types
 from acme.jax import utils as jax_utils
 import haiku as hk
 import jax.numpy as jnp
+from typing_extensions import Protocol
 
 # This definition is deprecated. Use jax_types.PRNGKey directly instead.
 # TODO(sinopalnikov): migrate all users and remove this definition.

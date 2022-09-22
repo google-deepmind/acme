@@ -15,10 +15,11 @@
 """Network definitions for BC."""
 
 import dataclasses
-from typing import Callable, Optional, Protocol
+from typing import Callable, Optional
 
 from acme.jax import networks as networks_lib
 from acme.jax import types
+from typing_extensions import Protocol
 
 
 class ApplyFn(Protocol):
