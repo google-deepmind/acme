@@ -15,7 +15,7 @@
 """Defines the MPO agent builder, which holds factories for all components."""
 
 import functools
-from typing import Iterator, Optional
+from typing import Iterator, List, Optional
 
 from absl import logging
 from acme import core
@@ -205,7 +205,7 @@ class MPOBuilder(builders.ActorLearnerBuilder):
       self,
       environment_spec: specs.EnvironmentSpec,
       policy: actor_core_lib.ActorCore,  # Used to get accurate extras_spec.
-  ) -> list[reverb.Table]:
+  ) -> List[reverb.Table]:
     dummy_actor_state = policy.init(jax.random.PRNGKey(0))
     extras_spec = policy.get_extras(dummy_actor_state)
 
