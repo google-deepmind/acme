@@ -54,7 +54,9 @@ EXAMPLES=$(find examples/ -mindepth 1 -type d -not -path examples/offline -not -
 
 # Run static type-checking.
 for TESTDIR in acme ${EXAMPLES}; do
-  pytype -k -j "${N_CPU}" "${TESTDIR}"
+  if [`ls *.py | wc -l` != 0]; then
+    pytype -k -j "${N_CPU}" "${TESTDIR}"
+  fi
 done
 
 # Run all tests.
