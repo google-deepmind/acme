@@ -42,8 +42,8 @@ in our [technical report][Paper].
 > effort to fix them as quickly as possible!
 
 [examples]: examples/
-[tutorial]: https://github.com/deepmind/acme/blob/master/examples/tutorial.ipynb
-[quickstart]: https://github.com/deepmind/acme/blob/master/examples/quickstart.ipynb
+[tutorial]: https://colab.research.google.com/github/deepmind/acme/blob/master/examples/tutorial.ipynb
+[quickstart]: https://colab.research.google.com/github/deepmind/acme/blob/master/examples/quickstart.ipynb
 [documentation]: https://dm-acme.readthedocs.io/
 [paper]: https://arxiv.org/abs/2006.00979
 
