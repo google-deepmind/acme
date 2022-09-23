@@ -1,6 +1,6 @@
 # Acme baseline examples
 
-This directory contains launcher scripts for the baselines referenced in the paper [arxiv link].
+This directory contains launcher scripts for the baselines referenced in [the paper](https://arxiv.org/abs/2006.00979).
 These scripts reproduce the plots given in the paper.
 
 ## How to run
