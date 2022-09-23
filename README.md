@@ -49,8 +49,6 @@ in our [technical report][Paper].
 
 ## Installation
 
-We have tested Acme on Python 3.8 and 3.9. We are working on making it run on
-the default 3.7 colab kernel. Please bear with us.
 To get up and running quickly just follow the steps below:
 
 1.  While you can install Acme in your standard python environment, we
