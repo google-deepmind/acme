@@ -37,29 +37,25 @@ spec.loader.exec_module(_metadata)
 # sure this constraint is upheld.
 
 tensorflow = [
-    'dm-reverb==0.7.2',
-    'keras==2.8.0',
-    'tensorflow-datasets==4.5.2',
-    'tensorflow-estimator==2.8.0',
     'tensorflow==2.8.0',
     'tensorflow_probability==0.15.0',
-    'rlds',
+    'tensorflow_datasets==4.6.0',
+    'dm-reverb==0.7.2',
+    'dm-launchpad==0.5.2',
 ]
 
 core_requirements = [
     'absl-py',
     'dm-env',
-    'dm-launchpad==0.5.2',
     'dm-tree',
-    'numpy==1.22.4',
+    'numpy',
     'pillow',
     'typing-extensions',
 ]
 
 jax_requirements = [
+    'jax',
     'chex',
-    'jax==0.3.6',  # Update when TF2.9 is release.
-    'jaxlib==0.3.5',  # Update when TF2.9 is release.
     'dm-haiku',
     'flax',
     'optax',
@@ -79,11 +75,10 @@ testing_requirements = [
 envs_requirements = [
     'atari-py',
     'bsuite',
-    'dm-control==0.0.364896371',  # TODO(b/206925413): update to new version.
+    'dm-control',
     'gym==0.25.0',
     'gym[atari]',
     'pygame==2.1.0',
-    'tensorflow-datasets==4.5.2',
     'rlds',
 ]
 

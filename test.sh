@@ -60,18 +60,24 @@ done
 # Run all tests.
 pytest --ignore-glob="*/*agent*_test.py" --durations=10 -n "${N_CPU}" acme
 
-# Run sample of examples.
-# For each of them make sure StepsLimiter reached the limit step count.
+# We'll run tests for the continuous baselines.
 cd examples/baselines/rl_continuous
-set +x
-set +e
-time python run_ppo.py --run_distributed=True --lp_termination_notice_secs=1 --env_name=gym:MountainCarContinuous-v0 --num_steps=1000 > /tmp/log.txt 2>&1
-set -x
-set -e
-cat /tmp/log.txt
-cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
 
-# Run tests for non-distributed examples:
+# FIXME(b/248523894): Distributed test(s) have been temporarily disabled
+# because they are seemingly segfaulting in some instances during teardown
+# (after passing the test).
+
+# Run tests for distributed examples.
+# For each of them make sure StepsLimiter reached the limit step count.
+# set +x
+# set +e
+# time python run_ppo.py --run_distributed=True --lp_termination_notice_secs=1 --env_name=gym:MountainCarContinuous-v0 --num_steps=1000 > /tmp/log.txt 2>&1
+# set -x
+# set -e
+# cat /tmp/log.txt
+# cat /tmp/log.txt | grep -E 'StepsLimiter: Max steps of [0-9]+ was reached, terminating'
+
+# Run tests for non-distributed examples.
 TEST_COUNT=0
 for TEST in run_*.py; do
   echo "TEST: ${TEST}"
