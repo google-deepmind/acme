@@ -29,6 +29,7 @@ import numpy as np
 class ActorState(NamedTuple):
   key: jax_types.PRNGKey
   core_state: hk.LSTMState
+  prev_core_state: hk.LSTMState
   log_prob: Union[jnp.ndarray, Tuple[()]] = ()
 
 
@@ -48,6 +49,7 @@ def make_actor_core(mpo_networks: networks.MPONetworks,
     return ActorState(
         key=next_key,
         core_state=core_state,
+        prev_core_state=core_state,
         log_prob=np.zeros(shape=(), dtype=np.float32) if store_log_prob else ())
 
   def select_action(params: networks.MPONetworkParams,
@@ -68,6 +70,7 @@ def make_actor_core(mpo_networks: networks.MPONetworks,
     return actions, ActorState(
         key=next_key,
         core_state=core_state,
+        prev_core_state=state.core_state,
         # Compute log-probabilities for use in off-policy correction schemes.
         log_prob=policy.log_prob(actions) if store_log_prob else ())
 
@@ -75,7 +78,7 @@ def make_actor_core(mpo_networks: networks.MPONetworks,
     extras = {}
 
     if store_core_state:
-      extras['core_state'] = state.core_state
+      extras['core_state'] = state.prev_core_state
 
     if store_log_prob:
       extras['log_prob'] = state.log_prob
