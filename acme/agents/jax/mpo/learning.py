@@ -102,7 +102,6 @@ class MPOLearner(acme.Learner):
       policy_eval_num_val_samples: int = 128,
       policy_loss_config: Optional[mpo_types.PolicyLossConfig] = None,
       use_online_policy_to_bootstrap: bool = False,
-      use_critic_weighted_policy_to_bootstrap: bool = False,
       use_stale_state: bool = False,
       use_retrace: bool = False,
       retrace_lambda: float = 0.95,
@@ -149,14 +148,6 @@ class MPOLearner(acme.Learner):
     self._tx_pair = value_tx_pair
     self._loss_scales = loss_scales
     self._use_online_policy_to_bootstrap = use_online_policy_to_bootstrap
-    self._use_critic_weighted_policy_to_bootstrap = use_critic_weighted_policy_to_bootstrap
-
-    if not policy_eval_stochastic and use_critic_weighted_policy_to_bootstrap:
-      raise ValueError(
-          'Cannot use critic weighted policy with a deterministic eval policy.'
-          ' Consider setting policy_eval_stochasti to True or'
-          ' use_critic_weighted_policy_to_bootstrap to False.')
-
     self._model_rollout_length = model_rollout_length
 
     self._use_retrace = use_retrace
@@ -431,33 +422,13 @@ class MPOLearner(acme.Learner):
     # Add a stopgrad in case we use the online policy for evaluation.
     a_evaluation = jax.lax.stop_gradient(a_evaluation)
 
-    # Get Q-values used to resample or reweight action(s).
-    if self._use_critic_weighted_policy_to_bootstrap:
-      # Temper the Q-values using the current temperature; [N, T, 1].
-      q_evaluation = critic_mean_fn(a_evaluation)
-      temperature = jax.nn.softplus(dual_params.log_temperature) + 1e-8
-      log_weights = jax.lax.stop_gradient(q_evaluation / temperature)
-
     if self._critic_type == CriticType.MIXTURE_OF_GAUSSIANS:
       # Produce Z return samples for every N action sample; [N, Z, T, 1].
       seeds = jax.random.split(key, num=a_evaluation.shape[0])
-      if self._use_critic_weighted_policy_to_bootstrap:
-        # Since a_evaluation are samples from the target policy, resampling
-        # them according to the tempered Q-values produces samples from the
-        # critic weighted policy (CWP): pi_CWP \propto pi * exp(Q).
-        cwp_resampled_idx = jax.random.categorical(
-            key=seeds[0], logits=log_weights.squeeze(axis=-1), axis=0,
-            shape=a_evaluation.shape)
-        a_evaluation = jnp.take_along_axis(
-            a_evaluation, cwp_resampled_idx, axis=0)
       z_samples = critic_sample_fn(a_evaluation, seeds)
     else:
-      if self._use_critic_weighted_policy_to_bootstrap:
-        normalized_weights = jax.nn.softmax(log_weights, axis=0)
-        z_samples = q_evaluation
-      else:
-        normalized_weights = 1. / a_evaluation.shape[0]
-        z_samples = critic_mean_fn(a_evaluation)  # [N, T, 1]
+      normalized_weights = 1. / a_evaluation.shape[0]
+      z_samples = critic_mean_fn(a_evaluation)  # [N, T, 1]
 
       # When policy_eval_stochastic == True, this corresponds to expected SARSA.
       # Otherwise, normalized_weights = 1.0 and N = 1 so the sum is a no-op.

@@ -182,8 +182,6 @@ class MPOBuilder(builders.ActorLearnerBuilder):
           experience_type=self.config.experience_type,
           use_online_policy_to_bootstrap=(
               self.config.use_online_policy_to_bootstrap),
-          use_critic_weighted_policy_to_bootstrap=(
-              self.config.use_critic_weighted_policy_to_bootstrap),
           use_stale_state=self.config.use_stale_state,
           use_retrace=self.config.use_retrace,
           retrace_lambda=self.config.retrace_lambda,

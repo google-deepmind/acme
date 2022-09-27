@@ -55,7 +55,6 @@ class MPOConfig:
   retrace_lambda: float = 0.95
   reward_clip: float = np.float32('inf')
   use_online_policy_to_bootstrap: bool = False
-  use_critic_weighted_policy_to_bootstrap: bool = False
   use_stale_state: bool = False
 
   # Policy training configuration.
