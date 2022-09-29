@@ -29,7 +29,7 @@ tfd = tfp.distributions
 
 
 def _fetch_devicearray(x):
-  if isinstance(x, jax.xla.DeviceArray):
+  if isinstance(x, jax.Array):
     return np.asarray(x)
   return x
 
