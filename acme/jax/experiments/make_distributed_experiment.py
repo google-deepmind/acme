@@ -41,6 +41,7 @@ def make_distributed_experiment(
     *,
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
+    multiprocessing_colocate_actors: bool = False,
     multithreading_colocate_learner_and_reverb: bool = False,
     make_snapshot_models: Optional[config.SnapshotModelFactory[
         builders.Networks]] = None,
@@ -55,7 +56,11 @@ def make_distributed_experiment(
       learner nodes, make sure the learner class does the appropriate pmap/pmean
       operations on the loss/gradients, respectively.
     num_actors_per_node: number of actors per one program node. Actors within
-      one node are colocated in one process.
+      one node are colocated in one or multiple processes depending on the
+      value of multiprocessing_colocate_actors.
+    multiprocessing_colocate_actors: whether to colocate actor nodes as
+      subprocesses on a single machine. False by default, which means colocate
+      within a single process.
     multithreading_colocate_learner_and_reverb: whether to colocate the learner
       and reverb nodes in one process. Not supported if the learner is spread
       across multiple nodes (num_learner_nodes > 1). False by default, which
@@ -269,8 +274,11 @@ def make_distributed_experiment(
         program.add_node(actor_node)
     else:
       for i in range(0, num_actors, num_actors_per_node):
-        program.add_node(
-            lp.MultiThreadingColocation(actor_nodes[i:i + num_actors_per_node]))
+        colocated_actors = actor_nodes[i:i + num_actors_per_node]
+        if multiprocessing_colocate_actors:
+          program.add_node(lp.MultiProcessingColocation(colocated_actors))
+        else:
+          program.add_node(lp.MultiThreadingColocation(colocated_actors))
 
   for evaluator in experiment.get_evaluator_factories():
     evaluator_key, key = jax.random.split(key)
