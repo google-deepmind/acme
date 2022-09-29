@@ -27,6 +27,7 @@ import atari_py  # pylint:disable=unused-import
 import dm_env
 import gym
 import haiku as hk
+import jax.numpy as jnp
 
 FLAGS = flags.FLAGS
 
@@ -76,6 +77,29 @@ def make_dqn_atari_network(
         hk.nets.MLP([512, environment_spec.actions.num_values]),
     ])
     return model(inputs)
+  network_hk = hk.without_apply_rng(hk.transform(network))
+  obs = utils.add_batch_dim(utils.zeros_like(environment_spec.observations))
+  network = networks_lib.FeedForwardNetwork(
+      init=lambda rng: network_hk.init(rng, obs), apply=network_hk.apply)
+  typed_network = networks_lib.non_stochastic_network_to_typed(network)
+  return dqn.DQNNetworks(policy_network=typed_network)
+
+
+def make_distributional_dqn_atari_network(
+    environment_spec: specs.EnvironmentSpec,
+    num_quantiles: int) -> dqn.DQNNetworks:
+  """Creates networks for training Distributional DQN on Atari."""
+
+  def network(inputs):
+    model = hk.Sequential([
+        networks_lib.AtariTorso(),
+        hk.nets.MLP([512, environment_spec.actions.num_values * num_quantiles]),
+    ])
+    q_dist = model(inputs).reshape(-1, environment_spec.actions.num_values,
+                                   num_quantiles)
+    q_values = jnp.mean(q_dist, axis=-1)
+    return q_values, q_dist
+
   network_hk = hk.without_apply_rng(hk.transform(network))
   obs = utils.add_batch_dim(utils.zeros_like(environment_spec.observations))
   network = networks_lib.FeedForwardNetwork(

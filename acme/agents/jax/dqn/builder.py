@@ -174,6 +174,14 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
         n_step=self._config.n_step,
         discount=self._config.discount)
 
+  def _policy_epsilons(self, evaluation: bool) -> Sequence[float]:
+    if evaluation and self._config.eval_epsilon:
+      epsilon = self._config.eval_epsilon
+    else:
+      epsilon = self._config.epsilon
+    epsilons = epsilon if isinstance(epsilon, Sequence) else (epsilon,)
+    return epsilons
+
   def make_policy(self,
                   networks: dqn_networks.DQNNetworks,
                   environment_spec: specs.EnvironmentSpec,
@@ -181,11 +189,49 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
     """Creates the policy."""
     del environment_spec
 
-    if evaluation and self._config.eval_epsilon:
-      epsilon = self._config.eval_epsilon
-    else:
-      epsilon = self._config.epsilon
-    epsilons = epsilon if isinstance(epsilon, Sequence) else (epsilon,)
+    return dqn_actor.alternating_epsilons_actor_core(
+        dqn_actor.behavior_policy(networks),
+        epsilons=self._policy_epsilons(evaluation))
+
+
+class DistributionalDQNBuilder(DQNBuilder):
+  """Distributional DQN Builder."""
+
+  def make_policy(self,
+                  networks: dqn_networks.DQNNetworks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> dqn_actor.DQNPolicy:
+    """Creates the policy.
+
+      Expects network head which returns a tuple with the first entry
+      representing q-values.
+      Creates the agent policy given the collection of network components and
+      environment spec. An optional boolean can be given to indicate if the
+      policy will be used for evaluation.
+
+    Args:
+      networks: struct describing the networks needed to generate the policy.
+      environment_spec: struct describing the specs of the environment.
+      evaluation: when true, a version of the policy to use for evaluation
+        should be returned. This is algorithm-specific so if an algorithm makes
+        no distinction between behavior and evaluation policies this boolean may
+        be ignored.
+
+    Returns:
+      Behavior policy or evaluation policy for the agent.
+    """
+    del environment_spec
+
+    def get_action_values(params: networks_lib.Params,
+                          observation: networks_lib.Observation, *args,
+                          **kwargs) -> networks_lib.NetworkOutput:
+      return networks.policy_network.apply(params, observation, *args,
+                                           **kwargs)[0]
+
+    typed_network = networks_lib.TypedFeedForwardNetwork(
+        init=networks.policy_network.init, apply=get_action_values)
+    behavior_policy = dqn_actor.behavior_policy(
+        dqn_networks.DQNNetworks(policy_network=typed_network))
 
     return dqn_actor.alternating_epsilons_actor_core(
-        dqn_actor.behavior_policy(networks), epsilons=epsilons)
+        behavior_policy, epsilons=self._policy_epsilons(evaluation))

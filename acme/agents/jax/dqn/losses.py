@@ -19,6 +19,7 @@ from typing import Tuple
 from acme import types
 from acme.agents.jax.dqn import learning_lib
 from acme.jax import networks as networks_lib
+import chex
 import jax
 import jax.numpy as jnp
 import reverb
@@ -98,11 +99,27 @@ class QrDqn(learning_lib.LossFn):
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
     key1, key2 = jax.random.split(key)
-    dist_q_tm1 = network.apply(
-        params, transitions.observation, is_training=True, key=key1)['q_dist']
-    dist_q_target_t = network.apply(
-        target_params, transitions.next_observation, is_training=True,
-        key=key2)['q_dist']
+    _, dist_q_tm1 = network.apply(
+        params, transitions.observation, is_training=True, key=key1)
+    _, dist_q_target_t = network.apply(
+        target_params, transitions.next_observation, is_training=True, key=key2)
+    batch_size = len(transitions.observation)
+    chex.assert_shape(
+        dist_q_tm1, (
+            batch_size,
+            None,
+            self.num_atoms,
+        ),
+        custom_message=f'Expected (batch_size, num_actions, num_atoms), got: {dist_q_tm1.shape}',
+        include_default_message=True)
+    chex.assert_shape(
+        dist_q_target_t, (
+            batch_size,
+            None,
+            self.num_atoms,
+        ),
+        custom_message=f'Expected (batch_size, num_actions, num_atoms), got: {dist_q_target_t.shape}',
+        include_default_message=True)
     # Swap distribution and action dimension, since
     # rlax.quantile_q_learning expects it that way.
     dist_q_tm1 = jnp.swapaxes(dist_q_tm1, 1, 2)
@@ -122,6 +139,7 @@ class QrDqn(learning_lib.LossFn):
         self.huber_param,
     )
     loss = jnp.mean(losses)
+    chex.assert_shape(losses, (batch_size,))
     extra = learning_lib.LossExtra(metrics={'mean_loss': loss})
     return loss, extra
 
