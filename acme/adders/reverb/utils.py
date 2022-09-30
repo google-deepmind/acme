@@ -18,6 +18,7 @@ from typing import Dict, Union
 
 from acme import types
 from acme.adders.reverb import base
+import jax
 import jax.numpy as jnp
 import numpy as np
 import tree
@@ -38,7 +39,7 @@ def zeros_like(x: Union[np.ndarray, int, float, np.number]):
   """
   if isinstance(x, (int, float, np.number)):
     return type(x)(0)
-  elif isinstance(x, jnp.DeviceArray):
+  elif isinstance(x, jax.Array):
     return jnp.zeros_like(x)
   elif isinstance(x, np.ndarray):
     return np.zeros_like(x)

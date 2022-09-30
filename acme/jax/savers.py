@@ -22,7 +22,7 @@ from typing import Any
 from absl import logging
 from acme import core
 from acme.tf import savers as tf_savers
-import jax.numpy as jnp
+import jax
 import numpy as np
 import tree
 
@@ -60,7 +60,7 @@ def save_to_path(ckpt_dir: str, state: CheckpointState):
   if not os.path.exists(ckpt_dir):
     os.makedirs(ckpt_dir)
 
-  is_numpy = lambda x: isinstance(x, (np.ndarray, jnp.DeviceArray))
+  is_numpy = lambda x: isinstance(x, (np.ndarray, jax.Array))
   flat_state = tree.flatten(state)
   nest_exemplar = tree.map_structure(is_numpy, state)
 
