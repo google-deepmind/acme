@@ -27,9 +27,8 @@ import optax
 
 # Flags which modify the behavior of the launcher.
 RUN_DISTRIBUTED = flags.DEFINE_bool(
-    'run_distributed', False,
-    'Should the agent be executed in a distributed way (the default for this '
-    'agent).')
+    'run_distributed', True, 'Should an agent be executed in a distributed '
+    'way. If False, will run single-threaded.')
 ENV_NAME = flags.DEFINE_string('env_name', 'Pong', 'What environment to run.')
 SEED = flags.DEFINE_integer('seed', 0, 'Random seed (experiment).')
 NUM_ACTOR_STEPS = flags.DEFINE_integer(
