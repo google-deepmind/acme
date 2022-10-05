@@ -149,3 +149,11 @@ class ValueDiceBuilder(
                                                     device='cpu')
     return actors.GenericActor(
         actor_core, random_key, variable_client, adder, backend='cpu')
+
+  def make_policy(self,
+                  networks: value_dice_networks.ValueDiceNetworks,
+                  environment_spec: specs.EnvironmentSpec,
+                  evaluation: bool = False) -> actor_core_lib.FeedForwardPolicy:
+    del environment_spec
+    return value_dice_networks.apply_policy_and_sample(
+        networks, eval_mode=evaluation)
