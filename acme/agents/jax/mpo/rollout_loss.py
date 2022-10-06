@@ -14,8 +14,6 @@
 
 """MPO learner implementation. With MoG/not and continuous/discrete policies."""
 
-import copy
-import dataclasses
 from typing import Tuple
 
 from acme import types
@@ -25,7 +23,6 @@ from acme.agents.jax.mpo import networks as mpo_networks
 from acme.agents.jax.mpo import types as mpo_types
 from acme.agents.jax.mpo import utils as mpo_utils
 from acme.jax import networks as network_lib
-import acme.jax.losses.mpo as continuous_losses
 import chex
 import jax
 import jax.numpy as jnp
@@ -60,41 +57,17 @@ class RolloutLoss:
       dynamics_model: mpo_networks.UnrollableNetwork,
       model_rollout_length: int,
       loss_scales: mpo_types.LossScalesConfig,
-      root_policy_loss_config: mpo_types.PolicyLossConfig,
       distributional_loss_fn: mpo_types.DistributionalLossFn,
   ):
     self._dynamics_model = dynamics_model
     self._model_rollout_length = model_rollout_length
     self._loss_scales = loss_scales
     self._distributional_loss_fn = distributional_loss_fn
-    self._policy_loss_module = None
-
-    # Create rollout policy loss.
-    eps_scale = 1.0
-    eps_policy_scale = 10.
-    policy_config = copy.deepcopy(dataclasses.asdict(root_policy_loss_config))
-    if isinstance(root_policy_loss_config,
-                  mpo_types.CategoricalPolicyLossConfig):
-      policy_config['epsilon'] = eps_scale * policy_config['epsilon']
-      policy_config['epsilon_policy'] = (
-          eps_policy_scale * policy_config['epsilon_policy'])
-      self._policy_loss_module = discrete_losses.CategoricalMPO(**policy_config)
-    elif isinstance(root_policy_loss_config,
-                    mpo_types.GaussianPolicyLossConfig):
-      policy_config['epsilon'] = eps_scale * policy_config['epsilon']
-      policy_config['epsilon_mean'] = (
-          eps_policy_scale * policy_config['epsilon_mean'])
-      policy_config['epsilon_stddev'] = (
-          eps_policy_scale * policy_config['epsilon_stddev'])
-      self._policy_loss_module = continuous_losses.MPO(**policy_config)
-    else:
-      raise ValueError('invalid root_policy_loss_config type '
-                       f'{type(root_policy_loss_config)}')
 
   def _rolling_window(self, x: chex.Array, axis: int = 0) -> chex.Array:
-    """A convenient tree-mapped and config'd call to rolling window.
+    """A convenient tree-mapped and configured call to rolling window.
 
-    Stacks R=T-K+1 action slices of length K = model_rollout_length from
+    Stacks R = T - K + 1 action slices of length K = model_rollout_length from
     tensor x: [..., 0:K; ...; T-K:T, ...].
 
     Args:
@@ -152,10 +125,17 @@ class RolloutLoss:
         embedding=embedding_rollout[:, :-1])  # [K, R-1, ...]
 
   def __call__(
-      self, params: mpo_networks.MPONetworkParams,
-      dual_params: mpo_types.DualParams, sequence: adders.Step,
-      state_embeddings: types.NestedArray, targets: mpo_types.LossTargets,
-      key: network_lib.PRNGKey) -> Tuple[jnp.ndarray, mpo_types.LogDict]:
+      self,
+      params: mpo_networks.MPONetworkParams,
+      dual_params: mpo_types.DualParams,
+      sequence: adders.Step,
+      state_embeddings: types.NestedArray,
+      targets: mpo_types.LossTargets,
+      key: network_lib.PRNGKey,
+  ) -> Tuple[jnp.ndarray, mpo_types.LogDict]:
+
+    num_rollouts = sequence.reward.shape[0] - self._model_rollout_length + 1
+    indices = jnp.arange(num_rollouts)
 
     # Create rollout predictions.
     rollout = self._compute_model_rollout_predictions(
@@ -167,46 +147,12 @@ class RolloutLoss:
     # the sequence, so drop those when creating the targets. They will contain
     # the reward at t=0, however, because of how the sequences are stored.
     # Rollout target shapes:
-    #   - policy: [T-1, ...] -> [K, R-1, ...],
-    #   - a/q_improvement: [N, T-1] -> [N, K, R-1].
     #   - value: [N, Z, T-2] -> [N, Z, K, R-2],
     #   - reward: [T] -> [K, R].
-    policy_targets = self._rolling_window(targets.policy[1:])
-    a_improvement = self._rolling_window(targets.a_improvement[:, 1:], axis=1)
-    q_improvement = self._rolling_window(targets.q_improvement[:, 1:], axis=1)
     value_targets = self._rolling_window(targets.value[..., 1:], axis=-1)
     reward_targets = self._rolling_window(targets.reward)[None, None, ...]
-    # TODO(abef): should we re-sample a_ and q_improvement here?
 
-    num_rollouts = sequence.reward.shape[0] - self._model_rollout_length + 1
-    num_actions = rollout.policy.logits.shape[-1]  # A
-    bc_targets = self._rolling_window(  # [T-1, A] -> [K, R-1, A]
-        rlax.one_hot(sequence.action[1:], num_actions))
-
-    # Create the rollout losses.
-    def policy_loss_fn(root_idx) -> Tuple[jnp.ndarray, mpo_types.PolicyStats]:
-      chex.assert_shape((rollout.policy.logits, policy_targets.logits),
-                        (self._model_rollout_length, num_rollouts-1, None))
-      chex.assert_shape((a_improvement, q_improvement),
-                        (None, self._model_rollout_length, num_rollouts-1))
-      return self._policy_loss_module(
-          params=dual_params,
-          online_action_distribution=rollout.policy[:, root_idx],
-          target_action_distribution=policy_targets[:, root_idx],
-          actions=a_improvement[..., root_idx],
-          q_values=q_improvement[..., root_idx])
-
-    def bc_policy_loss_fn(root_idx) -> Tuple[jnp.ndarray, jnp.ndarray]:
-      """Self-behavior-cloning loss (cross entropy on rollout actions)."""
-      chex.assert_shape(
-          (rollout.policy.logits, bc_targets),
-          (self._model_rollout_length, num_rollouts-1, num_actions))
-      loss = softmax_cross_entropy(
-          rollout.policy.logits[:, root_idx], bc_targets[:, root_idx])
-      top1_accuracy = top1_accuracy_tiebreak(
-          rollout.policy.logits[:, root_idx], bc_targets[:, root_idx], rng=key)
-      return loss, top1_accuracy
-
+    # Define the value and reward rollout loss functions.
     def value_loss_fn(root_idx) -> jnp.ndarray:
       return self._distributional_loss_fn(
           rollout.value[:, root_idx],  # [K, R-2, ...]
@@ -217,35 +163,75 @@ class RolloutLoss:
           rollout.reward[:, root_idx],  # [K, R, ...]
           reward_targets[..., root_idx])  # [..., K, R]
 
-    # Compute each rollout loss by vmapping over the rollouts.
-    indices = jnp.arange(num_rollouts)
-    mpo_policy_loss, policy_stats = jax.vmap(policy_loss_fn)(indices[:-1])
-    bc_policy_loss, bc_policy_acc = jax.vmap(bc_policy_loss_fn)(indices[:-1])
-    mpo_policy_loss = jnp.mean(mpo_policy_loss)
-    bc_policy_loss = jnp.mean(bc_policy_loss)
-    bc_policy_acc = jnp.mean(bc_policy_acc)
+    # Reward and value losses.
     critic_loss = jnp.mean(jax.vmap(value_loss_fn)(indices[:-2]))
     reward_loss = jnp.mean(jax.vmap(reward_loss_fn)(indices))
 
+    # Define the MPO policy rollout loss.
+    mpo_policy_loss = 0
+    if self._loss_scales.rollout.policy:
+      # Rollout target shapes:
+      #   - policy: [T-1, ...] -> [K, R-1, ...],
+      #   - q_improvement: [N, T-1] -> [N, K, R-1].
+      policy_targets = self._rolling_window(targets.policy[1:])
+      q_improvement = self._rolling_window(targets.q_improvement[:, 1:], axis=1)
+
+      def policy_loss_fn(root_idx) -> jnp.ndarray:
+        chex.assert_shape((rollout.policy.logits, policy_targets.logits),
+                          (self._model_rollout_length, num_rollouts - 1, None))
+        chex.assert_shape(q_improvement,
+                          (None, self._model_rollout_length, num_rollouts - 1))
+        # Compute MPO's E-step unnormalized logits.
+        temperature = discrete_losses.get_temperature_from_params(dual_params)
+        policy_target_probs = jax.nn.softmax(
+            jnp.transpose(q_improvement[..., root_idx]) / temperature +
+            jax.nn.log_softmax(policy_targets[:, root_idx].logits, axis=-1))
+        return softmax_cross_entropy(rollout.policy[:, root_idx].logits,
+                                     jax.lax.stop_gradient(policy_target_probs))
+
+      # Compute the MPO loss and add it to the overall rollout policy loss.
+      mpo_policy_loss = jax.vmap(policy_loss_fn)(indices[:-1])
+      mpo_policy_loss = jnp.mean(mpo_policy_loss)
+
+    # Define the BC policy rollout loss (only supported for discrete policies).
+    bc_policy_loss, bc_policy_acc = 0, 0
+    if self._loss_scales.rollout.bc_policy:
+      num_actions = rollout.policy.logits.shape[-1]  # A
+      bc_targets = self._rolling_window(  # [T-1, A] -> [K, R-1, A]
+          rlax.one_hot(sequence.action[1:], num_actions))
+
+      def bc_policy_loss_fn(root_idx) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        """Self-behavior-cloning loss (cross entropy on rollout actions)."""
+        chex.assert_shape(
+            (rollout.policy.logits, bc_targets),
+            (self._model_rollout_length, num_rollouts - 1, num_actions))
+        loss = softmax_cross_entropy(rollout.policy.logits[:, root_idx],
+                                     bc_targets[:, root_idx])
+        top1_accuracy = top1_accuracy_tiebreak(
+            rollout.policy.logits[:, root_idx],
+            bc_targets[:, root_idx],
+            rng=key)
+        return loss, top1_accuracy
+
+      # Compute each rollout loss by vmapping over the rollouts.
+      bc_policy_loss, bc_policy_acc = jax.vmap(bc_policy_loss_fn)(indices[:-1])
+      bc_policy_loss = jnp.mean(bc_policy_loss)
+      bc_policy_acc = jnp.mean(bc_policy_acc)
+
     # Combine losses.
-    policy_loss = (self._loss_scales.rollout.policy * mpo_policy_loss +
-                   self._loss_scales.rollout.bc_policy * bc_policy_loss)
-    critic_loss = self._loss_scales.rollout.critic * critic_loss
-    loss = (self._loss_scales.policy * policy_loss +
-            self._loss_scales.critic * critic_loss +
-            self._loss_scales.rollout.reward * reward_loss)
+    loss = (
+        self._loss_scales.rollout.policy * mpo_policy_loss +
+        self._loss_scales.rollout.bc_policy * bc_policy_loss +
+        self._loss_scales.critic * self._loss_scales.rollout.critic *
+        critic_loss + self._loss_scales.rollout.reward * reward_loss)
 
     logging_dict = {
-        'rollout_mpo_policy_loss': mpo_policy_loss,
-        'rollout_bc_policy_loss': bc_policy_loss,
-        'rollout_policy_loss': policy_loss,
         'rollout_critic_loss': critic_loss,
         'rollout_reward_loss': reward_loss,
+        'rollout_policy_loss': mpo_policy_loss,
+        'rollout_bc_policy_loss': bc_policy_loss,
         'rollout_bc_accuracy': bc_policy_acc,
         'rollout_loss': loss,
     }
-
-    logging_dict.update({
-        f'policy/rollout/{k}': v for k, v in policy_stats._asdict().items()})
 
     return loss, logging_dict

@@ -132,7 +132,7 @@ class CategoricalMPO:
 
     # Transform dual variables from log-space.
     # Note: using softplus instead of exponential for numerical stability.
-    temperature = jax.nn.softplus(params.log_temperature) + _MPO_FLOAT_EPSILON
+    temperature = get_temperature_from_params(params)
     alpha = jax.nn.softplus(params.log_alpha) + _MPO_FLOAT_EPSILON
 
     # Compute the E-step logits and the temperature loss, used to adapt the
@@ -235,3 +235,7 @@ def clip_categorical_mpo_params(
   return params._replace(
       log_temperature=jnp.maximum(_MIN_LOG_TEMPERATURE, params.log_temperature),
       log_alpha=jnp.maximum(_MIN_LOG_ALPHA, params.log_alpha))
+
+
+def get_temperature_from_params(params: CategoricalMPOParams) -> float:
+  return jax.nn.softplus(params.log_temperature) + _MPO_FLOAT_EPSILON

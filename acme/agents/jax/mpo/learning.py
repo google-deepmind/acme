@@ -196,11 +196,14 @@ class MPOLearner(acme.Learner):
 
     # Create the dynamics model rollout loss.
     if model_rollout_length > 0:
+      if not discrete_policy and (self._loss_scales.rollout.policy or
+                                  self._loss_scales.rollout.bc_policy):
+        raise ValueError('Policy rollout losses are only supported in the '
+                         'discrete policy case.')
       self._model_rollout_loss_fn = rollout_loss.RolloutLoss(
           dynamics_model=networks.dynamics_model,
           model_rollout_length=model_rollout_length,
           loss_scales=loss_scales,
-          root_policy_loss_config=policy_loss_config,
           distributional_loss_fn=self._distributional_loss)
 
     # Create optimizers if they aren't given.

@@ -138,6 +138,11 @@ class MPOConfig:
       if self.use_retrace:
         raise ValueError('retrace is not supported for the Categorical critic')
 
+    if self.model_rollout_length > 0 and not self.discrete_policy:
+      if (self.rollout_policy_loss_scale or self.rollout_bc_policy_loss_scale):
+        raise ValueError('Policy rollout losses are only supported in the '
+                         'discrete policy case.')
+
 
 def _compute_spi_from_replay_fraction(replay_fraction: float) -> float:
   """Computes an estimated samples_per_insert from a replay_fraction.
