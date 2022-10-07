@@ -32,11 +32,12 @@ import tree
 ActorState = Any
 Observation = networks_lib.Observation
 Action = networks_lib.Action
+Params = networks_lib.Params
 
 
 class StackerState(NamedTuple):
-  stack: jnp.ndarray  # Observations stacked along the final dimension.
-  needs_reset: jnp.ndarray  # A single boolean per element in a batch.
+  stack: jax.Array  # Observations stacked along the final dimension.
+  needs_reset: jax.Array  # A scalar boolean.
 
 
 class StackingActorState(NamedTuple):
@@ -73,7 +74,7 @@ class ObservationStacker:
     def _repeat_observation(state: StackerState,
                             first_observation: Observation) -> StackerState:
       return state._replace(
-          needs_reset=False,
+          needs_reset=jnp.array(False),
           stack=tile_nested_array(first_observation, stack_size - 1, axis=-1))
 
     self._zero_stack = tile_nested_array(
@@ -105,7 +106,7 @@ class ObservationStacker:
     return output, new_state
 
   def initial_state(self) -> StackerState:
-    return StackerState(stack=self._zero_stack, needs_reset=True)
+    return StackerState(stack=self._zero_stack, needs_reset=jnp.array(True))
 
 
 def get_adjusted_environment_spec(environment_spec: specs.EnvironmentSpec,
@@ -147,8 +148,10 @@ def wrap_actor_core(
         stacker_state=obs_stacker.initial_state())
 
   def select_action(
-      params, observations: Observation,
-      state: StackingActorState) -> Tuple[Action, StackingActorState]:
+      params: Params,
+      observations: Observation,
+      state: StackingActorState,
+  ) -> Tuple[Action, StackingActorState]:
 
     stacked_observations, stacker_state = obs_stacker(observations,
                                                       state.stacker_state)
