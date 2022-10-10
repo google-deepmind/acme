@@ -82,7 +82,8 @@ TEST_COUNT=0
 for TEST in run_*.py; do
   echo "TEST: ${TEST}"
   TEST_COUNT=$(($TEST_COUNT+1))
-  time python "${TEST}" --num_steps=1000 --eval_every=1000 --env_name=gym:MountainCarContinuous-v0
+  time python "${TEST}" --run_distributed=False --num_steps=1000 \
+    --eval_every=1000 --env_name=gym:MountainCarContinuous-v0
 
 done
 # Make sure number of executed examples is expected. This makes sure

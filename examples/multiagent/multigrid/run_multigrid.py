@@ -32,8 +32,8 @@ import launchpad as lp
 
 FLAGS = flags.FLAGS
 _RUN_DISTRIBUTED = flags.DEFINE_bool(
-    'run_distributed', False, 'Should an agent be executed in a '
-    'distributed way (the default is a single-threaded agent)')
+    'run_distributed', True, 'Should an agent be executed in a distributed '
+    'way. If False, will run single-threaded.')
 _NUM_STEPS = flags.DEFINE_integer('num_steps', 10000,
                                   'Number of env steps to run training for.')
 _EVAL_EVERY = flags.DEFINE_integer('eval_every', 1000,

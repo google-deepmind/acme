@@ -25,8 +25,8 @@ from acme.utils import lp_utils
 import launchpad as lp
 
 RUN_DISTRIBUTED = flags.DEFINE_bool(
-    'run_distributed', False, 'Should an agent be executed in a '
-    'distributed way (the default is a single-threaded agent)')
+    'run_distributed', True, 'Should an agent be executed in a distributed '
+    'way. If False, will run single-threaded.')
 ENV_NAME = flags.DEFINE_string(
     'env_name', 'gym:HalfCheetah-v2',
     'What environment to run on, in the format {gym|control}:{task}, '
