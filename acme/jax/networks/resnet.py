@@ -42,9 +42,9 @@ class ResidualBlock(hk.Module):
 
     if use_layer_norm:
       self.layernorm1 = hk.LayerNorm(
-          axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6)
+          axis=(-3, -2, -1), create_scale=True, create_offset=True, eps=1e-6)
       self.layernorm2 = hk.LayerNorm(
-          axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6)
+          axis=(-3, -2, -1), create_scale=True, create_offset=True, eps=1e-6)
 
   def __call__(self, x: jnp.ndarray):
     output = x
@@ -94,7 +94,7 @@ def make_downsampling_layer(
   elif strategy is DownsamplingStrategy.LAYERNORM_RELU_CONV:
     return hk.Sequential([
         hk.LayerNorm(
-            axis=(1, 2, 3), create_scale=True, create_offset=True, eps=1e-6),
+            axis=(-3, -2, -1), create_scale=True, create_offset=True, eps=1e-6),
         jax.nn.relu,
         hk.Conv2D(
             output_channels,
