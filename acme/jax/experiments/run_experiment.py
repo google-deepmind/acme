@@ -175,6 +175,8 @@ def run_experiment(experiment: config.ExperimentConfig,
     steps += train_loop.run(num_steps=eval_every)
   eval_loop.run(num_episodes=num_eval_episodes)
 
+  environment.close()
+
 
 class _LearningActor(core.Actor):
   """Actor which learns (updates its parameters) when `update` is called.
