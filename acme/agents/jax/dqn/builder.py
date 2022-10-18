@@ -39,7 +39,7 @@ from reverb import rate_limiters
 
 class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
                                               dqn_actor.DQNPolicy,
-                                              reverb.ReplaySample]):
+                                              utils.PrefetchingSplit]):
   """DQN Builder."""
 
   def __init__(self,
@@ -61,7 +61,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
       self,
       random_key: networks_lib.PRNGKey,
       networks: dqn_networks.DQNNetworks,
-      dataset: Iterator[reverb.ReplaySample],
+      dataset: Iterator[utils.PrefetchingSplit],
       logger_fn: loggers.LoggerFactory,
       environment_spec: Optional[specs.EnvironmentSpec],
       replay_client: Optional[reverb.Client] = None,
@@ -150,15 +150,20 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
     return batch_size // num_devices
 
   def make_dataset_iterator(
-      self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
+      self,
+      replay_client: reverb.Client,
+  ) -> Iterator[utils.PrefetchingSplit]:
     """Creates a dataset iterator to use for learning."""
     dataset = datasets.make_reverb_dataset(
         table=self._config.replay_table_name,
         server_address=replay_client.server_address,
         batch_size=self.batch_size_per_device,
         prefetch_size=self._config.prefetch_size)
-    return utils.multi_device_put(dataset.as_numpy_iterator(),
-                                  jax.local_devices())
+
+    return utils.multi_device_put(
+        dataset.as_numpy_iterator(),
+        jax.local_devices(),
+        split_fn=utils.keep_key_on_host)
 
   def make_adder(
       self,

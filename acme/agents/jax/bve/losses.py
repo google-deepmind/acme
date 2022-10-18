@@ -49,7 +49,6 @@ class BVELoss(dqn.LossFn):
   ) -> Tuple[jnp.DeviceArray, dqn.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
-    keys, *_ = batch.info
 
     # Forward pass.
     key1, key2 = jax.random.split(key)
@@ -72,7 +71,7 @@ class BVELoss(dqn.LossFn):
 
     # Average:
     loss = jnp.mean(batch_loss)  # []
-    reverb_update = dqn.ReverbUpdate(
-        keys=keys, priorities=jnp.abs(td_error).astype(jnp.float64))
     metrics = {'td_error': td_error, 'batch_loss': batch_loss}
-    return loss, dqn.LossExtra(metrics=metrics, reverb_update=reverb_update)
+    return loss, dqn.LossExtra(
+        metrics=metrics,
+        reverb_priorities=jnp.abs(td_error).astype(jnp.float64))

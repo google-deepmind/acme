@@ -46,7 +46,8 @@ class ReverbUpdate(NamedTuple):
 class LossExtra(NamedTuple):
   """Extra information that is returned along with loss value."""
   metrics: Dict[str, jnp.DeviceArray]
-  reverb_update: Optional[ReverbUpdate] = None
+  # New optional updated priorities for the samples.
+  reverb_priorities: Optional[jnp.DeviceArray] = None
 
 
 class LossFn(typing_extensions.Protocol):
@@ -79,7 +80,7 @@ class SGDLearner(acme.Learner):
                network: networks_lib.TypedFeedForwardNetwork,
                loss_fn: LossFn,
                optimizer: optax.GradientTransformation,
-               data_iterator: Iterator[reverb.ReplaySample],
+               data_iterator: Iterator[utils.PrefetchingSplit],
                target_update_period: int,
                random_key: networks_lib.PRNGKey,
                replay_client: Optional[reverb.Client] = None,
@@ -121,11 +122,11 @@ class SGDLearner(acme.Learner):
       return new_training_state, extra
 
     def postprocess_aux(extra: LossExtra) -> LossExtra:
-      reverb_update = jax.tree_util.tree_map(
-          lambda a: jnp.reshape(a, (-1, *a.shape[2:])), extra.reverb_update)
+      reverb_priorities = jax.tree_util.tree_map(
+          lambda a: jnp.reshape(a, (-1, *a.shape[2:])), extra.reverb_priorities)
       return extra._replace(
           metrics=jax.tree_util.tree_map(jnp.mean, extra.metrics),
-          reverb_update=reverb_update)
+          reverb_priorities=reverb_priorities)
 
     self._num_sgd_steps_per_step = num_sgd_steps_per_step
     sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step,
@@ -176,16 +177,21 @@ class SGDLearner(acme.Learner):
   def step(self):
     """Takes one SGD step on the learner."""
     with jax.profiler.StepTraceAnnotation('step', step_num=self._current_step):
-      batch = next(self._data_iterator)
-      self._state, extra = self._sgd_step(self._state, batch)
+      prefetching_split = next(self._data_iterator)
+      # In this case the host property of the prefetching split contains only
+      # replay keys and the device property is the prefetched full original
+      # sample. Key is on host since it's uint64 type.
+      reverb_keys = prefetching_split.host
+      batch: reverb.ReplaySample = prefetching_split.device
 
+      self._state, extra = self._sgd_step(self._state, batch)
       # Compute elapsed time.
       timestamp = time.time()
       elapsed = timestamp - self._timestamp if self._timestamp else 0
       self._timestamp = timestamp
 
-      if self._replay_client and extra.reverb_update:
-        reverb_update = extra.reverb_update._replace(keys=batch.info.key)
+      if self._replay_client and extra.reverb_priorities is not None:
+        reverb_update = ReverbUpdate(reverb_keys, extra.reverb_priorities)
         self._async_priority_updater.put(reverb_update)
 
       steps_per_sec = (self._num_sgd_steps_per_step / elapsed) if elapsed else 0

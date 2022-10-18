@@ -25,17 +25,17 @@ from acme.agents.jax.bve import networks as bve_networks
 from acme.agents.jax.dqn import learning_lib
 from acme.jax import networks as networks_lib
 from acme.jax import types as jax_types
+from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
 import haiku as hk
 import optax
-import reverb
 
 
 class BVEBuilder(builders.OfflineBuilder[bve_networks.BVENetworks,
                                          actor_core_lib.ActorCore,
-                                         reverb.ReplaySample]):
+                                         utils.PrefetchingSplit]):
   """BVE Builder."""
 
   def __init__(self, config):
@@ -49,7 +49,7 @@ class BVEBuilder(builders.OfflineBuilder[bve_networks.BVENetworks,
   def make_learner(self,
                    random_key: jax_types.PRNGKey,
                    networks: bve_networks.BVENetworks,
-                   dataset: Iterator[reverb.ReplaySample],
+                   dataset: Iterator[utils.PrefetchingSplit],
                    logger_fn: loggers.LoggerFactory,
                    environment_spec: specs.EnvironmentSpec,
                    counter: Optional[counting.Counter] = None) -> core.Learner:

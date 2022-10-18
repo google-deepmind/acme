@@ -209,16 +209,10 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
         postprocess=_zero_pad(self._sequence_length),
     )
 
-    # We split samples in two outputs, the keys which need to be kept on-host
-    # since int64 arrays are not supported in TPUs, and the entire sample
-    # separately so it can be sent to the sgd_step method.
-    def split_sample(sample: reverb.ReplaySample) -> utils.PrefetchingSplit:
-      return utils.PrefetchingSplit(host=sample.info.key, device=sample)
-
     return utils.multi_device_put(
         dataset.as_numpy_iterator(),
         devices=jax.local_devices(),
-        split_fn=split_sample)
+        split_fn=utils.keep_key_on_host)
 
   def make_adder(
       self, replay_client: reverb.Client,

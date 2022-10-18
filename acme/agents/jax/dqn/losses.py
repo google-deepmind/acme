@@ -44,7 +44,7 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
   ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
-    keys, probs, *_ = batch.info
+    probs = batch.info.probability
 
     # Forward pass.
     key1, key2, key3 = jax.random.split(key, 3)
@@ -73,9 +73,8 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
 
     # Reweight.
     loss = jnp.mean(importance_weights * batch_loss)  # []
-    reverb_update = learning_lib.ReverbUpdate(
-        keys=keys, priorities=jnp.abs(td_error).astype(jnp.float64))
-    extra = learning_lib.LossExtra(metrics={}, reverb_update=reverb_update)
+    extra = learning_lib.LossExtra(
+        metrics={}, reverb_priorities=jnp.abs(td_error).astype(jnp.float64))
     return loss, extra
 
 
@@ -161,7 +160,7 @@ class PrioritizedCategoricalDoubleQLearning(learning_lib.LossFn):
   ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
-    keys, probs, *_ = batch.info
+    probs = batch.info.probability
 
     # Forward pass.
     key1, key2, key3 = jax.random.split(key, 3)
@@ -191,9 +190,8 @@ class PrioritizedCategoricalDoubleQLearning(learning_lib.LossFn):
 
     # Reweight.
     loss = jnp.mean(importance_weights * batch_loss)  # []
-    reverb_update = learning_lib.ReverbUpdate(
-        keys=keys, priorities=jnp.abs(batch_loss).astype(jnp.float64))
-    extra = learning_lib.LossExtra(metrics={}, reverb_update=reverb_update)
+    extra = learning_lib.LossExtra(
+        metrics={}, reverb_priorities=jnp.abs(batch_loss).astype(jnp.float64))
     return loss, extra
 
 

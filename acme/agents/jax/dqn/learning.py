@@ -20,6 +20,7 @@ from acme.adders import reverb as adders
 from acme.agents.jax.dqn import learning_lib
 from acme.agents.jax.dqn import losses
 from acme.jax import networks as networks_lib
+from acme.jax import utils
 from acme.utils import counting
 from acme.utils import loggers
 import optax
@@ -38,7 +39,7 @@ class DQNLearner(learning_lib.SGDLearner):
                discount: float,
                importance_sampling_exponent: float,
                target_update_period: int,
-               iterator: Iterator[reverb.ReplaySample],
+               iterator: Iterator[utils.PrefetchingSplit],
                optimizer: optax.GradientTransformation,
                random_key: networks_lib.PRNGKey,
                max_abs_reward: float = 1.,

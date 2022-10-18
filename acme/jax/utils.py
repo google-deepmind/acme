@@ -28,6 +28,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
+import reverb
 import tree
 
 
@@ -159,6 +160,20 @@ class PrefetchingSplit(NamedTuple):
 
 
 _SplitFunction = Callable[[types.NestedArray], PrefetchingSplit]
+
+
+def keep_key_on_host(sample: reverb.ReplaySample) -> PrefetchingSplit:
+  """Returns PrefetchingSplit which keeps uint64 reverb key on the host.
+
+  We want to avoid truncation of the uint64 reverb key by JAX.
+
+  Args:
+    sample: a sample from a Reverb replay buffer.
+
+  Returns:
+    PrefetchingSplit with device having the reverb sample, and key on host.
+  """
+  return PrefetchingSplit(host=sample.info.key, device=sample)
 
 
 def device_put(
