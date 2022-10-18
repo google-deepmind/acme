@@ -14,7 +14,7 @@
 
 """Utility definitions for Acme experiments."""
 
-from typing import Optional
+from typing import Callable, Optional
 
 from acme.utils import loggers
 
@@ -26,3 +26,7 @@ def make_experiment_logger(label: str,
   if steps_key is None:
     steps_key = f'{label}_steps'
   return loggers.make_default_logger(label=label, steps_key=steps_key)
+
+
+def create_experiment_logger_fn() -> Callable[[str, str], loggers.Logger]:
+  return make_experiment_logger
