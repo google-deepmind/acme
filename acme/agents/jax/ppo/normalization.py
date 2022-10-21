@@ -14,14 +14,16 @@
 
 """Utilities for normalization."""
 import dataclasses
-from typing import Any, Callable, NamedTuple, Optional
+from typing import Any, Callable, Generic, NamedTuple, Optional
 
-from acme import core
+from acme import adders
 from acme import types
+from acme.agents.jax import actor_core
+from acme.agents.jax import actors
+from acme.jax import networks as network_lib
 from acme.jax import running_statistics
 from acme.jax import utils
 from acme.jax import variable_utils
-import dm_env
 import jax
 import jax.numpy as jnp
 
@@ -48,41 +50,49 @@ class NormalizationFns:
                    NormalizationParams]
 
 
-# largely following acme/agents/jax/normalization.py
-# TODO(kamyar): move to acme/agents/jax/normalization.py
-class NormalizationActorWrapper(core.Actor):
-  """An actor wrapper that normalizes observations before applying policy."""
+class NormalizedGenericActor(actors.GenericActor[actor_core.State,
+                                                 actor_core.Extras],
+                             Generic[actor_core.State, actor_core.Extras]):
+  """A GenericActor that uses observation normalization."""
 
-  def __init__(
-      self,
-      wrapped_actor: core.Actor,
-      normalization_fns: NormalizationFns,
-      variable_client: variable_utils.VariableClient,
-      backend: Optional[str] = None,
-  ):
-    self._wrapped_actor = wrapped_actor
-    self._variable_client = variable_client
-    self._apply_normalization = jax.jit(
-        normalization_fns.normalize, backend=backend)
+  def __init__(self,
+               actor: actor_core.ActorCore[actor_core.State, actor_core.Extras],
+               normalization_fns: NormalizationFns,
+               random_key: network_lib.PRNGKey,
+               variable_client: Optional[variable_utils.VariableClient],
+               adder: Optional[adders.Adder] = None,
+               jit: bool = True,
+               backend: Optional[str] = 'cpu',
+               per_episode_update: bool = False):
+    """Initializes a feed forward actor.
 
-  def select_action(self, observation: types.NestedArray) -> types.NestedArray:
-    self._variable_client.update()
-    norm_params = self._variable_client.params
-    observation = self._apply_normalization(observation, norm_params)
-    return self._wrapped_actor.select_action(observation)
+    Args:
+      actor: actor core.
+      normalization_fns: Function that are used for normalizing observations.
+      random_key: Random key.
+      variable_client: The variable client to get policy and observation
+        normalization parameters from. The variable client should be defined to
+        provide [policy_params, obs_norm_params].
+      adder: An adder to add experiences to.
+      jit: Whether or not to jit the ActorCore and normalization functions.
+      backend: Which backend to use when jitting.
+      per_episode_update: if True, updates variable client params once at the
+        beginning of each episode
+    """
+    super().__init__(actor, random_key, variable_client, adder, jit, backend,
+                     per_episode_update)
+    if jit:
+      self._apply_normalization = jax.jit(
+          normalization_fns.normalize, backend=backend)
+    else:
+      self._apply_normalization = normalization_fns.normalize
 
-  def observe_first(self, timestep: dm_env.TimeStep):
-    return self._wrapped_actor.observe_first(timestep)
-
-  def observe(
-      self,
-      action: types.NestedArray,
-      next_timestep: dm_env.TimeStep,
-  ):
-    return self._wrapped_actor.observe(action, next_timestep)
-
-  def update(self, wait: bool = False):
-    return self._wrapped_actor.update(wait)
+  def select_action(self,
+                    observation: network_lib.Observation) -> types.NestedArray:
+    policy_params, obs_norm_params = tuple(self._params)
+    observation = self._apply_normalization(observation, obs_norm_params)
+    action, self._state = self._policy(policy_params, observation, self._state)
+    return utils.to_numpy(action)
 
 
 class EMAMeanStdNormalizerParams(NamedTuple):

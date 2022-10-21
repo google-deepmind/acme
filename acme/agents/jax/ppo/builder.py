@@ -60,8 +60,10 @@ class PPOBuilder(
   ) -> List[reverb.Table]:
     """Creates reverb tables for the algorithm."""
     del policy
+    # params_num_sgd_steps is used to track how old the actor parameters are
     extra_spec = {
         'log_prob': np.ones(shape=(), dtype=np.float32),
+        'params_num_sgd_steps': np.ones(shape=(), dtype=np.float32),
     }
     signature = adders_reverb.SequenceAdder.signature(
         environment_spec, extra_spec, sequence_length=self._sequence_length)
@@ -199,26 +201,33 @@ class PPOBuilder(
       adder: Optional[adders.Adder] = None,
   ) -> core.Actor:
     assert variable_source is not None
-    policy_variable_client = variable_utils.VariableClient(
-        variable_source,
-        'params',
-        device='cpu',
-        update_period=self._config.variable_update_period)
-    actor = actor_core_lib.batched_feed_forward_with_extras_to_actor_core(
+    actor_core = actor_core_lib.batched_feed_forward_with_extras_to_actor_core(
         policy)
-    actor = actors.GenericActor(
-        actor, random_key, policy_variable_client, adder, backend='cpu')
-
     if self._config.obs_normalization_fns_factory is not None:
-      obs_normalization_fns = self._config.obs_normalization_fns_factory(
-          environment_spec.observations)
-      obs_norm_variable_client = variable_utils.VariableClient(
-          variable_source,
-          'obs_normalization_params',
+      variable_client = variable_utils.VariableClient(
+          variable_source, ['params', 'obs_normalization_params'],
           device='cpu',
           update_period=self._config.variable_update_period)
-      actor = normalization.NormalizationActorWrapper(
-          actor, obs_normalization_fns, obs_norm_variable_client, backend='cpu')
+      obs_normalization_fns = self._config.obs_normalization_fns_factory(
+          environment_spec.observations)
+      actor = normalization.NormalizedGenericActor(
+          actor_core,
+          obs_normalization_fns,
+          random_key,
+          variable_client,
+          adder,
+          jit=True,
+          backend='cpu',
+          per_episode_update=False,
+      )
+    else:
+      variable_client = variable_utils.VariableClient(
+          variable_source,
+          'params',
+          device='cpu',
+          update_period=self._config.variable_update_period)
+      actor = actors.GenericActor(
+          actor_core, random_key, variable_client, adder, backend='cpu')
     return actor
 
   def make_policy(

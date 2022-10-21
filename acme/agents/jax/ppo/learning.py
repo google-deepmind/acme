@@ -31,6 +31,9 @@ import reverb
 import rlax
 
 
+PPOParams = networks.PPOParams
+
+
 class Batch(NamedTuple):
   """A batch of data; all shapes are expected to be [B, ...]."""
   observations: types.NestedArray
@@ -47,12 +50,14 @@ class Batch(NamedTuple):
 
 class TrainingState(NamedTuple):
   """Training state for the PPO learner."""
-  params: networks_lib.Params
+  params: PPOParams
   opt_state: optax.OptState
   random_key: networks_lib.PRNGKey
 
   # Optional counter used for exponential moving average zero debiasing
-  ema_counter: Optional[jnp.int32] = None
+  # Using float32 as it covers a larger range than int32. If using int64 we
+  # would need to do jax_enable_x64.
+  ema_counter: Optional[jnp.float32] = None
 
   # Optional parameter for maintaining a running estimate of the scale of
   # advantage estimates
@@ -184,7 +189,7 @@ class PPOLearner(acme.Learner):
       key, sub_key = jax.random.split(state.random_key)
 
       loss_grad, metrics = ppo_loss_grad(
-          state.params,
+          state.params.model_params,
           observations,
           actions,
           advantages,
@@ -199,7 +204,10 @@ class PPOLearner(acme.Learner):
       # Apply updates
       loss_grad = jax.lax.pmean(loss_grad, axis_name=pmap_axis_name)
       updates, opt_state = optimizer.update(loss_grad, state.opt_state)
-      params = optax.apply_updates(state.params, updates)
+      model_params = optax.apply_updates(state.params.model_params, updates)
+      params = PPOParams(
+          model_params=model_params,
+          num_sgd_steps=state.params.num_sgd_steps + 1)
 
       if log_global_norm_metrics:
         metrics['norm_grad'] = optax.global_norm(loss_grad)
@@ -249,6 +257,8 @@ class PPOLearner(acme.Learner):
         state: TrainingState,
         trajectories: types.NestedArray,
     ):
+      params_num_sgd_steps_before_update = state.params.num_sgd_steps
+
       # Update the EMA counter and obtain the zero debiasing multiplier
       if normalize_advantage or normalize_value:
         ema_counter = state.ema_counter + 1
@@ -275,7 +285,8 @@ class PPOLearner(acme.Learner):
         rewards = jnp.clip(rewards, -1. * max_abs_reward, max_abs_reward)
       discounts = termination * discount
       behavior_log_probs = extra['log_prob']
-      _, behavior_values = vmapped_network_apply(state.params, observations)
+      _, behavior_values = vmapped_network_apply(state.params.model_params,
+                                                 observations)
 
       if normalize_value:
         batch_value_first_moment = jnp.mean(behavior_values)
@@ -366,6 +377,14 @@ class PPOLearner(acme.Learner):
         metrics['value_mean'] = value_mean
         metrics['value_std'] = value_std
 
+      delta_params_sgd_steps = (
+          data.extras['params_num_sgd_steps'][:, 0] -
+          params_num_sgd_steps_before_update)
+      metrics['delta_params_sgd_steps_min'] = jnp.min(delta_params_sgd_steps)
+      metrics['delta_params_sgd_steps_max'] = jnp.max(delta_params_sgd_steps)
+      metrics['delta_params_sgd_steps_mean'] = jnp.mean(delta_params_sgd_steps)
+      metrics['delta_params_sgd_steps_std'] = jnp.std(delta_params_sgd_steps)
+
       return state, metrics
 
     pmapped_update_step = jax.pmap(
@@ -391,18 +410,24 @@ class PPOLearner(acme.Learner):
 
       initial_params = ppo_networks.network.init(key_init)
       initial_opt_state = optimizer.init(initial_params)
+      # Using float32 as it covers a larger range than int32. If using int64 we
+      # would need to do jax_enable_x64.
+      params_num_sgd_steps = jnp.zeros(shape=(), dtype=jnp.float32)
 
       initial_params = jax.device_put_replicated(initial_params,
                                                  self.local_learner_devices)
       initial_opt_state = jax.device_put_replicated(initial_opt_state,
                                                     self.local_learner_devices)
+      params_num_sgd_steps = jax.device_put_replicated(
+          params_num_sgd_steps, self.local_learner_devices)
 
-      ema_counter = jnp.int32(0)
+      ema_counter = jnp.float32(0)
       ema_counter = jax.device_put_replicated(ema_counter,
                                               self.local_learner_devices)
 
       init_state = TrainingState(
-          params=initial_params,
+          params=PPOParams(
+              model_params=initial_params, num_sgd_steps=params_num_sgd_steps),
           opt_state=initial_opt_state,
           random_key=key_state,
           ema_counter=ema_counter,

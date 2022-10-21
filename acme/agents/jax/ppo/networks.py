@@ -50,6 +50,13 @@ class CategoricalParams(NamedTuple):
   logits: jnp.ndarray
 
 
+class PPOParams(NamedTuple):
+  model_params: networks_lib.Params
+  # Using float32 as it covers a larger range than int32. If using int64 we
+  # would need to do jax_enable_x64.
+  num_sgd_steps: jnp.float32
+
+
 @dataclasses.dataclass
 class PPONetworks:
   """Network and pure functions for the PPO agent.
@@ -76,9 +83,10 @@ def make_inference_fn(
     evaluation: bool = False) -> actor_core_lib.FeedForwardPolicyWithExtra:
   """Returns a function to be used for inference by a PPO actor."""
 
-  def inference(params: networks_lib.Params, key: networks_lib.PRNGKey,
+  def inference(params: PPOParams, key: networks_lib.PRNGKey,
                 observations: networks_lib.Observation):
-    dist_params, _ = ppo_networks.network.apply(params, observations)
+    dist_params, _ = ppo_networks.network.apply(params.model_params,
+                                                observations)
     if evaluation and ppo_networks.sample_eval:
       actions = ppo_networks.sample_eval(dist_params, key)
     else:
@@ -86,7 +94,12 @@ def make_inference_fn(
     if evaluation:
       return actions, {}
     log_prob = ppo_networks.log_prob(dist_params, actions)
-    return actions, {'log_prob': log_prob}
+    extras = {
+        'log_prob': log_prob,
+        # Add batch dimension.
+        'params_num_sgd_steps': params.num_sgd_steps[None, ...]
+    }
+    return actions, extras
 
   return inference
 
