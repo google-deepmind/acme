@@ -23,6 +23,7 @@ from acme.jax.experiments.config import make_policy
 from acme.jax.experiments.config import MakeActorFn
 from acme.jax.experiments.config import NetworkFactory
 from acme.jax.experiments.config import OfflineExperimentConfig
+from acme.jax.experiments.config import PolicyFactory
 from acme.jax.experiments.config import SnapshotModelFactory
 from acme.jax.experiments.make_distributed_experiment import make_distributed_experiment
 from acme.jax.experiments.make_distributed_offline_experiment import make_distributed_offline_experiment
