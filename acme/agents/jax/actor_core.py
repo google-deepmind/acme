@@ -33,15 +33,16 @@ State = TypeVar('State')
 # The extras to be passed to the observe method.
 Extras = TypeVar('Extras')
 RecurrentState = TypeVar('RecurrentState')
+SelectActionFn = Callable[
+    [networks_lib.Params, networks_lib.Observation, State],
+    Tuple[networks_lib.Action, State]]
 
 
 @dataclasses.dataclass
 class ActorCore(Generic[State, Extras]):
   """Pure functions that define the algorithm-specific actor functionality."""
   init: Callable[[PRNGKey], State]
-  select_action: Callable[[
-      networks_lib.Params, networks_lib.Observation, State
-  ], Tuple[networks_lib.Action, State]]
+  select_action: SelectActionFn
   get_extras: Callable[[State], Extras]
 
 
