@@ -14,16 +14,19 @@
 
 """Program definition for a distributed layout based on a builder."""
 
-import itertools
+import math
 from typing import Any, Optional
 
 from acme import core
 from acme import environment_loop
 from acme import specs
+from acme.agents.jax import actor_core
 from acme.agents.jax import builders
+from acme.jax import inference_server as inference_server_lib
 from acme.jax import networks as networks_lib
 from acme.jax import savers
 from acme.jax import utils
+from acme.jax import variable_utils
 from acme.jax.experiments import config
 from acme.jax import snapshotter
 from acme.utils import counting
@@ -33,31 +36,46 @@ import launchpad as lp
 import reverb
 
 ActorId = int
+InferenceServer = inference_server_lib.InferenceServer[
+    actor_core.SelectActionFn]
 
 
 def make_distributed_experiment(
     experiment: config.ExperimentConfig[builders.Networks, Any, Any],
     num_actors: int,
     *,
+    inference_server_config: Optional[
+        inference_server_lib.InferenceServerConfig] = None,
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
+    num_inference_servers: int = 1,
     multiprocessing_colocate_actors: bool = False,
     multithreading_colocate_learner_and_reverb: bool = False,
     make_snapshot_models: Optional[config.SnapshotModelFactory[
         builders.Networks]] = None,
     name: str = 'agent',
-    program: Optional[lp.Program] = None) -> lp.Program:
+    program: Optional[lp.Program] = None,
+) -> lp.Program:
   """Builds a Launchpad program for running the experiment.
 
   Args:
     experiment: configuration of the experiment.
     num_actors: number of actors to run.
+    inference_server_config: If provided we will attempt to use
+      `num_inference_servers` inference servers for selecting actions.
+      There are two assumptions if this config is provided:
+      1) The experiment's policy is an `ActorCore` and a
+      `TypeError` will be raised if not.
+      2) The `ActorCore`'s `select_action` method runs on
+      unbatched observations.
     num_learner_nodes: number of learner nodes to run. When using multiple
       learner nodes, make sure the learner class does the appropriate pmap/pmean
       operations on the loss/gradients, respectively.
     num_actors_per_node: number of actors per one program node. Actors within
       one node are colocated in one or multiple processes depending on the
       value of multiprocessing_colocate_actors.
+    num_inference_servers: number of inference servers to serve actors. (Only
+      used if `inference_server_config` is provided.)
     multiprocessing_colocate_actors: whether to colocate actor nodes as
       subprocesses on a single machine. False by default, which means colocate
       within a single process.
@@ -169,12 +187,49 @@ def make_distributed_experiment(
 
     return learner
 
+  def build_inference_server(
+      inference_server_config: inference_server_lib.InferenceServerConfig,
+      variable_source: core.VariableSource,
+  ) -> InferenceServer:
+    """Builds an inference server for `ActorCore` policies."""
+    dummy_seed = 1
+    spec = (
+        experiment.environment_spec or
+        specs.make_environment_spec(experiment.environment_factory(dummy_seed)))
+    networks = experiment.network_factory(spec)
+    policy = config.make_policy(
+        experiment=experiment,
+        networks=networks,
+        environment_spec=spec,
+        evaluation=False,
+    )
+    if not isinstance(policy, actor_core.ActorCore):
+      raise TypeError(
+          f'Using InferenceServer with policy of unsupported type:'
+          f'{type(policy)}. InferenceServer only supports `ActorCore` policies.'
+      )
+
+    return InferenceServer(
+        handler=jax.jit(
+            jax.vmap(
+                policy.select_action,
+                in_axes=(None, 0, 0),
+                # Note on in_axes: Params will not be batched. Only the
+                # observations and actor state will be stacked along a new
+                # leading axis by the inference server.
+            ),),
+        variable_source=variable_source,
+        devices=jax.local_devices(),
+        config=inference_server_config,
+    )
+
   def build_actor(
       random_key: networks_lib.PRNGKey,
       replay: reverb.Client,
       variable_source: core.VariableSource,
       counter: counting.Counter,
       actor_id: ActorId,
+      inference_server: Optional[InferenceServer],
   ) -> environment_loop.EnvironmentLoop:
     """The actor process."""
     environment_key, actor_key = jax.random.split(random_key)
@@ -191,6 +246,14 @@ def make_distributed_experiment(
         networks=networks,
         environment_spec=environment_spec,
         evaluation=False)
+    if inference_server is not None:
+      policy_network = actor_core.ActorCore(
+          init=policy_network.init,
+          select_action=inference_server.handler,
+          get_extras=policy_network.get_extras,
+      )
+      variable_source = variable_utils.ReferenceVariableSource()
+
     adder = experiment.builder.make_adder(replay, environment_spec,
                                           policy_network)
     actor = experiment.builder.make_actor(actor_key, policy_network,
@@ -258,15 +321,38 @@ def make_distributed_experiment(
         # NOTE: Do not pass the counter to the secondary learners to avoid
         # double counting of learner steps.
 
+  if inference_server_config is not None:
+    num_actors_per_server = math.ceil(num_actors / num_inference_servers)
+    with program.group('inference_server'):
+      inference_nodes = []
+      for _ in range(num_inference_servers):
+        inference_nodes.append(
+            program.add_node(
+                lp.CourierNode(
+                    build_inference_server,
+                    inference_server_config,
+                    learner,
+                    courier_kwargs={'thread_pool_size': num_actors_per_server
+                                   })))
+  else:
+    num_inference_servers = 1
+    inference_nodes = [None]
+
   with program.group('actor'):
     # Create all actor threads.
     *actor_keys, key = jax.random.split(key, num_actors + 1)
-    variable_sources = itertools.cycle(variable_sources)
-    actor_nodes = [
-        lp.CourierNode(build_actor, akey, replay, vsource, counter, aid)
-        for aid, (akey,
-                  vsource) in enumerate(zip(actor_keys, variable_sources))
-    ]
+    actor_nodes = []
+    for aid, akey in enumerate(actor_keys):
+      actor_nodes.append(
+          lp.CourierNode(
+              build_actor,
+              akey,
+              replay,
+              variable_sources[aid % num_learner_nodes],
+              counter,
+              aid,
+              inference_nodes[aid % num_inference_servers],
+          ),)
 
     # Create (maybe colocated) actor nodes.
     if num_actors_per_node == 1:
