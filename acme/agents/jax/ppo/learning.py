@@ -470,6 +470,7 @@ class PPOLearner(acme.Learner):
 
     # Initialise training state (parameters and optimizer state).
     self._state = make_initial_state(random_key)
+    self._cached_state = get_from_first_device(self._state, as_numpy=True)
 
   def step(self):
     """Does a learner step and logs the results.
@@ -479,6 +480,7 @@ class PPOLearner(acme.Learner):
     """
     sample = next(self._iterator)
     self._state, results = self._full_update_step(self._state, sample)
+    self._cached_state = get_from_first_device(self._state, as_numpy=True)
 
     # Update our counts and record it.
     counts = self._counter.increment(steps=self.num_epochs *
@@ -492,12 +494,11 @@ class PPOLearner(acme.Learner):
     self._num_full_update_steps += 1
 
   def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
-    state = get_from_first_device(self._state, as_numpy=False)
-    variables = state._asdict()
-    return [variables[name] for name in names]
+    variables = self._cached_state
+    return [getattr(variables, name) for name in names]
 
   def save(self) -> TrainingState:
-    return get_from_first_device(self._state, as_numpy=False)
+    return self._cached_state
 
   def restore(self, state: TrainingState):
     # TODO(kamyar) Should the random_key come from self._state instead?
@@ -511,3 +512,4 @@ class PPOLearner(acme.Learner):
     state = jax.device_put_replicated(state, self.local_learner_devices)
     state = state._replace(random_key=random_key)
     self._state = state
+    self._cached_state = get_from_first_device(self._state, as_numpy=True)
