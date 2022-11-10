@@ -35,4 +35,3 @@ from acme.environment_loop import EnvironmentLoop
 
 from acme.specs import make_environment_spec
 
-# Acme loves you.
