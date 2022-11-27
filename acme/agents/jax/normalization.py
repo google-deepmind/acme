@@ -27,7 +27,7 @@ from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.jax import running_statistics
 from acme.jax import variable_utils
-from acme.jax.types import Networks, PolicyNetwork  # pylint: disable=g-multiple-import
+from acme.jax.types import Networks, Policy  # pylint: disable=g-multiple-import
 from acme.utils import counting
 from acme.utils import loggers
 import dm_env
@@ -166,19 +166,18 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
 
 
 @dataclasses.dataclass
-class NormalizationBuilder(Generic[Networks, PolicyNetwork],
-                           builders.ActorLearnerBuilder[Networks, PolicyNetwork,
+class NormalizationBuilder(Generic[Networks, Policy],
+                           builders.ActorLearnerBuilder[Networks, Policy,
                                                         reverb.ReplaySample]):
   """Builder wrapper that normalizes observations using running mean/std."""
-  builder: builders.ActorLearnerBuilder[Networks, PolicyNetwork,
-                                        reverb.ReplaySample]
+  builder: builders.ActorLearnerBuilder[Networks, Policy, reverb.ReplaySample]
   max_abs_observation: Optional[float] = 10.0
   statistics_update_period: int = 100
 
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
-      policy: PolicyNetwork,
+      policy: Policy,
   ) -> List[reverb.Table]:
     return self.builder.make_replay_tables(environment_spec, policy)
 
@@ -188,7 +187,7 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
 
   def make_adder(self, replay_client: reverb.Client,
                  environment_spec: Optional[specs.EnvironmentSpec],
-                 policy: Optional[PolicyNetwork]) -> Optional[adders.Adder]:
+                 policy: Optional[Policy]) -> Optional[adders.Adder]:
     return self.builder.make_adder(replay_client, environment_spec, policy)
 
   def make_learner(
@@ -220,7 +219,7 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy: PolicyNetwork,
+      policy: Policy,
       environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
@@ -237,7 +236,7 @@ class NormalizationBuilder(Generic[Networks, PolicyNetwork],
   def make_policy(self,
                   networks: Networks,
                   environment_spec: specs.EnvironmentSpec,
-                  evaluation: bool = False) -> PolicyNetwork:
+                  evaluation: bool = False) -> Policy:
     return self.builder.make_policy(
         networks=networks,
         environment_spec=environment_spec,

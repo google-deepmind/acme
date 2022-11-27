@@ -25,8 +25,11 @@ import jax.numpy as jnp
 
 PRNGKey = jax.random.KeyArray
 Networks = TypeVar('Networks')
-PolicyNetwork = TypeVar('PolicyNetwork')
+"""Container for all agent network components."""
+Policy = TypeVar('Policy')
+"""Function or container for agent policy functions."""
 Sample = TypeVar('Sample')
+"""Sample from the demonstrations or replay buffer."""
 TrainingState = TypeVar('TrainingState')
 
 TrainingMetrics = Mapping[str, jnp.ndarray]

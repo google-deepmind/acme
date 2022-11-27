@@ -16,19 +16,20 @@
 
 import abc
 import dataclasses
-from typing import Generic, Iterator, List, Optional, TypeVar
+from typing import Generic, Iterator, List, Optional
 
 from acme import adders
 from acme import core
 from acme import specs
 from acme.jax import networks as networks_lib
+from acme.jax import types as jax_types
 from acme.utils import counting
 from acme.utils import loggers
 import reverb
 
-Networks = TypeVar('Networks')  # Container for all agent network components.
-Policy = TypeVar('Policy')  # Function or container for agent policy functions.
-Sample = TypeVar('Sample')  # Sample from the demonstrations or replay buffer.
+Networks = jax_types.Networks
+Policy = jax_types.Policy
+Sample = jax_types.Sample
 
 
 class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):

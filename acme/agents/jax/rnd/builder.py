@@ -25,7 +25,7 @@ from acme.agents.jax.rnd import config as rnd_config
 from acme.agents.jax.rnd import learning as rnd_learning
 from acme.agents.jax.rnd import networks as rnd_networks
 from acme.jax import networks as networks_lib
-from acme.jax.types import PolicyNetwork
+from acme.jax.types import Policy
 from acme.utils import counting
 from acme.utils import loggers
 import jax
@@ -33,17 +33,15 @@ import optax
 import reverb
 
 
-class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
-                 builders.ActorLearnerBuilder[rnd_networks.RNDNetworks,
-                                              PolicyNetwork,
+class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
+                 builders.ActorLearnerBuilder[rnd_networks.RNDNetworks, Policy,
                                               reverb.ReplaySample]):
   """RND Builder."""
 
   def __init__(
       self,
       rl_agent: builders.ActorLearnerBuilder[rnd_networks.DirectRLNetworks,
-                                             PolicyNetwork,
-                                             reverb.ReplaySample],
+                                             Policy, reverb.ReplaySample],
       config: rnd_config.RNDConfig,
       logger_fn: Callable[[], loggers.Logger] = lambda: None,
   ):
@@ -101,7 +99,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
   def make_replay_tables(
       self,
       environment_spec: specs.EnvironmentSpec,
-      policy: PolicyNetwork,
+      policy: Policy,
   ) -> List[reverb.Table]:
     return self._rl_agent.make_replay_tables(environment_spec, policy)
 
@@ -112,13 +110,13 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, PolicyNetwork],
 
   def make_adder(self, replay_client: reverb.Client,
                  environment_spec: Optional[specs.EnvironmentSpec],
-                 policy: Optional[PolicyNetwork]) -> Optional[adders.Adder]:
+                 policy: Optional[Policy]) -> Optional[adders.Adder]:
     return self._rl_agent.make_adder(replay_client, environment_spec, policy)
 
   def make_actor(
       self,
       random_key: networks_lib.PRNGKey,
-      policy: PolicyNetwork,
+      policy: Policy,
       environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
