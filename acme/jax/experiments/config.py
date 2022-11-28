@@ -155,7 +155,7 @@ class ExperimentConfig(Generic[builders.Networks, builders.Policy,
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
   logger_factory: loggers.LoggerFactory = dataclasses.field(
-      default_factory=experiment_utils.create_experiment_logger_fn)
+      default_factory=experiment_utils.create_experiment_logger_factory)
   checkpointing: Optional[CheckpointingConfig] = CheckpointingConfig()
 
   # TODO(stanczyk): Make get_evaluator_factories a standalone function.
@@ -236,7 +236,7 @@ class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
   environment_spec: Optional[specs.EnvironmentSpec] = None
   observers: Sequence[observers_lib.EnvLoopObserver] = ()
   logger_factory: loggers.LoggerFactory = dataclasses.field(
-      default_factory=experiment_utils.create_experiment_logger_fn)
+      default_factory=experiment_utils.create_experiment_logger_factory)
   checkpointing: Optional[CheckpointingConfig] = CheckpointingConfig()
 
   # TODO(stanczyk): Make get_evaluator_factories a standalone function.
