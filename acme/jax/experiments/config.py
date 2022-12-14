@@ -77,6 +77,8 @@ class SnapshotModelFactory(Protocol, Generic[builders.Networks]):
     ...
 
 
+
+
 @dataclasses.dataclass(frozen=True)
 class CheckpointingConfig:
   """Configuration options for checkpointing.

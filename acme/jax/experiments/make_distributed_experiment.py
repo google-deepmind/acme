@@ -14,8 +14,9 @@
 
 """Program definition for a distributed layout based on a builder."""
 
+import itertools
 import math
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from acme import core
 from acme import environment_loop
@@ -40,19 +41,23 @@ InferenceServer = inference_server_lib.InferenceServer[
     actor_core.SelectActionFn]
 
 
+
+
 def make_distributed_experiment(
     experiment: config.ExperimentConfig[builders.Networks, Any, Any],
     num_actors: int,
     *,
     inference_server_config: Optional[
-        inference_server_lib.InferenceServerConfig] = None,
+        inference_server_lib.InferenceServerConfig
+    ] = None,
     num_learner_nodes: int = 1,
     num_actors_per_node: int = 1,
     num_inference_servers: int = 1,
     multiprocessing_colocate_actors: bool = False,
     multithreading_colocate_learner_and_reverb: bool = False,
-    make_snapshot_models: Optional[config.SnapshotModelFactory[
-        builders.Networks]] = None,
+    make_snapshot_models: Optional[
+        config.SnapshotModelFactory[builders.Networks]
+    ] = None,
     name: str = 'agent',
     program: Optional[lp.Program] = None,
 ) -> lp.Program:
@@ -72,8 +77,8 @@ def make_distributed_experiment(
       learner nodes, make sure the learner class does the appropriate pmap/pmean
       operations on the loss/gradients, respectively.
     num_actors_per_node: number of actors per one program node. Actors within
-      one node are colocated in one or multiple processes depending on the
-      value of multiprocessing_colocate_actors.
+      one node are colocated in one or multiple processes depending on the value
+      of multiprocessing_colocate_actors.
     num_inference_servers: number of inference servers to serve actors. (Only
       used if `inference_server_config` is provided.)
     multiprocessing_colocate_actors: whether to colocate actor nodes as
@@ -101,6 +106,12 @@ def make_distributed_experiment(
         '\tmultithreading_colocate_learner_and_reverb='
         f'{multithreading_colocate_learner_and_reverb}'
         f'\tnum_learner_nodes={num_learner_nodes}.')
+
+  assert not (inference_server_config and variable_cache_config), (
+      'When using inference servers, learner variables are not pulled by the '
+      'actors. Hence, inference servers and variable caching should not be '
+      'used simultaneously.'
+  )
 
   def build_replay():
     """The replay storage."""
@@ -338,33 +349,43 @@ def make_distributed_experiment(
     num_inference_servers = 1
     inference_nodes = [None]
 
+  num_actor_nodes, remainder = divmod(num_actors, num_actors_per_node)
+  num_actor_nodes += int(remainder > 0)
+
+
   with program.group('actor'):
     # Create all actor threads.
     *actor_keys, key = jax.random.split(key, num_actors + 1)
-    actor_nodes = []
-    for aid, akey in enumerate(actor_keys):
-      actor_nodes.append(
-          lp.CourierNode(
-              build_actor,
-              akey,
-              replay,
-              variable_sources[aid % num_learner_nodes],
-              counter,
-              aid,
-              inference_nodes[aid % num_inference_servers],
-          ),)
 
     # Create (maybe colocated) actor nodes.
-    if num_actors_per_node == 1:
-      for actor_node in actor_nodes:
-        program.add_node(actor_node)
-    else:
-      for i in range(0, num_actors, num_actors_per_node):
-        colocated_actors = actor_nodes[i:i + num_actors_per_node]
-        if multiprocessing_colocate_actors:
-          program.add_node(lp.MultiProcessingColocation(colocated_actors))
-        else:
-          program.add_node(lp.MultiThreadingColocation(colocated_actors))
+    for node_id, variable_source, inference_node in zip(
+        range(num_actor_nodes),
+        itertools.cycle(variable_sources),
+        itertools.cycle(inference_nodes),
+    ):
+      colocation_nodes = []
+
+      first_actor_id = node_id * num_actors_per_node
+      for actor_id in range(
+          first_actor_id, min(first_actor_id + num_actors_per_node, num_actors)
+      ):
+        actor = lp.CourierNode(
+            build_actor,
+            actor_keys[actor_id],
+            replay,
+            variable_source,
+            counter,
+            actor_id,
+            inference_node,
+        )
+        colocation_nodes.append(actor)
+
+      if len(colocation_nodes) == 1:
+        program.add_node(colocation_nodes[0])
+      elif multiprocessing_colocate_actors:
+        program.add_node(lp.MultiProcessingColocation(colocation_nodes))
+      else:
+        program.add_node(lp.MultiThreadingColocation(colocation_nodes))
 
   for evaluator in experiment.get_evaluator_factories():
     evaluator_key, key = jax.random.split(key)
