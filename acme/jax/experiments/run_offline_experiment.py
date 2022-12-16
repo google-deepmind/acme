@@ -89,15 +89,15 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
 
   checkpointer = None
   if experiment.checkpointing is not None:
+    checkpointing = experiment.checkpointing
     checkpointer = savers.Checkpointer(
-        objects_to_save={
-            'learner': learner,
-            'counter': parent_counter
-        },
-        time_delta_minutes=experiment.checkpointing.time_delta_minutes,
-        directory=experiment.checkpointing.directory,
-        add_uid=experiment.checkpointing.add_uid,
-        max_to_keep=experiment.checkpointing.max_to_keep)
+        objects_to_save={'learner': learner, 'counter': parent_counter},
+        time_delta_minutes=checkpointing.time_delta_minutes,
+        directory=checkpointing.directory,
+        add_uid=checkpointing.add_uid,
+        max_to_keep=checkpointing.max_to_keep,
+        keep_checkpoint_every_n_hours=checkpointing.keep_checkpoint_every_n_hours,
+    )
 
   max_num_learner_steps = (
       experiment.max_num_learner_steps -

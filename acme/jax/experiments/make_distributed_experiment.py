@@ -144,14 +144,17 @@ def make_distributed_experiment(
   def build_counter():
     counter = counting.Counter()
     if experiment.checkpointing:
+      checkpointing = experiment.checkpointing
       counter = savers.CheckpointingRunner(
           counter,
           key='counter',
           subdirectory='counter',
-          time_delta_minutes=experiment.checkpointing.time_delta_minutes,
-          directory=experiment.checkpointing.directory,
-          add_uid=experiment.checkpointing.add_uid,
-          max_to_keep=experiment.checkpointing.max_to_keep)
+          time_delta_minutes=checkpointing.time_delta_minutes,
+          directory=checkpointing.directory,
+          add_uid=checkpointing.add_uid,
+          max_to_keep=checkpointing.max_to_keep,
+          keep_checkpoint_every_n_hours=checkpointing.keep_checkpoint_every_n_hours,
+      )
     return counter
 
   def build_learner(
@@ -182,14 +185,17 @@ def make_distributed_experiment(
 
     if experiment.checkpointing:
       if primary_learner is None:
+        checkpointing = experiment.checkpointing
         learner = savers.CheckpointingRunner(
             learner,
             key='learner',
             subdirectory='learner',
             time_delta_minutes=5,
-            directory=experiment.checkpointing.directory,
-            add_uid=experiment.checkpointing.add_uid,
-            max_to_keep=experiment.checkpointing.max_to_keep)
+            directory=checkpointing.directory,
+            add_uid=checkpointing.add_uid,
+            max_to_keep=checkpointing.max_to_keep,
+            keep_checkpoint_every_n_hours=checkpointing.keep_checkpoint_every_n_hours,
+        )
       else:
         learner.restore(primary_learner.save())
         # NOTE: This initially synchronizes secondary learner states with the

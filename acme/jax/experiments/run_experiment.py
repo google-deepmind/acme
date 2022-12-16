@@ -113,15 +113,15 @@ def run_experiment(experiment: config.ExperimentConfig,
 
   checkpointer = None
   if experiment.checkpointing is not None:
+    checkpointing = experiment.checkpointing
     checkpointer = savers.Checkpointer(
-        objects_to_save={
-            'learner': learner,
-            'counter': parent_counter
-        },
-        time_delta_minutes=experiment.checkpointing.time_delta_minutes,
-        directory=experiment.checkpointing.directory,
-        add_uid=experiment.checkpointing.add_uid,
-        max_to_keep=experiment.checkpointing.max_to_keep)
+        objects_to_save={'learner': learner, 'counter': parent_counter},
+        time_delta_minutes=checkpointing.time_delta_minutes,
+        directory=checkpointing.directory,
+        add_uid=checkpointing.add_uid,
+        max_to_keep=checkpointing.max_to_keep,
+        keep_checkpoint_every_n_hours=checkpointing.keep_checkpoint_every_n_hours,
+    )
 
   # Replace the actor with a LearningActor. This makes sure that every time
   # that `update` is called on the actor it checks to see whether there is
