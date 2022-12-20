@@ -16,6 +16,7 @@
 
 import functools
 import os
+from typing import Tuple
 
 from absl import flags
 from acme import specs
@@ -29,6 +30,7 @@ import gym
 import haiku as hk
 import jax.numpy as jnp
 
+
 FLAGS = flags.FLAGS
 
 
@@ -40,6 +42,8 @@ def make_atari_environment(
     num_stacked_frames: int = 4,
     flatten_frame_stack: bool = False,
     grayscaling: bool = True,
+    to_float: bool = True,
+    scale_dims: Tuple[int, int] = (84, 84),
 ) -> dm_env.Environment:
   """Loads the Atari environment."""
 # Internal logic.
@@ -51,7 +55,8 @@ def make_atari_environment(
       wrappers.GymAtariAdapter,
       functools.partial(
           wrappers.AtariWrapper,
-          to_float=True,
+          scale_dims=scale_dims,
+          to_float=to_float,
           max_episode_len=108_000,
           num_stacked_frames=num_stacked_frames,
           flatten_frame_stack=flatten_frame_stack,
