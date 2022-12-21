@@ -47,7 +47,7 @@ class _DummyVariableSource(core.VariableSource):
         'p0': jnp.ones([3, 1], dtype=jnp.float32),
     }
 
-  def get_variables(self, names: Sequence[str]) -> Sequence[Any]:
+  def get_variables(self, names: Sequence[str]) -> Sequence[Any]:  # pytype: disable=signature-mismatch  # overriding-return-type-checks
     variables = []
     for n in names:
       if n == 'params_model0':

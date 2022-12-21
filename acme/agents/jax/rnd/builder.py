@@ -103,7 +103,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
   ) -> List[reverb.Table]:
     return self._rl_agent.make_replay_tables(environment_spec, policy)
 
-  def make_dataset_iterator(
+  def make_dataset_iterator(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
       self,
       replay_client: reverb.Client) -> Optional[Iterator[reverb.ReplaySample]]:
     return self._rl_agent.make_dataset_iterator(replay_client)

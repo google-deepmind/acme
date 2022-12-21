@@ -142,7 +142,7 @@ class PWILBuilder(builders.ActorLearnerBuilder[DirectRLNetworks,
   ) -> List[reverb.Table]:
     return self._rl_agent.make_replay_tables(environment_spec, policy)
 
-  def make_dataset_iterator(
+  def make_dataset_iterator(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
       self,
       replay_client: reverb.Client) -> Optional[Iterator[reverb.ReplaySample]]:
     # make_dataset_iterator is only called once (per learner), to pass the

@@ -43,7 +43,7 @@ class MeasurementObserver(base.EnvLoopObserver):
     """Records one environment step."""
     self._measurements.append(timestep.observation)
 
-  def get_metrics(self) -> Mapping[str, List[base.Number]]:
+  def get_metrics(self) -> Mapping[str, List[base.Number]]:  # pytype: disable=signature-mismatch  # overriding-return-type-checks
     """Returns metrics collected for the current episode."""
     aggregate_metrics = {}
     if not self._measurements:

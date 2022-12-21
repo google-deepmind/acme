@@ -122,7 +122,7 @@ class SQILBuilder(Generic[DirectRLNetworks, DirectPolicyNetwork],
   ) -> List[reverb.Table]:
     return self._rl_agent.make_replay_tables(environment_spec, policy)
 
-  def make_dataset_iterator(
+  def make_dataset_iterator(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
       self,
       replay_client: reverb.Client) -> Optional[Iterator[reverb.ReplaySample]]:
     """The returned iterator returns batches with both expert and policy data.
