@@ -15,6 +15,7 @@
 """JAX experiment config."""
 
 import dataclasses
+import datetime
 from typing import Any, Callable, Dict, Generic, Iterator, Optional, Sequence
 
 from acme import core
@@ -104,6 +105,7 @@ class CheckpointingConfig:
       purposes.
       Note: Since replay buffers tend to be quite large O(100GiB), writing can
         take up to 10 minutes so keep that in mind when setting this frequency.
+    checkpoint_ttl_seconds: TTL (time to leave) in seconds for checkpoints.
   """
   max_to_keep: int = 1
   directory: str = '~/acme'
@@ -111,6 +113,7 @@ class CheckpointingConfig:
   time_delta_minutes: int = 5
   keep_checkpoint_every_n_hours: Optional[int] = None
   replay_checkpointing_time_delta_minutes: Optional[int] = None
+  checkpoint_ttl_seconds: int = int(datetime.timedelta(days=5).total_seconds())
 
 
 @dataclasses.dataclass(frozen=True)

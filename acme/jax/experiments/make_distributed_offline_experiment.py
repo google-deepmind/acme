@@ -74,7 +74,9 @@ def make_distributed_offline_experiment(
           time_delta_minutes=experiment.checkpointing.time_delta_minutes,
           directory=experiment.checkpointing.directory,
           add_uid=experiment.checkpointing.add_uid,
-          max_to_keep=experiment.checkpointing.max_to_keep)
+          max_to_keep=experiment.checkpointing.max_to_keep,
+          checkpoint_ttl_seconds=experiment.checkpointing.checkpoint_ttl_seconds,
+      )
     return counter
 
   def build_learner(
@@ -114,7 +116,9 @@ def make_distributed_offline_experiment(
           time_delta_minutes=5,
           directory=experiment.checkpointing.directory,
           add_uid=experiment.checkpointing.add_uid,
-          max_to_keep=experiment.checkpointing.max_to_keep)
+          max_to_keep=experiment.checkpointing.max_to_keep,
+          checkpoint_ttl_seconds=experiment.checkpointing.checkpoint_ttl_seconds,
+      )
 
     return learner
 

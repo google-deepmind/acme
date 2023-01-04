@@ -154,6 +154,7 @@ def make_distributed_experiment(
           add_uid=checkpointing.add_uid,
           max_to_keep=checkpointing.max_to_keep,
           keep_checkpoint_every_n_hours=checkpointing.keep_checkpoint_every_n_hours,
+          checkpoint_ttl_seconds=checkpointing.checkpoint_ttl_seconds,
       )
     return counter
 
@@ -195,6 +196,7 @@ def make_distributed_experiment(
             add_uid=checkpointing.add_uid,
             max_to_keep=checkpointing.max_to_keep,
             keep_checkpoint_every_n_hours=checkpointing.keep_checkpoint_every_n_hours,
+            checkpoint_ttl_seconds=checkpointing.checkpoint_ttl_seconds,
         )
       else:
         learner.restore(primary_learner.save())

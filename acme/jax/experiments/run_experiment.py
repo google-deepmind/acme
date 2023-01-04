@@ -121,6 +121,7 @@ def run_experiment(experiment: config.ExperimentConfig,
         add_uid=checkpointing.add_uid,
         max_to_keep=checkpointing.max_to_keep,
         keep_checkpoint_every_n_hours=checkpointing.keep_checkpoint_every_n_hours,
+        checkpoint_ttl_seconds=checkpointing.checkpoint_ttl_seconds,
     )
 
   # Replace the actor with a LearningActor. This makes sure that every time

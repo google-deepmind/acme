@@ -97,6 +97,7 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
         add_uid=checkpointing.add_uid,
         max_to_keep=checkpointing.max_to_keep,
         keep_checkpoint_every_n_hours=checkpointing.keep_checkpoint_every_n_hours,
+        checkpoint_ttl_seconds=checkpointing.checkpoint_ttl_seconds,
     )
 
   max_num_learner_steps = (
