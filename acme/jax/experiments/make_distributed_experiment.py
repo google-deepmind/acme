@@ -107,11 +107,6 @@ def make_distributed_experiment(
         f'{multithreading_colocate_learner_and_reverb}'
         f'\tnum_learner_nodes={num_learner_nodes}.')
 
-  assert not (inference_server_config and variable_cache_config), (
-      'When using inference servers, learner variables are not pulled by the '
-      'actors. Hence, inference servers and variable caching should not be '
-      'used simultaneously.'
-  )
 
   def build_replay():
     """The replay storage."""
