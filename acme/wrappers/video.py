@@ -19,7 +19,9 @@ the `dm_control/tutorial.ipynb` file.
 """
 
 import os.path
+import tempfile
 from typing import Callable, Optional, Sequence, Tuple, Union
+
 from acme.utils import paths
 from acme.wrappers import base
 import dm_env
@@ -86,15 +88,18 @@ class VideoWrapper(base.EnvironmentWrapper):
   of the diagonal.
   """
 
-  def __init__(self,
-               environment: dm_env.Environment,
-               *,
-               path: str = '~/acme',
-               filename: str = '',
-               process_path: Callable[[str, str], str] = paths.process_path,
-               record_every: int = 100,
-               frame_rate: int = 30,
-               figsize: Optional[Union[float, Tuple[int, int]]] = None):
+  def __init__(
+      self,
+      environment: dm_env.Environment,
+      *,
+      path: str = '~/acme',
+      filename: str = '',
+      process_path: Callable[[str, str], str] = paths.process_path,
+      record_every: int = 100,
+      frame_rate: int = 30,
+      figsize: Optional[Union[float, Tuple[int, int]]] = None,
+      to_html: bool = True,
+  ):
     super(VideoWrapper, self).__init__(environment)
     self._path = process_path(path, 'videos')
     self._filename = filename
@@ -103,6 +108,7 @@ class VideoWrapper(base.EnvironmentWrapper):
     self._frames = []
     self._counter = 0
     self._figsize = figsize
+    self._to_html = to_html
 
   def _render_frame(self, observation):
     """Renders a frame from the given environment observation."""
@@ -111,13 +117,25 @@ class VideoWrapper(base.EnvironmentWrapper):
   def _write_frames(self):
     """Writes frames to video."""
     if self._counter % self._record_every == 0:
-      path = os.path.join(self._path,
-                          f'{self._filename}_{self._counter:04d}.html')
-      video = make_animation(self._frames, self._frame_rate,
-                             self._figsize).to_html5_video()
-
-      with open(path, 'w') as f:
-        f.write(video)
+      animation = make_animation(self._frames, self._frame_rate, self._figsize)
+      path_without_extension = os.path.join(
+          self._path, f'{self._filename}_{self._counter:04d}'
+      )
+      if self._to_html:
+        path = path_without_extension + '.html'
+        video = animation.to_html5_video()
+        with open(path, 'w') as f:
+          f.write(video)
+      else:
+        path = path_without_extension + '.m4v'
+        # Animation.save can save only locally. Save first and copy using
+        # gfile.
+        with tempfile.TemporaryDirectory() as tmp_dir:
+          tmp_path = os.path.join(tmp_dir, 'temp.m4v')
+          animation.save(tmp_path)
+          with open(path, 'wb') as f:
+            with open(tmp_path, 'rb') as g:
+              f.write(g.read())
 
     # Clear the frame buffer whether a video was generated or not.
     self._frames = []
