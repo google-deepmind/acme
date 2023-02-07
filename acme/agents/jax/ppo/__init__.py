@@ -17,6 +17,7 @@
 from acme.agents.jax.ppo.builder import PPOBuilder
 from acme.agents.jax.ppo.config import PPOConfig
 from acme.agents.jax.ppo.learning import PPOLearner
+from acme.agents.jax.ppo.networks import EntropyFn
 from acme.agents.jax.ppo.networks import make_categorical_ppo_networks
 from acme.agents.jax.ppo.networks import make_continuous_networks
 from acme.agents.jax.ppo.networks import make_discrete_networks

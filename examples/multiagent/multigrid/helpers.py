@@ -180,7 +180,8 @@ def make_categorical_ppo_networks(
   def log_prob(params: CategoricalParams, action):
     return tfd.Categorical(logits=params.logits).log_prob(action)
 
-  def entropy(params: CategoricalParams):
+  def entropy(params: CategoricalParams, key: networks_lib.PRNGKey):
+    del key
     return tfd.Categorical(logits=params.logits).entropy()
 
   def sample(params: CategoricalParams, key: networks_lib.PRNGKey):
