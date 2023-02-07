@@ -40,6 +40,7 @@ Logits = jnp.ndarray
 LogProb = jnp.ndarray
 Value = jnp.ndarray
 RecurrentState = types.NestedArray
+Entropy = jnp.ndarray
 
 # Commonly-used function/network signatures.
 QNetwork = Callable[[Observation], QValues]

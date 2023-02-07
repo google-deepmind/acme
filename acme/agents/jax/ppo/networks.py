@@ -15,7 +15,7 @@
 """PPO network definitions."""
 
 import dataclasses
-from typing import Any, Callable, NamedTuple, Optional, Sequence
+from typing import Callable, NamedTuple, Optional, Sequence
 
 from acme import specs
 from acme.agents.jax import actor_core as actor_core_lib
@@ -30,7 +30,9 @@ import tensorflow_probability
 tfp = tensorflow_probability.substrates.jax
 tfd = tfp.distributions
 
-EntropyFn = Callable[[Any], jnp.ndarray]
+EntropyFn = Callable[
+    [networks_lib.Params, networks_lib.PRNGKey], networks_lib.Entropy
+]
 
 
 class MVNDiagParams(NamedTuple):
@@ -83,8 +85,11 @@ def make_inference_fn(
     evaluation: bool = False) -> actor_core_lib.FeedForwardPolicyWithExtra:
   """Returns a function to be used for inference by a PPO actor."""
 
-  def inference(params: PPOParams, key: networks_lib.PRNGKey,
-                observations: networks_lib.Observation):
+  def inference(
+      params: networks_lib.Params,
+      key: networks_lib.PRNGKey,
+      observations: networks_lib.Observation,
+  ):
     dist_params, _ = ppo_networks.network.apply(params.model_params,
                                                 observations)
     if evaluation and ppo_networks.sample_eval:
@@ -156,7 +161,10 @@ def make_mvn_diag_ppo_networks(
     return tfd.MultivariateNormalDiag(
         loc=params.loc, scale_diag=params.scale_diag).log_prob(action)
 
-  def entropy(params: MVNDiagParams):
+  def entropy(
+      params: MVNDiagParams, key: networks_lib.PRNGKey
+  ) -> networks_lib.Entropy:
+    del key
     return tfd.MultivariateNormalDiag(
         loc=params.loc, scale_diag=params.scale_diag).entropy()
 
@@ -200,9 +208,11 @@ def make_tanh_normal_ppo_networks(
     distribution = build_distribution(params)
     return distribution.log_prob(action)
 
-  def entropy(params: TanhNormalParams):
+  def entropy(
+      params: TanhNormalParams, key: networks_lib.PRNGKey
+  ) -> networks_lib.Entropy:
     distribution = build_distribution(params)
-    return distribution.entropy(seed=jax.random.PRNGKey(42))
+    return distribution.entropy(seed=key)
 
   def sample(params: TanhNormalParams, key: networks_lib.PRNGKey):
     distribution = build_distribution(params)
@@ -275,7 +285,10 @@ def make_categorical_ppo_networks(
   def log_prob(params: CategoricalParams, action):
     return tfd.Categorical(logits=params.logits).log_prob(action)
 
-  def entropy(params: CategoricalParams):
+  def entropy(
+      params: CategoricalParams, key: networks_lib.PRNGKey
+  ) -> networks_lib.Entropy:
+    del key
     return tfd.Categorical(logits=params.logits).entropy()
 
   def sample(params: CategoricalParams, key: networks_lib.PRNGKey):

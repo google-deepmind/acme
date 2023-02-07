@@ -140,8 +140,8 @@ class PPOLearner(acme.Learner):
         # values = values * jnp.fmax(value_std, 1e-6) + value_mean
         target_values = (target_values - value_mean) / jnp.fmax(value_std, 1e-6)
       policy_log_probs = ppo_networks.log_prob(distribution_params, actions)
-      key, sub_key = jax.random.split(key)  # pylint: disable=unused-variable
-      policy_entropies = ppo_networks.entropy(distribution_params)
+      key, sub_key = jax.random.split(key)
+      policy_entropies = ppo_networks.entropy(distribution_params, sub_key)
 
       # Compute the policy losses
       rhos = jnp.exp(policy_log_probs - behavior_log_probs)
@@ -330,9 +330,12 @@ class PPOLearner(acme.Learner):
 
       # Exclude the last step - it was only used for bootstrapping.
       # The shape is [num_sequences, num_steps, ..]
-      observations, actions, behavior_log_probs, behavior_values = jax.tree_util.tree_map(
-          lambda x: x[:, :-1],
-          (observations, actions, behavior_log_probs, behavior_values))
+      (observations, actions, behavior_log_probs, behavior_values) = (
+          jax.tree_util.tree_map(
+              lambda x: x[:, :-1],
+              (observations, actions, behavior_log_probs, behavior_values),
+          )
+      )
 
       # Shuffle the data and break into minibatches
       batch_size = advantages.shape[0] * advantages.shape[1]
