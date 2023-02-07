@@ -100,7 +100,10 @@ class CRRLearner(acme.Learner):
       # Return the weighted loss.
       dist_params = policy_network.apply(policy_params, transition.observation)
       logp_action = networks.log_prob(dist_params, transition.action)
-      return -jnp.mean(logp_action * coeff)
+      # Make sure there is no broadcasting.
+      logp_action *= coeff.flatten()
+      assert len(logp_action.shape) == 1
+      return -jnp.mean(logp_action)
 
     def critic_loss(
         critic_params: networks_lib.Params,
