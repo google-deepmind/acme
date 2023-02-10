@@ -366,15 +366,15 @@ def replicate_in_all_devices(nest: N,
 
 
 def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
-  """Gets the first array of a nest of `jax.pxla.ShardedDeviceArray`s.
+  """Gets the first array of a nest of `jax.Array`s.
 
   Args:
-    nest: A nest of `jax.pxla.ShardedDeviceArray`s.
+    nest: A nest of `jax.Array`s.
     as_numpy: If `True` then each `DeviceArray` that is retrieved is transformed
       (and copied if not on the host machine) into a `np.ndarray`.
 
   Returns:
-    The first array of a nest of `jax.pxla.ShardedDeviceArray`s. Note that if
+    The first array of a nest of `jax.Array`s. Note that if
     `as_numpy=False` then the array will be a `DeviceArray` (which will live on
     the same device as the sharded device array). If `as_numpy=True` then the
     array will be copied to the host machine and converted into a `np.ndarray`.
