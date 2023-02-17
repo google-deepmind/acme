@@ -22,6 +22,7 @@ from acme.jax import experiments
 from acme.utils import lp_utils
 import dm_env
 import launchpad as lp
+from datetime import datetime
 
 # Flags which modify the behavior of the launcher.
 flags.DEFINE_bool(
@@ -29,7 +30,7 @@ flags.DEFINE_bool(
     'way. If False, will run single-threaded.')
 flags.DEFINE_string('env_name', 'Pong', 'What environment to run.')
 flags.DEFINE_integer('seed', 0, 'Random seed (experiment).')
-flags.DEFINE_integer('num_steps', 1_000_000,
+flags.DEFINE_integer('num_steps', 200_000_000,
                      'Number of environment steps to run for.')
 
 FLAGS = flags.FLAGS
@@ -64,7 +65,7 @@ def build_experiment_config():
       min_replay_size=10_000,
       batch_size=batch_size,
       prefetch_size=1,
-      samples_per_insert=1.0,
+      samples_per_insert=0,
       evaluation_epsilon=1e-3,
       learning_rate=1e-4,
       target_update_period=1200,
@@ -83,11 +84,16 @@ def main(_):
   config = build_experiment_config()
   if FLAGS.run_distributed:
     program = experiments.make_distributed_experiment(
-        experiment=config, num_actors=4 if lp_utils.is_local_run() else 80)
+        experiment=config, num_actors=64 if lp_utils.is_local_run() else 80)
     lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
   else:
     experiments.run_experiment(experiment=config)
 
 
 if __name__ == '__main__':
+  start_time = datetime.now()
   app.run(main)
+  end_time = datetime.now()
+  print('End Time: {}'.format(end_time))
+  print('Duration: {}'.format(end_time - start_time))
+
