@@ -96,4 +96,4 @@ def policy_loss_coeff_constant(networks: CRRNetworks,
   del critic_params
   del transition
   del key
-  return value
+  return value  # pytype: disable=bad-return-type  # jax-ndarray

@@ -41,7 +41,7 @@ def fairl_reward(
           rewards, a_min=-max_reward_magnitude, a_max=max_reward_magnitude)
     return rewards
 
-  return imitation_reward
+  return imitation_reward  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def gail_reward(
@@ -73,4 +73,4 @@ def gail_reward(
           rewards, a_min=-max_reward_magnitude, a_max=max_reward_magnitude)
     return rewards
 
-  return imitation_reward
+  return imitation_reward  # pytype: disable=bad-return-type  # jax-ndarray

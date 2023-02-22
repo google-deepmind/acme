@@ -212,7 +212,7 @@ class ValueDiceLearner(acme.Learner):
       policy_loss = -loss + policy_reg_scale * policy_reg
       nu_loss = loss + nu_reg_scale * nu_grad_penalty
 
-      return policy_loss, nu_loss
+      return policy_loss, nu_loss  # pytype: disable=bad-return-type  # jax-ndarray
 
     def sgd_step(
         state: TrainingState,

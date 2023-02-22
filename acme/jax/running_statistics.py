@@ -88,7 +88,7 @@ def init_state(nest: types.Nest) -> RunningStatisticsState:
   """Initializes the running statistics for the given nested structure."""
   dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
 
-  return RunningStatisticsState(
+  return RunningStatisticsState(  # pytype: disable=wrong-arg-types  # jax-ndarray
       count=0.,
       mean=_zeros_like(nest, dtype=dtype),
       summed_variance=_zeros_like(nest, dtype=dtype),

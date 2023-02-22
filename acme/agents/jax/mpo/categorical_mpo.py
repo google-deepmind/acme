@@ -137,7 +137,7 @@ class CategoricalMPO:
 
     # Compute the E-step logits and the temperature loss, used to adapt the
     # tempering of Q-values.
-    logits_e_step, loss_temperature = compute_weights_and_temperature_loss(
+    logits_e_step, loss_temperature = compute_weights_and_temperature_loss(  # pytype: disable=wrong-arg-types  # jax-ndarray
         q_values=q_values, logits=target_action_distribution.logits,
         epsilon=self._epsilon, temperature=temperature)
     action_distribution_e_step = distrax.Categorical(logits=logits_e_step)

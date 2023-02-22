@@ -234,4 +234,4 @@ class RolloutLoss:
         'rollout_loss': loss,
     }
 
-    return loss, logging_dict
+    return loss, logging_dict  # pytype: disable=bad-return-type  # jax-ndarray

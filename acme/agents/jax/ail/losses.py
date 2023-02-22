@@ -222,7 +222,7 @@ def add_gradient_penalty(base_loss: Loss,
         key=gradient_penalty_key)
     def apply_discriminator_fn(transitions: types.Transition) -> float:
       logits, _ = discriminator_fn(discriminator_state, transitions)
-      return logits
+      return logits  # pytype: disable=bad-return-type  # jax-ndarray
     gradient_penalty = gradient_penalty_coefficient * jnp.mean(
         _compute_gradient_penalty(gradient_penalty_data, apply_discriminator_fn,
                                   gradient_penalty_target))

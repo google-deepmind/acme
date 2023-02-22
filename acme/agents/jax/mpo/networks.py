@@ -341,6 +341,6 @@ class Conv2DLSTMWithSkip(hk.Conv2DLSTM):
   """Conv2DLSTM with a skip-connection from input to output."""
 
   def __call__(self, inputs: jnp.ndarray, state: jnp.ndarray):
-    outputs, state = super().__call__(inputs, state)
+    outputs, state = super().__call__(inputs, state)  # pytype: disable=wrong-arg-types  # jax-ndarray
     outputs = jnp.concatenate([inputs, outputs], axis=-1)
     return outputs, state

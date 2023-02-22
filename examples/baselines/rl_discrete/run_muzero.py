@@ -78,7 +78,7 @@ def build_experiment_config() -> experiments.ExperimentConfig:
       ),
       muzero.RAW_VALUES_KEY: specs.Array(shape=(), dtype='float32'),
   }
-  muzero_builder = muzero.MzBuilder(
+  muzero_builder = muzero.MzBuilder(  # pytype: disable=wrong-arg-types  # jax-ndarray
       muzero_config,
       extra_spec,
   )

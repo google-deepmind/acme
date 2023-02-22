@@ -384,8 +384,8 @@ def make_discriminator(
       # D = exp(output)/(exp(output) + pi(a|s))
       # logit(D) = log(D/(1-D)) = log(exp(output)/pi(a|s))
       # logit(D) = output - logpi
-      return output - logpi, state
-    return output, state
+      return output - logpi, state  # pytype: disable=bad-return-type  # jax-ndarray
+    return output, state  # pytype: disable=bad-return-type  # jax-ndarray
 
   dummy_obs = utils.zeros_like(environment_spec.observations)
   dummy_obs = utils.add_batch_dim(dummy_obs)
