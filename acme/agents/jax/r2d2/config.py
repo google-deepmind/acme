@@ -51,3 +51,6 @@ class R2D2Config:
   importance_sampling_exponent: float = 0.6
   priority_exponent: float = 0.9
   max_priority_weight: float = 0.9
+
+  # actor options
+  actor_jit: bool =True

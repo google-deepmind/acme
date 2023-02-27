@@ -248,7 +248,15 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
         update_period=self._config.variable_update_period)
 
     return actors.GenericActor(
-        policy, random_key, variable_client, adder, backend='cpu')
+        policy, random_key, variable_client, adder, backend='cpu',
+        jit=self._config.actor_jit)
+    # return actors.GenericActor(
+    #     policy, random_key, variable_client, adder, backend='gpu',
+    #     jit=self._config.actor_jit)
+    # return actors.GenericActor(
+    #     policy, random_key, variable_client, adder, backend='cpu')
+    # return actors.GenericActor(
+    #     policy, random_key, variable_client, adder, backend='gpu')
 
   def make_policy(self,
                   networks: r2d2_networks.R2D2Networks,
