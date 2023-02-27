@@ -114,8 +114,10 @@ class PPOBuilder(
     dataset = reverb.TrajectoryDataset.from_table_signature(
         server_address=replay_client.server_address,
         table=self._config.replay_table_name,
-        max_in_flight_samples_per_worker=(2 * self._config.batch_size /
-                                          jax.process_count()))
+        max_in_flight_samples_per_worker=(
+            2 * self._config.batch_size // jax.process_count()
+        ),
+    )
     dataset = dataset.batch(iterator_batch_size, drop_remainder=True)
     dataset = dataset.as_numpy_iterator()
     return utils.multi_device_put(iterable=dataset, devices=jax.local_devices())
