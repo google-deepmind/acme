@@ -25,6 +25,10 @@ import launchpad as lp
 from datetime import datetime, timedelta
 from acme.jax import inference_server as inference_server_lib
 
+# import tensorflow as tf
+# physical_device = tf.config.list_physical_devices('GPU')[0]
+# print(tf.config.experimental.get_memory_growth(physical_device))
+
 # import ipdb; ipdb.set_trace()
 import tensorflow as tf
 physical_devices = tf.config.list_physical_devices('GPU')
@@ -79,17 +83,19 @@ def build_experiment_config():
       # burn_in_length=8,
       # trace_length=40,
       # sequence_period=20,
-      burn_in_length=4,
-      trace_length=20,
-      sequence_period=10,
+      burn_in_length=2,
+      trace_length=10,
+      sequence_period=4,
       # min_replay_size=10_000,
-      min_replay_size=100,
+      min_replay_size=200,
       max_replay_size=10000,
       batch_size=batch_size,
-      # prefetch_size=1,
-      prefetch_size=0,
+      prefetch_size=1,
+      # prefetch_size=0,
       # samples_per_insert=0,
-      samples_per_insert=1,
+      # samples_per_insert=1,
+      samples_per_insert=4.0, # shouldn't this be 0.25 to match DQN? I dunno. Maybe this is more sample efficent.
+      # can see what it means/does.
       evaluation_epsilon=1e-3,
       # learning_rate=1e-4,
       # target_update_period=1200,
@@ -106,30 +112,59 @@ def build_experiment_config():
       max_num_actor_steps=FLAGS.num_steps)
 
 
+def _get_local_resources(launch_type):
+  assert launch_type in ('local_mp', 'local_mt'), launch_type
+  from launchpad.nodes.python.local_multi_processing import PythonProcess
+  if launch_type == 'local_mp':
+    local_resources = {
+      "learner":PythonProcess(env={
+        "CUDA_VISIBLE_DEVICES": str(0),
+        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+      }),
+      "actor":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+      "inference_server":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+      "counter":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+      "replay":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+      "evaluator":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+    }
+  else:
+    local_resources = {}
+  return local_resources
+
+
 def main(_):
   config = build_experiment_config()
   if FLAGS.run_distributed:
     num_actors = FLAGS.num_actors
     num_actors_per_node = FLAGS.num_actors_per_node
-    inference_batch_size = int(max(num_actors_per_node//2, 1))
+    inference_batch_size = int(max(num_actors//2, 1))
+    launch_type = FLAGS.lp_launch_type
     print('inference batch size ', inference_batch_size)
     inference_server_config = inference_server_lib.InferenceServerConfig(
       # batch_size=max(num_actors_per_node // 2, 1),
       batch_size=inference_batch_size,
-      update_period=400,
-      timeout=timedelta(
-          microseconds=999000,
-      ),
+      # update_period=400,
+      update_period=5,
+      # timeout=timedelta(
+      #     microseconds=999000,
+      # ),
       # timeout=1000,
       )
     print(inference_server_config)
+    local_resources = _get_local_resources(launch_type)
+    print(local_resources)
     program = experiments.make_distributed_experiment(
         experiment=config, num_actors=num_actors,
-        inference_server_config=inference_server_config,
+        # inference_server_config=inference_server_config,
         num_actors_per_node=num_actors_per_node, multiprocessing_colocate_actors=FLAGS.multiprocessing_colocate_actors)
     # program = experiments.make_distributed_experiment(
     #     experiment=config, num_actors=64 if lp_utils.is_local_run() else 80)
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program), terminal="current_terminal")
+    lp.launch(program,
+              xm_resources=lp_utils.make_xm_docker_resources(program),
+              local_resources=local_resources,
+              # terminal="current_terminal")
+              terminal="tmux_session")
   else:
     experiments.run_experiment(experiment=config)
 
