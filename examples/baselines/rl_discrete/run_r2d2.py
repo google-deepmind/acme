@@ -32,6 +32,7 @@ flags.DEFINE_string('env_name', 'Pong', 'What environment to run.')
 flags.DEFINE_integer('seed', 0, 'Random seed (experiment).')
 flags.DEFINE_integer('num_steps', 200_000_000,
                      'Number of environment steps to run for.')
+flags.DEFINE_integer('num_actors', 64, 'Number of actors to use')
 
 FLAGS = flags.FLAGS
 
@@ -84,8 +85,10 @@ def main(_):
   config = build_experiment_config()
   if FLAGS.run_distributed:
     program = experiments.make_distributed_experiment(
-        experiment=config, num_actors=64 if lp_utils.is_local_run() else 80)
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
+        experiment=config, num_actors=FLAGS.num_actors if lp_utils.is_local_run() else 80
+    )
+    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program),
+              terminal='current_terminal')
   else:
     experiments.run_experiment(experiment=config)
 
