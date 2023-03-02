@@ -261,9 +261,14 @@ def make_distributed_experiment(
         environment_spec=environment_spec,
         evaluation=False)
     if inference_server is not None:
+      def silly_select_action(*args, **kwargs):
+        to_return = inference_server.handler(*args, **kwargs)
+        return to_return
+        
       policy_network = actor_core.ActorCore(
           init=policy_network.init,
-          select_action=inference_server.handler,
+          # select_action=inference_server.handler,
+          select_action=silly_select_action,
           get_extras=policy_network.get_extras,
       )
       variable_source = variable_utils.ReferenceVariableSource()

@@ -87,14 +87,16 @@ def build_experiment_config():
       trace_length=10,
       sequence_period=4,
       # min_replay_size=10_000,
-      min_replay_size=200,
-      max_replay_size=10000,
+      # min_replay_size=200,
+      # max_replay_size=10000,
+      min_replay_size=10000,
+      max_replay_size=100000,
       batch_size=batch_size,
-      prefetch_size=1,
-      # prefetch_size=0,
-      # samples_per_insert=0,
+      # prefetch_size=1,
+      prefetch_size=0,
+      samples_per_insert=0,
       # samples_per_insert=1,
-      samples_per_insert=4.0, # shouldn't this be 0.25 to match DQN? I dunno. Maybe this is more sample efficent.
+      # samples_per_insert=4.0, # shouldn't this be 0.25 to match DQN? I dunno. Maybe this is more sample efficent.
       # can see what it means/does.
       evaluation_epsilon=1e-3,
       # learning_rate=1e-4,
@@ -123,7 +125,11 @@ def _get_local_resources(launch_type):
         "TF_FORCE_GPU_ALLOW_GROWTH": "true",
       }),
       "actor":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
-      "inference_server":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+      "inference_server":PythonProcess(env={
+        "CUDA_VISIBLE_DEVICES": str(0),
+        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+        }),
       "counter":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
       "replay":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
       "evaluator":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
@@ -139,16 +145,17 @@ def main(_):
     num_actors = FLAGS.num_actors
     num_actors_per_node = FLAGS.num_actors_per_node
     inference_batch_size = int(max(num_actors//2, 1))
+    # inference_batch_size = int(max(num_actors//4, 1))
     launch_type = FLAGS.lp_launch_type
     print('inference batch size ', inference_batch_size)
     inference_server_config = inference_server_lib.InferenceServerConfig(
       # batch_size=max(num_actors_per_node // 2, 1),
       batch_size=inference_batch_size,
-      # update_period=400,
-      update_period=5,
-      # timeout=timedelta(
-      #     microseconds=999000,
-      # ),
+      update_period=400,
+      # update_period=5,
+      timeout=timedelta(
+          microseconds=999000,
+      ),
       # timeout=1000,
       )
     print(inference_server_config)
@@ -156,7 +163,7 @@ def main(_):
     print(local_resources)
     program = experiments.make_distributed_experiment(
         experiment=config, num_actors=num_actors,
-        # inference_server_config=inference_server_config,
+        inference_server_config=inference_server_config,
         num_actors_per_node=num_actors_per_node, multiprocessing_colocate_actors=FLAGS.multiprocessing_colocate_actors)
     # program = experiments.make_distributed_experiment(
     #     experiment=config, num_actors=64 if lp_utils.is_local_run() else 80)
