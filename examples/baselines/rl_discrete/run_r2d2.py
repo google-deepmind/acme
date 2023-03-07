@@ -25,22 +25,6 @@ import launchpad as lp
 from datetime import datetime, timedelta
 from acme.jax import inference_server as inference_server_lib
 
-# import tensorflow as tf
-# physical_device = tf.config.list_physical_devices('GPU')[0]
-# print(tf.config.experimental.get_memory_growth(physical_device))
-
-# import ipdb; ipdb.set_trace()
-import tensorflow as tf
-physical_devices = tf.config.list_physical_devices('GPU')
-try:
-  if physical_devices:
-    for physical_device in physical_devices:
-      tf.config.experimental.set_memory_growth(physical_device, True)
-except:
-  # Invalid device or cannot modify virtual devices once initialized.
-  pass
-
-
 # Flags which modify the behavior of the launcher.
 flags.DEFINE_bool(
     'run_distributed', True, 'Should an agent be executed in a distributed '
@@ -48,8 +32,13 @@ flags.DEFINE_bool(
 flags.DEFINE_string('env_name', 'Pong', 'What environment to run.')
 flags.DEFINE_integer('seed', 0, 'Random seed (experiment).')
 flags.DEFINE_integer('num_actors', 64, 'Num actors if running distributed')
+flags.DEFINE_integer('inference_batch_size', 0, 'Inference batch size')
+flags.DEFINE_boolean('use_inference_server', False, 'Whether we use inference server (default False, include with no args to be true)')
+flags.DEFINE_integer('num_inference_servers', 1, 'Number of inference servers (defaults to 1)')
 flags.DEFINE_integer('num_actors_per_node', 1, 'Actors per node (not sure what this means yet)')
-flags.DEFINE_bool('multiprocessing_colocate_actors', False, 'Not sure, maybe whether to put actors in different processes?')
+flags.DEFINE_boolean('multiprocessing_colocate_actors', False, 'Not sure, maybe whether to put actors in different processes?')
+flags.DEFINE_boolean('actors_on_gpu', False, 'Whether we put actors on GPU (default is on CPU)')
+flags.DEFINE_boolean('learner_on_cpu', False, 'For testing whether learner on GPU makes inference faster')
 flags.DEFINE_integer('num_steps', 200_000_000,
                      'Number of environment steps to run for.')
 
@@ -103,7 +92,8 @@ def build_experiment_config():
       # target_update_period=1200,
       # variable_update_period=100,
       # actor_jit=False,
-      actor_jit=False,
+      # actor_jit=False,
+      actor_jit=not FLAGS.use_inference_server, # we don't use this if we're doing inference-server
   )
 
   return experiments.ExperimentConfig(
@@ -118,21 +108,22 @@ def _get_local_resources(launch_type):
   assert launch_type in ('local_mp', 'local_mt'), launch_type
   from launchpad.nodes.python.local_multi_processing import PythonProcess
   if launch_type == 'local_mp':
+    def make_with_gpu_dict():
+      return PythonProcess(env={
+        "CUDA_VISIBLE_DEVICES": str(0),
+        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+      })
+    def make_without_gpu_dict():
+      return PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)})
+
     local_resources = {
-      "learner":PythonProcess(env={
-        "CUDA_VISIBLE_DEVICES": str(0),
-        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
-        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-      }),
-      "actor":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
-      "inference_server":PythonProcess(env={
-        "CUDA_VISIBLE_DEVICES": str(0),
-        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
-        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-        }),
-      "counter":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
-      "replay":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
-      "evaluator":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+      "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict(), # reversed from other
+      "inference_server": make_with_gpu_dict(),
+      "counter": make_without_gpu_dict(),
+      "replay": make_without_gpu_dict(),
+      "evaluator": make_without_gpu_dict(),
+      "actor": make_with_gpu_dict() if FLAGS.actors_on_gpu else make_without_gpu_dict(),
     }
   else:
     local_resources = {}
@@ -141,29 +132,34 @@ def _get_local_resources(launch_type):
 
 def main(_):
   config = build_experiment_config()
+  print(FLAGS.use_inference_server)
   if FLAGS.run_distributed:
     num_actors = FLAGS.num_actors
     num_actors_per_node = FLAGS.num_actors_per_node
-    inference_batch_size = int(max(num_actors//2, 1))
-    # inference_batch_size = int(max(num_actors//4, 1))
+    inference_batch_size = FLAGS.inference_batch_size or int(max(num_actors//2, 1)) # defaults flag to 0
     launch_type = FLAGS.lp_launch_type
-    print('inference batch size ', inference_batch_size)
-    inference_server_config = inference_server_lib.InferenceServerConfig(
-      # batch_size=max(num_actors_per_node // 2, 1),
-      batch_size=inference_batch_size,
-      update_period=400,
-      # update_period=5,
-      timeout=timedelta(
-          microseconds=999000,
-      ),
-      # timeout=1000,
-      )
-    print(inference_server_config)
+    if FLAGS.use_inference_server:
+      print('inference batch size ', inference_batch_size)
+      inference_server_config = inference_server_lib.InferenceServerConfig(
+        # batch_size=max(num_actors_per_node // 2, 1),
+        batch_size=inference_batch_size,
+        update_period=400,
+        # update_period=5,
+        timeout=timedelta(
+            microseconds=999000,
+        ),
+        # timeout=1000,
+        )
+      print(inference_server_config)
+    else:
+      inference_server_config = None
+      print('not using inference server')
     local_resources = _get_local_resources(launch_type)
     print(local_resources)
     program = experiments.make_distributed_experiment(
         experiment=config, num_actors=num_actors,
         inference_server_config=inference_server_config,
+        num_inference_servers=FLAGS.num_inference_servers,
         num_actors_per_node=num_actors_per_node, multiprocessing_colocate_actors=FLAGS.multiprocessing_colocate_actors)
     # program = experiments.make_distributed_experiment(
     #     experiment=config, num_actors=64 if lp_utils.is_local_run() else 80)
