@@ -81,13 +81,36 @@ def build_experiment_config():
       max_num_actor_steps=FLAGS.num_steps)
 
 
+def _get_local_resources(launch_type):
+   assert launch_type in ('local_mp', 'local_mt'), launch_type
+   from launchpad.nodes.python.local_multi_processing import PythonProcess
+   if launch_type == 'local_mp':
+     local_resources = {
+       "learner":PythonProcess(env={
+         "CUDA_VISIBLE_DEVICES": str(0),
+         "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+         "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+       }),
+       "actor":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+       "evaluator":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(0)}),
+       "inference_server":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+       "counter":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+       "replay":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+     }
+   else:
+     local_resources = {}
+   return local_resources
+
+
 def main(_):
   config = build_experiment_config()
   if FLAGS.run_distributed:
     program = experiments.make_distributed_experiment(
         experiment=config, num_actors=FLAGS.num_actors if lp_utils.is_local_run() else 80
     )
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program),
+    lp.launch(program, 
+              xm_resources=lp_utils.make_xm_docker_resources(program),
+              local_resources=_get_local_resources(FLAGS.lp_launch_type),
               terminal='current_terminal')
   else:
     experiments.run_experiment(experiment=config)
