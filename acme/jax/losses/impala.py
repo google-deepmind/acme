@@ -17,7 +17,7 @@
 [1] https://arxiv.org/abs/1802.01561
 """
 
-from typing import Callable
+from typing import Callable, Mapping, Tuple
 
 from acme.agents.jax.impala import types
 from acme.jax import utils
@@ -48,11 +48,13 @@ def impala_loss(
     entropy_cost: Weighting of the entropy regulariser relative to policy loss.
 
   Returns:
-    A loss function with signature (params, data) -> loss_scalar.
+    A loss function with signature (params, data) -> (loss_scalar, metrics).
   """
 
-  def loss_fn(params: hk.Params,
-              sample: reverb.ReplaySample) -> jnp.DeviceArray:
+  def loss_fn(
+      params: hk.Params,
+      sample: reverb.ReplaySample,
+  ) -> Tuple[jnp.DeviceArray, Mapping[str, jnp.DeviceArray]]:
     """Batched, entropy-regularised actor-critic loss with V-trace."""
 
     # Extract the data.
