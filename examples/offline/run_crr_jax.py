@@ -28,7 +28,6 @@ from acme.types import Transition
 from acme.utils import loggers
 import haiku as hk
 import jax
-import jax.numpy as jnp
 import optax
 import rlds
 
@@ -109,8 +108,9 @@ def main(_):
       grad_updates_per_batch=FLAGS.grad_updates_per_batch,
       use_sarsa_target=FLAGS.use_sarsa_target)
 
-  def evaluator_network(params: hk.Params, key: jnp.DeviceArray,
-                        observation: jnp.DeviceArray) -> jnp.DeviceArray:
+  def evaluator_network(
+      params: hk.Params, key: jax.Array, observation: jax.Array
+  ) -> jax.Array:
     dist_params = networks.policy_network.apply(params, observation)
     return networks.sample_eval(dist_params, key)
 

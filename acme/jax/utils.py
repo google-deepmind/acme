@@ -385,7 +385,7 @@ def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
 
 def mapreduce(
     f: F,
-    reduce_fn: Optional[Callable[[jnp.DeviceArray], jnp.DeviceArray]] = None,
+    reduce_fn: Optional[Callable[[jax.Array], jax.Array]] = None,
     **vmap_kwargs,
 ) -> F:
   """A simple decorator that transforms `f` into (`reduce_fn` o vmap o f).

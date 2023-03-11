@@ -41,7 +41,7 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
       target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
       key: networks_lib.PRNGKey,
-  ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
+  ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
     probs = batch.info.probability
@@ -94,7 +94,7 @@ class QrDqn(learning_lib.LossFn):
       target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
       key: networks_lib.PRNGKey,
-  ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
+  ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
     key1, key2 = jax.random.split(key)
@@ -157,7 +157,7 @@ class PrioritizedCategoricalDoubleQLearning(learning_lib.LossFn):
       target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
       key: networks_lib.PRNGKey,
-  ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
+  ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
     probs = batch.info.probability
@@ -214,7 +214,7 @@ class QLearning(learning_lib.LossFn):
       target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
       key: networks_lib.PRNGKey,
-  ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
+  ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
 
@@ -258,7 +258,7 @@ class RegularizedQLearning(learning_lib.LossFn):
       target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
       key: networks_lib.PRNGKey,
-  ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
+  ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
 
@@ -306,7 +306,7 @@ class MunchausenQLearning(learning_lib.LossFn):
       target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
       key: networks_lib.PRNGKey,
-  ) -> Tuple[jnp.DeviceArray, learning_lib.LossExtra]:
+  ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
 

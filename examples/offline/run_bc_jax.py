@@ -27,7 +27,6 @@ from acme.jax import variable_utils
 from acme.utils import loggers
 import haiku as hk
 import jax
-import jax.numpy as jnp
 import optax
 import rlax
 
@@ -69,8 +68,9 @@ def main(_):
       prefetching_iterator=utils.sharded_prefetch(dataset),
       num_sgd_steps_per_step=1)
 
-  def evaluator_network(params: hk.Params, key: jnp.DeviceArray,
-                        observation: jnp.DeviceArray) -> jnp.DeviceArray:
+  def evaluator_network(
+      params: hk.Params, key: jax.Array, observation: jax.Array
+  ) -> jax.Array:
     dist_params = bc_networks.policy_network.apply(params, observation)
     return rlax.epsilon_greedy(FLAGS.evaluation_epsilon).sample(
         key, dist_params)

@@ -46,7 +46,7 @@ class BVELoss(dqn.LossFn):
       target_params: networks_lib.Params,
       batch: reverb.ReplaySample,
       key: networks_lib.PRNGKey,
-  ) -> Tuple[jnp.DeviceArray, dqn.LossExtra]:
+  ) -> Tuple[jax.Array, dqn.LossExtra]:
     """Calculate a loss on a single batch of data."""
     transitions: types.Transition = batch.data
 

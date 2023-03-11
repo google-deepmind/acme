@@ -28,7 +28,6 @@ from acme.types import Transition
 from acme.utils import loggers
 import haiku as hk
 import jax
-import jax.numpy as jnp
 import optax
 import reverb
 import rlds
@@ -116,8 +115,9 @@ def main(_):
       bc_alpha=FLAGS.bc_alpha,
       num_sgd_steps_per_step=1)
 
-  def evaluator_network(params: hk.Params, key: jnp.DeviceArray,
-                        observation: jnp.DeviceArray) -> jnp.DeviceArray:
+  def evaluator_network(
+      params: hk.Params, key: jax.Array, observation: jax.Array
+  ) -> jax.Array:
     del key
     return networks.policy_network.apply(params, observation)
 
