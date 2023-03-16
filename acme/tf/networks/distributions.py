@@ -21,7 +21,7 @@ import tensorflow_probability as tfp
 tfd = tfp.distributions
 
 
-@tfp.experimental.register_composite
+@tfp.experimental.auto_composite_tensor
 class DiscreteValuedDistribution(tfd.Categorical):
   """This is a generalization of a categorical distribution.
 

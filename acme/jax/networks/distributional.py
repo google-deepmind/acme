@@ -414,7 +414,7 @@ class DiscreteValuedTfpHead(hk.Module):
     return DiscreteValuedTfpDistribution(values=self._values, logits=logits)
 
 
-@tf_tfp.experimental.register_composite
+@tf_tfp.experimental.auto_composite_tensor
 class DiscreteValuedTfpDistribution(tfd.Categorical):
   """This is a generalization of a categorical distribution.
 
