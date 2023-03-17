@@ -109,14 +109,13 @@ class MPOLearner(acme.Learner):
       optimizer: Optional[optax.GradientTransformation] = None,
       learning_rate: Optional[Union[float, optax.Schedule]] = None,
       dual_optimizer: Optional[optax.GradientTransformation] = None,
-      grad_norm_clip: float = 40.,
+      grad_norm_clip: float = 40.0,
       reward_clip: float = np.float32('inf'),
       value_tx_pair: rlax.TxPair = rlax.IDENTITY_PAIR,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
-      devices: Optional[Sequence[jax.xla.Device]] = None,
+      devices: Optional[Sequence[jax.Device]] = None,
   ):
-
     self._critic_type = critic_type
     self._discrete_policy = discrete_policy
 

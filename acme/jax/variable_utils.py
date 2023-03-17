@@ -46,11 +46,13 @@ class ReferenceVariableSource(core.VariableSource):
 class VariableClient:
   """A variable client for updating variables from a remote source."""
 
-  def __init__(self,
-               client: core.VariableSource,
-               key: Union[str, Sequence[str]],
-               update_period: Union[int, datetime.timedelta] = 1,
-               device: Optional[Union[str, jax.xla.Device]] = None):
+  def __init__(
+      self,
+      client: core.VariableSource,
+      key: Union[str, Sequence[str]],
+      update_period: Union[int, datetime.timedelta] = 1,
+      device: Optional[Union[str, jax.Device]] = None,
+  ):
     """Initializes the variable client.
 
     Args:
@@ -137,7 +139,7 @@ class VariableClient:
       self._params = params_list
 
   @property
-  def device(self) -> Optional[jax.xla.Device]:
+  def device(self) -> Optional[jax.Device]:
     return self._device
 
   @property

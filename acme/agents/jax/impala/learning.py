@@ -50,12 +50,12 @@ class IMPALALearner(acme.Learner):
       optimizer: optax.GradientTransformation,
       random_key: networks_lib.PRNGKey,
       discount: float = 0.99,
-      entropy_cost: float = 0.,
-      baseline_cost: float = 1.,
+      entropy_cost: float = 0.0,
+      baseline_cost: float = 1.0,
       max_abs_reward: float = np.inf,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
-      devices: Optional[Sequence[jax.xla.Device]] = None,
+      devices: Optional[Sequence[jax.Device]] = None,
       prefetch_size: int = 2,
   ):
     local_devices = jax.local_devices()

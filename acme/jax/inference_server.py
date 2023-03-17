@@ -48,10 +48,13 @@ InferenceServerHandler = TypeVar('InferenceServerHandler')
 class InferenceServer(Generic[InferenceServerHandler]):
   """Centralised, batched inference server."""
 
-  def __init__(self, handler: InferenceServerHandler,
-               variable_source: acme.VariableSource,
-               devices: Sequence[jax.xla.Device],
-               config: InferenceServerConfig):
+  def __init__(
+      self,
+      handler: InferenceServerHandler,
+      variable_source: acme.VariableSource,
+      devices: Sequence[jax.Device],
+      config: InferenceServerConfig,
+  ):
     """Constructs an inference server object.
 
     Args:

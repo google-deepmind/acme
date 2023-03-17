@@ -146,7 +146,7 @@ def maybe_recover_lstm_type(state: types.NestedArray) -> types.NestedArray:
 def prefetch(
     iterable: Iterable[T],
     buffer_size: int = 5,
-    device: Optional[jax.xla.Device] = None,
+    device: Optional[jax.Device] = None,
     num_threads: int = NUM_PREFETCH_THREADS,
 ) -> core.PrefetchingIterator[T]:
   """Returns prefetching iterator with additional 'ready' method."""
@@ -178,7 +178,7 @@ def keep_key_on_host(sample: reverb.ReplaySample) -> PrefetchingSplit:
 
 def device_put(
     iterable: Iterable[types.NestedArray],
-    device: jax.xla.Device,
+    device: jax.Device,
     split_fn: Optional[_SplitFunction] = None,
 ):
   """Returns iterator that samples an item and places it on the device."""
@@ -192,7 +192,7 @@ def device_put(
 
 def multi_device_put(
     iterable: Iterable[types.NestedArray],
-    devices: Sequence[jax.xla.Device],
+    devices: Sequence[jax.Device],
     split_fn: Optional[_SplitFunction] = None,
 ):
   """Returns iterator that, per device, samples an item and places on device."""
@@ -236,7 +236,7 @@ class PutToDevicesIterable(Iterable[types.NestedArray]):
       self,
       iterable: Iterable[types.NestedArray],
       pmapped_user: bool,
-      devices: Sequence[jax.xla.Device],
+      devices: Sequence[jax.Device],
       split_fn: Optional[_SplitFunction] = None,
   ):
     """Constructs PutToDevicesIterable.
@@ -319,7 +319,7 @@ def sharded_prefetch(
     buffer_size: int = 5,
     num_threads: int = 1,
     split_fn: Optional[_SplitFunction] = None,
-    devices: Optional[Sequence[jax.xla.Device]] = None,
+    devices: Optional[Sequence[jax.Device]] = None,
 ) -> core.PrefetchingIterator:
   """Performs sharded prefetching from an iterable in separate threads.
 
@@ -357,9 +357,9 @@ def sharded_prefetch(
   return prefetch(iterable, buffer_size, device=None, num_threads=num_threads)
 
 
-def replicate_in_all_devices(nest: N,
-                             devices: Optional[Sequence[jax.xla.Device]] = None
-                            ) -> N:
+def replicate_in_all_devices(
+    nest: N, devices: Optional[Sequence[jax.Device]] = None
+) -> N:
   """Replicate array nest in all available devices."""
   devices = devices or jax.local_devices()
   return jax.device_put_sharded([nest] * len(devices), devices)
@@ -530,7 +530,7 @@ class PrefetchIterator(core.PrefetchingIterator):
       self,
       iterable: Iterable[types.NestedArray],
       buffer_size: int = 5,
-      device: Optional[jax.xla.Device] = None,
+      device: Optional[jax.Device] = None,
       num_threads: int = NUM_PREFETCH_THREADS,
   ):
     """Constructs PrefetchIterator.
