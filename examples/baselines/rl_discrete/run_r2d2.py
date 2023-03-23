@@ -30,8 +30,8 @@ flags.DEFINE_bool(
     'way. If False, will run single-threaded.')
 flags.DEFINE_string('env_name', 'Pong', 'What environment to run.')
 flags.DEFINE_integer('seed', 0, 'Random seed (experiment).')
-flags.DEFINE_integer('num_steps', 200_000_000,
-                     'Number of environment steps to run for.')
+flags.DEFINE_integer('num_steps', 50_000_000,
+                     'Number of environment steps to run for. Number of frames is 4x this')
 flags.DEFINE_integer('num_actors', 64, 'Number of actors to use')
 
 FLAGS = flags.FLAGS
