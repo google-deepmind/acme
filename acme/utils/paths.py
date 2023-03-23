@@ -24,6 +24,11 @@ from absl import flags
 
 ACME_ID = flags.DEFINE_string('acme_id', None,
                               'Experiment identifier to use for Acme.')
+import sys
+FLAGS = flags.FLAGS
+if not FLAGS.is_parsed():
+  FLAGS(sys.argv, known_only=True)
+print(ACME_ID)
 
 
 def process_path(path: str,
