@@ -33,6 +33,7 @@ flags.DEFINE_integer('seed', 0, 'Random seed (experiment).')
 flags.DEFINE_integer('num_steps', 50_000_000,
                      'Number of environment steps to run for. Number of frames is 4x this')
 flags.DEFINE_integer('num_actors', 64, 'Number of actors to use')
+flags.DEFINE_string('acme_id', None, 'Experiment identifier to use for Acme.')
 
 FLAGS = flags.FLAGS
 
@@ -91,7 +92,7 @@ def _get_local_resources(launch_type):
          "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
          "TF_FORCE_GPU_ALLOW_GROWTH": "true",
        }),
-       "actor":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+       "actor":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(0)}),
        "evaluator":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(0)}),
        "inference_server":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
        "counter":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
@@ -103,6 +104,7 @@ def _get_local_resources(launch_type):
 
 
 def main(_):
+  FLAGS.append_flags_into_file('/tmp/temp_flags')  # hack: so that subprocesses can load FLAGS
   config = build_experiment_config()
   if FLAGS.run_distributed:
     program = experiments.make_distributed_experiment(
