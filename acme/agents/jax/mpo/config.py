@@ -53,7 +53,7 @@ class MPOConfig:
   value_tx_pair: rlax.TxPair = rlax.IDENTITY_PAIR
   use_retrace: bool = False
   retrace_lambda: float = 0.95
-  reward_clip: float = np.float32('inf')
+  reward_clip: float = np.float32('inf')  # pytype: disable=annotation-type-mismatch  # numpy-scalars
   use_online_policy_to_bootstrap: bool = False
   use_stale_state: bool = False
 

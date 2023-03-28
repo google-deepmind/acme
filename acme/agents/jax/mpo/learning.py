@@ -83,7 +83,7 @@ class MPOLearner(acme.Learner):
 
   _state: TrainingState
 
-  def __init__(
+  def __init__(  # pytype: disable=annotation-type-mismatch  # numpy-scalars
       self,
       critic_type: CriticType,
       discrete_policy: bool,
@@ -232,7 +232,7 @@ class MPOLearner(acme.Learner):
       self._dual_clip_fn = discrete_losses.clip_categorical_mpo_params
     elif isinstance(self._policy_loss_module, continuous_losses.MPO):
       is_constraining = self._policy_loss_module.per_dim_constraining
-      self._dual_clip_fn = lambda dp: continuous_losses.clip_mpo_params(  # pylint: disable=g-long-lambda
+      self._dual_clip_fn = lambda dp: continuous_losses.clip_mpo_params(  # pylint: disable=g-long-lambda  # pytype: disable=wrong-arg-types  # numpy-scalars
           dp,
           per_dim_constraining=is_constraining)
 
@@ -642,13 +642,13 @@ class MPOLearner(acme.Learner):
 
     # Periodically update target networks.
     if self._target_update_period:
-      target_params = optax.periodic_update(params, state.target_params, steps,
+      target_params = optax.periodic_update(params, state.target_params, steps,  # pytype: disable=wrong-arg-types  # numpy-scalars
                                             self._target_update_period)
     elif self._target_update_rate:
       target_params = optax.incremental_update(params, state.target_params,
                                                self._target_update_rate)
 
-    new_state = TrainingState(
+    new_state = TrainingState(  # pytype: disable=wrong-arg-types  # numpy-scalars
         params=params,
         target_params=target_params,
         dual_params=dual_params,

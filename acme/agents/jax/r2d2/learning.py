@@ -181,7 +181,7 @@ class R2D2Learner(acme.Learner):
 
       # Periodically update target networks.
       steps = state.steps + 1
-      target_params = optax.periodic_update(new_params, state.target_params,
+      target_params = optax.periodic_update(new_params, state.target_params,  # pytype: disable=wrong-arg-types  # numpy-scalars
                                             steps, self._target_update_period)
 
       new_state = TrainingState(

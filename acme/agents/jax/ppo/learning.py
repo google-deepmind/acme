@@ -169,7 +169,7 @@ class PPOLearner(acme.Learner):
         value_loss = jnp.mean(unclipped_value_loss)
 
       total_ppo_loss = total_policy_loss + value_cost * value_loss
-      return total_ppo_loss, {
+      return total_ppo_loss, {  # pytype: disable=bad-return-type  # numpy-scalars
           'loss_total': total_ppo_loss,
           'loss_policy_total': total_policy_loss,
           'loss_policy_pg': clipped_ppo_policy_loss,

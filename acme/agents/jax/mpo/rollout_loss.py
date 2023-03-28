@@ -177,7 +177,7 @@ class RolloutLoss:
       q_improvement = self._rolling_window(targets.q_improvement[:, 1:], axis=1)
 
       def policy_loss_fn(root_idx) -> jnp.ndarray:
-        chex.assert_shape((rollout.policy.logits, policy_targets.logits),
+        chex.assert_shape((rollout.policy.logits, policy_targets.logits),  # pytype: disable=attribute-error  # numpy-scalars
                           (self._model_rollout_length, num_rollouts - 1, None))
         chex.assert_shape(q_improvement,
                           (None, self._model_rollout_length, num_rollouts - 1))
@@ -185,8 +185,8 @@ class RolloutLoss:
         temperature = discrete_losses.get_temperature_from_params(dual_params)
         policy_target_probs = jax.nn.softmax(
             jnp.transpose(q_improvement[..., root_idx]) / temperature +
-            jax.nn.log_softmax(policy_targets[:, root_idx].logits, axis=-1))
-        return softmax_cross_entropy(rollout.policy[:, root_idx].logits,
+            jax.nn.log_softmax(policy_targets[:, root_idx].logits, axis=-1))  # pytype: disable=attribute-error  # numpy-scalars
+        return softmax_cross_entropy(rollout.policy[:, root_idx].logits,  # pytype: disable=bad-return-type  # numpy-scalars
                                      jax.lax.stop_gradient(policy_target_probs))
 
       # Compute the MPO loss and add it to the overall rollout policy loss.
@@ -211,7 +211,7 @@ class RolloutLoss:
             rollout.policy.logits[:, root_idx],
             bc_targets[:, root_idx],
             rng=key)
-        return loss, top1_accuracy
+        return loss, top1_accuracy  # pytype: disable=bad-return-type  # numpy-scalars
 
       # Compute each rollout loss by vmapping over the rollouts.
       bc_policy_loss, bc_policy_acc = jax.vmap(bc_policy_loss_fn)(indices[:-1])
