@@ -14,6 +14,8 @@
 
 """Example running R2D2 on discrete control tasks."""
 
+import os
+import signal
 from absl import flags
 from acme.agents.jax import r2d2
 import helpers
@@ -23,6 +25,8 @@ from acme.utils import lp_utils
 import dm_env
 import launchpad as lp
 from datetime import datetime
+start_time = datetime.now()
+
 
 # Flags which modify the behavior of the launcher.
 flags.DEFINE_bool(
@@ -103,6 +107,26 @@ def _get_local_resources(launch_type):
    return local_resources
 
 
+def sigterm_log_endtime_handler(_signo, _stack_frame):
+  """
+  log end time gracefully on SIGTERM
+  we use SIGTERM because this is what acme throws when the experiments end by reaching nun_steps
+  """
+  end_time = datetime.now()
+  # log start and end time 
+  log_dir = os.path.expanduser(os.path.join('~/acme', FLAGS.acme_id))
+  # don't print because it will be lost, especially because acme stops experiment by throwing an Error when reaching num_steps
+  start_time_file = os.path.join(log_dir, 'start_time.txt')
+  end_time_file = os.path.join(log_dir, 'end_time.txt')
+  duration_file = os.path.join(log_dir, 'duration_time.txt')
+  with open(start_time_file, 'w') as f:
+    f.write(str(start_time) + '\n')
+  with open(end_time_file, 'w') as f:
+    f.write(str(end_time) + '\n')
+  with open(duration_file, 'w') as f:
+    f.write(str(end_time - start_time) + '\n')
+
+
 def main(_):
   FLAGS.append_flags_into_file('/tmp/temp_flags')  # hack: so that subprocesses can load FLAGS
   config = build_experiment_config()
@@ -116,12 +140,9 @@ def main(_):
               terminal='current_terminal')
   else:
     experiments.run_experiment(experiment=config)
-
+  
 
 if __name__ == '__main__':
-  start_time = datetime.now()
+  signal.signal(signal.SIGTERM, sigterm_log_endtime_handler)
   app.run(main)
-  end_time = datetime.now()
-  print('End Time: {}'.format(end_time))
-  print('Duration: {}'.format(end_time - start_time))
 
