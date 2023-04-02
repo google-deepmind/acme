@@ -116,15 +116,17 @@ def sigterm_log_endtime_handler(_signo, _stack_frame):
   # log start and end time 
   log_dir = os.path.expanduser(os.path.join('~/acme', FLAGS.acme_id))
   # don't print because it will be lost, especially because acme stops experiment by throwing an Error when reaching num_steps
-  start_time_file = os.path.join(log_dir, 'start_time.txt')
-  end_time_file = os.path.join(log_dir, 'end_time.txt')
-  duration_file = os.path.join(log_dir, 'duration_time.txt')
-  with open(start_time_file, 'w') as f:
-    f.write(str(start_time) + '\n')
-  with open(end_time_file, 'w') as f:
-    f.write(str(end_time) + '\n')
-  with open(duration_file, 'w') as f:
-    f.write(str(end_time - start_time) + '\n')
+  from helpers import save_start_and_end_time
+  save_start_and_end_time(log_dir, start_time, end_time)
+
+  # log the command used
+  from helpers import save_command_used
+  save_command_used(log_dir)
+
+  # log git stuff
+  from helpers import is_under_git_control, save_git_information
+  if is_under_git_control():
+      save_git_information(log_dir)
 
 
 def main(_):
@@ -137,7 +139,7 @@ def main(_):
     lp.launch(program, 
               xm_resources=lp_utils.make_xm_docker_resources(program),
               local_resources=_get_local_resources(FLAGS.lp_launch_type),
-              terminal='current_terminal')
+              terminal='tmux_session')
   else:
     experiments.run_experiment(experiment=config)
   
