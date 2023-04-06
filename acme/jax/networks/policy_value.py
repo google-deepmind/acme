@@ -24,7 +24,7 @@ class PolicyValueHead(hk.Module):
   """A network with two linear layers, for policy and value respectively."""
 
   def __init__(self, num_actions: int):
-    super().__init__()
+    super().__init__(name='policy_value_network')
     self._policy_layer = hk.Linear(num_actions)
     self._value_layer = hk.Linear(1)
 
