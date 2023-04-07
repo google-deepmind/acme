@@ -15,36 +15,41 @@
 """An environment wrapper to produce pixel observations from dm_control."""
 
 import collections
-from acme.wrappers import base
+
+import dm_env
 from dm_control.rl import control
 from dm_control.suite.wrappers import pixels  # type: ignore
-import dm_env
+
+from acme.wrappers import base
 
 
 class MujocoPixelWrapper(base.EnvironmentWrapper):
-  """Produces pixel observations from Mujoco environment observations."""
+    """Produces pixel observations from Mujoco environment observations."""
 
-  def __init__(self,
-               environment: control.Environment,
-               *,
-               height: int = 84,
-               width: int = 84,
-               camera_id: int = 0):
-    render_kwargs = {'height': height, 'width': width, 'camera_id': camera_id}
-    pixel_environment = pixels.Wrapper(
-        environment, pixels_only=True, render_kwargs=render_kwargs)
-    super().__init__(pixel_environment)
+    def __init__(
+        self,
+        environment: control.Environment,
+        *,
+        height: int = 84,
+        width: int = 84,
+        camera_id: int = 0
+    ):
+        render_kwargs = {"height": height, "width": width, "camera_id": camera_id}
+        pixel_environment = pixels.Wrapper(
+            environment, pixels_only=True, render_kwargs=render_kwargs
+        )
+        super().__init__(pixel_environment)
 
-  def step(self, action) -> dm_env.TimeStep:
-    return self._convert_timestep(self._environment.step(action))
+    def step(self, action) -> dm_env.TimeStep:
+        return self._convert_timestep(self._environment.step(action))
 
-  def reset(self) -> dm_env.TimeStep:
-    return self._convert_timestep(self._environment.reset())
+    def reset(self) -> dm_env.TimeStep:
+        return self._convert_timestep(self._environment.reset())
 
-  def observation_spec(self):
-    return self._environment.observation_spec()['pixels']
+    def observation_spec(self):
+        return self._environment.observation_spec()["pixels"]
 
-  def _convert_timestep(self, timestep: dm_env.TimeStep) -> dm_env.TimeStep:
-    """Removes the pixel observation's OrderedDict wrapper."""
-    observation: collections.OrderedDict = timestep.observation
-    return timestep._replace(observation=observation['pixels'])
+    def _convert_timestep(self, timestep: dm_env.TimeStep) -> dm_env.TimeStep:
+        """Removes the pixel observation's OrderedDict wrapper."""
+        observation: collections.OrderedDict = timestep.observation
+        return timestep._replace(observation=observation["pixels"])

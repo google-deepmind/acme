@@ -17,5 +17,4 @@
 from acme.agents.jax.cql.builder import CQLBuilder
 from acme.agents.jax.cql.config import CQLConfig
 from acme.agents.jax.cql.learning import CQLLearner
-from acme.agents.jax.cql.networks import CQLNetworks
-from acme.agents.jax.cql.networks import make_networks
+from acme.agents.jax.cql.networks import CQLNetworks, make_networks

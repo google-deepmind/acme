@@ -17,9 +17,10 @@
 from acme.agents.jax.crr.builder import CRRBuilder
 from acme.agents.jax.crr.config import CRRConfig
 from acme.agents.jax.crr.learning import CRRLearner
-from acme.agents.jax.crr.losses import policy_loss_coeff_advantage_exp
-from acme.agents.jax.crr.losses import policy_loss_coeff_advantage_indicator
-from acme.agents.jax.crr.losses import policy_loss_coeff_constant
-from acme.agents.jax.crr.losses import PolicyLossCoeff
-from acme.agents.jax.crr.networks import CRRNetworks
-from acme.agents.jax.crr.networks import make_networks
+from acme.agents.jax.crr.losses import (
+    PolicyLossCoeff,
+    policy_loss_coeff_advantage_exp,
+    policy_loss_coeff_advantage_indicator,
+    policy_loss_coeff_constant,
+)
+from acme.agents.jax.crr.networks import CRRNetworks, make_networks

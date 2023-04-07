@@ -33,122 +33,131 @@ The changes lead to an improved agent able to learn from a single demonstration
 (even for Humanoid).
 """
 
-from absl import flags
-from acme import specs
-from acme.agents.jax import ail
-from acme.agents.jax import td3
-from acme.datasets import tfds
+import dm_env
+import haiku as hk
 import helpers
-from absl import app
+import jax
+import launchpad as lp
+from absl import app, flags
+
+from acme import specs
+from acme.agents.jax import ail, td3
+from acme.datasets import tfds
 from acme.jax import experiments
 from acme.jax import networks as networks_lib
 from acme.utils import lp_utils
-import dm_env
-import haiku as hk
-import jax
-import launchpad as lp
-
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_bool(
-    'run_distributed', True, 'Should an agent be executed in a distributed '
-    'way. If False, will run single-threaded.')
-flags.DEFINE_string('env_name', 'HalfCheetah-v2', 'What environment to run')
-flags.DEFINE_integer('seed', 0, 'Random seed.')
-flags.DEFINE_integer('num_steps', 1_000_000, 'Number of env steps to run.')
-flags.DEFINE_integer('eval_every', 50_000, 'Number of env steps to run.')
-flags.DEFINE_integer('num_demonstrations', 11,
-                     'Number of demonstration trajectories.')
-flags.DEFINE_integer('evaluation_episodes', 10, 'Evaluation episodes.')
+    "run_distributed",
+    True,
+    "Should an agent be executed in a distributed "
+    "way. If False, will run single-threaded.",
+)
+flags.DEFINE_string("env_name", "HalfCheetah-v2", "What environment to run")
+flags.DEFINE_integer("seed", 0, "Random seed.")
+flags.DEFINE_integer("num_steps", 1_000_000, "Number of env steps to run.")
+flags.DEFINE_integer("eval_every", 50_000, "Number of env steps to run.")
+flags.DEFINE_integer("num_demonstrations", 11, "Number of demonstration trajectories.")
+flags.DEFINE_integer("evaluation_episodes", 10, "Evaluation episodes.")
 
 
 def build_experiment_config() -> experiments.ExperimentConfig:
-  """Returns a configuration for GAIL/DAC experiments."""
+    """Returns a configuration for GAIL/DAC experiments."""
 
-  # Create an environment, grab the spec, and use it to create networks.
-  environment = helpers.make_environment(task=FLAGS.env_name)
-  environment_spec = specs.make_environment_spec(environment)
+    # Create an environment, grab the spec, and use it to create networks.
+    environment = helpers.make_environment(task=FLAGS.env_name)
+    environment_spec = specs.make_environment_spec(environment)
 
-  # Create the direct RL agent.
-  td3_config = td3.TD3Config(
-      min_replay_size=1,
-      samples_per_insert_tolerance_rate=2.0)
-  td3_networks = td3.make_networks(environment_spec)
+    # Create the direct RL agent.
+    td3_config = td3.TD3Config(min_replay_size=1, samples_per_insert_tolerance_rate=2.0)
+    td3_networks = td3.make_networks(environment_spec)
 
-  # Create the discriminator.
-  def discriminator(*args, **kwargs) -> networks_lib.Logits:
-    return ail.DiscriminatorModule(
-        environment_spec=environment_spec,
-        use_action=True,
-        use_next_obs=False,
-        network_core=ail.DiscriminatorMLP(
-            hidden_layer_sizes=[64,],
-            spectral_normalization_lipschitz_coeff=1.)
+    # Create the discriminator.
+    def discriminator(*args, **kwargs) -> networks_lib.Logits:
+        return ail.DiscriminatorModule(
+            environment_spec=environment_spec,
+            use_action=True,
+            use_next_obs=False,
+            network_core=ail.DiscriminatorMLP(
+                hidden_layer_sizes=[64,], spectral_normalization_lipschitz_coeff=1.0
+            ),
         )(*args, **kwargs)
-  discriminator_transformed = hk.without_apply_rng(
-      hk.transform_with_state(discriminator))
 
-  def network_factory(
-      environment_spec: specs.EnvironmentSpec) -> ail.AILNetworks:
-    return ail.AILNetworks(
-        ail.make_discriminator(environment_spec, discriminator_transformed),
-        # reward balance = 0 corresponds to the GAIL reward: -ln(1-D)
-        imitation_reward_fn=ail.rewards.gail_reward(reward_balance=0.),
-        direct_rl_networks=td3_networks)
+    discriminator_transformed = hk.without_apply_rng(
+        hk.transform_with_state(discriminator)
+    )
 
-  # Create demonstrations function.
-  dataset_name = helpers.get_dataset_name(FLAGS.env_name)
-  num_demonstrations = FLAGS.num_demonstrations
-  def make_demonstrations(batch_size, seed: int = 0):
-    transitions_iterator = tfds.get_tfds_dataset(
-        dataset_name, num_demonstrations, env_spec=environment_spec)
-    return tfds.JaxInMemoryRandomSampleIterator(
-        transitions_iterator, jax.random.PRNGKey(seed), batch_size)
+    def network_factory(environment_spec: specs.EnvironmentSpec) -> ail.AILNetworks:
+        return ail.AILNetworks(
+            ail.make_discriminator(environment_spec, discriminator_transformed),
+            # reward balance = 0 corresponds to the GAIL reward: -ln(1-D)
+            imitation_reward_fn=ail.rewards.gail_reward(reward_balance=0.0),
+            direct_rl_networks=td3_networks,
+        )
 
-  # Create DAC agent.
-  ail_config = ail.AILConfig(direct_rl_batch_size=td3_config.batch_size *
-                             td3_config.num_sgd_steps_per_step)
+    # Create demonstrations function.
+    dataset_name = helpers.get_dataset_name(FLAGS.env_name)
+    num_demonstrations = FLAGS.num_demonstrations
 
-  env_name = FLAGS.env_name
+    def make_demonstrations(batch_size, seed: int = 0):
+        transitions_iterator = tfds.get_tfds_dataset(
+            dataset_name, num_demonstrations, env_spec=environment_spec
+        )
+        return tfds.JaxInMemoryRandomSampleIterator(
+            transitions_iterator, jax.random.PRNGKey(seed), batch_size
+        )
 
-  def environment_factory(seed: int) -> dm_env.Environment:
-    del seed
-    return helpers.make_environment(task=env_name)
+    # Create DAC agent.
+    ail_config = ail.AILConfig(
+        direct_rl_batch_size=td3_config.batch_size * td3_config.num_sgd_steps_per_step
+    )
 
-  td3_builder = td3.TD3Builder(td3_config)
+    env_name = FLAGS.env_name
 
-  dac_loss = ail.losses.add_gradient_penalty(
-      ail.losses.gail_loss(entropy_coefficient=1e-3),
-      gradient_penalty_coefficient=10.,
-      gradient_penalty_target=1.)
+    def environment_factory(seed: int) -> dm_env.Environment:
+        del seed
+        return helpers.make_environment(task=env_name)
 
-  ail_builder = ail.AILBuilder(
-      rl_agent=td3_builder,
-      config=ail_config,
-      discriminator_loss=dac_loss,
-      make_demonstrations=make_demonstrations)
+    td3_builder = td3.TD3Builder(td3_config)
 
-  return experiments.ExperimentConfig(
-      builder=ail_builder,
-      environment_factory=environment_factory,
-      network_factory=network_factory,
-      seed=FLAGS.seed,
-      max_num_actor_steps=FLAGS.num_steps)
+    dac_loss = ail.losses.add_gradient_penalty(
+        ail.losses.gail_loss(entropy_coefficient=1e-3),
+        gradient_penalty_coefficient=10.0,
+        gradient_penalty_target=1.0,
+    )
+
+    ail_builder = ail.AILBuilder(
+        rl_agent=td3_builder,
+        config=ail_config,
+        discriminator_loss=dac_loss,
+        make_demonstrations=make_demonstrations,
+    )
+
+    return experiments.ExperimentConfig(
+        builder=ail_builder,
+        environment_factory=environment_factory,
+        network_factory=network_factory,
+        seed=FLAGS.seed,
+        max_num_actor_steps=FLAGS.num_steps,
+    )
 
 
 def main(_):
-  config = build_experiment_config()
-  if FLAGS.run_distributed:
-    program = experiments.make_distributed_experiment(
-        experiment=config, num_actors=4)
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
-  else:
-    experiments.run_experiment(
-        experiment=config,
-        eval_every=FLAGS.eval_every,
-        num_eval_episodes=FLAGS.evaluation_episodes)
+    config = build_experiment_config()
+    if FLAGS.run_distributed:
+        program = experiments.make_distributed_experiment(
+            experiment=config, num_actors=4
+        )
+        lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
+    else:
+        experiments.run_experiment(
+            experiment=config,
+            eval_every=FLAGS.eval_every,
+            num_eval_episodes=FLAGS.evaluation_episodes,
+        )
 
 
-if __name__ == '__main__':
-  app.run(main)
+if __name__ == "__main__":
+    app.run(main)

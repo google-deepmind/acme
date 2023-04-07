@@ -14,18 +14,17 @@
 
 """Implementations of a AIL agent."""
 
-from acme.agents.jax.ail import losses
-from acme.agents.jax.ail import rewards
+from acme.agents.jax.ail import losses, rewards
 from acme.agents.jax.ail.builder import AILBuilder
 from acme.agents.jax.ail.config import AILConfig
-from acme.agents.jax.ail.dac import DACBuilder
-from acme.agents.jax.ail.dac import DACConfig
-from acme.agents.jax.ail.gail import GAILBuilder
-from acme.agents.jax.ail.gail import GAILConfig
+from acme.agents.jax.ail.dac import DACBuilder, DACConfig
+from acme.agents.jax.ail.gail import GAILBuilder, GAILConfig
 from acme.agents.jax.ail.learning import AILLearner
-from acme.agents.jax.ail.networks import AILNetworks
-from acme.agents.jax.ail.networks import AIRLModule
-from acme.agents.jax.ail.networks import compute_ail_reward
-from acme.agents.jax.ail.networks import DiscriminatorMLP
-from acme.agents.jax.ail.networks import DiscriminatorModule
-from acme.agents.jax.ail.networks import make_discriminator
+from acme.agents.jax.ail.networks import (
+    AILNetworks,
+    AIRLModule,
+    DiscriminatorMLP,
+    DiscriminatorModule,
+    compute_ail_reward,
+    make_discriminator,
+)

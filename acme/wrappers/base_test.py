@@ -17,28 +17,27 @@
 import copy
 import pickle
 
+from absl.testing import absltest
+
 from acme.testing import fakes
 from acme.wrappers import base
 
-from absl.testing import absltest
-
 
 class BaseTest(absltest.TestCase):
+    def test_pickle_unpickle(self):
+        test_env = base.EnvironmentWrapper(environment=fakes.DiscreteEnvironment())
 
-  def test_pickle_unpickle(self):
-    test_env = base.EnvironmentWrapper(environment=fakes.DiscreteEnvironment())
+        test_env_pickled = pickle.dumps(test_env)
+        test_env_restored = pickle.loads(test_env_pickled)
+        self.assertEqual(
+            test_env.observation_spec(), test_env_restored.observation_spec(),
+        )
 
-    test_env_pickled = pickle.dumps(test_env)
-    test_env_restored = pickle.loads(test_env_pickled)
-    self.assertEqual(
-        test_env.observation_spec(),
-        test_env_restored.observation_spec(),
-    )
+    def test_deepcopy(self):
+        test_env = base.EnvironmentWrapper(environment=fakes.DiscreteEnvironment())
+        copied_env = copy.deepcopy(test_env)
+        del copied_env
 
-  def test_deepcopy(self):
-    test_env = base.EnvironmentWrapper(environment=fakes.DiscreteEnvironment())
-    copied_env = copy.deepcopy(test_env)
-    del copied_env
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

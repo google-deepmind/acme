@@ -17,24 +17,22 @@
 import copy
 from typing import Optional
 
-from acme import datasets
-from acme import specs
-from acme import types
+import reverb
+import sonnet as snt
+import tensorflow as tf
+
+from acme import datasets, specs, types
 from acme.adders import reverb as adders
 from acme.agents import agent
 from acme.agents.tf import actors
 from acme.agents.tf.mpo import learning
 from acme.tf import networks
 from acme.tf import utils as tf2_utils
-from acme.utils import counting
-from acme.utils import loggers
-import reverb
-import sonnet as snt
-import tensorflow as tf
+from acme.utils import counting, loggers
 
 
 class MPO(agent.Agent):
-  """MPO Agent.
+    """MPO Agent.
 
   This implements a single-process MPO agent. This is an actor-critic algorithm
   that generates data via a behavior policy, inserts N-step transitions into
@@ -43,33 +41,33 @@ class MPO(agent.Agent):
   itself from the DPG agent by using MPO to learn a stochastic policy.
   """
 
-  def __init__(
-      self,
-      environment_spec: specs.EnvironmentSpec,
-      policy_network: snt.Module,
-      critic_network: snt.Module,
-      observation_network: types.TensorTransformation = tf.identity,
-      discount: float = 0.99,
-      batch_size: int = 256,
-      prefetch_size: int = 4,
-      target_policy_update_period: int = 100,
-      target_critic_update_period: int = 100,
-      min_replay_size: int = 1000,
-      max_replay_size: int = 1000000,
-      samples_per_insert: float = 32.0,
-      policy_loss_module: Optional[snt.Module] = None,
-      policy_optimizer: Optional[snt.Optimizer] = None,
-      critic_optimizer: Optional[snt.Optimizer] = None,
-      n_step: int = 5,
-      num_samples: int = 20,
-      clipping: bool = True,
-      logger: Optional[loggers.Logger] = None,
-      counter: Optional[counting.Counter] = None,
-      checkpoint: bool = True,
-      save_directory: str = '~/acme',
-      replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
-  ):
-    """Initialize the agent.
+    def __init__(
+        self,
+        environment_spec: specs.EnvironmentSpec,
+        policy_network: snt.Module,
+        critic_network: snt.Module,
+        observation_network: types.TensorTransformation = tf.identity,
+        discount: float = 0.99,
+        batch_size: int = 256,
+        prefetch_size: int = 4,
+        target_policy_update_period: int = 100,
+        target_critic_update_period: int = 100,
+        min_replay_size: int = 1000,
+        max_replay_size: int = 1000000,
+        samples_per_insert: float = 32.0,
+        policy_loss_module: Optional[snt.Module] = None,
+        policy_optimizer: Optional[snt.Optimizer] = None,
+        critic_optimizer: Optional[snt.Optimizer] = None,
+        n_step: int = 5,
+        num_samples: int = 20,
+        clipping: bool = True,
+        logger: Optional[loggers.Logger] = None,
+        counter: Optional[counting.Counter] = None,
+        checkpoint: bool = True,
+        save_directory: str = "~/acme",
+        replay_table_name: str = adders.DEFAULT_PRIORITY_TABLE,
+    ):
+        """Initialize the agent.
 
     Args:
       environment_spec: description of the actions, observations, etc.
@@ -105,87 +103,89 @@ class MPO(agent.Agent):
       replay_table_name: string indicating what name to give the replay table.
     """
 
-    # Create a replay server to add data to.
-    replay_table = reverb.Table(
-        name=adders.DEFAULT_PRIORITY_TABLE,
-        sampler=reverb.selectors.Uniform(),
-        remover=reverb.selectors.Fifo(),
-        max_size=max_replay_size,
-        rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1),
-        signature=adders.NStepTransitionAdder.signature(environment_spec))
-    self._server = reverb.Server([replay_table], port=None)
+        # Create a replay server to add data to.
+        replay_table = reverb.Table(
+            name=adders.DEFAULT_PRIORITY_TABLE,
+            sampler=reverb.selectors.Uniform(),
+            remover=reverb.selectors.Fifo(),
+            max_size=max_replay_size,
+            rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1),
+            signature=adders.NStepTransitionAdder.signature(environment_spec),
+        )
+        self._server = reverb.Server([replay_table], port=None)
 
-    # The adder is used to insert observations into replay.
-    address = f'localhost:{self._server.port}'
-    adder = adders.NStepTransitionAdder(
-        client=reverb.Client(address), n_step=n_step, discount=discount)
+        # The adder is used to insert observations into replay.
+        address = f"localhost:{self._server.port}"
+        adder = adders.NStepTransitionAdder(
+            client=reverb.Client(address), n_step=n_step, discount=discount
+        )
 
-    # The dataset object to learn from.
-    dataset = datasets.make_reverb_dataset(
-        table=replay_table_name,
-        server_address=address,
-        batch_size=batch_size,
-        prefetch_size=prefetch_size)
+        # The dataset object to learn from.
+        dataset = datasets.make_reverb_dataset(
+            table=replay_table_name,
+            server_address=address,
+            batch_size=batch_size,
+            prefetch_size=prefetch_size,
+        )
 
-    # Make sure observation network is a Sonnet Module.
-    observation_network = tf2_utils.to_sonnet_module(observation_network)
+        # Make sure observation network is a Sonnet Module.
+        observation_network = tf2_utils.to_sonnet_module(observation_network)
 
-    # Create target networks before creating online/target network variables.
-    target_policy_network = copy.deepcopy(policy_network)
-    target_critic_network = copy.deepcopy(critic_network)
-    target_observation_network = copy.deepcopy(observation_network)
+        # Create target networks before creating online/target network variables.
+        target_policy_network = copy.deepcopy(policy_network)
+        target_critic_network = copy.deepcopy(critic_network)
+        target_observation_network = copy.deepcopy(observation_network)
 
-    # Get observation and action specs.
-    act_spec = environment_spec.actions
-    obs_spec = environment_spec.observations
-    emb_spec = tf2_utils.create_variables(observation_network, [obs_spec])
+        # Get observation and action specs.
+        act_spec = environment_spec.actions
+        obs_spec = environment_spec.observations
+        emb_spec = tf2_utils.create_variables(observation_network, [obs_spec])
 
-    # Create the behavior policy.
-    behavior_network = snt.Sequential([
-        observation_network,
-        policy_network,
-        networks.StochasticSamplingHead(),
-    ])
+        # Create the behavior policy.
+        behavior_network = snt.Sequential(
+            [observation_network, policy_network, networks.StochasticSamplingHead(),]
+        )
 
-    # Create variables.
-    tf2_utils.create_variables(policy_network, [emb_spec])
-    tf2_utils.create_variables(critic_network, [emb_spec, act_spec])
-    tf2_utils.create_variables(target_policy_network, [emb_spec])
-    tf2_utils.create_variables(target_critic_network, [emb_spec, act_spec])
-    tf2_utils.create_variables(target_observation_network, [obs_spec])
+        # Create variables.
+        tf2_utils.create_variables(policy_network, [emb_spec])
+        tf2_utils.create_variables(critic_network, [emb_spec, act_spec])
+        tf2_utils.create_variables(target_policy_network, [emb_spec])
+        tf2_utils.create_variables(target_critic_network, [emb_spec, act_spec])
+        tf2_utils.create_variables(target_observation_network, [obs_spec])
 
-    # Create the actor which defines how we take actions.
-    actor = actors.FeedForwardActor(
-        policy_network=behavior_network, adder=adder)
+        # Create the actor which defines how we take actions.
+        actor = actors.FeedForwardActor(policy_network=behavior_network, adder=adder)
 
-    # Create optimizers.
-    policy_optimizer = policy_optimizer or snt.optimizers.Adam(1e-4)
-    critic_optimizer = critic_optimizer or snt.optimizers.Adam(1e-4)
+        # Create optimizers.
+        policy_optimizer = policy_optimizer or snt.optimizers.Adam(1e-4)
+        critic_optimizer = critic_optimizer or snt.optimizers.Adam(1e-4)
 
-    # The learner updates the parameters (and initializes them).
-    learner = learning.MPOLearner(
-        policy_network=policy_network,
-        critic_network=critic_network,
-        observation_network=observation_network,
-        target_policy_network=target_policy_network,
-        target_critic_network=target_critic_network,
-        target_observation_network=target_observation_network,
-        policy_loss_module=policy_loss_module,
-        policy_optimizer=policy_optimizer,
-        critic_optimizer=critic_optimizer,
-        clipping=clipping,
-        discount=discount,
-        num_samples=num_samples,
-        target_policy_update_period=target_policy_update_period,
-        target_critic_update_period=target_critic_update_period,
-        dataset=dataset,
-        logger=logger,
-        counter=counter,
-        checkpoint=checkpoint,
-        save_directory=save_directory)
+        # The learner updates the parameters (and initializes them).
+        learner = learning.MPOLearner(
+            policy_network=policy_network,
+            critic_network=critic_network,
+            observation_network=observation_network,
+            target_policy_network=target_policy_network,
+            target_critic_network=target_critic_network,
+            target_observation_network=target_observation_network,
+            policy_loss_module=policy_loss_module,
+            policy_optimizer=policy_optimizer,
+            critic_optimizer=critic_optimizer,
+            clipping=clipping,
+            discount=discount,
+            num_samples=num_samples,
+            target_policy_update_period=target_policy_update_period,
+            target_critic_update_period=target_critic_update_period,
+            dataset=dataset,
+            logger=logger,
+            counter=counter,
+            checkpoint=checkpoint,
+            save_directory=save_directory,
+        )
 
-    super().__init__(
-        actor=actor,
-        learner=learner,
-        min_observations=max(batch_size, min_replay_size),
-        observations_per_step=float(batch_size) / samples_per_insert)
+        super().__init__(
+            actor=actor,
+            learner=learner,
+            min_observations=max(batch_size, min_replay_size),
+            observations_per_step=float(batch_size) / samples_per_insert,
+        )

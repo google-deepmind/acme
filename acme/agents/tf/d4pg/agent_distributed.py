@@ -17,252 +17,252 @@
 import copy
 from typing import Callable, Dict, Optional
 
-import acme
-from acme import specs
-from acme.agents.tf.d4pg import agent
-from acme.tf import savers as tf2_savers
-from acme.utils import counting
-from acme.utils import loggers
-from acme.utils import lp_utils
 import dm_env
 import launchpad as lp
 import reverb
 import sonnet as snt
 import tensorflow as tf
 
+import acme
+from acme import specs
+from acme.agents.tf.d4pg import agent
+from acme.tf import savers as tf2_savers
+from acme.utils import counting, loggers, lp_utils
+
 # Valid values of the "accelerator" argument.
-_ACCELERATORS = ('CPU', 'GPU', 'TPU')
+_ACCELERATORS = ("CPU", "GPU", "TPU")
 
 
 class DistributedD4PG:
-  """Program definition for D4PG."""
+    """Program definition for D4PG."""
 
-  def __init__(
-      self,
-      environment_factory: Callable[[bool], dm_env.Environment],
-      network_factory: Callable[[specs.BoundedArray], Dict[str, snt.Module]],
-      accelerator: Optional[str] = None,
-      num_actors: int = 1,
-      num_caches: int = 0,
-      environment_spec: Optional[specs.EnvironmentSpec] = None,
-      batch_size: int = 256,
-      prefetch_size: int = 4,
-      min_replay_size: int = 1000,
-      max_replay_size: int = 1000000,
-      samples_per_insert: Optional[float] = 32.0,
-      n_step: int = 5,
-      sigma: float = 0.3,
-      clipping: bool = True,
-      discount: float = 0.99,
-      policy_optimizer: Optional[snt.Optimizer] = None,
-      critic_optimizer: Optional[snt.Optimizer] = None,
-      target_update_period: int = 100,
-      variable_update_period: int = 1000,
-      max_actor_steps: Optional[int] = None,
-      log_every: float = 10.0,
-  ):
+    def __init__(
+        self,
+        environment_factory: Callable[[bool], dm_env.Environment],
+        network_factory: Callable[[specs.BoundedArray], Dict[str, snt.Module]],
+        accelerator: Optional[str] = None,
+        num_actors: int = 1,
+        num_caches: int = 0,
+        environment_spec: Optional[specs.EnvironmentSpec] = None,
+        batch_size: int = 256,
+        prefetch_size: int = 4,
+        min_replay_size: int = 1000,
+        max_replay_size: int = 1000000,
+        samples_per_insert: Optional[float] = 32.0,
+        n_step: int = 5,
+        sigma: float = 0.3,
+        clipping: bool = True,
+        discount: float = 0.99,
+        policy_optimizer: Optional[snt.Optimizer] = None,
+        critic_optimizer: Optional[snt.Optimizer] = None,
+        target_update_period: int = 100,
+        variable_update_period: int = 1000,
+        max_actor_steps: Optional[int] = None,
+        log_every: float = 10.0,
+    ):
 
-    if accelerator is not None and accelerator not in _ACCELERATORS:
-      raise ValueError(f'Accelerator must be one of {_ACCELERATORS}, '
-                       f'not "{accelerator}".')
+        if accelerator is not None and accelerator not in _ACCELERATORS:
+            raise ValueError(
+                f"Accelerator must be one of {_ACCELERATORS}, " f'not "{accelerator}".'
+            )
 
-    if not environment_spec:
-      environment_spec = specs.make_environment_spec(environment_factory(False))
+        if not environment_spec:
+            environment_spec = specs.make_environment_spec(environment_factory(False))
 
-    # TODO(mwhoffman): Make network_factory directly return the struct.
-    # TODO(mwhoffman): Make the factory take the entire spec.
-    def wrapped_network_factory(action_spec):
-      networks_dict = network_factory(action_spec)
-      networks = agent.D4PGNetworks(
-          policy_network=networks_dict.get('policy'),
-          critic_network=networks_dict.get('critic'),
-          observation_network=networks_dict.get('observation', tf.identity))
-      return networks
+        # TODO(mwhoffman): Make network_factory directly return the struct.
+        # TODO(mwhoffman): Make the factory take the entire spec.
+        def wrapped_network_factory(action_spec):
+            networks_dict = network_factory(action_spec)
+            networks = agent.D4PGNetworks(
+                policy_network=networks_dict.get("policy"),
+                critic_network=networks_dict.get("critic"),
+                observation_network=networks_dict.get("observation", tf.identity),
+            )
+            return networks
 
-    self._environment_factory = environment_factory
-    self._network_factory = wrapped_network_factory
-    self._environment_spec = environment_spec
-    self._sigma = sigma
-    self._num_actors = num_actors
-    self._num_caches = num_caches
-    self._max_actor_steps = max_actor_steps
-    self._log_every = log_every
-    self._accelerator = accelerator
-    self._variable_update_period = variable_update_period
+        self._environment_factory = environment_factory
+        self._network_factory = wrapped_network_factory
+        self._environment_spec = environment_spec
+        self._sigma = sigma
+        self._num_actors = num_actors
+        self._num_caches = num_caches
+        self._max_actor_steps = max_actor_steps
+        self._log_every = log_every
+        self._accelerator = accelerator
+        self._variable_update_period = variable_update_period
 
-    self._builder = agent.D4PGBuilder(
-        # TODO(mwhoffman): pass the config dataclass in directly.
-        # TODO(mwhoffman): use the limiter rather than the workaround below.
-        agent.D4PGConfig(
-            accelerator=accelerator,
-            discount=discount,
-            batch_size=batch_size,
-            prefetch_size=prefetch_size,
-            target_update_period=target_update_period,
-            variable_update_period=variable_update_period,
-            policy_optimizer=policy_optimizer,
-            critic_optimizer=critic_optimizer,
-            min_replay_size=min_replay_size,
-            max_replay_size=max_replay_size,
-            samples_per_insert=samples_per_insert,
-            n_step=n_step,
-            sigma=sigma,
-            clipping=clipping,
-        ))
+        self._builder = agent.D4PGBuilder(
+            # TODO(mwhoffman): pass the config dataclass in directly.
+            # TODO(mwhoffman): use the limiter rather than the workaround below.
+            agent.D4PGConfig(
+                accelerator=accelerator,
+                discount=discount,
+                batch_size=batch_size,
+                prefetch_size=prefetch_size,
+                target_update_period=target_update_period,
+                variable_update_period=variable_update_period,
+                policy_optimizer=policy_optimizer,
+                critic_optimizer=critic_optimizer,
+                min_replay_size=min_replay_size,
+                max_replay_size=max_replay_size,
+                samples_per_insert=samples_per_insert,
+                n_step=n_step,
+                sigma=sigma,
+                clipping=clipping,
+            )
+        )
 
-  def replay(self):
-    """The replay storage."""
-    return self._builder.make_replay_tables(self._environment_spec)
+    def replay(self):
+        """The replay storage."""
+        return self._builder.make_replay_tables(self._environment_spec)
 
-  def counter(self):
-    return tf2_savers.CheckpointingRunner(counting.Counter(),
-                                          time_delta_minutes=1,
-                                          subdirectory='counter')
+    def counter(self):
+        return tf2_savers.CheckpointingRunner(
+            counting.Counter(), time_delta_minutes=1, subdirectory="counter"
+        )
 
-  def coordinator(self, counter: counting.Counter):
-    return lp_utils.StepsLimiter(counter, self._max_actor_steps)
+    def coordinator(self, counter: counting.Counter):
+        return lp_utils.StepsLimiter(counter, self._max_actor_steps)
 
-  def learner(
-      self,
-      replay: reverb.Client,
-      counter: counting.Counter,
-  ):
-    """The Learning part of the agent."""
+    def learner(
+        self, replay: reverb.Client, counter: counting.Counter,
+    ):
+        """The Learning part of the agent."""
 
-    # If we are running on multiple accelerator devices, this replicates
-    # weights and updates across devices.
-    replicator = agent.get_replicator(self._accelerator)
+        # If we are running on multiple accelerator devices, this replicates
+        # weights and updates across devices.
+        replicator = agent.get_replicator(self._accelerator)
 
-    with replicator.scope():
-      # Create the networks to optimize (online) and target networks.
-      online_networks = self._network_factory(self._environment_spec.actions)
-      target_networks = copy.deepcopy(online_networks)
+        with replicator.scope():
+            # Create the networks to optimize (online) and target networks.
+            online_networks = self._network_factory(self._environment_spec.actions)
+            target_networks = copy.deepcopy(online_networks)
 
-      # Initialize the networks.
-      online_networks.init(self._environment_spec)
-      target_networks.init(self._environment_spec)
+            # Initialize the networks.
+            online_networks.init(self._environment_spec)
+            target_networks.init(self._environment_spec)
 
-    dataset = self._builder.make_dataset_iterator(replay)
+        dataset = self._builder.make_dataset_iterator(replay)
 
-    counter = counting.Counter(counter, 'learner')
-    logger = loggers.make_default_logger(
-        'learner', time_delta=self._log_every, steps_key='learner_steps')
+        counter = counting.Counter(counter, "learner")
+        logger = loggers.make_default_logger(
+            "learner", time_delta=self._log_every, steps_key="learner_steps"
+        )
 
-    return self._builder.make_learner(
-        networks=(online_networks, target_networks),
-        dataset=dataset,
-        counter=counter,
-        logger=logger,
-        checkpoint=True,
-    )
+        return self._builder.make_learner(
+            networks=(online_networks, target_networks),
+            dataset=dataset,
+            counter=counter,
+            logger=logger,
+            checkpoint=True,
+        )
 
-  def actor(
-      self,
-      replay: reverb.Client,
-      variable_source: acme.VariableSource,
-      counter: counting.Counter,
-  ) -> acme.EnvironmentLoop:
-    """The actor process."""
+    def actor(
+        self,
+        replay: reverb.Client,
+        variable_source: acme.VariableSource,
+        counter: counting.Counter,
+    ) -> acme.EnvironmentLoop:
+        """The actor process."""
 
-    # Create the behavior policy.
-    networks = self._network_factory(self._environment_spec.actions)
-    networks.init(self._environment_spec)
-    policy_network = networks.make_policy(
-        environment_spec=self._environment_spec,
-        sigma=self._sigma,
-    )
+        # Create the behavior policy.
+        networks = self._network_factory(self._environment_spec.actions)
+        networks.init(self._environment_spec)
+        policy_network = networks.make_policy(
+            environment_spec=self._environment_spec, sigma=self._sigma,
+        )
 
-    # Create the agent.
-    actor = self._builder.make_actor(
-        policy_network=policy_network,
-        adder=self._builder.make_adder(replay),
-        variable_source=variable_source,
-    )
+        # Create the agent.
+        actor = self._builder.make_actor(
+            policy_network=policy_network,
+            adder=self._builder.make_adder(replay),
+            variable_source=variable_source,
+        )
 
-    # Create the environment.
-    environment = self._environment_factory(False)
+        # Create the environment.
+        environment = self._environment_factory(False)
 
-    # Create logger and counter; actors will not spam bigtable.
-    counter = counting.Counter(counter, 'actor')
-    logger = loggers.make_default_logger(
-        'actor',
-        save_data=False,
-        time_delta=self._log_every,
-        steps_key='actor_steps')
+        # Create logger and counter; actors will not spam bigtable.
+        counter = counting.Counter(counter, "actor")
+        logger = loggers.make_default_logger(
+            "actor",
+            save_data=False,
+            time_delta=self._log_every,
+            steps_key="actor_steps",
+        )
 
-    # Create the loop to connect environment and agent.
-    return acme.EnvironmentLoop(environment, actor, counter, logger)
+        # Create the loop to connect environment and agent.
+        return acme.EnvironmentLoop(environment, actor, counter, logger)
 
-  def evaluator(
-      self,
-      variable_source: acme.VariableSource,
-      counter: counting.Counter,
-      logger: Optional[loggers.Logger] = None,
-  ):
-    """The evaluation process."""
+    def evaluator(
+        self,
+        variable_source: acme.VariableSource,
+        counter: counting.Counter,
+        logger: Optional[loggers.Logger] = None,
+    ):
+        """The evaluation process."""
 
-    # Create the behavior policy.
-    networks = self._network_factory(self._environment_spec.actions)
-    networks.init(self._environment_spec)
-    policy_network = networks.make_policy(self._environment_spec)
+        # Create the behavior policy.
+        networks = self._network_factory(self._environment_spec.actions)
+        networks.init(self._environment_spec)
+        policy_network = networks.make_policy(self._environment_spec)
 
-    # Create the agent.
-    actor = self._builder.make_actor(
-        policy_network=policy_network,
-        variable_source=variable_source,
-    )
+        # Create the agent.
+        actor = self._builder.make_actor(
+            policy_network=policy_network, variable_source=variable_source,
+        )
 
-    # Make the environment.
-    environment = self._environment_factory(True)
+        # Make the environment.
+        environment = self._environment_factory(True)
 
-    # Create logger and counter.
-    counter = counting.Counter(counter, 'evaluator')
-    logger = logger or loggers.make_default_logger(
-        'evaluator',
-        time_delta=self._log_every,
-        steps_key='evaluator_steps',
-    )
+        # Create logger and counter.
+        counter = counting.Counter(counter, "evaluator")
+        logger = logger or loggers.make_default_logger(
+            "evaluator", time_delta=self._log_every, steps_key="evaluator_steps",
+        )
 
-    # Create the run loop and return it.
-    return acme.EnvironmentLoop(environment, actor, counter, logger)
+        # Create the run loop and return it.
+        return acme.EnvironmentLoop(environment, actor, counter, logger)
 
-  def build(self, name='d4pg'):
-    """Build the distributed agent topology."""
-    program = lp.Program(name=name)
+    def build(self, name="d4pg"):
+        """Build the distributed agent topology."""
+        program = lp.Program(name=name)
 
-    with program.group('replay'):
-      replay = program.add_node(lp.ReverbNode(self.replay))
+        with program.group("replay"):
+            replay = program.add_node(lp.ReverbNode(self.replay))
 
-    with program.group('counter'):
-      counter = program.add_node(lp.CourierNode(self.counter))
+        with program.group("counter"):
+            counter = program.add_node(lp.CourierNode(self.counter))
 
-    if self._max_actor_steps:
-      with program.group('coordinator'):
-        _ = program.add_node(lp.CourierNode(self.coordinator, counter))
+        if self._max_actor_steps:
+            with program.group("coordinator"):
+                _ = program.add_node(lp.CourierNode(self.coordinator, counter))
 
-    with program.group('learner'):
-      learner = program.add_node(lp.CourierNode(self.learner, replay, counter))
+        with program.group("learner"):
+            learner = program.add_node(lp.CourierNode(self.learner, replay, counter))
 
-    with program.group('evaluator'):
-      program.add_node(lp.CourierNode(self.evaluator, learner, counter))
+        with program.group("evaluator"):
+            program.add_node(lp.CourierNode(self.evaluator, learner, counter))
 
-    if not self._num_caches:
-      # Use our learner as a single variable source.
-      sources = [learner]
-    else:
-      with program.group('cacher'):
-        # Create a set of learner caches.
-        sources = []
-        for _ in range(self._num_caches):
-          cacher = program.add_node(
-              lp.CacherNode(
-                  learner, refresh_interval_ms=2000, stale_after_ms=4000))
-          sources.append(cacher)
+        if not self._num_caches:
+            # Use our learner as a single variable source.
+            sources = [learner]
+        else:
+            with program.group("cacher"):
+                # Create a set of learner caches.
+                sources = []
+                for _ in range(self._num_caches):
+                    cacher = program.add_node(
+                        lp.CacherNode(
+                            learner, refresh_interval_ms=2000, stale_after_ms=4000
+                        )
+                    )
+                    sources.append(cacher)
 
-    with program.group('actor'):
-      # Add actors which pull round-robin from our variable sources.
-      for actor_id in range(self._num_actors):
-        source = sources[actor_id % len(sources)]
-        program.add_node(lp.CourierNode(self.actor, replay, source, counter))
+        with program.group("actor"):
+            # Add actors which pull round-robin from our variable sources.
+            for actor_id in range(self._num_actors):
+                source = sources[actor_id % len(sources)]
+                program.add_node(lp.CourierNode(self.actor, replay, source, counter))
 
-    return program
+        return program

@@ -18,25 +18,26 @@ import logging
 import time
 from typing import Any, Callable
 
-from acme.utils.loggers import base
 import numpy as np
+
+from acme.utils.loggers import base
 
 
 def _format_key(key: str) -> str:
-  """Internal function for formatting keys."""
-  return key.replace('_', ' ').title()
+    """Internal function for formatting keys."""
+    return key.replace("_", " ").title()
 
 
 def _format_value(value: Any) -> str:
-  """Internal function for formatting values."""
-  value = base.to_numpy(value)
-  if isinstance(value, (float, np.number)):
-    return f'{value:0.3f}'
-  return f'{value}'
+    """Internal function for formatting values."""
+    value = base.to_numpy(value)
+    if isinstance(value, (float, np.number)):
+        return f"{value:0.3f}"
+    return f"{value}"
 
 
 def serialize(values: base.LoggingData) -> str:
-  """Converts `values` to a pretty-printed string.
+    """Converts `values` to a pretty-printed string.
 
   This takes a dictionary `values` whose keys are strings and returns
   a formatted string such that each [key, value] pair is separated by ' = ' and
@@ -55,21 +56,22 @@ def serialize(values: base.LoggingData) -> str:
   Returns:
     A formatted string.
   """
-  return ' | '.join(f'{_format_key(k)} = {_format_value(v)}'
-                    for k, v in sorted(values.items()))
+    return " | ".join(
+        f"{_format_key(k)} = {_format_value(v)}" for k, v in sorted(values.items())
+    )
 
 
 class TerminalLogger(base.Logger):
-  """Logs to terminal."""
+    """Logs to terminal."""
 
-  def __init__(
-      self,
-      label: str = '',
-      print_fn: Callable[[str], None] = logging.info,
-      serialize_fn: Callable[[base.LoggingData], str] = serialize,
-      time_delta: float = 0.0,
-  ):
-    """Initializes the logger.
+    def __init__(
+        self,
+        label: str = "",
+        print_fn: Callable[[str], None] = logging.info,
+        serialize_fn: Callable[[base.LoggingData], str] = serialize,
+        time_delta: float = 0.0,
+    ):
+        """Initializes the logger.
 
     Args:
       label: label string to use when logging.
@@ -79,17 +81,17 @@ class TerminalLogger(base.Logger):
         minimize terminal spam, but is 0 by default---ie everything is written.
     """
 
-    self._print_fn = print_fn
-    self._serialize_fn = serialize_fn
-    self._label = label and f'[{_format_key(label)}] '
-    self._time = time.time()
-    self._time_delta = time_delta
+        self._print_fn = print_fn
+        self._serialize_fn = serialize_fn
+        self._label = label and f"[{_format_key(label)}] "
+        self._time = time.time()
+        self._time_delta = time_delta
 
-  def write(self, values: base.LoggingData):
-    now = time.time()
-    if (now - self._time) > self._time_delta:
-      self._print_fn(f'{self._label}{self._serialize_fn(values)}')
-      self._time = now
+    def write(self, values: base.LoggingData):
+        now = time.time()
+        if (now - self._time) > self._time_delta:
+            self._print_fn(f"{self._label}{self._serialize_fn(values)}")
+            self._time = now
 
-  def close(self):
-    pass
+    def close(self):
+        pass

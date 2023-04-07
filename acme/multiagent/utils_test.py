@@ -14,46 +14,45 @@
 
 """Tests for multiagent_utils."""
 
-from acme import specs
-from acme.multiagent import utils as multiagent_utils
-from acme.testing import fakes
-from acme.testing import multiagent_fakes
 import dm_env
 from absl.testing import absltest
 
+from acme import specs
+from acme.multiagent import utils as multiagent_utils
+from acme.testing import fakes, multiagent_fakes
+
 
 class UtilsTest(absltest.TestCase):
+    def test_get_agent_spec(self):
+        agent_indices = ["a", "99", "Z"]
+        spec = multiagent_fakes.make_multiagent_environment_spec(agent_indices)
+        for agent_id in spec.actions.keys():
+            single_agent_spec = multiagent_utils.get_agent_spec(spec, agent_id=agent_id)
+            expected_spec = specs.EnvironmentSpec(
+                actions=spec.actions[agent_id],
+                discounts=spec.discounts,
+                observations=spec.observations[agent_id],
+                rewards=spec.rewards[agent_id],
+            )
+            self.assertEqual(single_agent_spec, expected_spec)
 
-  def test_get_agent_spec(self):
-    agent_indices = ['a', '99', 'Z']
-    spec = multiagent_fakes.make_multiagent_environment_spec(agent_indices)
-    for agent_id in spec.actions.keys():
-      single_agent_spec = multiagent_utils.get_agent_spec(
-          spec, agent_id=agent_id)
-      expected_spec = specs.EnvironmentSpec(
-          actions=spec.actions[agent_id],
-          discounts=spec.discounts,
-          observations=spec.observations[agent_id],
-          rewards=spec.rewards[agent_id]
-      )
-      self.assertEqual(single_agent_spec, expected_spec)
-
-  def test_get_agent_timestep(self):
-    agent_indices = ['a', '99', 'Z']
-    spec = multiagent_fakes.make_multiagent_environment_spec(agent_indices)
-    env = fakes.Environment(spec)
-    timestep = env.reset()
-    for agent_id in spec.actions.keys():
-      single_agent_timestep = multiagent_utils.get_agent_timestep(
-          timestep, agent_id)
-      expected_timestep = dm_env.TimeStep(
-          observation=timestep.observation[agent_id],
-          reward=None,
-          discount=None,
-          step_type=timestep.step_type
-      )
-      self.assertEqual(single_agent_timestep, expected_timestep)
+    def test_get_agent_timestep(self):
+        agent_indices = ["a", "99", "Z"]
+        spec = multiagent_fakes.make_multiagent_environment_spec(agent_indices)
+        env = fakes.Environment(spec)
+        timestep = env.reset()
+        for agent_id in spec.actions.keys():
+            single_agent_timestep = multiagent_utils.get_agent_timestep(
+                timestep, agent_id
+            )
+            expected_timestep = dm_env.TimeStep(
+                observation=timestep.observation[agent_id],
+                reward=None,
+                discount=None,
+                step_type=timestep.step_type,
+            )
+            self.assertEqual(single_agent_timestep, expected_timestep)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

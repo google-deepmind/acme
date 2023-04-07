@@ -21,22 +21,22 @@ from acme.utils.loggers import base
 
 
 class AsyncLogger(base.Logger):
-  """Logger which makes the logging to another logger asyncronous."""
+    """Logger which makes the logging to another logger asyncronous."""
 
-  def __init__(self, to: base.Logger):
-    """Initializes the logger.
+    def __init__(self, to: base.Logger):
+        """Initializes the logger.
 
     Args:
       to: A `Logger` object to which the current object will forward its results
         when `write` is called.
     """
-    self._to = to
-    self._async_worker = async_utils.AsyncExecutor(self._to.write, queue_size=5)
+        self._to = to
+        self._async_worker = async_utils.AsyncExecutor(self._to.write, queue_size=5)
 
-  def write(self, values: Mapping[str, Any]):
-    self._async_worker.put(values)
+    def write(self, values: Mapping[str, Any]):
+        self._async_worker.put(values)
 
-  def close(self):
-    """Closes the logger, closing is synchronous."""
-    self._async_worker.close()
-    self._to.close()
+    def close(self):
+        """Closes the logger, closing is synchronous."""
+        self._async_worker.close()
+        self._to.close()

@@ -16,16 +16,11 @@
 
 from typing import Optional, Tuple
 
-from acme.tf.networks import base
-from acme.tf.networks import duelling
-from acme.tf.networks import embedding
-from acme.tf.networks import policy_value
-from acme.tf.networks import recurrence
-from acme.tf.networks import vision
-from acme.wrappers import observation_action_reward
-
 import sonnet as snt
 import tensorflow as tf
+
+from acme.tf.networks import base, duelling, embedding, policy_value, recurrence, vision
+from acme.wrappers import observation_action_reward
 
 Images = tf.Tensor
 QValues = tf.Tensor
@@ -34,158 +29,158 @@ Value = tf.Tensor
 
 
 class AtariTorso(base.Module):
-  """Simple convolutional stack commonly used for Atari."""
+    """Simple convolutional stack commonly used for Atari."""
 
-  def __init__(self):
-    super().__init__(name='atari_torso')
-    self._network = snt.Sequential([
-        snt.Conv2D(32, [8, 8], [4, 4]),
-        tf.nn.relu,
-        snt.Conv2D(64, [4, 4], [2, 2]),
-        tf.nn.relu,
-        snt.Conv2D(64, [3, 3], [1, 1]),
-        tf.nn.relu,
-        snt.Flatten(),
-    ])
+    def __init__(self):
+        super().__init__(name="atari_torso")
+        self._network = snt.Sequential(
+            [
+                snt.Conv2D(32, [8, 8], [4, 4]),
+                tf.nn.relu,
+                snt.Conv2D(64, [4, 4], [2, 2]),
+                tf.nn.relu,
+                snt.Conv2D(64, [3, 3], [1, 1]),
+                tf.nn.relu,
+                snt.Flatten(),
+            ]
+        )
 
-  def __call__(self, inputs: Images) -> tf.Tensor:
-    return self._network(inputs)
+    def __call__(self, inputs: Images) -> tf.Tensor:
+        return self._network(inputs)
 
 
 class DQNAtariNetwork(base.Module):
-  """A feed-forward network for use with Ape-X DQN.
+    """A feed-forward network for use with Ape-X DQN.
 
   See https://arxiv.org/pdf/1803.00933.pdf for more information.
   """
 
-  def __init__(self, num_actions: int):
-    super().__init__(name='dqn_atari_network')
-    self._network = snt.Sequential([
-        AtariTorso(),
-        duelling.DuellingMLP(num_actions, hidden_sizes=[512]),
-    ])
+    def __init__(self, num_actions: int):
+        super().__init__(name="dqn_atari_network")
+        self._network = snt.Sequential(
+            [AtariTorso(), duelling.DuellingMLP(num_actions, hidden_sizes=[512]),]
+        )
 
-  def __call__(self, inputs: Images) -> QValues:
-    return self._network(inputs)
+    def __call__(self, inputs: Images) -> QValues:
+        return self._network(inputs)
 
 
 class R2D2AtariNetwork(base.RNNCore):
-  """A recurrent network for use with R2D2.
+    """A recurrent network for use with R2D2.
 
   See https://openreview.net/forum?id=r1lyTjAqYX for more information.
   """
 
-  def __init__(self, num_actions: int, core: Optional[base.RNNCore] = None):
-    super().__init__(name='r2d2_atari_network')
-    self._embed = embedding.OAREmbedding(
-        torso=AtariTorso(), num_actions=num_actions)
-    self._core = core if core is not None else recurrence.LSTM(512)
-    self._head = duelling.DuellingMLP(num_actions, hidden_sizes=[512])
+    def __init__(self, num_actions: int, core: Optional[base.RNNCore] = None):
+        super().__init__(name="r2d2_atari_network")
+        self._embed = embedding.OAREmbedding(
+            torso=AtariTorso(), num_actions=num_actions
+        )
+        self._core = core if core is not None else recurrence.LSTM(512)
+        self._head = duelling.DuellingMLP(num_actions, hidden_sizes=[512])
 
-  def __call__(
-      self,
-      inputs: observation_action_reward.OAR,
-      state: base.State,
-  ) -> Tuple[QValues, base.State]:
+    def __call__(
+        self, inputs: observation_action_reward.OAR, state: base.State,
+    ) -> Tuple[QValues, base.State]:
 
-    embeddings = self._embed(inputs)
-    embeddings, new_state = self._core(embeddings, state)
-    action_values = self._head(embeddings)  # [B, A]
+        embeddings = self._embed(inputs)
+        embeddings, new_state = self._core(embeddings, state)
+        action_values = self._head(embeddings)  # [B, A]
 
-    return action_values, new_state
+        return action_values, new_state
 
-  # TODO(b/171287329): Figure out why return type annotation causes error.
-  def initial_state(self, batch_size: int, **unused_kwargs) -> base.State:  # pytype: disable=invalid-annotation
-    return self._core.initial_state(batch_size)
+    # TODO(b/171287329): Figure out why return type annotation causes error.
+    def initial_state(
+        self, batch_size: int, **unused_kwargs
+    ) -> base.State:  # pytype: disable=invalid-annotation
+        return self._core.initial_state(batch_size)
 
-  def unroll(
-      self,
-      inputs: observation_action_reward.OAR,
-      state: base.State,
-      sequence_length: int,
-  ) -> Tuple[QValues, base.State]:
-    """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
-    embeddings = snt.BatchApply(self._embed)(inputs)  # [T, B, D+A+1]
-    embeddings, new_state = self._core.unroll(embeddings, state,
-                                              sequence_length)
-    action_values = snt.BatchApply(self._head)(embeddings)
+    def unroll(
+        self,
+        inputs: observation_action_reward.OAR,
+        state: base.State,
+        sequence_length: int,
+    ) -> Tuple[QValues, base.State]:
+        """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
+        embeddings = snt.BatchApply(self._embed)(inputs)  # [T, B, D+A+1]
+        embeddings, new_state = self._core.unroll(embeddings, state, sequence_length)
+        action_values = snt.BatchApply(self._head)(embeddings)
 
-    return action_values, new_state
+        return action_values, new_state
 
 
 class IMPALAAtariNetwork(snt.RNNCore):
-  """A recurrent network for use with IMPALA.
+    """A recurrent network for use with IMPALA.
 
   See https://arxiv.org/pdf/1802.01561.pdf for more information.
   """
 
-  def __init__(self, num_actions: int):
-    super().__init__(name='impala_atari_network')
-    self._embed = embedding.OAREmbedding(
-        torso=AtariTorso(), num_actions=num_actions)
-    self._core = snt.LSTM(256)
-    self._head = snt.Sequential([
-        snt.Linear(256),
-        tf.nn.relu,
-        policy_value.PolicyValueHead(num_actions),
-    ])
-    self._num_actions = num_actions
+    def __init__(self, num_actions: int):
+        super().__init__(name="impala_atari_network")
+        self._embed = embedding.OAREmbedding(
+            torso=AtariTorso(), num_actions=num_actions
+        )
+        self._core = snt.LSTM(256)
+        self._head = snt.Sequential(
+            [snt.Linear(256), tf.nn.relu, policy_value.PolicyValueHead(num_actions),]
+        )
+        self._num_actions = num_actions
 
-  def __call__(
-      self, inputs: observation_action_reward.OAR,
-      state: snt.LSTMState) -> Tuple[Tuple[Logits, Value], snt.LSTMState]:
+    def __call__(
+        self, inputs: observation_action_reward.OAR, state: snt.LSTMState
+    ) -> Tuple[Tuple[Logits, Value], snt.LSTMState]:
 
-    embeddings = self._embed(inputs)
-    embeddings, new_state = self._core(embeddings, state)
-    logits, value = self._head(embeddings)  # [B, A]
+        embeddings = self._embed(inputs)
+        embeddings, new_state = self._core(embeddings, state)
+        logits, value = self._head(embeddings)  # [B, A]
 
-    return (logits, value), new_state
+        return (logits, value), new_state
 
-  def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:
-    return self._core.initial_state(batch_size)
+    def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:
+        return self._core.initial_state(batch_size)
 
 
 class DeepIMPALAAtariNetwork(base.RNNCore):
-  """A recurrent network for use with IMPALA.
+    """A recurrent network for use with IMPALA.
 
   See https://arxiv.org/pdf/1802.01561.pdf for more information.
   """
 
-  def __init__(self, num_actions: int):
-    super().__init__(name='deep_impala_atari_network')
-    self._embed = embedding.OAREmbedding(
-        torso=vision.ResNetTorso(), num_actions=num_actions)
-    self._core = snt.LSTM(256)
-    self._head = snt.Sequential([
-        snt.Linear(256),
-        tf.nn.relu,
-        policy_value.PolicyValueHead(num_actions),
-    ])
-    self._num_actions = num_actions
+    def __init__(self, num_actions: int):
+        super().__init__(name="deep_impala_atari_network")
+        self._embed = embedding.OAREmbedding(
+            torso=vision.ResNetTorso(), num_actions=num_actions
+        )
+        self._core = snt.LSTM(256)
+        self._head = snt.Sequential(
+            [snt.Linear(256), tf.nn.relu, policy_value.PolicyValueHead(num_actions),]
+        )
+        self._num_actions = num_actions
 
-  def __call__(
-      self, inputs: observation_action_reward.OAR,
-      state: snt.LSTMState) -> Tuple[Tuple[Logits, Value], snt.LSTMState]:
+    def __call__(
+        self, inputs: observation_action_reward.OAR, state: snt.LSTMState
+    ) -> Tuple[Tuple[Logits, Value], snt.LSTMState]:
 
-    embeddings = self._embed(inputs)
-    embeddings, new_state = self._core(embeddings, state)
-    logits, value = self._head(embeddings)  # [B, A]
+        embeddings = self._embed(inputs)
+        embeddings, new_state = self._core(embeddings, state)
+        logits, value = self._head(embeddings)  # [B, A]
 
-    return (logits, value), new_state
+        return (logits, value), new_state
 
-  def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:
-    return self._core.initial_state(batch_size)
+    def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:
+        return self._core.initial_state(batch_size)
 
-  def unroll(
-      self,
-      inputs: observation_action_reward.OAR,
-      states: snt.LSTMState,
-      sequence_length: int,
-  ) -> Tuple[Tuple[Logits, Value], snt.LSTMState]:
-    """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
-    embeddings = snt.BatchApply(self._embed)(inputs)  # [T, B, D+A+1]
-    embeddings, new_states = snt.static_unroll(self._core, embeddings, states,
-                                               sequence_length)
-    logits, values = snt.BatchApply(self._head)(embeddings)
+    def unroll(
+        self,
+        inputs: observation_action_reward.OAR,
+        states: snt.LSTMState,
+        sequence_length: int,
+    ) -> Tuple[Tuple[Logits, Value], snt.LSTMState]:
+        """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
+        embeddings = snt.BatchApply(self._embed)(inputs)  # [T, B, D+A+1]
+        embeddings, new_states = snt.static_unroll(
+            self._core, embeddings, states, sequence_length
+        )
+        logits, values = snt.BatchApply(self._head)(embeddings)
 
-    return (logits, values), new_states
+        return (logits, values), new_states

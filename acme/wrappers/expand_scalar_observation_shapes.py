@@ -23,15 +23,16 @@ This can be necessary when stacking observations with previous actions.
 
 from typing import Any
 
-from acme.wrappers import base
 import dm_env
-from dm_env import specs
 import numpy as np
 import tree
+from dm_env import specs
+
+from acme.wrappers import base
 
 
 class ExpandScalarObservationShapesWrapper(base.EnvironmentWrapper):
-  """Expands scalar shapes in the observation.
+    """Expands scalar shapes in the observation.
 
   For example, if the observation holds the previous (scalar) action, this
   wrapper makes sure the environment returns a previous action with shape [1].
@@ -39,30 +40,33 @@ class ExpandScalarObservationShapesWrapper(base.EnvironmentWrapper):
   This can be necessary when stacking observations with previous actions.
   """
 
-  def step(self, action: Any) -> dm_env.TimeStep:
-    timestep = self._environment.step(action)
-    expanded_observation = tree.map_structure(_expand_scalar_array_shape,
-                                              timestep.observation)
-    return timestep._replace(observation=expanded_observation)
+    def step(self, action: Any) -> dm_env.TimeStep:
+        timestep = self._environment.step(action)
+        expanded_observation = tree.map_structure(
+            _expand_scalar_array_shape, timestep.observation
+        )
+        return timestep._replace(observation=expanded_observation)
 
-  def reset(self) -> dm_env.TimeStep:
-    timestep = self._environment.reset()
-    expanded_observation = tree.map_structure(_expand_scalar_array_shape,
-                                              timestep.observation)
-    return timestep._replace(observation=expanded_observation)
+    def reset(self) -> dm_env.TimeStep:
+        timestep = self._environment.reset()
+        expanded_observation = tree.map_structure(
+            _expand_scalar_array_shape, timestep.observation
+        )
+        return timestep._replace(observation=expanded_observation)
 
-  def observation_spec(self) -> specs.Array:
-    return tree.map_structure(_expand_scalar_spec_shape,
-                              self._environment.observation_spec())
+    def observation_spec(self) -> specs.Array:
+        return tree.map_structure(
+            _expand_scalar_spec_shape, self._environment.observation_spec()
+        )
 
 
 def _expand_scalar_spec_shape(spec: specs.Array) -> specs.Array:
-  if not spec.shape:
-    # NOTE: This line upcasts the spec to an Array to avoid edge cases (as in
-    # DiscreteSpec) where we cannot set the spec's shape.
-    spec = specs.Array(shape=(1,), dtype=spec.dtype, name=spec.name)
-  return spec
+    if not spec.shape:
+        # NOTE: This line upcasts the spec to an Array to avoid edge cases (as in
+        # DiscreteSpec) where we cannot set the spec's shape.
+        spec = specs.Array(shape=(1,), dtype=spec.dtype, name=spec.name)
+    return spec
 
 
 def _expand_scalar_array_shape(array: np.ndarray) -> np.ndarray:
-  return array if array.shape else np.expand_dims(array, axis=-1)
+    return array if array.shape else np.expand_dims(array, axis=-1)

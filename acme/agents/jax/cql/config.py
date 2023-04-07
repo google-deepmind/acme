@@ -19,7 +19,7 @@ from typing import Optional
 
 @dataclasses.dataclass
 class CQLConfig:
-  """Configuration options for CQL.
+    """Configuration options for CQL.
 
   Attributes:
     batch_size: batch size.
@@ -42,17 +42,18 @@ class CQLConfig:
     target_entropy: target entropy when using adapdative entropy bonus.
     num_bc_iters: number of BC steps for actor initialization.
   """
-  batch_size: int = 256
-  policy_learning_rate: float = 3e-5
-  critic_learning_rate: float = 3e-4
-  fixed_cql_coefficient: float = 5.
-  tau: float = 0.005
-  fixed_cql_coefficient: Optional[float] = 5.
-  cql_lagrange_threshold: Optional[float] = None
-  cql_num_samples: int = 10
-  num_sgd_steps_per_step: int = 1
-  reward_scale: float = 1.0
-  discount: float = 0.99
-  fixed_entropy_coefficient: Optional[float] = 0.
-  target_entropy: Optional[float] = 0
-  num_bc_iters: int = 50_000
+
+    batch_size: int = 256
+    policy_learning_rate: float = 3e-5
+    critic_learning_rate: float = 3e-4
+    fixed_cql_coefficient: float = 5.0
+    tau: float = 0.005
+    fixed_cql_coefficient: Optional[float] = 5.0
+    cql_lagrange_threshold: Optional[float] = None
+    cql_num_samples: int = 10
+    num_sgd_steps_per_step: int = 1
+    reward_scale: float = 1.0
+    discount: float = 0.99
+    fixed_entropy_coefficient: Optional[float] = 0.0
+    target_entropy: Optional[float] = 0
+    num_bc_iters: int = 50_000

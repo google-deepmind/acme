@@ -14,39 +14,37 @@
 
 """Tests for acme launchpad utilities."""
 
-from acme.utils import lp_utils
-
 from absl.testing import absltest
+
+from acme.utils import lp_utils
 
 
 class LpUtilsTest(absltest.TestCase):
+    def test_partial_kwargs(self):
+        def foo(a, b, c=2):
+            return a, b, c
 
-  def test_partial_kwargs(self):
+        def bar(a, b):
+            return a, b
 
-    def foo(a, b, c=2):
-      return a, b, c
+        # Override the default values. The last two should be no-ops.
+        foo1 = lp_utils.partial_kwargs(foo, c=1)
+        foo2 = lp_utils.partial_kwargs(foo)
+        bar1 = lp_utils.partial_kwargs(bar)
 
-    def bar(a, b):
-      return a, b
+        # Check that we raise errors on overriding kwargs with no default values
+        with self.assertRaises(ValueError):
+            lp_utils.partial_kwargs(foo, a=2)
 
-    # Override the default values. The last two should be no-ops.
-    foo1 = lp_utils.partial_kwargs(foo, c=1)
-    foo2 = lp_utils.partial_kwargs(foo)
-    bar1 = lp_utils.partial_kwargs(bar)
+        # CHeck the we raise if we try to override a kwarg that doesn't exist.
+        with self.assertRaises(ValueError):
+            lp_utils.partial_kwargs(foo, d=2)
 
-    # Check that we raise errors on overriding kwargs with no default values
-    with self.assertRaises(ValueError):
-      lp_utils.partial_kwargs(foo, a=2)
-
-    # CHeck the we raise if we try to override a kwarg that doesn't exist.
-    with self.assertRaises(ValueError):
-      lp_utils.partial_kwargs(foo, d=2)
-
-    # Make sure we get back the correct values.
-    self.assertEqual(foo1(1, 2), (1, 2, 1))
-    self.assertEqual(foo2(1, 2), (1, 2, 2))
-    self.assertEqual(bar1(1, 2), (1, 2))
+        # Make sure we get back the correct values.
+        self.assertEqual(foo1(1, 2), (1, 2, 1))
+        self.assertEqual(foo2(1, 2), (1, 2, 2))
+        self.assertEqual(bar1(1, 2), (1, 2))
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

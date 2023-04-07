@@ -14,47 +14,44 @@
 
 """Example running DQN on BSuite in a single process."""
 
-from absl import app
-from absl import flags
-
-import acme
-from acme import specs
-from acme import wrappers
-from acme.agents.tf import dqn
-
 import bsuite
 import sonnet as snt
+from absl import app, flags
+
+import acme
+from acme import specs, wrappers
+from acme.agents.tf import dqn
 
 # Bsuite flags
-flags.DEFINE_string('bsuite_id', 'deep_sea/0', 'Bsuite id.')
-flags.DEFINE_string('results_dir', '/tmp/bsuite', 'CSV results directory.')
-flags.DEFINE_boolean('overwrite', False, 'Whether to overwrite csv results.')
+flags.DEFINE_string("bsuite_id", "deep_sea/0", "Bsuite id.")
+flags.DEFINE_string("results_dir", "/tmp/bsuite", "CSV results directory.")
+flags.DEFINE_boolean("overwrite", False, "Whether to overwrite csv results.")
 FLAGS = flags.FLAGS
 
 
 def main(_):
-  # Create an environment and grab the spec.
-  raw_environment = bsuite.load_and_record_to_csv(
-      bsuite_id=FLAGS.bsuite_id,
-      results_dir=FLAGS.results_dir,
-      overwrite=FLAGS.overwrite,
-  )
-  environment = wrappers.SinglePrecisionWrapper(raw_environment)
-  environment_spec = specs.make_environment_spec(environment)
+    # Create an environment and grab the spec.
+    raw_environment = bsuite.load_and_record_to_csv(
+        bsuite_id=FLAGS.bsuite_id,
+        results_dir=FLAGS.results_dir,
+        overwrite=FLAGS.overwrite,
+    )
+    environment = wrappers.SinglePrecisionWrapper(raw_environment)
+    environment_spec = specs.make_environment_spec(environment)
 
-  network = snt.Sequential([
-      snt.Flatten(),
-      snt.nets.MLP([50, 50, environment_spec.actions.num_values])
-  ])
+    network = snt.Sequential(
+        [snt.Flatten(), snt.nets.MLP([50, 50, environment_spec.actions.num_values])]
+    )
 
-  # Construct the agent.
-  agent = dqn.DQN(
-      environment_spec=environment_spec, network=network)
+    # Construct the agent.
+    agent = dqn.DQN(environment_spec=environment_spec, network=network)
 
-  # Run the environment loop.
-  loop = acme.EnvironmentLoop(environment, agent)
-  loop.run(num_episodes=environment.bsuite_num_episodes)  # pytype: disable=attribute-error
+    # Run the environment loop.
+    loop = acme.EnvironmentLoop(environment, agent)
+    loop.run(
+        num_episodes=environment.bsuite_num_episodes
+    )  # pytype: disable=attribute-error
 
 
-if __name__ == '__main__':
-  app.run(main)
+if __name__ == "__main__":
+    app.run(main)

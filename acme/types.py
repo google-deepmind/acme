@@ -15,6 +15,7 @@
 """Common types used throughout Acme."""
 
 from typing import Any, Callable, Iterable, Mapping, NamedTuple, Union
+
 from acme import specs
 
 # Define types for nested arrays and tensors.
@@ -24,9 +25,7 @@ NestedTensor = Any
 
 # pytype: disable=not-supported-yet
 NestedSpec = Union[
-    specs.Array,
-    Iterable['NestedSpec'],
-    Mapping[Any, 'NestedSpec'],
+    specs.Array, Iterable["NestedSpec"], Mapping[Any, "NestedSpec"],
 ]
 # pytype: enable=not-supported-yet
 
@@ -38,7 +37,7 @@ TensorValuedCallable = Callable[..., NestedTensor]
 
 
 class Batches(int):
-  """Helper class for specification of quantities in units of batches.
+    """Helper class for specification of quantities in units of batches.
 
   Example usage:
 
@@ -56,10 +55,11 @@ class Batches(int):
 
 
 class Transition(NamedTuple):
-  """Container for a transition."""
-  observation: NestedArray
-  action: NestedArray
-  reward: NestedArray
-  discount: NestedArray
-  next_observation: NestedArray
-  extras: NestedArray = ()
+    """Container for a transition."""
+
+    observation: NestedArray
+    action: NestedArray
+    reward: NestedArray
+    discount: NestedArray
+    next_observation: NestedArray
+    extras: NestedArray = ()

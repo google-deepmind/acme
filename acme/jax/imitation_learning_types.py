@@ -17,6 +17,6 @@
 from typing import TypeVar
 
 # Common TypeVars that correspond to various aspects of the direct RL algorithm.
-DirectPolicyNetwork = TypeVar('DirectPolicyNetwork')
-DirectRLNetworks = TypeVar('DirectRLNetworks')
-DirectRLTrainingState = TypeVar('DirectRLTrainingState')
+DirectPolicyNetwork = TypeVar("DirectPolicyNetwork")
+DirectRLNetworks = TypeVar("DirectRLNetworks")
+DirectRLTrainingState = TypeVar("DirectRLTrainingState")

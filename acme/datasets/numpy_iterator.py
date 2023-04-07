@@ -16,13 +16,14 @@
 
 from typing import Iterator
 
-from acme import types
 import numpy as np
 import tree
 
+from acme import types
+
 
 class NumpyIterator(Iterator[types.NestedArray]):
-  """Iterator over a dataset with elements converted to numpy.
+    """Iterator over a dataset with elements converted to numpy.
 
   Note: This iterator returns read-only numpy arrays.
 
@@ -32,17 +33,18 @@ class NumpyIterator(Iterator[types.NestedArray]):
   TODO(b/178684359): Remove this when it is upstreamed into `tf.data`.
   """
 
-  __slots__ = ['_iterator']
+    __slots__ = ["_iterator"]
 
-  def __init__(self, dataset):
-    self._iterator: Iterator[types.NestedTensor] = iter(dataset)
+    def __init__(self, dataset):
+        self._iterator: Iterator[types.NestedTensor] = iter(dataset)
 
-  def __iter__(self) -> 'NumpyIterator':
-    return self
+    def __iter__(self) -> "NumpyIterator":
+        return self
 
-  def __next__(self) -> types.NestedArray:
-    return tree.map_structure(lambda t: np.asarray(memoryview(t)),
-                              next(self._iterator))
+    def __next__(self) -> types.NestedArray:
+        return tree.map_structure(
+            lambda t: np.asarray(memoryview(t)), next(self._iterator)
+        )
 
-  def next(self):
-    return self.__next__()
+    def next(self):
+        return self.__next__()

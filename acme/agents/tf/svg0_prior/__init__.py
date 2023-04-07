@@ -17,5 +17,7 @@
 from acme.agents.tf.svg0_prior.agent import SVG0
 from acme.agents.tf.svg0_prior.agent_distributed import DistributedSVG0
 from acme.agents.tf.svg0_prior.learning import SVG0Learner
-from acme.agents.tf.svg0_prior.networks import make_default_networks
-from acme.agents.tf.svg0_prior.networks import make_network_with_prior
+from acme.agents.tf.svg0_prior.networks import (
+    make_default_networks,
+    make_network_with_prior,
+)

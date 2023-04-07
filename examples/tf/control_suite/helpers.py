@@ -16,42 +16,48 @@
 
 from typing import Optional
 
-from acme import wrappers
 import dm_env
+
+from acme import wrappers
 
 
 def make_environment(
     evaluation: bool = False,
-    domain_name: str = 'cartpole',
-    task_name: str = 'balance',
+    domain_name: str = "cartpole",
+    task_name: str = "balance",
     from_pixels: bool = False,
     frames_to_stack: int = 3,
     flatten_stack: bool = False,
     num_action_repeats: Optional[int] = None,
 ) -> dm_env.Environment:
-  """Implements a control suite environment factory."""
-  # Load dm_suite lazily not require Mujoco license when not using it.
-  from dm_control import suite  # pylint: disable=g-import-not-at-top
-  from acme.wrappers import mujoco as mujoco_wrappers  # pylint: disable=g-import-not-at-top
+    """Implements a control suite environment factory."""
+    # Load dm_suite lazily not require Mujoco license when not using it.
+    from dm_control import suite  # pylint: disable=g-import-not-at-top
 
-  # Load raw control suite environment.
-  environment = suite.load(domain_name, task_name)
+    from acme.wrappers import (
+        mujoco as mujoco_wrappers,
+    )  # pylint: disable=g-import-not-at-top
 
-  # Maybe wrap to get pixel observations from environment state.
-  if from_pixels:
-    environment = mujoco_wrappers.MujocoPixelWrapper(environment)
-    environment = wrappers.FrameStackingWrapper(
-        environment, num_frames=frames_to_stack, flatten=flatten_stack)
-  environment = wrappers.CanonicalSpecWrapper(environment, clip=True)
+    # Load raw control suite environment.
+    environment = suite.load(domain_name, task_name)
 
-  if num_action_repeats:
-    environment = wrappers.ActionRepeatWrapper(
-        environment, num_repeats=num_action_repeats)
-  environment = wrappers.SinglePrecisionWrapper(environment)
+    # Maybe wrap to get pixel observations from environment state.
+    if from_pixels:
+        environment = mujoco_wrappers.MujocoPixelWrapper(environment)
+        environment = wrappers.FrameStackingWrapper(
+            environment, num_frames=frames_to_stack, flatten=flatten_stack
+        )
+    environment = wrappers.CanonicalSpecWrapper(environment, clip=True)
 
-  if evaluation:
-    # The evaluator in the distributed agent will set this to True so you can
-    # use this clause to, e.g., set up video recording by the evaluator.
-    pass
+    if num_action_repeats:
+        environment = wrappers.ActionRepeatWrapper(
+            environment, num_repeats=num_action_repeats
+        )
+    environment = wrappers.SinglePrecisionWrapper(environment)
 
-  return environment
+    if evaluation:
+        # The evaluator in the distributed agent will set this to True so you can
+        # use this clause to, e.g., set up video recording by the evaluator.
+        pass
+
+    return environment

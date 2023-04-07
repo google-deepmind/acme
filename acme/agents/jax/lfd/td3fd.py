@@ -17,31 +17,37 @@
 import dataclasses
 from typing import Callable, Iterator
 
+import reverb
+
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import td3
-from acme.agents.jax.lfd import builder
-from acme.agents.jax.lfd import config
-import reverb
+from acme.agents.jax.lfd import builder, config
 
 
 @dataclasses.dataclass
 class TD3fDConfig:
-  """Configuration options specific to TD3 with demonstrations.
+    """Configuration options specific to TD3 with demonstrations.
 
   Attributes:
     lfd_config: LfD config.
     td3_config: TD3 config.
   """
-  lfd_config: config.LfdConfig
-  td3_config: td3.TD3Config
+
+    lfd_config: config.LfdConfig
+    td3_config: td3.TD3Config
 
 
-class TD3fDBuilder(builder.LfdBuilder[td3.TD3Networks,
-                                      actor_core_lib.FeedForwardPolicy,
-                                      reverb.ReplaySample]):
-  """Builder for TD3 agent learning from demonstrations."""
+class TD3fDBuilder(
+    builder.LfdBuilder[
+        td3.TD3Networks, actor_core_lib.FeedForwardPolicy, reverb.ReplaySample
+    ]
+):
+    """Builder for TD3 agent learning from demonstrations."""
 
-  def __init__(self, td3_fd_config: TD3fDConfig,
-               lfd_iterator_fn: Callable[[], Iterator[builder.LfdStep]]):
-    td3_builder = td3.TD3Builder(td3_fd_config.td3_config)
-    super().__init__(td3_builder, lfd_iterator_fn, td3_fd_config.lfd_config)
+    def __init__(
+        self,
+        td3_fd_config: TD3fDConfig,
+        lfd_iterator_fn: Callable[[], Iterator[builder.LfdStep]],
+    ):
+        td3_builder = td3.TD3Builder(td3_fd_config.td3_config)
+        super().__init__(td3_builder, lfd_iterator_fn, td3_fd_config.lfd_config)

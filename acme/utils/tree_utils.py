@@ -14,40 +14,40 @@
 
 """Tensor framework-agnostic utilities for manipulating nested structures."""
 
-from typing import Sequence, List, TypeVar, Any
+from typing import Any, List, Sequence, TypeVar
 
 import numpy as np
 import tree
 
-ElementType = TypeVar('ElementType')
+ElementType = TypeVar("ElementType")
 
 
 def fast_map_structure(func, *structure):
-  """Faster map_structure implementation which skips some error checking."""
-  flat_structure = (tree.flatten(s) for s in structure)
-  entries = zip(*flat_structure)
-  # Arbitrarily choose one of the structures of the original sequence (the last)
-  # to match the structure for the flattened sequence.
-  return tree.unflatten_as(structure[-1], [func(*x) for x in entries])
+    """Faster map_structure implementation which skips some error checking."""
+    flat_structure = (tree.flatten(s) for s in structure)
+    entries = zip(*flat_structure)
+    # Arbitrarily choose one of the structures of the original sequence (the last)
+    # to match the structure for the flattened sequence.
+    return tree.unflatten_as(structure[-1], [func(*x) for x in entries])
 
 
 def fast_map_structure_with_path(func, *structure):
-  """Faster map_structure_with_path implementation."""
-  head_entries_with_path = tree.flatten_with_path(structure[0])
-  if len(structure) > 1:
-    tail_entries = (tree.flatten(s) for s in structure[1:])
-    entries_with_path = [
-        e[0] + e[1:] for e in zip(head_entries_with_path, *tail_entries)
-    ]
-  else:
-    entries_with_path = head_entries_with_path
-  # Arbitrarily choose one of the structures of the original sequence (the last)
-  # to match the structure for the flattened sequence.
-  return tree.unflatten_as(structure[-1], [func(*x) for x in entries_with_path])
+    """Faster map_structure_with_path implementation."""
+    head_entries_with_path = tree.flatten_with_path(structure[0])
+    if len(structure) > 1:
+        tail_entries = (tree.flatten(s) for s in structure[1:])
+        entries_with_path = [
+            e[0] + e[1:] for e in zip(head_entries_with_path, *tail_entries)
+        ]
+    else:
+        entries_with_path = head_entries_with_path
+    # Arbitrarily choose one of the structures of the original sequence (the last)
+    # to match the structure for the flattened sequence.
+    return tree.unflatten_as(structure[-1], [func(*x) for x in entries_with_path])
 
 
 def stack_sequence_fields(sequence: Sequence[ElementType]) -> ElementType:
-  """Stacks a list of identically nested objects.
+    """Stacks a list of identically nested objects.
 
   This takes a sequence of identically nested objects and returns a single
   nested object whose ith leaf is a stacked numpy array of the corresponding
@@ -93,22 +93,22 @@ def stack_sequence_fields(sequence: Sequence[ElementType]) -> ElementType:
   Raises:
     ValueError: If `sequence` is an empty sequence.
   """
-  # Handle empty input sequences.
-  if not sequence:
-    raise ValueError('Input sequence must not be empty')
+    # Handle empty input sequences.
+    if not sequence:
+        raise ValueError("Input sequence must not be empty")
 
-  # Default to asarray when arrays don't have the same shape to be compatible
-  # with old behaviour.
-  try:
-    return fast_map_structure(lambda *values: np.stack(values), *sequence)
-  except ValueError:
-    return fast_map_structure(lambda *values: np.asarray(values, dtype=object),
-                              *sequence)
+    # Default to asarray when arrays don't have the same shape to be compatible
+    # with old behaviour.
+    try:
+        return fast_map_structure(lambda *values: np.stack(values), *sequence)
+    except ValueError:
+        return fast_map_structure(
+            lambda *values: np.asarray(values, dtype=object), *sequence
+        )
 
 
-def unstack_sequence_fields(struct: ElementType,
-                            batch_size: int) -> List[ElementType]:
-  """Converts a struct of batched arrays to a list of structs.
+def unstack_sequence_fields(struct: ElementType, batch_size: int) -> List[ElementType]:
+    """Converts a struct of batched arrays to a list of structs.
 
   This is effectively the inverse of `stack_sequence_fields`.
 
@@ -122,13 +122,11 @@ def unstack_sequence_fields(struct: ElementType,
      is an unbatched element of the original leaf node.
   """
 
-  return [
-      tree.map_structure(lambda s, i=i: s[i], struct) for i in range(batch_size)
-  ]
+    return [tree.map_structure(lambda s, i=i: s[i], struct) for i in range(batch_size)]
 
 
 def broadcast_structures(*args: Any) -> Any:
-  """Returns versions of the arguments that give them the same nested structure.
+    """Returns versions of the arguments that give them the same nested structure.
 
   Any nested items in *args must have the same structure.
 
@@ -156,37 +154,37 @@ def broadcast_structures(*args: Any) -> Any:
   Returns:
     `*args`, except with all items sharing the same nest structure.
   """
-  if not args:
-    return
+    if not args:
+        return
 
-  reference_tree = None
-  for arg in args:
-    if tree.is_nested(arg):
-      reference_tree = arg
-      break
+    reference_tree = None
+    for arg in args:
+        if tree.is_nested(arg):
+            reference_tree = arg
+            break
 
-  # If reference_tree is None then none of args are nested and we can skip over
-  # the rest of this function, which would be a no-op.
-  if reference_tree is None:
-    return args
+    # If reference_tree is None then none of args are nested and we can skip over
+    # the rest of this function, which would be a no-op.
+    if reference_tree is None:
+        return args
 
-  def mirror_structure(value, reference_tree):
-    if tree.is_nested(value):
-      # Use check_types=True so that the types of the trees we construct aren't
-      # dependent on our arbitrary choice of which nested arg to use as the
-      # reference_tree.
-      tree.assert_same_structure(value, reference_tree, check_types=True)
-      return value
-    else:
-      return tree.map_structure(lambda _: value, reference_tree)
+    def mirror_structure(value, reference_tree):
+        if tree.is_nested(value):
+            # Use check_types=True so that the types of the trees we construct aren't
+            # dependent on our arbitrary choice of which nested arg to use as the
+            # reference_tree.
+            tree.assert_same_structure(value, reference_tree, check_types=True)
+            return value
+        else:
+            return tree.map_structure(lambda _: value, reference_tree)
 
-  return tuple(mirror_structure(arg, reference_tree) for arg in args)
+    return tuple(mirror_structure(arg, reference_tree) for arg in args)
 
 
 def tree_map(f):
-  """Transforms `f` into a tree-mapped version."""
+    """Transforms `f` into a tree-mapped version."""
 
-  def mapped_f(*structures):
-    return tree.map_structure(f, *structures)
+    def mapped_f(*structures):
+        return tree.map_structure(f, *structures)
 
-  return mapped_f
+    return mapped_f

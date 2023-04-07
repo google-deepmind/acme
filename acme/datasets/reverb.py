@@ -18,11 +18,11 @@ import collections
 import os
 from typing import Callable, Mapping, Optional, Union
 
-from acme import specs
-from acme import types
-from acme.adders import reverb as adders
 import reverb
 import tensorflow as tf
+
+from acme import specs, types
+from acme.adders import reverb as adders
 
 Transform = Callable[[reverb.ReplaySample], reverb.ReplaySample]
 
@@ -43,7 +43,7 @@ def make_reverb_dataset(
     using_deprecated_adder: bool = False,
     sequence_length: Optional[int] = None,
 ) -> tf.data.Dataset:
-  """Make a TensorFlow dataset backed by a Reverb trajectory replay service.
+    """Make a TensorFlow dataset backed by a Reverb trajectory replay service.
 
   Arguments:
     server_address: Address of the Reverb server.
@@ -73,85 +73,92 @@ def make_reverb_dataset(
     mapping with no positive weight values.
   """
 
-  if environment_spec or extra_spec:
-    raise ValueError(
-        'The make_reverb_dataset factory function no longer requires specs as'
-        ' as they should be passed as a signature to the reverb.Table when it'
-        ' is created. Consider either updating your code or falling back to the'
-        ' deprecated dataset factory in acme/datasets/deprecated.')
+    if environment_spec or extra_spec:
+        raise ValueError(
+            "The make_reverb_dataset factory function no longer requires specs as"
+            " as they should be passed as a signature to the reverb.Table when it"
+            " is created. Consider either updating your code or falling back to the"
+            " deprecated dataset factory in acme/datasets/deprecated."
+        )
 
-  # These are no longer used and are only kept in the call signature for
-  # backward compatibility.
-  del environment_spec
-  del extra_spec
-  del transition_adder
-  del convert_zero_size_to_none
-  del using_deprecated_adder
-  del sequence_length
+    # These are no longer used and are only kept in the call signature for
+    # backward compatibility.
+    del environment_spec
+    del extra_spec
+    del transition_adder
+    del convert_zero_size_to_none
+    del using_deprecated_adder
+    del sequence_length
 
-  # This is the default that used to be set by reverb.TFClient.dataset().
-  if max_in_flight_samples_per_worker is None and batch_size is None:
-    max_in_flight_samples_per_worker = 100
-  elif max_in_flight_samples_per_worker is None:
-    max_in_flight_samples_per_worker = 2 * batch_size
+    # This is the default that used to be set by reverb.TFClient.dataset().
+    if max_in_flight_samples_per_worker is None and batch_size is None:
+        max_in_flight_samples_per_worker = 100
+    elif max_in_flight_samples_per_worker is None:
+        max_in_flight_samples_per_worker = 2 * batch_size
 
-  # Create mapping from tables to non-zero weights.
-  if isinstance(table, str):
-    tables = collections.OrderedDict([(table, 1.)])
-  else:
-    tables = collections.OrderedDict([
-        (name, weight) for name, weight in table.items() if weight > 0.
-    ])
-    if len(tables) <= 0:
-      raise ValueError(f'No positive weights in input tables {tables}')
-
-  # Normalize weights.
-  total_weight = sum(tables.values())
-  tables = collections.OrderedDict([
-      (name, weight / total_weight) for name, weight in tables.items()
-  ])
-
-  def _make_dataset(unused_idx: tf.Tensor) -> tf.data.Dataset:
-    datasets = ()
-    for table_name, weight in tables.items():
-      max_in_flight_samples = max(
-          1, int(max_in_flight_samples_per_worker * weight))
-      dataset = reverb.TrajectoryDataset.from_table_signature(
-          server_address=server_address,
-          table=table_name,
-          max_in_flight_samples_per_worker=max_in_flight_samples)
-      datasets += (dataset,)
-    if len(datasets) > 1:
-      dataset = tf.data.Dataset.sample_from_datasets(
-          datasets, weights=tables.values())
+    # Create mapping from tables to non-zero weights.
+    if isinstance(table, str):
+        tables = collections.OrderedDict([(table, 1.0)])
     else:
-      dataset = datasets[0]
+        tables = collections.OrderedDict(
+            [(name, weight) for name, weight in table.items() if weight > 0.0]
+        )
+        if len(tables) <= 0:
+            raise ValueError(f"No positive weights in input tables {tables}")
 
-    # Post-process each element if a post-processing function is passed, e.g.
-    # observation-stacking or data augmenting transformations.
-    if postprocess:
-      dataset = dataset.map(postprocess)
+    # Normalize weights.
+    total_weight = sum(tables.values())
+    tables = collections.OrderedDict(
+        [(name, weight / total_weight) for name, weight in tables.items()]
+    )
 
-    if batch_size:
-      dataset = dataset.batch(batch_size, drop_remainder=True)
+    def _make_dataset(unused_idx: tf.Tensor) -> tf.data.Dataset:
+        datasets = ()
+        for table_name, weight in tables.items():
+            max_in_flight_samples = max(
+                1, int(max_in_flight_samples_per_worker * weight)
+            )
+            dataset = reverb.TrajectoryDataset.from_table_signature(
+                server_address=server_address,
+                table=table_name,
+                max_in_flight_samples_per_worker=max_in_flight_samples,
+            )
+            datasets += (dataset,)
+        if len(datasets) > 1:
+            dataset = tf.data.Dataset.sample_from_datasets(
+                datasets, weights=tables.values()
+            )
+        else:
+            dataset = datasets[0]
+
+        # Post-process each element if a post-processing function is passed, e.g.
+        # observation-stacking or data augmenting transformations.
+        if postprocess:
+            dataset = dataset.map(postprocess)
+
+        if batch_size:
+            dataset = dataset.batch(batch_size, drop_remainder=True)
+
+        return dataset
+
+    if num_parallel_calls is not None:
+        # Create a datasets and interleaves it to create `num_parallel_calls`
+        # `TrajectoryDataset`s.
+        num_datasets_to_interleave = (
+            os.cpu_count()
+            if num_parallel_calls == tf.data.AUTOTUNE
+            else num_parallel_calls
+        )
+        dataset = tf.data.Dataset.range(num_datasets_to_interleave).interleave(
+            map_func=_make_dataset,
+            cycle_length=num_parallel_calls,
+            num_parallel_calls=num_parallel_calls,
+            deterministic=False,
+        )
+    else:
+        dataset = _make_dataset(tf.constant(0))
+
+    if prefetch_size:
+        dataset = dataset.prefetch(prefetch_size)
 
     return dataset
-
-  if num_parallel_calls is not None:
-    # Create a datasets and interleaves it to create `num_parallel_calls`
-    # `TrajectoryDataset`s.
-    num_datasets_to_interleave = (
-        os.cpu_count()
-        if num_parallel_calls == tf.data.AUTOTUNE else num_parallel_calls)
-    dataset = tf.data.Dataset.range(num_datasets_to_interleave).interleave(
-        map_func=_make_dataset,
-        cycle_length=num_parallel_calls,
-        num_parallel_calls=num_parallel_calls,
-        deterministic=False)
-  else:
-    dataset = _make_dataset(tf.constant(0))
-
-  if prefetch_size:
-    dataset = dataset.prefetch(prefetch_size)
-
-  return dataset

@@ -14,22 +14,23 @@
 
 """Variable utilities for JAX."""
 
-from concurrent import futures
 import datetime
 import time
+from concurrent import futures
 from typing import List, NamedTuple, Optional, Sequence, Union
+
+import jax
 
 from acme import core
 from acme.jax import networks as network_types
-import jax
 
 
 class VariableReference(NamedTuple):
-  variable_name: str
+    variable_name: str
 
 
 class ReferenceVariableSource(core.VariableSource):
-  """Variable source which returns references instead of values.
+    """Variable source which returns references instead of values.
 
   This is passed to each actor when using a centralized inference server. The
   actor uses this special variable source to get references rather than values.
@@ -39,21 +40,21 @@ class ReferenceVariableSource(core.VariableSource):
   actor to the inference server.
   """
 
-  def get_variables(self, names: Sequence[str]) -> List[VariableReference]:
-    return [VariableReference(name) for name in names]
+    def get_variables(self, names: Sequence[str]) -> List[VariableReference]:
+        return [VariableReference(name) for name in names]
 
 
 class VariableClient:
-  """A variable client for updating variables from a remote source."""
+    """A variable client for updating variables from a remote source."""
 
-  def __init__(
-      self,
-      client: core.VariableSource,
-      key: Union[str, Sequence[str]],
-      update_period: Union[int, datetime.timedelta] = 1,
-      device: Optional[Union[str, jax.Device]] = None,
-  ):
-    """Initializes the variable client.
+    def __init__(
+        self,
+        client: core.VariableSource,
+        key: Union[str, Sequence[str]],
+        update_period: Union[int, datetime.timedelta] = 1,
+        device: Optional[Union[str, jax.Device]] = None,
+    ):
+        """Initializes the variable client.
 
     Args:
       client: A variable source from which we fetch variables.
@@ -65,28 +66,28 @@ class VariableClient:
       device: The name of a JAX device to put variables on. If None (default),
         VariableClient won't put params on any device.
     """
-    self._update_period = update_period
-    self._call_counter = 0
-    self._last_call = time.time()
-    self._client = client
-    self._params: Sequence[network_types.Params] = None
+        self._update_period = update_period
+        self._call_counter = 0
+        self._last_call = time.time()
+        self._client = client
+        self._params: Sequence[network_types.Params] = None
 
-    self._device = device
-    if isinstance(self._device, str):
-      self._device = jax.devices(device)[0]
+        self._device = device
+        if isinstance(self._device, str):
+            self._device = jax.devices(device)[0]
 
-    self._executor = futures.ThreadPoolExecutor(max_workers=1)
+        self._executor = futures.ThreadPoolExecutor(max_workers=1)
 
-    if isinstance(key, str):
-      key = [key]
+        if isinstance(key, str):
+            key = [key]
 
-    self._key = key
-    self._request = lambda k=key: client.get_variables(k)
-    self._future: Optional[futures.Future] = None  # pylint: disable=g-bare-generic
-    self._async_request = lambda: self._executor.submit(self._request)
+        self._key = key
+        self._request = lambda k=key: client.get_variables(k)
+        self._future: Optional[futures.Future] = None  # pylint: disable=g-bare-generic
+        self._async_request = lambda: self._executor.submit(self._request)
 
-  def update(self, wait: bool = False) -> None:
-    """Periodically updates the variables with the latest copy from the source.
+    def update(self, wait: bool = False) -> None:
+        """Periodically updates the variables with the latest copy from the source.
 
     If wait is True, a blocking request is executed. Any active request will be
     cancelled.
@@ -96,59 +97,59 @@ class VariableClient:
       wait: Whether to execute asynchronous (False) or blocking updates (True).
         Defaults to False.
     """
-    # Track calls (we only update periodically).
-    self._call_counter += 1
+        # Track calls (we only update periodically).
+        self._call_counter += 1
 
-    # Return if it's not time to fetch another update.
-    if isinstance(self._update_period, datetime.timedelta):
-      if self._update_period.total_seconds() + self._last_call > time.time():
-        return
-    else:
-      if self._call_counter < self._update_period:
-        return
+        # Return if it's not time to fetch another update.
+        if isinstance(self._update_period, datetime.timedelta):
+            if self._update_period.total_seconds() + self._last_call > time.time():
+                return
+        else:
+            if self._call_counter < self._update_period:
+                return
 
-    if wait:
-      if self._future is not None:
-        if self._future.running():
-          self._future.cancel()
-        self._future = None
-      self._call_counter = 0
-      self._last_call = time.time()
-      self.update_and_wait()
-      return
+        if wait:
+            if self._future is not None:
+                if self._future.running():
+                    self._future.cancel()
+                self._future = None
+            self._call_counter = 0
+            self._last_call = time.time()
+            self.update_and_wait()
+            return
 
-    # Return early if we are still waiting for a previous request to come back.
-    if self._future and not self._future.done():
-      return
+        # Return early if we are still waiting for a previous request to come back.
+        if self._future and not self._future.done():
+            return
 
-    # Get a future and add the copy function as a callback.
-    self._call_counter = 0
-    self._last_call = time.time()
-    self._future = self._async_request()
-    self._future.add_done_callback(lambda f: self._callback(f.result()))
+        # Get a future and add the copy function as a callback.
+        self._call_counter = 0
+        self._last_call = time.time()
+        self._future = self._async_request()
+        self._future.add_done_callback(lambda f: self._callback(f.result()))
 
-  def update_and_wait(self):
-    """Immediately update and block until we get the result."""
-    self._callback(self._request())
+    def update_and_wait(self):
+        """Immediately update and block until we get the result."""
+        self._callback(self._request())
 
-  def _callback(self, params_list: List[network_types.Params]):
-    if self._device and not isinstance(self._client, ReferenceVariableSource):
-      # Move variables to a proper device.
-      self._params = jax.device_put(params_list, self._device)
-    else:
-      self._params = params_list
+    def _callback(self, params_list: List[network_types.Params]):
+        if self._device and not isinstance(self._client, ReferenceVariableSource):
+            # Move variables to a proper device.
+            self._params = jax.device_put(params_list, self._device)
+        else:
+            self._params = params_list
 
-  @property
-  def device(self) -> Optional[jax.Device]:
-    return self._device
+    @property
+    def device(self) -> Optional[jax.Device]:
+        return self._device
 
-  @property
-  def params(self) -> Union[network_types.Params, List[network_types.Params]]:
-    """Returns the first params for one key, otherwise the whole params list."""
-    if self._params is None:
-      self.update_and_wait()
+    @property
+    def params(self) -> Union[network_types.Params, List[network_types.Params]]:
+        """Returns the first params for one key, otherwise the whole params list."""
+        if self._params is None:
+            self.update_and_wait()
 
-    if len(self._params) == 1:
-      return self._params[0]
-    else:
-      return self._params
+        if len(self._params) == 1:
+            return self._params[0]
+        else:
+            return self._params

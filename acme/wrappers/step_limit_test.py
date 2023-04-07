@@ -14,61 +14,60 @@
 
 """Tests for the step limit wrapper."""
 
+import numpy as np
+from absl.testing import absltest
+
 from acme import wrappers
 from acme.testing import fakes
-import numpy as np
-
-from absl.testing import absltest
 
 ACTION = np.array(0, dtype=np.int32)
 
 
 class StepLimitWrapperTest(absltest.TestCase):
+    def test_step(self):
+        fake_env = fakes.DiscreteEnvironment(episode_length=5)
+        env = wrappers.StepLimitWrapper(fake_env, step_limit=2)
 
-  def test_step(self):
-    fake_env = fakes.DiscreteEnvironment(episode_length=5)
-    env = wrappers.StepLimitWrapper(fake_env, step_limit=2)
+        env.reset()
+        env.step(ACTION)
+        self.assertTrue(env.step(ACTION).last())
 
-    env.reset()
-    env.step(ACTION)
-    self.assertTrue(env.step(ACTION).last())
+    def test_step_on_new_env(self):
+        fake_env = fakes.DiscreteEnvironment(episode_length=5)
+        env = wrappers.StepLimitWrapper(fake_env, step_limit=2)
 
-  def test_step_on_new_env(self):
-    fake_env = fakes.DiscreteEnvironment(episode_length=5)
-    env = wrappers.StepLimitWrapper(fake_env, step_limit=2)
+        self.assertTrue(env.step(ACTION).first())
+        self.assertFalse(env.step(ACTION).last())
+        self.assertTrue(env.step(ACTION).last())
 
-    self.assertTrue(env.step(ACTION).first())
-    self.assertFalse(env.step(ACTION).last())
-    self.assertTrue(env.step(ACTION).last())
+    def test_step_after_truncation(self):
+        fake_env = fakes.DiscreteEnvironment(episode_length=5)
+        env = wrappers.StepLimitWrapper(fake_env, step_limit=2)
 
-  def test_step_after_truncation(self):
-    fake_env = fakes.DiscreteEnvironment(episode_length=5)
-    env = wrappers.StepLimitWrapper(fake_env, step_limit=2)
+        env.reset()
+        env.step(ACTION)
+        self.assertTrue(env.step(ACTION).last())
 
-    env.reset()
-    env.step(ACTION)
-    self.assertTrue(env.step(ACTION).last())
+        self.assertTrue(env.step(ACTION).first())
+        self.assertFalse(env.step(ACTION).last())
+        self.assertTrue(env.step(ACTION).last())
 
-    self.assertTrue(env.step(ACTION).first())
-    self.assertFalse(env.step(ACTION).last())
-    self.assertTrue(env.step(ACTION).last())
+    def test_step_after_termination(self):
+        fake_env = fakes.DiscreteEnvironment(episode_length=5)
 
-  def test_step_after_termination(self):
-    fake_env = fakes.DiscreteEnvironment(episode_length=5)
+        fake_env.reset()
+        fake_env.step(ACTION)
+        fake_env.step(ACTION)
+        fake_env.step(ACTION)
+        fake_env.step(ACTION)
+        self.assertTrue(fake_env.step(ACTION).last())
 
-    fake_env.reset()
-    fake_env.step(ACTION)
-    fake_env.step(ACTION)
-    fake_env.step(ACTION)
-    fake_env.step(ACTION)
-    self.assertTrue(fake_env.step(ACTION).last())
+        env = wrappers.StepLimitWrapper(fake_env, step_limit=2)
 
-    env = wrappers.StepLimitWrapper(fake_env, step_limit=2)
-
-    self.assertTrue(env.step(ACTION).first())
-    self.assertFalse(env.step(ACTION).last())
-    self.assertTrue(env.step(ACTION).last())
+        self.assertTrue(env.step(ACTION).first())
+        self.assertFalse(env.step(ACTION).last())
+        self.assertTrue(env.step(ACTION).last())
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

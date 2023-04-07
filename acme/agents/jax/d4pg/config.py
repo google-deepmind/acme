@@ -15,31 +15,33 @@
 """Config classes for D4PG."""
 import dataclasses
 from typing import Optional
+
 from acme.adders import reverb as adders_reverb
 
 
 @dataclasses.dataclass
 class D4PGConfig:
-  """Configuration options for D4PG."""
-  sigma: float = 0.3
-  target_update_period: int = 100
-  samples_per_insert: Optional[float] = 32.0
+    """Configuration options for D4PG."""
 
-  # Loss options
-  n_step: int = 5
-  discount: float = 0.99
-  batch_size: int = 256
-  learning_rate: float = 1e-4
-  clipping: bool = True
+    sigma: float = 0.3
+    target_update_period: int = 100
+    samples_per_insert: Optional[float] = 32.0
 
-  # Replay options
-  min_replay_size: int = 1000
-  max_replay_size: int = 1000000
-  replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
-  prefetch_size: int = 4
-  # Rate to be used for the SampleToInsertRatio rate limitter tolerance.
-  # See a formula in make_replay_tables for more details.
-  samples_per_insert_tolerance_rate: float = 0.1
+    # Loss options
+    n_step: int = 5
+    discount: float = 0.99
+    batch_size: int = 256
+    learning_rate: float = 1e-4
+    clipping: bool = True
 
-  # How many gradient updates to perform per step.
-  num_sgd_steps_per_step: int = 1
+    # Replay options
+    min_replay_size: int = 1000
+    max_replay_size: int = 1000000
+    replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
+    prefetch_size: int = 4
+    # Rate to be used for the SampleToInsertRatio rate limitter tolerance.
+    # See a formula in make_replay_tables for more details.
+    samples_per_insert_tolerance_rate: float = 0.1
+
+    # How many gradient updates to perform per step.
+    num_sgd_steps_per_step: int = 1

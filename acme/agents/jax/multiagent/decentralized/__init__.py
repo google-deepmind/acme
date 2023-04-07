@@ -14,10 +14,16 @@
 
 """Decentralized multiagent configuration."""
 
-from acme.agents.jax.multiagent.decentralized.builder import DecentralizedMultiAgentBuilder
-from acme.agents.jax.multiagent.decentralized.config import DecentralizedMultiagentConfig
-from acme.agents.jax.multiagent.decentralized.factories import builder_factory
-from acme.agents.jax.multiagent.decentralized.factories import default_config_factory
-from acme.agents.jax.multiagent.decentralized.factories import DefaultSupportedAgent
-from acme.agents.jax.multiagent.decentralized.factories import network_factory
-from acme.agents.jax.multiagent.decentralized.factories import policy_network_factory
+from acme.agents.jax.multiagent.decentralized.builder import (
+    DecentralizedMultiAgentBuilder,
+)
+from acme.agents.jax.multiagent.decentralized.config import (
+    DecentralizedMultiagentConfig,
+)
+from acme.agents.jax.multiagent.decentralized.factories import (
+    DefaultSupportedAgent,
+    builder_factory,
+    default_config_factory,
+    network_factory,
+    policy_network_factory,
+)

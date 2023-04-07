@@ -21,16 +21,16 @@ import tensorflow as tf
 
 
 class PolicyValueHead(snt.Module):
-  """A network with two linear layers, for policy and value respectively."""
+    """A network with two linear layers, for policy and value respectively."""
 
-  def __init__(self, num_actions: int):
-    super().__init__(name='policy_value_network')
-    self._policy_layer = snt.Linear(num_actions)
-    self._value_layer = snt.Linear(1)
+    def __init__(self, num_actions: int):
+        super().__init__(name="policy_value_network")
+        self._policy_layer = snt.Linear(num_actions)
+        self._value_layer = snt.Linear(1)
 
-  def __call__(self, inputs: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-    """Returns a (Logits, Value) tuple."""
-    logits = self._policy_layer(inputs)  # [B, A]
-    value = tf.squeeze(self._value_layer(inputs), axis=-1)  # [B]
+    def __call__(self, inputs: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+        """Returns a (Logits, Value) tuple."""
+        logits = self._policy_layer(inputs)  # [B, A]
+        value = tf.squeeze(self._value_layer(inputs), axis=-1)  # [B]
 
-    return logits, value
+        return logits, value

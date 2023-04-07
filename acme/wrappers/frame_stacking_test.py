@@ -14,68 +14,67 @@
 
 """Tests for the single precision wrapper."""
 
-from acme import wrappers
-from acme.testing import fakes
 import numpy as np
 import tree
-
 from absl.testing import absltest
+
+from acme import wrappers
+from acme.testing import fakes
 
 
 class FakeNonZeroObservationEnvironment(fakes.ContinuousEnvironment):
-  """Fake environment with non-zero observations."""
+    """Fake environment with non-zero observations."""
 
-  def _generate_fake_observation(self):
-    original_observation = super()._generate_fake_observation()
-    return tree.map_structure(np.ones_like, original_observation)
+    def _generate_fake_observation(self):
+        original_observation = super()._generate_fake_observation()
+        return tree.map_structure(np.ones_like, original_observation)
 
 
 class FrameStackingTest(absltest.TestCase):
+    def test_specs(self):
+        original_env = FakeNonZeroObservationEnvironment()
+        env = wrappers.FrameStackingWrapper(original_env, 2)
 
-  def test_specs(self):
-    original_env = FakeNonZeroObservationEnvironment()
-    env = wrappers.FrameStackingWrapper(original_env, 2)
+        original_observation_spec = original_env.observation_spec()
+        expected_shape = original_observation_spec.shape + (2,)
+        observation_spec = env.observation_spec()
+        self.assertEqual(expected_shape, observation_spec.shape)
 
-    original_observation_spec = original_env.observation_spec()
-    expected_shape = original_observation_spec.shape + (2,)
-    observation_spec = env.observation_spec()
-    self.assertEqual(expected_shape, observation_spec.shape)
+        expected_action_spec = original_env.action_spec()
+        action_spec = env.action_spec()
+        self.assertEqual(expected_action_spec, action_spec)
 
-    expected_action_spec = original_env.action_spec()
-    action_spec = env.action_spec()
-    self.assertEqual(expected_action_spec, action_spec)
+        expected_reward_spec = original_env.reward_spec()
+        reward_spec = env.reward_spec()
+        self.assertEqual(expected_reward_spec, reward_spec)
 
-    expected_reward_spec = original_env.reward_spec()
-    reward_spec = env.reward_spec()
-    self.assertEqual(expected_reward_spec, reward_spec)
+        expected_discount_spec = original_env.discount_spec()
+        discount_spec = env.discount_spec()
+        self.assertEqual(expected_discount_spec, discount_spec)
 
-    expected_discount_spec = original_env.discount_spec()
-    discount_spec = env.discount_spec()
-    self.assertEqual(expected_discount_spec, discount_spec)
+    def test_step(self):
+        original_env = FakeNonZeroObservationEnvironment()
+        env = wrappers.FrameStackingWrapper(original_env, 2)
+        observation_spec = env.observation_spec()
+        action_spec = env.action_spec()
 
-  def test_step(self):
-    original_env = FakeNonZeroObservationEnvironment()
-    env = wrappers.FrameStackingWrapper(original_env, 2)
-    observation_spec = env.observation_spec()
-    action_spec = env.action_spec()
+        timestep = env.reset()
+        self.assertEqual(observation_spec.shape, timestep.observation.shape)
+        self.assertTrue(np.all(timestep.observation[..., 0] == 0))
 
-    timestep = env.reset()
-    self.assertEqual(observation_spec.shape, timestep.observation.shape)
-    self.assertTrue(np.all(timestep.observation[..., 0] == 0))
+        timestep = env.step(action_spec.generate_value())
+        self.assertEqual(observation_spec.shape, timestep.observation.shape)
 
-    timestep = env.step(action_spec.generate_value())
-    self.assertEqual(observation_spec.shape, timestep.observation.shape)
+    def test_second_reset(self):
+        original_env = FakeNonZeroObservationEnvironment()
+        env = wrappers.FrameStackingWrapper(original_env, 2)
+        action_spec = env.action_spec()
 
-  def test_second_reset(self):
-    original_env = FakeNonZeroObservationEnvironment()
-    env = wrappers.FrameStackingWrapper(original_env, 2)
-    action_spec = env.action_spec()
-
-    env.reset()
-    env.step(action_spec.generate_value())
-    timestep = env.reset()
-    self.assertTrue(np.all(timestep.observation[..., 0] == 0))
+        env.reset()
+        env.step(action_spec.generate_value())
+        timestep = env.reset()
+        self.assertTrue(np.all(timestep.observation[..., 0] == 0))
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

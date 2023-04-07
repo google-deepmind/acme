@@ -19,10 +19,7 @@ from typing import Any, Callable, Mapping, Optional
 
 from acme.utils.loggers import aggregators
 from acme.utils.loggers import asynchronous as async_logger
-from acme.utils.loggers import base
-from acme.utils.loggers import csv
-from acme.utils.loggers import filters
-from acme.utils.loggers import terminal
+from acme.utils.loggers import base, csv, filters, terminal
 
 
 def make_default_logger(
@@ -32,9 +29,9 @@ def make_default_logger(
     asynchronous: bool = False,
     print_fn: Optional[Callable[[str], None]] = None,
     serialize_fn: Optional[Callable[[Mapping[str, Any]], str]] = base.to_numpy,
-    steps_key: str = 'steps',
+    steps_key: str = "steps",
 ) -> base.Logger:
-  """Makes a default Acme logger.
+    """Makes a default Acme logger.
 
   Args:
     label: Name to give to the logger.
@@ -49,21 +46,21 @@ def make_default_logger(
   Returns:
     A logger object that responds to logger.write(some_dict).
   """
-  del steps_key
-  if not print_fn:
-    print_fn = logging.info
-  terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
+    del steps_key
+    if not print_fn:
+        print_fn = logging.info
+    terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
 
-  loggers = [terminal_logger]
+    loggers = [terminal_logger]
 
-  if save_data:
-    loggers.append(csv.CSVLogger(label=label))
+    if save_data:
+        loggers.append(csv.CSVLogger(label=label))
 
-  # Dispatch to all writers and filter Nones and by time.
-  logger = aggregators.Dispatcher(loggers, serialize_fn)
-  logger = filters.NoneFilter(logger)
-  if asynchronous:
-    logger = async_logger.AsyncLogger(logger)
-  logger = filters.TimeFilter(logger, time_delta)
+    # Dispatch to all writers and filter Nones and by time.
+    logger = aggregators.Dispatcher(loggers, serialize_fn)
+    logger = filters.NoneFilter(logger)
+    if asynchronous:
+        logger = async_logger.AsyncLogger(logger)
+    logger = filters.TimeFilter(logger, time_delta)
 
-  return logger
+    return logger

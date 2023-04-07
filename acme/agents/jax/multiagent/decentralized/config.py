@@ -22,7 +22,8 @@ from acme.multiagent import types
 
 @dataclasses.dataclass
 class DecentralizedMultiagentConfig:
-  """Configuration options for decentralized multiagent."""
-  sub_agent_configs: Dict[types.AgentID, types.AgentConfig]
-  batch_size: int = 256
-  prefetch_size: int = 2
+    """Configuration options for decentralized multiagent."""
+
+    sub_agent_configs: Dict[types.AgentID, types.AgentConfig]
+    batch_size: int = 256
+    prefetch_size: int = 2

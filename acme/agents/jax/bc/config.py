@@ -18,11 +18,12 @@ import dataclasses
 
 @dataclasses.dataclass
 class BCConfig:
-  """Configuration options for BC.
+    """Configuration options for BC.
 
   Attributes:
     learning_rate: Learning rate.
     num_sgd_steps_per_step: How many gradient updates to perform per step.
   """
-  learning_rate: float = 1e-4
-  num_sgd_steps_per_step: int = 1
+
+    learning_rate: float = 1e-4
+    num_sgd_steps_per_step: int = 1

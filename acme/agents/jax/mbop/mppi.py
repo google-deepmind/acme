@@ -29,12 +29,13 @@ import dataclasses
 import functools
 from typing import Callable, Optional
 
+import jax
+import jax.numpy as jnp
+from jax import random
+
 from acme import specs
 from acme.agents.jax.mbop import models
 from acme.jax import networks
-import jax
-from jax import random
-import jax.numpy as jnp
 
 # Function that takes (n_trajectories, horizon, action_dim) tensor of action
 # trajectories and  (n_trajectories) vector of corresponding cumulative rewards,
@@ -43,10 +44,10 @@ import jax.numpy as jnp
 ActionAggregationFn = Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray]
 
 
-def return_weighted_average(action_trajectories: jnp.ndarray,
-                            cum_reward: jnp.ndarray,
-                            kappa: float) -> jnp.ndarray:
-  r"""Calculates return-weighted average over all trajectories.
+def return_weighted_average(
+    action_trajectories: jnp.ndarray, cum_reward: jnp.ndarray, kappa: float
+) -> jnp.ndarray:
+    r"""Calculates return-weighted average over all trajectories.
 
   This will calculate the return-weighted average over a set of trajectories as
   defined on l.17 of Alg. 2 in the MBOP paper:
@@ -66,18 +67,18 @@ def return_weighted_average(action_trajectories: jnp.ndarray,
     Single action trajectory corresponding to the return-weighted average of the
       trajectories.
   """
-  # Substract maximum reward to avoid NaNs:
-  cum_reward = cum_reward - cum_reward.max()
-  # Remove the batch dimension of cum_reward allows for an implicit broadcast in
-  # jnp.average:
-  exp_cum_reward = jnp.exp(kappa * jnp.squeeze(cum_reward))
-  return jnp.average(action_trajectories, weights=exp_cum_reward, axis=0)
+    # Substract maximum reward to avoid NaNs:
+    cum_reward = cum_reward - cum_reward.max()
+    # Remove the batch dimension of cum_reward allows for an implicit broadcast in
+    # jnp.average:
+    exp_cum_reward = jnp.exp(kappa * jnp.squeeze(cum_reward))
+    return jnp.average(action_trajectories, weights=exp_cum_reward, axis=0)
 
 
-def return_top_k_average(action_trajectories: jnp.ndarray,
-                         cum_reward: jnp.ndarray,
-                         k: int = 10) -> jnp.ndarray:
-  r"""Calculates the top-k average over all trajectories.
+def return_top_k_average(
+    action_trajectories: jnp.ndarray, cum_reward: jnp.ndarray, k: int = 10
+) -> jnp.ndarray:
+    r"""Calculates the top-k average over all trajectories.
 
   This will calculate the top-k average over a set of trajectories as
   defined in the POIR Paper:
@@ -95,14 +96,15 @@ def return_top_k_average(action_trajectories: jnp.ndarray,
     Single action trajectory corresponding to the average of the k best
       trajectories.
   """
-  top_k_trajectories = action_trajectories[jnp.argsort(
-      jnp.squeeze(cum_reward))[-int(k):]]
-  return jnp.mean(top_k_trajectories, axis=0)
+    top_k_trajectories = action_trajectories[
+        jnp.argsort(jnp.squeeze(cum_reward))[-int(k) :]
+    ]
+    return jnp.mean(top_k_trajectories, axis=0)
 
 
 @dataclasses.dataclass
 class MPPIConfig:
-  """Config dataclass for MPPI-style planning, used in mppi.py.
+    """Config dataclass for MPPI-style planning, used in mppi.py.
 
   These variables correspond to different parameters of `MBOP-Trajopt` as
   defined in MBOP [https://arxiv.org/abs/2008.05556] (Alg. 2).
@@ -118,23 +120,25 @@ class MPPIConfig:
     action_aggregation_fn: Function that aggregates action trajectories and
       returns a single action trajectory.
   """
-  sigma: float = 0.8
-  beta: float = 0.2
-  horizon: int = 15
-  n_trajectories: int = 1000
-  previous_trajectory_clip: Optional[float] = None
-  action_aggregation_fn: ActionAggregationFn = (
-      functools.partial(return_weighted_average, kappa=0.5))
+
+    sigma: float = 0.8
+    beta: float = 0.2
+    horizon: int = 15
+    n_trajectories: int = 1000
+    previous_trajectory_clip: Optional[float] = None
+    action_aggregation_fn: ActionAggregationFn = (
+        functools.partial(return_weighted_average, kappa=0.5)
+    )
 
 
 def get_initial_trajectory(config: MPPIConfig, env_spec: specs.EnvironmentSpec):
-  """Returns the initial empty trajectory `T_0`."""
-  return jnp.zeros((max(1, config.horizon),) + env_spec.actions.shape)
+    """Returns the initial empty trajectory `T_0`."""
+    return jnp.zeros((max(1, config.horizon),) + env_spec.actions.shape)
 
 
 def _repeat_n(new_batch: int, data: jnp.ndarray) -> jnp.ndarray:
-  """Create new batch dimension of size `new_batch` by repeating `data`."""
-  return jnp.broadcast_to(data, (new_batch,) + data.shape)
+    """Create new batch dimension of size `new_batch` by repeating `data`."""
+    return jnp.broadcast_to(data, (new_batch,) + data.shape)
 
 
 def mppi_planner(
@@ -149,7 +153,7 @@ def mppi_planner(
     observation: networks.Observation,
     previous_trajectory: jnp.ndarray,
 ) -> jnp.ndarray:
-  """MPPI-extended trajectory optimizer.
+    """MPPI-extended trajectory optimizer.
 
   This implements the trajectory optimizer described in MBOP
   [https://arxiv.org/abs/2008.05556] (Alg. 2) which is an extended version of
@@ -179,73 +183,78 @@ def mppi_planner(
   Returns:
     jnp.ndarray: Average action trajectory of shape [horizon, action_dims].
   """
-  action_trajectory_tm1 = previous_trajectory
-  policy_prior_state = policy_prior.init(random_key)
+    action_trajectory_tm1 = previous_trajectory
+    policy_prior_state = policy_prior.init(random_key)
 
-  # Broadcast so that we have n_trajectories copies of each:
-  observation_t = jax.tree_map(
-      functools.partial(_repeat_n, config.n_trajectories), observation)
-  action_tm1 = jnp.broadcast_to(action_trajectory_tm1[0],
-                                (config.n_trajectories,) +
-                                action_trajectory_tm1[0].shape)
+    # Broadcast so that we have n_trajectories copies of each:
+    observation_t = jax.tree_map(
+        functools.partial(_repeat_n, config.n_trajectories), observation
+    )
+    action_tm1 = jnp.broadcast_to(
+        action_trajectory_tm1[0],
+        (config.n_trajectories,) + action_trajectory_tm1[0].shape,
+    )
 
-  if config.previous_trajectory_clip is not None:
-    action_tm1 = jnp.clip(
-        action_tm1,
-        a_min=-config.previous_trajectory_clip,
-        a_max=config.previous_trajectory_clip)
+    if config.previous_trajectory_clip is not None:
+        action_tm1 = jnp.clip(
+            action_tm1,
+            a_min=-config.previous_trajectory_clip,
+            a_max=config.previous_trajectory_clip,
+        )
 
-  # First check if planning is unnecessary:
-  if config.horizon == 0:
-    if hasattr(policy_prior_state, 'action_tm1'):
-      policy_prior_state = policy_prior_state.replace(action_tm1=action_tm1)
-    action_set, _ = policy_prior.select_action(policy_prior_params,
-                                               observation_t,
-                                               policy_prior_state)
-    # Need to re-create an action trajectory from a single action.
-    return jnp.broadcast_to(
-        jnp.mean(action_set, axis=0), (1, action_set.shape[-1]))
+    # First check if planning is unnecessary:
+    if config.horizon == 0:
+        if hasattr(policy_prior_state, "action_tm1"):
+            policy_prior_state = policy_prior_state.replace(action_tm1=action_tm1)
+        action_set, _ = policy_prior.select_action(
+            policy_prior_params, observation_t, policy_prior_state
+        )
+        # Need to re-create an action trajectory from a single action.
+        return jnp.broadcast_to(jnp.mean(action_set, axis=0), (1, action_set.shape[-1]))
 
-  # Accumulators for returns and trajectories:
-  cum_reward = jnp.zeros((config.n_trajectories, 1))
+    # Accumulators for returns and trajectories:
+    cum_reward = jnp.zeros((config.n_trajectories, 1))
 
-  # Generate noise once:
-  random_key, noise_key = random.split(random_key)
-  action_noise = config.sigma * random.normal(noise_key, (
-      (config.horizon,) + action_tm1.shape))
+    # Generate noise once:
+    random_key, noise_key = random.split(random_key)
+    action_noise = config.sigma * random.normal(
+        noise_key, ((config.horizon,) + action_tm1.shape)
+    )
 
-  # Initialize empty set of action trajectories for concatenation in loop:
-  action_trajectories = jnp.zeros((config.n_trajectories, 0) +
-                                  action_trajectory_tm1[0].shape)
+    # Initialize empty set of action trajectories for concatenation in loop:
+    action_trajectories = jnp.zeros(
+        (config.n_trajectories, 0) + action_trajectory_tm1[0].shape
+    )
 
-  for t in range(config.horizon):
-    # Query policy prior for proposed action:
-    if hasattr(policy_prior_state, 'action_tm1'):
-      policy_prior_state = policy_prior_state.replace(action_tm1=action_tm1)
-    action_t, policy_prior_state = policy_prior.select_action(
-        policy_prior_params, observation_t, policy_prior_state)
-    # Add action noise:
-    action_t = action_t + action_noise[t]
-    # Mix action with previous trajectory's corresponding action:
-    action_t = (1 -
-                config.beta) * action_t + config.beta * action_trajectory_tm1[t]
+    for t in range(config.horizon):
+        # Query policy prior for proposed action:
+        if hasattr(policy_prior_state, "action_tm1"):
+            policy_prior_state = policy_prior_state.replace(action_tm1=action_tm1)
+        action_t, policy_prior_state = policy_prior.select_action(
+            policy_prior_params, observation_t, policy_prior_state
+        )
+        # Add action noise:
+        action_t = action_t + action_noise[t]
+        # Mix action with previous trajectory's corresponding action:
+        action_t = (1 - config.beta) * action_t + config.beta * action_trajectory_tm1[t]
 
-    # Query world model to get next observation and reward:
-    observation_tp1, reward_t = world_model(world_model_params, observation_t,
-                                            action_t)
-    cum_reward += reward_t
+        # Query world model to get next observation and reward:
+        observation_tp1, reward_t = world_model(
+            world_model_params, observation_t, action_t
+        )
+        cum_reward += reward_t
 
-    # Insert actions into trajectory matrix:
-    action_trajectories = jnp.concatenate(
-        [action_trajectories,
-         jnp.expand_dims(action_t, axis=1)], axis=1)
-    # Bump variable timesteps for next loop:
-    observation_t = observation_tp1
-    action_tm1 = action_t
+        # Insert actions into trajectory matrix:
+        action_trajectories = jnp.concatenate(
+            [action_trajectories, jnp.expand_dims(action_t, axis=1)], axis=1
+        )
+        # Bump variable timesteps for next loop:
+        observation_t = observation_tp1
+        action_tm1 = action_t
 
-  # De-normalize and append the final n_step return prediction:
-  n_step_return_t = n_step_return(n_step_return_params, observation_t, action_t)
-  cum_reward += n_step_return_t
+    # De-normalize and append the final n_step return prediction:
+    n_step_return_t = n_step_return(n_step_return_params, observation_t, action_t)
+    cum_reward += n_step_return_t
 
-  # Average the set of `n_trajectories` trajectories into a single trajectory.
-  return config.action_aggregation_fn(action_trajectories, cum_reward)
+    # Average the set of `n_trajectories` trajectories into a single trajectory.
+    return config.action_aggregation_fn(action_trajectories, cum_reward)

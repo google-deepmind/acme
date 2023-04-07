@@ -16,20 +16,19 @@
 
 from typing import Callable, Optional, Union
 
-from acme import types
-from acme.tf import utils as tf2_utils
-
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+from acme import types
+from acme.tf import utils as tf2_utils
+
 tfd = tfp.distributions
-TensorTransformation = Union[snt.Module, Callable[[types.NestedTensor],
-                                                  tf.Tensor]]
+TensorTransformation = Union[snt.Module, Callable[[types.NestedTensor], tf.Tensor]]
 
 
 class CriticMultiplexer(snt.Module):
-  """Module connecting a critic torso to (transformed) observations/actions.
+    """Module connecting a critic torso to (transformed) observations/actions.
 
   This takes as input a `critic_network`, an `observation_network`, and an
   `action_network` and returns another network whose outputs are given by
@@ -45,35 +44,37 @@ class CriticMultiplexer(snt.Module):
     module reduces to a simple `tf2_utils.batch_concat()`.
   """
 
-  def __init__(self,
-               critic_network: Optional[TensorTransformation] = None,
-               observation_network: Optional[TensorTransformation] = None,
-               action_network: Optional[TensorTransformation] = None):
-    self._critic_network = critic_network
-    self._observation_network = observation_network
-    self._action_network = action_network
-    super().__init__(name='critic_multiplexer')
+    def __init__(
+        self,
+        critic_network: Optional[TensorTransformation] = None,
+        observation_network: Optional[TensorTransformation] = None,
+        action_network: Optional[TensorTransformation] = None,
+    ):
+        self._critic_network = critic_network
+        self._observation_network = observation_network
+        self._action_network = action_network
+        super().__init__(name="critic_multiplexer")
 
-  def __call__(self,
-               observation: types.NestedTensor,
-               action: types.NestedTensor) -> tf.Tensor:
+    def __call__(
+        self, observation: types.NestedTensor, action: types.NestedTensor
+    ) -> tf.Tensor:
 
-    # Maybe transform observations and actions before feeding them on.
-    if self._observation_network:
-      observation = self._observation_network(observation)
-    if self._action_network:
-      action = self._action_network(action)
+        # Maybe transform observations and actions before feeding them on.
+        if self._observation_network:
+            observation = self._observation_network(observation)
+        if self._action_network:
+            action = self._action_network(action)
 
-    if hasattr(observation, 'dtype') and hasattr(action, 'dtype'):
-      if observation.dtype != action.dtype:
-        # Observation and action must be the same type for concat to work
-        action = tf.cast(action, observation.dtype)
+        if hasattr(observation, "dtype") and hasattr(action, "dtype"):
+            if observation.dtype != action.dtype:
+                # Observation and action must be the same type for concat to work
+                action = tf.cast(action, observation.dtype)
 
-    # Concat observations and actions, with one batch dimension.
-    outputs = tf2_utils.batch_concat([observation, action])
+        # Concat observations and actions, with one batch dimension.
+        outputs = tf2_utils.batch_concat([observation, action])
 
-    # Maybe transform output before returning.
-    if self._critic_network:
-      outputs = self._critic_network(outputs)
+        # Maybe transform output before returning.
+        if self._critic_network:
+            outputs = self._critic_network(outputs)
 
-    return outputs
+        return outputs

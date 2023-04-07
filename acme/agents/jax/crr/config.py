@@ -18,7 +18,7 @@ import dataclasses
 
 @dataclasses.dataclass
 class CRRConfig:
-  """Configuration options for CRR.
+    """Configuration options for CRR.
 
   Attributes:
     learning_rate: Learning rate.
@@ -28,7 +28,8 @@ class CRRConfig:
       than sampled actions.
       Useful for 1-step offline RL (https://arxiv.org/pdf/2106.08909.pdf).
   """
-  learning_rate: float = 3e-4
-  discount: float = 0.99
-  target_update_period: int = 100
-  use_sarsa_target: bool = False
+
+    learning_rate: float = 3e-4
+    discount: float = 0.99
+    target_update_period: int = 100
+    use_sarsa_target: bool = False

@@ -14,74 +14,67 @@
 
 """Tests for utils."""
 
-from acme.jax import utils
 import chex
 import jax
 import jax.numpy as jnp
 import numpy as np
-
 from absl.testing import absltest
+
+from acme.jax import utils
 
 chex.set_n_cpu_devices(4)
 
 
 class JaxUtilsTest(absltest.TestCase):
+    def test_batch_concat(self):
+        batch_size = 32
+        inputs = [
+            jnp.zeros(shape=(batch_size, 2)),
+            {"foo": jnp.zeros(shape=(batch_size, 5, 3))},
+            [jnp.zeros(shape=(batch_size, 1))],
+            jnp.zeros(shape=(batch_size,)),
+        ]
 
-  def test_batch_concat(self):
-    batch_size = 32
-    inputs = [
-        jnp.zeros(shape=(batch_size, 2)),
-        {
-            'foo': jnp.zeros(shape=(batch_size, 5, 3))
-        },
-        [jnp.zeros(shape=(batch_size, 1))],
-        jnp.zeros(shape=(batch_size,)),
-    ]
+        output_shape = utils.batch_concat(inputs).shape
+        expected_shape = [batch_size, 2 + 5 * 3 + 1 + 1]
+        self.assertSequenceEqual(output_shape, expected_shape)
 
-    output_shape = utils.batch_concat(inputs).shape
-    expected_shape = [batch_size, 2 + 5 * 3 + 1 + 1]
-    self.assertSequenceEqual(output_shape, expected_shape)
+    def test_mapreduce(self):
+        @utils.mapreduce
+        def f(y, x):
+            return jnp.square(x + y)
 
-  def test_mapreduce(self):
+        z = f(jnp.ones(shape=(32,)), jnp.ones(shape=(32,)))
+        z = jax.device_get(z)
+        self.assertEqual(z, 4)
 
-    @utils.mapreduce
-    def f(y, x):
-      return jnp.square(x + y)
-
-    z = f(jnp.ones(shape=(32,)), jnp.ones(shape=(32,)))
-    z = jax.device_get(z)
-    self.assertEqual(z, 4)
-
-  def test_get_from_first_device(self):
-    sharded = {
-        'a':
-            jax.device_put_sharded(
+    def test_get_from_first_device(self):
+        sharded = {
+            "a": jax.device_put_sharded(
                 list(jnp.arange(16).reshape([jax.local_device_count(), 4])),
-                jax.local_devices()),
-        'b':
-            jax.device_put_sharded(
+                jax.local_devices(),
+            ),
+            "b": jax.device_put_sharded(
                 list(jnp.arange(8).reshape([jax.local_device_count(), 2])),
                 jax.local_devices(),
             ),
-    }
+        }
 
-    want = {
-        'a': jnp.arange(4),
-        'b': jnp.arange(2),
-    }
+        want = {
+            "a": jnp.arange(4),
+            "b": jnp.arange(2),
+        }
 
-    # Get zeroth device content as DeviceArray.
-    device_arrays = utils.get_from_first_device(sharded, as_numpy=False)
-    jax.tree_map(
-        lambda x: self.assertIsInstance(x, jax.Array),
-        device_arrays)
-    jax.tree_map(np.testing.assert_array_equal, want, device_arrays)
+        # Get zeroth device content as DeviceArray.
+        device_arrays = utils.get_from_first_device(sharded, as_numpy=False)
+        jax.tree_map(lambda x: self.assertIsInstance(x, jax.Array), device_arrays)
+        jax.tree_map(np.testing.assert_array_equal, want, device_arrays)
 
-    # Get the zeroth device content as numpy arrays.
-    numpy_arrays = utils.get_from_first_device(sharded, as_numpy=True)
-    jax.tree_map(lambda x: self.assertIsInstance(x, np.ndarray), numpy_arrays)
-    jax.tree_map(np.testing.assert_array_equal, want, numpy_arrays)
+        # Get the zeroth device content as numpy arrays.
+        numpy_arrays = utils.get_from_first_device(sharded, as_numpy=True)
+        jax.tree_map(lambda x: self.assertIsInstance(x, np.ndarray), numpy_arrays)
+        jax.tree_map(np.testing.assert_array_equal, want, numpy_arrays)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

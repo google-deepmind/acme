@@ -14,47 +14,49 @@
 
 """JAX networks implemented with Haiku."""
 
-from acme.jax.networks.atari import AtariTorso
-from acme.jax.networks.atari import DeepIMPALAAtariNetwork
-from acme.jax.networks.atari import dqn_atari_network
-from acme.jax.networks.atari import R2D2AtariNetwork
-from acme.jax.networks.base import Action
-from acme.jax.networks.base import Entropy
-from acme.jax.networks.base import FeedForwardNetwork
-from acme.jax.networks.base import Logits
-from acme.jax.networks.base import LogProb
-from acme.jax.networks.base import LogProbFn
-from acme.jax.networks.base import LSTMOutputs
-from acme.jax.networks.base import make_unrollable_network
-from acme.jax.networks.base import NetworkOutput
-from acme.jax.networks.base import non_stochastic_network_to_typed
-from acme.jax.networks.base import Observation
-from acme.jax.networks.base import Params
-from acme.jax.networks.base import PolicyValueRNN
-from acme.jax.networks.base import PRNGKey
-from acme.jax.networks.base import QNetwork
-from acme.jax.networks.base import QValues
-from acme.jax.networks.base import RecurrentQNetwork
-from acme.jax.networks.base import RecurrentState
-from acme.jax.networks.base import SampleFn
-from acme.jax.networks.base import TypedFeedForwardNetwork
-from acme.jax.networks.base import UnrollableNetwork
-from acme.jax.networks.base import Value
-from acme.jax.networks.continuous import LayerNormMLP
-from acme.jax.networks.continuous import NearZeroInitializedLinear
-from acme.jax.networks.distributional import CategoricalCriticHead
-from acme.jax.networks.distributional import CategoricalHead
-from acme.jax.networks.distributional import CategoricalValueHead
-from acme.jax.networks.distributional import DiscreteValued
-from acme.jax.networks.distributional import GaussianMixture
-from acme.jax.networks.distributional import MultivariateNormalDiagHead
-from acme.jax.networks.distributional import NormalTanhDistribution
-from acme.jax.networks.distributional import TanhTransformedDistribution
+from acme.jax.networks.atari import (
+    AtariTorso,
+    DeepIMPALAAtariNetwork,
+    R2D2AtariNetwork,
+    dqn_atari_network,
+)
+from acme.jax.networks.base import (
+    Action,
+    Entropy,
+    FeedForwardNetwork,
+    Logits,
+    LogProb,
+    LogProbFn,
+    LSTMOutputs,
+    NetworkOutput,
+    Observation,
+    Params,
+    PolicyValueRNN,
+    PRNGKey,
+    QNetwork,
+    QValues,
+    RecurrentQNetwork,
+    RecurrentState,
+    SampleFn,
+    TypedFeedForwardNetwork,
+    UnrollableNetwork,
+    Value,
+    make_unrollable_network,
+    non_stochastic_network_to_typed,
+)
+from acme.jax.networks.continuous import LayerNormMLP, NearZeroInitializedLinear
+from acme.jax.networks.distributional import (
+    CategoricalCriticHead,
+    CategoricalHead,
+    CategoricalValueHead,
+    DiscreteValued,
+    GaussianMixture,
+    MultivariateNormalDiagHead,
+    NormalTanhDistribution,
+    TanhTransformedDistribution,
+)
 from acme.jax.networks.duelling import DuellingMLP
 from acme.jax.networks.multiplexers import CriticMultiplexer
 from acme.jax.networks.policy_value import PolicyValueHead
-from acme.jax.networks.rescaling import ClipToSpec
-from acme.jax.networks.rescaling import TanhToSpec
-from acme.jax.networks.resnet import DownsamplingStrategy
-from acme.jax.networks.resnet import ResidualBlock
-from acme.jax.networks.resnet import ResNetTorso
+from acme.jax.networks.rescaling import ClipToSpec, TanhToSpec
+from acme.jax.networks.resnet import DownsamplingStrategy, ResidualBlock, ResNetTorso

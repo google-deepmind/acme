@@ -16,9 +16,11 @@
 
 from typing import Callable, Generic, Iterator, List, Optional
 
-from acme import adders
-from acme import core
-from acme import specs
+import jax
+import optax
+import reverb
+
+from acme import adders, core, specs
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import builders
 from acme.agents.jax.rnd import config as rnd_config
@@ -26,108 +28,114 @@ from acme.agents.jax.rnd import learning as rnd_learning
 from acme.agents.jax.rnd import networks as rnd_networks
 from acme.jax import networks as networks_lib
 from acme.jax.types import Policy
-from acme.utils import counting
-from acme.utils import loggers
-import jax
-import optax
-import reverb
+from acme.utils import counting, loggers
 
 
-class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
-                 builders.ActorLearnerBuilder[rnd_networks.RNDNetworks, Policy,
-                                              reverb.ReplaySample]):
-  """RND Builder."""
+class RNDBuilder(
+    Generic[rnd_networks.DirectRLNetworks, Policy],
+    builders.ActorLearnerBuilder[rnd_networks.RNDNetworks, Policy, reverb.ReplaySample],
+):
+    """RND Builder."""
 
-  def __init__(
-      self,
-      rl_agent: builders.ActorLearnerBuilder[rnd_networks.DirectRLNetworks,
-                                             Policy, reverb.ReplaySample],
-      config: rnd_config.RNDConfig,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
-  ):
-    """Implements a builder for RND using rl_agent as forward RL algorithm.
+    def __init__(
+        self,
+        rl_agent: builders.ActorLearnerBuilder[
+            rnd_networks.DirectRLNetworks, Policy, reverb.ReplaySample
+        ],
+        config: rnd_config.RNDConfig,
+        logger_fn: Callable[[], loggers.Logger] = lambda: None,
+    ):
+        """Implements a builder for RND using rl_agent as forward RL algorithm.
 
     Args:
       rl_agent: The standard RL agent used by RND to optimize the generator.
       config: A config with RND HPs.
       logger_fn: a logger factory for the rl_agent's learner.
     """
-    self._rl_agent = rl_agent
-    self._config = config
-    self._logger_fn = logger_fn
+        self._rl_agent = rl_agent
+        self._config = config
+        self._logger_fn = logger_fn
 
-  def make_learner(
-      self,
-      random_key: networks_lib.PRNGKey,
-      networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],
-      dataset: Iterator[reverb.ReplaySample],
-      logger_fn: loggers.LoggerFactory,
-      environment_spec: specs.EnvironmentSpec,
-      replay_client: Optional[reverb.Client] = None,
-      counter: Optional[counting.Counter] = None,
-  ) -> core.Learner:
-    direct_rl_learner_key, rnd_learner_key = jax.random.split(random_key)
+    def make_learner(
+        self,
+        random_key: networks_lib.PRNGKey,
+        networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],
+        dataset: Iterator[reverb.ReplaySample],
+        logger_fn: loggers.LoggerFactory,
+        environment_spec: specs.EnvironmentSpec,
+        replay_client: Optional[reverb.Client] = None,
+        counter: Optional[counting.Counter] = None,
+    ) -> core.Learner:
+        direct_rl_learner_key, rnd_learner_key = jax.random.split(random_key)
 
-    counter = counter or counting.Counter()
-    direct_rl_counter = counting.Counter(counter, 'direct_rl')
+        counter = counter or counting.Counter()
+        direct_rl_counter = counting.Counter(counter, "direct_rl")
 
-    def direct_rl_learner_factory(
-        networks: rnd_networks.DirectRLNetworks,
-        dataset: Iterator[reverb.ReplaySample]) -> core.Learner:
-      return self._rl_agent.make_learner(
-          direct_rl_learner_key,
-          networks,
-          dataset,
-          logger_fn=lambda name: self._logger_fn(),
-          environment_spec=environment_spec,
-          replay_client=replay_client,
-          counter=direct_rl_counter)
+        def direct_rl_learner_factory(
+            networks: rnd_networks.DirectRLNetworks,
+            dataset: Iterator[reverb.ReplaySample],
+        ) -> core.Learner:
+            return self._rl_agent.make_learner(
+                direct_rl_learner_key,
+                networks,
+                dataset,
+                logger_fn=lambda name: self._logger_fn(),
+                environment_spec=environment_spec,
+                replay_client=replay_client,
+                counter=direct_rl_counter,
+            )
 
-    optimizer = optax.adam(learning_rate=self._config.predictor_learning_rate)
+        optimizer = optax.adam(learning_rate=self._config.predictor_learning_rate)
 
-    return rnd_learning.RNDLearner(
-        direct_rl_learner_factory=direct_rl_learner_factory,
-        iterator=dataset,
-        optimizer=optimizer,
-        rnd_network=networks,
-        rng_key=rnd_learner_key,
-        is_sequence_based=self._config.is_sequence_based,
-        grad_updates_per_batch=self._config.num_sgd_steps_per_step,
-        counter=counter,
-        logger=logger_fn('learner'))
+        return rnd_learning.RNDLearner(
+            direct_rl_learner_factory=direct_rl_learner_factory,
+            iterator=dataset,
+            optimizer=optimizer,
+            rnd_network=networks,
+            rng_key=rnd_learner_key,
+            is_sequence_based=self._config.is_sequence_based,
+            grad_updates_per_batch=self._config.num_sgd_steps_per_step,
+            counter=counter,
+            logger=logger_fn("learner"),
+        )
 
-  def make_replay_tables(
-      self,
-      environment_spec: specs.EnvironmentSpec,
-      policy: Policy,
-  ) -> List[reverb.Table]:
-    return self._rl_agent.make_replay_tables(environment_spec, policy)
+    def make_replay_tables(
+        self, environment_spec: specs.EnvironmentSpec, policy: Policy,
+    ) -> List[reverb.Table]:
+        return self._rl_agent.make_replay_tables(environment_spec, policy)
 
-  def make_dataset_iterator(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
-      self,
-      replay_client: reverb.Client) -> Optional[Iterator[reverb.ReplaySample]]:
-    return self._rl_agent.make_dataset_iterator(replay_client)
+    def make_dataset_iterator(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
+        self, replay_client: reverb.Client
+    ) -> Optional[Iterator[reverb.ReplaySample]]:
+        return self._rl_agent.make_dataset_iterator(replay_client)
 
-  def make_adder(self, replay_client: reverb.Client,
-                 environment_spec: Optional[specs.EnvironmentSpec],
-                 policy: Optional[Policy]) -> Optional[adders.Adder]:
-    return self._rl_agent.make_adder(replay_client, environment_spec, policy)
+    def make_adder(
+        self,
+        replay_client: reverb.Client,
+        environment_spec: Optional[specs.EnvironmentSpec],
+        policy: Optional[Policy],
+    ) -> Optional[adders.Adder]:
+        return self._rl_agent.make_adder(replay_client, environment_spec, policy)
 
-  def make_actor(
-      self,
-      random_key: networks_lib.PRNGKey,
-      policy: Policy,
-      environment_spec: specs.EnvironmentSpec,
-      variable_source: Optional[core.VariableSource] = None,
-      adder: Optional[adders.Adder] = None,
-  ) -> core.Actor:
-    return self._rl_agent.make_actor(random_key, policy, environment_spec,
-                                     variable_source, adder)
+    def make_actor(
+        self,
+        random_key: networks_lib.PRNGKey,
+        policy: Policy,
+        environment_spec: specs.EnvironmentSpec,
+        variable_source: Optional[core.VariableSource] = None,
+        adder: Optional[adders.Adder] = None,
+    ) -> core.Actor:
+        return self._rl_agent.make_actor(
+            random_key, policy, environment_spec, variable_source, adder
+        )
 
-  def make_policy(self,
-                  networks: rnd_networks.RNDNetworks,
-                  environment_spec: specs.EnvironmentSpec,
-                  evaluation: bool = False) -> actor_core_lib.FeedForwardPolicy:
-    """Construct the policy."""
-    return self._rl_agent.make_policy(networks.direct_rl_networks,
-                                      environment_spec, evaluation)
+    def make_policy(
+        self,
+        networks: rnd_networks.RNDNetworks,
+        environment_spec: specs.EnvironmentSpec,
+        evaluation: bool = False,
+    ) -> actor_core_lib.FeedForwardPolicy:
+        """Construct the policy."""
+        return self._rl_agent.make_policy(
+            networks.direct_rl_networks, environment_spec, evaluation
+        )

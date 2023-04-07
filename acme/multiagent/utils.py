@@ -14,14 +14,16 @@
 
 """Multiagent utilities."""
 
-from acme import specs
-from acme.multiagent import types
 import dm_env
 
+from acme import specs
+from acme.multiagent import types
 
-def get_agent_spec(env_spec: specs.EnvironmentSpec,
-                   agent_id: types.AgentID) -> specs.EnvironmentSpec:
-  """Returns a single agent spec from environment spec.
+
+def get_agent_spec(
+    env_spec: specs.EnvironmentSpec, agent_id: types.AgentID
+) -> specs.EnvironmentSpec:
+    """Returns a single agent spec from environment spec.
 
   Args:
     env_spec: environment spec, wherein observation, action, and reward specs
@@ -29,20 +31,23 @@ def get_agent_spec(env_spec: specs.EnvironmentSpec,
       given agent index). Discounts are scalars shared amongst agents.
     agent_id: agent index.
   """
-  return specs.EnvironmentSpec(
-      actions=env_spec.actions[agent_id],
-      discounts=env_spec.discounts,
-      observations=env_spec.observations[agent_id],
-      rewards=env_spec.rewards[agent_id])
+    return specs.EnvironmentSpec(
+        actions=env_spec.actions[agent_id],
+        discounts=env_spec.discounts,
+        observations=env_spec.observations[agent_id],
+        rewards=env_spec.rewards[agent_id],
+    )
 
 
-def get_agent_timestep(timestep: dm_env.TimeStep,
-                       agent_id: types.AgentID) -> dm_env.TimeStep:
-  """Returns the extracted timestep for a particular agent."""
-  # Discounts are assumed to be shared amongst agents
-  reward = None if timestep.reward is None else timestep.reward[agent_id]
-  return dm_env.TimeStep(
-      observation=timestep.observation[agent_id],
-      reward=reward,
-      discount=timestep.discount,
-      step_type=timestep.step_type)
+def get_agent_timestep(
+    timestep: dm_env.TimeStep, agent_id: types.AgentID
+) -> dm_env.TimeStep:
+    """Returns the extracted timestep for a particular agent."""
+    # Discounts are assumed to be shared amongst agents
+    reward = None if timestep.reward is None else timestep.reward[agent_id]
+    return dm_env.TimeStep(
+        observation=timestep.observation[agent_id],
+        reward=reward,
+        discount=timestep.discount,
+        step_type=timestep.step_type,
+    )

@@ -18,12 +18,10 @@ from acme.agents.jax.bc import pretraining
 from acme.agents.jax.bc.builder import BCBuilder
 from acme.agents.jax.bc.config import BCConfig
 from acme.agents.jax.bc.learning import BCLearner
-from acme.agents.jax.bc.losses import BCLoss
-from acme.agents.jax.bc.losses import logp
-from acme.agents.jax.bc.losses import mse
-from acme.agents.jax.bc.losses import peerbc
-from acme.agents.jax.bc.losses import rcal
-from acme.agents.jax.bc.networks import BCNetworks
-from acme.agents.jax.bc.networks import BCPolicyNetwork
-from acme.agents.jax.bc.networks import convert_policy_value_to_bc_network
-from acme.agents.jax.bc.networks import convert_to_bc_network
+from acme.agents.jax.bc.losses import BCLoss, logp, mse, peerbc, rcal
+from acme.agents.jax.bc.networks import (
+    BCNetworks,
+    BCPolicyNetwork,
+    convert_policy_value_to_bc_network,
+    convert_to_bc_network,
+)

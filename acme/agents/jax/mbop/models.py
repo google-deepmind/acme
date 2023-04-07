@@ -17,33 +17,37 @@
 import functools
 from typing import Callable, Generic, Optional, Tuple
 
+import chex
+import jax
+
 from acme import specs
 from acme.agents.jax import actor_core
 from acme.agents.jax.mbop import ensemble
 from acme.agents.jax.mbop import networks as mbop_networks
-from acme.jax import networks
-from acme.jax import utils
-import chex
-import jax
+from acme.jax import networks, utils
 
 # World, policy prior and n-step return models. These are backed by the
 # corresponding networks.
-WorldModel = Callable[[networks.Params, networks.Observation, networks.Action],
-                      Tuple[networks.Observation, networks.Value]]
+WorldModel = Callable[
+    [networks.Params, networks.Observation, networks.Action],
+    Tuple[networks.Observation, networks.Value],
+]
 MakeWorldModel = Callable[[mbop_networks.WorldModelNetwork], WorldModel]
 
 PolicyPrior = actor_core.ActorCore
 MakePolicyPrior = Callable[
-    [mbop_networks.PolicyPriorNetwork, specs.EnvironmentSpec], PolicyPrior]
+    [mbop_networks.PolicyPriorNetwork, specs.EnvironmentSpec], PolicyPrior
+]
 
-NStepReturn = Callable[[networks.Params, networks.Observation, networks.Action],
-                       networks.Value]
+NStepReturn = Callable[
+    [networks.Params, networks.Observation, networks.Action], networks.Value
+]
 MakeNStepReturn = Callable[[mbop_networks.NStepReturnNetwork], NStepReturn]
 
 
 @chex.dataclass(frozen=True, mappable_dataclass=False)
 class PolicyPriorState(Generic[actor_core.RecurrentState]):
-  """State of a policy prior.
+    """State of a policy prior.
 
   Attributes:
     rng: Random key.
@@ -51,9 +55,10 @@ class PolicyPriorState(Generic[actor_core.RecurrentState]):
     recurrent_state: Recurrent state. It will be none for non-recurrent, e.g.
       feed forward, policies.
   """
-  rng: networks.PRNGKey
-  action_tm1: networks.Action
-  recurrent_state: Optional[actor_core.RecurrentState] = None
+
+    rng: networks.PRNGKey
+    action_tm1: networks.Action
+    recurrent_state: Optional[actor_core.RecurrentState] = None
 
 
 FeedForwardPolicyState = PolicyPriorState[actor_core.NoneType]
@@ -62,7 +67,7 @@ FeedForwardPolicyState = PolicyPriorState[actor_core.NoneType]
 def feed_forward_policy_prior_to_actor_core(
     policy: actor_core.RecurrentPolicy, initial_action_tm1: networks.Action
 ) -> actor_core.ActorCore[PolicyPriorState, actor_core.NoneType]:
-  """A convenience adaptor from a feed forward policy prior to ActorCore.
+    """A convenience adaptor from a feed forward policy prior to ActorCore.
 
   Args:
     policy: A feed forward policy prior. In the planner and other components,
@@ -77,34 +82,39 @@ def feed_forward_policy_prior_to_actor_core(
     an ActorCore representing the feed forward policy prior.
   """
 
-  def select_action(params: networks.Params, observation: networks.Observation,
-                    state: FeedForwardPolicyState):
-    rng, policy_rng = jax.random.split(state.rng)
-    action = policy(params, policy_rng, observation, state.action_tm1)
-    return action, PolicyPriorState(rng, action)
+    def select_action(
+        params: networks.Params,
+        observation: networks.Observation,
+        state: FeedForwardPolicyState,
+    ):
+        rng, policy_rng = jax.random.split(state.rng)
+        action = policy(params, policy_rng, observation, state.action_tm1)
+        return action, PolicyPriorState(rng, action)
 
-  def init(rng: networks.PRNGKey) -> FeedForwardPolicyState:
-    return PolicyPriorState(rng, initial_action_tm1)
+    def init(rng: networks.PRNGKey) -> FeedForwardPolicyState:
+        return PolicyPriorState(rng, initial_action_tm1)
 
-  def get_extras(unused_state: FeedForwardPolicyState) -> actor_core.NoneType:
-    return None
+    def get_extras(unused_state: FeedForwardPolicyState) -> actor_core.NoneType:
+        return None
 
-  return actor_core.ActorCore(
-      init=init, select_action=select_action, get_extras=get_extras)
+    return actor_core.ActorCore(
+        init=init, select_action=select_action, get_extras=get_extras
+    )
 
 
 def make_ensemble_world_model(
-    world_model_network: mbop_networks.WorldModelNetwork) -> WorldModel:
-  """Creates an ensemble world model from its network."""
-  return functools.partial(ensemble.apply_round_robin,
-                           world_model_network.apply)
+    world_model_network: mbop_networks.WorldModelNetwork,
+) -> WorldModel:
+    """Creates an ensemble world model from its network."""
+    return functools.partial(ensemble.apply_round_robin, world_model_network.apply)
 
 
 def make_ensemble_policy_prior(
     policy_prior_network: mbop_networks.PolicyPriorNetwork,
     spec: specs.EnvironmentSpec,
-    use_round_robin: bool = True) -> PolicyPrior:
-  """Creates an ensemble policy prior from its network.
+    use_round_robin: bool = True,
+) -> PolicyPrior:
+    """Creates an ensemble policy prior from its network.
 
   Args:
     policy_prior_network: The policy prior network.
@@ -116,26 +126,32 @@ def make_ensemble_policy_prior(
     A policy prior.
   """
 
-  def _policy_prior(params: networks.Params, key: networks.PRNGKey,
-                    observation_t: networks.Observation,
-                    action_tm1: networks.Action) -> networks.Action:
-    # Regressor policies are deterministic.
-    del key
-    apply_fn = (
-        ensemble.apply_round_robin if use_round_robin else ensemble.apply_mean)
-    return apply_fn(
-        policy_prior_network.apply,
-        params,
-        observation_t=observation_t,
-        action_tm1=action_tm1)
+    def _policy_prior(
+        params: networks.Params,
+        key: networks.PRNGKey,
+        observation_t: networks.Observation,
+        action_tm1: networks.Action,
+    ) -> networks.Action:
+        # Regressor policies are deterministic.
+        del key
+        apply_fn = (
+            ensemble.apply_round_robin if use_round_robin else ensemble.apply_mean
+        )
+        return apply_fn(
+            policy_prior_network.apply,
+            params,
+            observation_t=observation_t,
+            action_tm1=action_tm1,
+        )
 
-  dummy_action = utils.zeros_like(spec.actions)
-  dummy_action = utils.add_batch_dim(dummy_action)
+    dummy_action = utils.zeros_like(spec.actions)
+    dummy_action = utils.add_batch_dim(dummy_action)
 
-  return feed_forward_policy_prior_to_actor_core(_policy_prior, dummy_action)
+    return feed_forward_policy_prior_to_actor_core(_policy_prior, dummy_action)
 
 
 def make_ensemble_n_step_return(
-    n_step_return_network: mbop_networks.NStepReturnNetwork) -> NStepReturn:
-  """Creates an ensemble n-step return model from its network."""
-  return functools.partial(ensemble.apply_mean, n_step_return_network.apply)
+    n_step_return_network: mbop_networks.NStepReturnNetwork,
+) -> NStepReturn:
+    """Creates an ensemble n-step return model from its network."""
+    return functools.partial(ensemble.apply_mean, n_step_return_network.apply)

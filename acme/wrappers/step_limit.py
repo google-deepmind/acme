@@ -15,40 +15,44 @@
 """Wrapper that implements environment step limit."""
 
 from typing import Optional
+
+import dm_env
+
 from acme import types
 from acme.wrappers import base
-import dm_env
 
 
 class StepLimitWrapper(base.EnvironmentWrapper):
-  """A wrapper which truncates episodes at the specified step limit."""
+    """A wrapper which truncates episodes at the specified step limit."""
 
-  def __init__(self, environment: dm_env.Environment,
-               step_limit: Optional[int] = None):
-    super().__init__(environment)
-    self._step_limit = step_limit
-    self._elapsed_steps = 0
+    def __init__(
+        self, environment: dm_env.Environment, step_limit: Optional[int] = None
+    ):
+        super().__init__(environment)
+        self._step_limit = step_limit
+        self._elapsed_steps = 0
 
-  def reset(self) -> dm_env.TimeStep:
-    self._elapsed_steps = 0
-    return self._environment.reset()
+    def reset(self) -> dm_env.TimeStep:
+        self._elapsed_steps = 0
+        return self._environment.reset()
 
-  def step(self, action: types.NestedArray) -> dm_env.TimeStep:
-    if self._elapsed_steps == -1:
-      # The previous episode was truncated by the wrapper, so start a new one.
-      timestep = self._environment.reset()
-    else:
-      timestep = self._environment.step(action)
-    # If this is the first timestep, then this `step()` call was done on a new,
-    # terminated or truncated environment instance without calling `reset()`
-    # first. In this case this `step()` call should be treated as `reset()`,
-    # so should not increment step count.
-    if timestep.first():
-      self._elapsed_steps = 0
-      return timestep
-    self._elapsed_steps += 1
-    if self._step_limit is not None and self._elapsed_steps >= self._step_limit:
-      self._elapsed_steps = -1
-      return dm_env.truncation(
-          timestep.reward, timestep.observation, timestep.discount)
-    return timestep
+    def step(self, action: types.NestedArray) -> dm_env.TimeStep:
+        if self._elapsed_steps == -1:
+            # The previous episode was truncated by the wrapper, so start a new one.
+            timestep = self._environment.reset()
+        else:
+            timestep = self._environment.step(action)
+        # If this is the first timestep, then this `step()` call was done on a new,
+        # terminated or truncated environment instance without calling `reset()`
+        # first. In this case this `step()` call should be treated as `reset()`,
+        # so should not increment step count.
+        if timestep.first():
+            self._elapsed_steps = 0
+            return timestep
+        self._elapsed_steps += 1
+        if self._step_limit is not None and self._elapsed_steps >= self._step_limit:
+            self._elapsed_steps = -1
+            return dm_env.truncation(
+                timestep.reward, timestep.observation, timestep.discount
+            )
+        return timestep

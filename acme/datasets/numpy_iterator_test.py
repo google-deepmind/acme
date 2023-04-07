@@ -16,34 +16,30 @@
 
 import collections
 
-from acme.datasets import numpy_iterator
 import tensorflow as tf
-
 from absl.testing import absltest
+
+from acme.datasets import numpy_iterator
 
 
 class NumpyIteratorTest(absltest.TestCase):
+    def testBasic(self):
+        ds = tf.data.Dataset.range(3)
+        self.assertEqual([0, 1, 2], list(numpy_iterator.NumpyIterator(ds)))
 
-  def testBasic(self):
-    ds = tf.data.Dataset.range(3)
-    self.assertEqual([0, 1, 2], list(numpy_iterator.NumpyIterator(ds)))
+    def testNestedStructure(self):
+        point = collections.namedtuple("Point", ["x", "y"])
+        ds = tf.data.Dataset.from_tensor_slices(
+            {"a": ([1, 2], [3, 4]), "b": [5, 6], "c": point([7, 8], [9, 10])}
+        )
+        self.assertEqual(
+            [
+                {"a": (1, 3), "b": 5, "c": point(7, 9)},
+                {"a": (2, 4), "b": 6, "c": point(8, 10)},
+            ],
+            list(numpy_iterator.NumpyIterator(ds)),
+        )
 
-  def testNestedStructure(self):
-    point = collections.namedtuple('Point', ['x', 'y'])
-    ds = tf.data.Dataset.from_tensor_slices({
-        'a': ([1, 2], [3, 4]),
-        'b': [5, 6],
-        'c': point([7, 8], [9, 10])
-    })
-    self.assertEqual([{
-        'a': (1, 3),
-        'b': 5,
-        'c': point(7, 9)
-    }, {
-        'a': (2, 4),
-        'b': 6,
-        'c': point(8, 10)
-    }], list(numpy_iterator.NumpyIterator(ds)))
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

@@ -14,7 +14,7 @@
 
 """Wrapping trfl epsilon_greedy with legal action masking."""
 
-from typing import Optional, Mapping, Union
+from typing import Mapping, Optional, Union
 
 import sonnet as snt
 import tensorflow as tf
@@ -22,12 +22,10 @@ import trfl
 
 
 class NetworkWithMaskedEpsilonGreedy(snt.Module):
-  """Epsilon greedy sampling with action masking on network outputs."""
+    """Epsilon greedy sampling with action masking on network outputs."""
 
-  def __init__(self,
-               network: snt.Module,
-               epsilon: Optional[tf.Tensor] = None):
-    """Initialize the network and epsilon.
+    def __init__(self, network: snt.Module, epsilon: Optional[tf.Tensor] = None):
+        """Initialize the network and epsilon.
 
     Usage:
       Wrap an observation in a dictionary in your environment as follows:
@@ -42,14 +40,16 @@ class NetworkWithMaskedEpsilonGreedy(snt.Module):
       network: the online Q network (the one being optimized)
       epsilon: probability of taking a random action.
     """
-    super().__init__()
-    self._network = network
-    self._epsilon = epsilon
+        super().__init__()
+        self._network = network
+        self._epsilon = epsilon
 
-  def __call__(
-      self, observation: Union[Mapping[str, tf.Tensor],
-                               tf.Tensor]) -> tf.Tensor:
-    q = self._network(observation)
-    return trfl.epsilon_greedy(
-        q, epsilon=self._epsilon,
-        legal_actions_mask=observation['legal_actions_mask']).sample()
+    def __call__(
+        self, observation: Union[Mapping[str, tf.Tensor], tf.Tensor]
+    ) -> tf.Tensor:
+        q = self._network(observation)
+        return trfl.epsilon_greedy(
+            q,
+            epsilon=self._epsilon,
+            legal_actions_mask=observation["legal_actions_mask"],
+        ).sample()

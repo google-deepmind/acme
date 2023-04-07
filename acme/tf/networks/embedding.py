@@ -14,32 +14,32 @@
 
 """Modules for computing custom embeddings."""
 
-from acme.tf.networks import base
-from acme.wrappers import observation_action_reward
-
 import sonnet as snt
 import tensorflow as tf
 
+from acme.tf.networks import base
+from acme.wrappers import observation_action_reward
+
 
 class OAREmbedding(snt.Module):
-  """Module for embedding (observation, action, reward) inputs together."""
+    """Module for embedding (observation, action, reward) inputs together."""
 
-  def __init__(self, torso: base.Module, num_actions: int):
-    super().__init__(name='oar_embedding')
-    self._num_actions = num_actions
-    self._torso = torso
+    def __init__(self, torso: base.Module, num_actions: int):
+        super().__init__(name="oar_embedding")
+        self._num_actions = num_actions
+        self._torso = torso
 
-  def __call__(self, inputs: observation_action_reward.OAR) -> tf.Tensor:
-    """Embed each of the (observation, action, reward) inputs & concatenate."""
+    def __call__(self, inputs: observation_action_reward.OAR) -> tf.Tensor:
+        """Embed each of the (observation, action, reward) inputs & concatenate."""
 
-    # Add dummy trailing dimension to rewards if necessary.
-    if len(inputs.reward.shape.dims) == 1:
-      inputs = inputs._replace(reward=tf.expand_dims(inputs.reward, axis=-1))
+        # Add dummy trailing dimension to rewards if necessary.
+        if len(inputs.reward.shape.dims) == 1:
+            inputs = inputs._replace(reward=tf.expand_dims(inputs.reward, axis=-1))
 
-    features = self._torso(inputs.observation)  # [T?, B, D]
-    action = tf.one_hot(inputs.action, depth=self._num_actions)  # [T?, B, A]
-    reward = tf.nn.tanh(inputs.reward)  # [T?, B, 1]
+        features = self._torso(inputs.observation)  # [T?, B, D]
+        action = tf.one_hot(inputs.action, depth=self._num_actions)  # [T?, B, A]
+        reward = tf.nn.tanh(inputs.reward)  # [T?, B, 1]
 
-    embedding = tf.concat([features, action, reward], axis=-1)  # [T?, B, D+A+1]
+        embedding = tf.concat([features, action, reward], axis=-1)  # [T?, B, D+A+1]
 
-    return embedding
+        return embedding

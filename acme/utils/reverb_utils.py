@@ -17,20 +17,18 @@
 Contains functions manipulating reverb tables and samples.
 """
 
-from acme import types
 import jax
 import numpy as np
 import reverb
-from reverb import item_selectors
-from reverb import rate_limiters
-from reverb import reverb_types
 import tensorflow as tf
 import tree
+from reverb import item_selectors, rate_limiters, reverb_types
+
+from acme import types
 
 
-def make_replay_table_from_info(
-    table_info: reverb_types.TableInfo) -> reverb.Table:
-  """Build a replay table out of its specs in a TableInfo.
+def make_replay_table_from_info(table_info: reverb_types.TableInfo) -> reverb.Table:
+    """Build a replay table out of its specs in a TableInfo.
 
   Args:
     table_info: A TableInfo containing the Table specs.
@@ -38,55 +36,55 @@ def make_replay_table_from_info(
   Returns:
     A reverb replay table matching the info specs.
   """
-  sampler = _make_selector_from_key_distribution_options(
-      table_info.sampler_options)
-  remover = _make_selector_from_key_distribution_options(
-      table_info.remover_options)
-  rate_limiter = _make_rate_limiter_from_rate_limiter_info(
-      table_info.rate_limiter_info)
-  return reverb.Table(
-      name=table_info.name,
-      sampler=sampler,
-      remover=remover,
-      max_size=table_info.max_size,
-      rate_limiter=rate_limiter,
-      max_times_sampled=table_info.max_times_sampled,
-      signature=table_info.signature)
+    sampler = _make_selector_from_key_distribution_options(table_info.sampler_options)
+    remover = _make_selector_from_key_distribution_options(table_info.remover_options)
+    rate_limiter = _make_rate_limiter_from_rate_limiter_info(
+        table_info.rate_limiter_info
+    )
+    return reverb.Table(
+        name=table_info.name,
+        sampler=sampler,
+        remover=remover,
+        max_size=table_info.max_size,
+        rate_limiter=rate_limiter,
+        max_times_sampled=table_info.max_times_sampled,
+        signature=table_info.signature,
+    )
 
 
-def _make_selector_from_key_distribution_options(
-    options) -> reverb_types.SelectorType:
-  """Returns a Selector from its KeyDistributionOptions description."""
-  one_of = options.WhichOneof('distribution')
-  if one_of == 'fifo':
-    return item_selectors.Fifo()
-  if one_of == 'uniform':
-    return item_selectors.Uniform()
-  if one_of == 'prioritized':
-    return item_selectors.Prioritized(options.prioritized.priority_exponent)
-  if one_of == 'heap':
-    if options.heap.min_heap:
-      return item_selectors.MinHeap()
-    return item_selectors.MaxHeap()
-  if one_of == 'lifo':
-    return item_selectors.Lifo()
-  raise ValueError(f'Unknown distribution field: {one_of}')
+def _make_selector_from_key_distribution_options(options) -> reverb_types.SelectorType:
+    """Returns a Selector from its KeyDistributionOptions description."""
+    one_of = options.WhichOneof("distribution")
+    if one_of == "fifo":
+        return item_selectors.Fifo()
+    if one_of == "uniform":
+        return item_selectors.Uniform()
+    if one_of == "prioritized":
+        return item_selectors.Prioritized(options.prioritized.priority_exponent)
+    if one_of == "heap":
+        if options.heap.min_heap:
+            return item_selectors.MinHeap()
+        return item_selectors.MaxHeap()
+    if one_of == "lifo":
+        return item_selectors.Lifo()
+    raise ValueError(f"Unknown distribution field: {one_of}")
 
 
-def _make_rate_limiter_from_rate_limiter_info(
-    info) -> rate_limiters.RateLimiter:
-  return rate_limiters.SampleToInsertRatio(
-      samples_per_insert=info.samples_per_insert,
-      min_size_to_sample=info.min_size_to_sample,
-      error_buffer=(info.min_diff, info.max_diff))
+def _make_rate_limiter_from_rate_limiter_info(info) -> rate_limiters.RateLimiter:
+    return rate_limiters.SampleToInsertRatio(
+        samples_per_insert=info.samples_per_insert,
+        min_size_to_sample=info.min_size_to_sample,
+        error_buffer=(info.min_diff, info.max_diff),
+    )
 
 
 def replay_sample_to_sars_transition(
     sample: reverb.ReplaySample,
     is_sequence: bool,
     strip_last_transition: bool = False,
-    flatten_batch: bool = False) -> types.Transition:
-  """Converts the replay sample to a types.Transition.
+    flatten_batch: bool = False,
+) -> types.Transition:
+    """Converts the replay sample to a types.Transition.
 
   NB: If is_sequence is True then the last next_observation of each sequence is
   rubbish. Don't train on it.
@@ -107,34 +105,38 @@ def replay_sample_to_sars_transition(
     smaller than the output as the last transition of every sequence will have
     been removed.
   """
-  if not is_sequence:
-    return types.Transition(*sample.data)
-  # Note that the last next_observation is invalid.
-  steps = sample.data
-  def roll(observation):
-    return np.roll(observation, shift=-1, axis=1)
-  transitions = types.Transition(
-      observation=steps.observation,
-      action=steps.action,
-      reward=steps.reward,
-      discount=steps.discount,
-      next_observation=tree.map_structure(roll, steps.observation),
-      extras=steps.extras)
-  if strip_last_transition:
-    # We remove the last transition as its next_observation field is incorrect.
-    # It has been obtained by rolling the observation field, such that
-    # transitions.next_observations[:, -1] is transitions.observations[:, 0]
-    transitions = jax.tree_map(lambda x: x[:, :-1, ...], transitions)
-  if flatten_batch:
-    # Merge the 2 leading batch dimensions into 1.
-    transitions = jax.tree_map(lambda x: np.reshape(x, (-1,) + x.shape[2:]),
-                               transitions)
-  return transitions
+    if not is_sequence:
+        return types.Transition(*sample.data)
+    # Note that the last next_observation is invalid.
+    steps = sample.data
+
+    def roll(observation):
+        return np.roll(observation, shift=-1, axis=1)
+
+    transitions = types.Transition(
+        observation=steps.observation,
+        action=steps.action,
+        reward=steps.reward,
+        discount=steps.discount,
+        next_observation=tree.map_structure(roll, steps.observation),
+        extras=steps.extras,
+    )
+    if strip_last_transition:
+        # We remove the last transition as its next_observation field is incorrect.
+        # It has been obtained by rolling the observation field, such that
+        # transitions.next_observations[:, -1] is transitions.observations[:, 0]
+        transitions = jax.tree_map(lambda x: x[:, :-1, ...], transitions)
+    if flatten_batch:
+        # Merge the 2 leading batch dimensions into 1.
+        transitions = jax.tree_map(
+            lambda x: np.reshape(x, (-1,) + x.shape[2:]), transitions
+        )
+    return transitions
 
 
-def transition_to_replaysample(
-    transitions: types.Transition) -> reverb.ReplaySample:
-  """Converts a types.Transition to a reverb.ReplaySample."""
-  info = tree.map_structure(lambda dtype: tf.ones([], dtype),
-                            reverb.SampleInfo.tf_dtypes())
-  return reverb.ReplaySample(info=info, data=transitions)
+def transition_to_replaysample(transitions: types.Transition) -> reverb.ReplaySample:
+    """Converts a types.Transition to a reverb.ReplaySample."""
+    info = tree.map_structure(
+        lambda dtype: tf.ones([], dtype), reverb.SampleInfo.tf_dtypes()
+    )
+    return reverb.ReplaySample(info=info, data=transitions)

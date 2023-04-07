@@ -30,23 +30,27 @@ from acme.agents.jax.ail import losses
 
 @dataclasses.dataclass
 class GAILConfig:
-  """Configuration options specific to GAIL."""
-  ail_config: ail_config.AILConfig
-  ppo_config: ppo.PPOConfig
+    """Configuration options specific to GAIL."""
+
+    ail_config: ail_config.AILConfig
+    ppo_config: ppo.PPOConfig
 
 
-class GAILBuilder(builder.AILBuilder[ppo.PPONetworks,
-                                     actor_core_lib.FeedForwardPolicyWithExtra]
-                 ):
-  """GAIL Builder."""
+class GAILBuilder(
+    builder.AILBuilder[ppo.PPONetworks, actor_core_lib.FeedForwardPolicyWithExtra]
+):
+    """GAIL Builder."""
 
-  def __init__(self, config: GAILConfig,
-               make_demonstrations: Callable[[int],
-                                             Iterator[types.Transition]]):
+    def __init__(
+        self,
+        config: GAILConfig,
+        make_demonstrations: Callable[[int], Iterator[types.Transition]],
+    ):
 
-    ppo_builder = ppo.PPOBuilder(config.ppo_config)
-    super().__init__(
-        ppo_builder,
-        config=config.ail_config,
-        discriminator_loss=losses.gail_loss(),
-        make_demonstrations=make_demonstrations)
+        ppo_builder = ppo.PPOBuilder(config.ppo_config)
+        super().__init__(
+            ppo_builder,
+            config=config.ail_config,
+            discriminator_loss=losses.gail_loss(),
+            make_demonstrations=make_demonstrations,
+        )

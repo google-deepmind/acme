@@ -22,13 +22,14 @@ from acme.jax import networks as networks_lib
 
 @dataclasses.dataclass
 class BVENetworks:
-  """The network and pure functions for the BVE agent.
+    """The network and pure functions for the BVE agent.
 
   Attributes:
     policy_network: The policy network.
     sample_fn: A pure function. Samples an action based on the network output.
     log_prob: A pure function. Computes log-probability for an action.
   """
-  policy_network: networks_lib.TypedFeedForwardNetwork
-  sample_fn: networks_lib.SampleFn
-  log_prob: Optional[networks_lib.LogProbFn] = None
+
+    policy_network: networks_lib.TypedFeedForwardNetwork
+    sample_fn: networks_lib.SampleFn
+    log_prob: Optional[networks_lib.LogProbFn] = None

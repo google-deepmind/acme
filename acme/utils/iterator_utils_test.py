@@ -14,27 +14,25 @@
 
 """Tests for iterator_utils."""
 
-from acme.utils import iterator_utils
 import numpy as np
-
 from absl.testing import absltest
+
+from acme.utils import iterator_utils
 
 
 class IteratorUtilsTest(absltest.TestCase):
+    def test_iterator_zipping(self):
+        def get_iters():
+            x = iter(range(0, 10))
+            y = iter(range(20, 30))
+            return [x, y]
 
-  def test_iterator_zipping(self):
-
-    def get_iters():
-      x = iter(range(0, 10))
-      y = iter(range(20, 30))
-      return [x, y]
-
-    zipped = zip(*get_iters())
-    unzipped = iterator_utils.unzip_iterators(zipped, num_sub_iterators=2)
-    expected_x, expected_y = get_iters()
-    np.testing.assert_equal(list(unzipped[0]), list(expected_x))
-    np.testing.assert_equal(list(unzipped[1]), list(expected_y))
+        zipped = zip(*get_iters())
+        unzipped = iterator_utils.unzip_iterators(zipped, num_sub_iterators=2)
+        expected_x, expected_y = get_iters()
+        np.testing.assert_equal(list(unzipped[0]), list(expected_x))
+        np.testing.assert_equal(list(unzipped[1]), list(expected_y))
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

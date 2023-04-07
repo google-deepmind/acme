@@ -20,12 +20,13 @@ from acme.adders import reverb as adders_reverb
 
 @dataclasses.dataclass
 class ARSConfig:
-  """Configuration options for ARS."""
-  num_steps: int = 1000000
-  normalize_observations: bool = True
-  step_size: float = 0.015
-  num_directions: int = 60
-  exploration_noise_std: float = 0.025
-  top_directions: int = 20
-  reward_shift: float = 1.0
-  replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
+    """Configuration options for ARS."""
+
+    num_steps: int = 1000000
+    normalize_observations: bool = True
+    step_size: float = 0.015
+    num_directions: int = 60
+    exploration_noise_std: float = 0.025
+    top_directions: int = 20
+    reward_shift: float = 1.0
+    replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE

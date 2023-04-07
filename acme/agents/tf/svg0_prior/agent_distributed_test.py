@@ -16,17 +16,17 @@
 
 from typing import Sequence
 
+import launchpad as lp
+import numpy as np
+import sonnet as snt
+from absl.testing import absltest
+
 import acme
 from acme import specs
 from acme.agents.tf import svg0_prior
 from acme.testing import fakes
 from acme.tf import networks
 from acme.tf import utils as tf2_utils
-import launchpad as lp
-import numpy as np
-import sonnet as snt
-
-from absl.testing import absltest
 
 
 def make_networks(
@@ -34,62 +34,67 @@ def make_networks(
     policy_layer_sizes: Sequence[int] = (10, 10),
     critic_layer_sizes: Sequence[int] = (10, 10),
 ):
-  """Simple networks for testing.."""
+    """Simple networks for testing.."""
 
-  # Get total number of action dimensions from action spec.
-  num_dimensions = np.prod(action_spec.shape, dtype=int)
+    # Get total number of action dimensions from action spec.
+    num_dimensions = np.prod(action_spec.shape, dtype=int)
 
-  policy_network = snt.Sequential([
-      tf2_utils.batch_concat,
-      networks.LayerNormMLP(policy_layer_sizes, activate_final=True),
-      networks.MultivariateNormalDiagHead(
-          num_dimensions,
-          tanh_mean=True,
-          min_scale=0.3,
-          init_scale=0.7,
-          fixed_scale=False,
-          use_tfd_independent=False)
-  ])
-  # The multiplexer concatenates the (maybe transformed) observations/actions.
-  multiplexer = networks.CriticMultiplexer()
-  critic_network = snt.Sequential([
-      multiplexer,
-      networks.LayerNormMLP(critic_layer_sizes, activate_final=True),
-      networks.NearZeroInitializedLinear(1),
-  ])
+    policy_network = snt.Sequential(
+        [
+            tf2_utils.batch_concat,
+            networks.LayerNormMLP(policy_layer_sizes, activate_final=True),
+            networks.MultivariateNormalDiagHead(
+                num_dimensions,
+                tanh_mean=True,
+                min_scale=0.3,
+                init_scale=0.7,
+                fixed_scale=False,
+                use_tfd_independent=False,
+            ),
+        ]
+    )
+    # The multiplexer concatenates the (maybe transformed) observations/actions.
+    multiplexer = networks.CriticMultiplexer()
+    critic_network = snt.Sequential(
+        [
+            multiplexer,
+            networks.LayerNormMLP(critic_layer_sizes, activate_final=True),
+            networks.NearZeroInitializedLinear(1),
+        ]
+    )
 
-  return {
-      'policy': policy_network,
-      'critic': critic_network,
-  }
+    return {
+        "policy": policy_network,
+        "critic": critic_network,
+    }
 
 
 class DistributedAgentTest(absltest.TestCase):
-  """Simple integration/smoke test for the distributed agent."""
+    """Simple integration/smoke test for the distributed agent."""
 
-  def test_control_suite(self):
-    """Tests that the agent can run on the control suite without crashing."""
+    def test_control_suite(self):
+        """Tests that the agent can run on the control suite without crashing."""
 
-    agent = svg0_prior.DistributedSVG0(
-        environment_factory=lambda x: fakes.ContinuousEnvironment(),
-        network_factory=make_networks,
-        num_actors=2,
-        batch_size=32,
-        min_replay_size=32,
-        max_replay_size=1000,
-    )
-    program = agent.build()
+        agent = svg0_prior.DistributedSVG0(
+            environment_factory=lambda x: fakes.ContinuousEnvironment(),
+            network_factory=make_networks,
+            num_actors=2,
+            batch_size=32,
+            min_replay_size=32,
+            max_replay_size=1000,
+        )
+        program = agent.build()
 
-    (learner_node,) = program.groups['learner']
-    learner_node.disable_run()
+        (learner_node,) = program.groups["learner"]
+        learner_node.disable_run()
 
-    lp.launch(program, launch_type='test_mt')
+        lp.launch(program, launch_type="test_mt")
 
-    learner: acme.Learner = learner_node.create_handle().dereference()
+        learner: acme.Learner = learner_node.create_handle().dereference()
 
-    for _ in range(5):
-      learner.step()
+        for _ in range(5):
+            learner.step()
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

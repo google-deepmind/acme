@@ -14,53 +14,53 @@
 
 """Tests for IMPALA agent."""
 
+import numpy as np
+import sonnet as snt
+from absl.testing import absltest
+
 import acme
 from acme import specs
 from acme.agents.tf import impala
 from acme.testing import fakes
 from acme.tf import networks
-import numpy as np
-import sonnet as snt
-
-from absl.testing import absltest
 
 
 def _make_network(action_spec: specs.DiscreteArray) -> snt.RNNCore:
-  return snt.DeepRNN([
-      snt.Flatten(),
-      snt.LSTM(20),
-      snt.nets.MLP([50, 50]),
-      networks.PolicyValueHead(action_spec.num_values),
-  ])
+    return snt.DeepRNN(
+        [
+            snt.Flatten(),
+            snt.LSTM(20),
+            snt.nets.MLP([50, 50]),
+            networks.PolicyValueHead(action_spec.num_values),
+        ]
+    )
 
 
 class IMPALATest(absltest.TestCase):
 
-  # TODO(b/200509080): This test case is timing out.
-  @absltest.SkipTest
-  def test_impala(self):
-    # Create a fake environment to test with.
-    environment = fakes.DiscreteEnvironment(
-        num_actions=5,
-        num_observations=10,
-        obs_dtype=np.float32,
-        episode_length=10)
-    spec = specs.make_environment_spec(environment)
+    # TODO(b/200509080): This test case is timing out.
+    @absltest.SkipTest
+    def test_impala(self):
+        # Create a fake environment to test with.
+        environment = fakes.DiscreteEnvironment(
+            num_actions=5, num_observations=10, obs_dtype=np.float32, episode_length=10
+        )
+        spec = specs.make_environment_spec(environment)
 
-    # Construct the agent.
-    agent = impala.IMPALA(
-        environment_spec=spec,
-        network=_make_network(spec.actions),
-        sequence_length=3,
-        sequence_period=3,
-        batch_size=6,
-    )
+        # Construct the agent.
+        agent = impala.IMPALA(
+            environment_spec=spec,
+            network=_make_network(spec.actions),
+            sequence_length=3,
+            sequence_period=3,
+            batch_size=6,
+        )
 
-    # Try running the environment loop. We have no assertions here because all
-    # we care about is that the agent runs without raising any errors.
-    loop = acme.EnvironmentLoop(environment, agent)
-    loop.run(num_episodes=20)
+        # Try running the environment loop. We have no assertions here because all
+        # we care about is that the agent runs without raising any errors.
+        loop = acme.EnvironmentLoop(environment, agent)
+        loop.run(num_episodes=20)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

@@ -22,16 +22,17 @@ from typing import Optional, Tuple
 
 from absl import flags
 
-ACME_ID = flags.DEFINE_string('acme_id', None,
-                              'Experiment identifier to use for Acme.')
+ACME_ID = flags.DEFINE_string("acme_id", None, "Experiment identifier to use for Acme.")
 
 
-def process_path(path: str,
-                 *subpaths: str,
-                 ttl_seconds: Optional[int] = None,
-                 backups: Optional[bool] = None,
-                 add_uid: bool = True) -> str:
-  """Process the path string.
+def process_path(
+    path: str,
+    *subpaths: str,
+    ttl_seconds: Optional[int] = None,
+    backups: Optional[bool] = None,
+    add_uid: bool = True
+) -> str:
+    """Process the path string.
 
   This will process the path string by running `os.path.expanduser` to replace
   any initial "~". It will also append a unique string on the end of the path
@@ -49,35 +50,35 @@ def process_path(path: str,
   Returns:
     the processed, expanded path string.
   """
-  del backups, ttl_seconds
+    del backups, ttl_seconds
 
-  path = os.path.expanduser(path)
-  if add_uid:
-    path = os.path.join(path, *get_unique_id())
-  path = os.path.join(path, *subpaths)
-  os.makedirs(path, exist_ok=True)
-  return path
+    path = os.path.expanduser(path)
+    if add_uid:
+        path = os.path.join(path, *get_unique_id())
+    path = os.path.join(path, *subpaths)
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
-_DATETIME = time.strftime('%Y%m%d-%H%M%S')
+_DATETIME = time.strftime("%Y%m%d-%H%M%S")
 
 
 def get_unique_id() -> Tuple[str, ...]:
-  """Makes a unique identifier for this process; override with --acme_id."""
-  # By default we'll use the global id.
-  identifier = _DATETIME
+    """Makes a unique identifier for this process; override with --acme_id."""
+    # By default we'll use the global id.
+    identifier = _DATETIME
 
-  # If the --acme_id flag is given prefer that; ignore if flag processing has
-  # been skipped (this happens in colab or in tests).
-  try:
-    identifier = ACME_ID.value or identifier
-  except flags.UnparsedFlagAccessError:
-    pass
+    # If the --acme_id flag is given prefer that; ignore if flag processing has
+    # been skipped (this happens in colab or in tests).
+    try:
+        identifier = ACME_ID.value or identifier
+    except flags.UnparsedFlagAccessError:
+        pass
 
-  # Return as a tuple (for future proofing).
-  return (identifier,)
+    # Return as a tuple (for future proofing).
+    return (identifier,)
 
 
 def rmdir(path: str):
-  """Remove directory recursively."""
-  shutil.rmtree(path)
+    """Remove directory recursively."""
+    shutil.rmtree(path)

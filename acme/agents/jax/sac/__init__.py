@@ -15,10 +15,11 @@
 """SAC agent."""
 
 from acme.agents.jax.sac.builder import SACBuilder
-from acme.agents.jax.sac.config import SACConfig
-from acme.agents.jax.sac.config import target_entropy_from_env_spec
+from acme.agents.jax.sac.config import SACConfig, target_entropy_from_env_spec
 from acme.agents.jax.sac.learning import SACLearner
-from acme.agents.jax.sac.networks import apply_policy_and_sample
-from acme.agents.jax.sac.networks import default_models_to_snapshot
-from acme.agents.jax.sac.networks import make_networks
-from acme.agents.jax.sac.networks import SACNetworks
+from acme.agents.jax.sac.networks import (
+    SACNetworks,
+    apply_policy_and_sample,
+    default_models_to_snapshot,
+    make_networks,
+)

@@ -15,6 +15,7 @@
 """Type aliases and assumptions that are specific to the MCTS agent."""
 
 from typing import Callable, Tuple, Union
+
 import numpy as np
 
 # pylint: disable=invalid-name

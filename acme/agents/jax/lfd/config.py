@@ -19,7 +19,7 @@ import dataclasses
 
 @dataclasses.dataclass
 class LfdConfig:
-  """Configuration options for LfD.
+    """Configuration options for LfD.
 
   Attributes:
     initial_insert_count: Number of steps of demonstrations to add to the replay
@@ -33,5 +33,6 @@ class LfdConfig:
       Note also that this ratio is only a target ratio since the granularity
       is the episode.
   """
-  initial_insert_count: int = 0
-  demonstration_ratio: float = 0.01
+
+    initial_insert_count: int = 0
+    demonstration_ratio: float = 0.01

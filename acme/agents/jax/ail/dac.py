@@ -30,7 +30,7 @@ from acme.agents.jax.ail import losses
 
 @dataclasses.dataclass
 class DACConfig:
-  """Configuration options specific to DAC.
+    """Configuration options specific to DAC.
 
   Attributes:
     ail_config: AIL config.
@@ -39,27 +39,31 @@ class DACConfig:
     gradient_penalty_coefficient: Coefficient for the gradient penalty term in
       the discriminator loss.
   """
-  ail_config: ail_config.AILConfig
-  td3_config: td3.TD3Config
-  entropy_coefficient: float = 1e-3
-  gradient_penalty_coefficient: float = 10.
+
+    ail_config: ail_config.AILConfig
+    td3_config: td3.TD3Config
+    entropy_coefficient: float = 1e-3
+    gradient_penalty_coefficient: float = 10.0
 
 
-class DACBuilder(builder.AILBuilder[td3.TD3Networks,
-                                    actor_core_lib.FeedForwardPolicy]):
-  """DAC Builder."""
+class DACBuilder(builder.AILBuilder[td3.TD3Networks, actor_core_lib.FeedForwardPolicy]):
+    """DAC Builder."""
 
-  def __init__(self, config: DACConfig,
-               make_demonstrations: Callable[[int],
-                                             Iterator[types.Transition]]):
+    def __init__(
+        self,
+        config: DACConfig,
+        make_demonstrations: Callable[[int], Iterator[types.Transition]],
+    ):
 
-    td3_builder = td3.TD3Builder(config.td3_config)
-    dac_loss = losses.add_gradient_penalty(
-        losses.gail_loss(entropy_coefficient=config.entropy_coefficient),
-        gradient_penalty_coefficient=config.gradient_penalty_coefficient,
-        gradient_penalty_target=1.)
-    super().__init__(
-        td3_builder,
-        config=config.ail_config,
-        discriminator_loss=dac_loss,
-        make_demonstrations=make_demonstrations)
+        td3_builder = td3.TD3Builder(config.td3_config)
+        dac_loss = losses.add_gradient_penalty(
+            losses.gail_loss(entropy_coefficient=config.entropy_coefficient),
+            gradient_penalty_coefficient=config.gradient_penalty_coefficient,
+            gradient_penalty_target=1.0,
+        )
+        super().__init__(
+            td3_builder,
+            config=config.ail_config,
+            discriminator_loss=dac_loss,
+            make_demonstrations=make_demonstrations,
+        )

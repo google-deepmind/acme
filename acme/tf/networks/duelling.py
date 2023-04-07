@@ -24,20 +24,18 @@ import tensorflow as tf
 
 
 class DuellingMLP(snt.Module):
-  """A Duelling MLP Q-network."""
+    """A Duelling MLP Q-network."""
 
-  def __init__(
-      self,
-      num_actions: int,
-      hidden_sizes: Sequence[int],
-  ):
-    super().__init__(name='duelling_q_network')
+    def __init__(
+        self, num_actions: int, hidden_sizes: Sequence[int],
+    ):
+        super().__init__(name="duelling_q_network")
 
-    self._value_mlp = snt.nets.MLP([*hidden_sizes, 1])
-    self._advantage_mlp = snt.nets.MLP([*hidden_sizes, num_actions])
+        self._value_mlp = snt.nets.MLP([*hidden_sizes, 1])
+        self._advantage_mlp = snt.nets.MLP([*hidden_sizes, num_actions])
 
-  def __call__(self, inputs: tf.Tensor) -> tf.Tensor:
-    """Forward pass of the duelling network.
+    def __call__(self, inputs: tf.Tensor) -> tf.Tensor:
+        """Forward pass of the duelling network.
 
     Args:
       inputs: 2-D tensor of shape [batch_size, embedding_size].
@@ -46,13 +44,13 @@ class DuellingMLP(snt.Module):
       q_values: 2-D tensor of action values of shape [batch_size, num_actions]
     """
 
-    # Compute value & advantage for duelling.
-    value = self._value_mlp(inputs)  # [B, 1]
-    advantages = self._advantage_mlp(inputs)  # [B, A]
+        # Compute value & advantage for duelling.
+        value = self._value_mlp(inputs)  # [B, 1]
+        advantages = self._advantage_mlp(inputs)  # [B, A]
 
-    # Advantages have zero mean.
-    advantages -= tf.reduce_mean(advantages, axis=-1, keepdims=True)  # [B, A]
+        # Advantages have zero mean.
+        advantages -= tf.reduce_mean(advantages, axis=-1, keepdims=True)  # [B, A]
 
-    q_values = value + advantages  # [B, A]
+        q_values = value + advantages  # [B, A]
 
-    return q_values
+        return q_values

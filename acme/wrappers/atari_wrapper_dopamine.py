@@ -26,45 +26,52 @@ configuration using the wrapper defined in atari_wrapper.py.
 
 from typing import List
 
-from acme.wrappers import atari_wrapper
 # pytype: disable=import-error
 import cv2
+
 # pytype: enable=import-error
 import dm_env
 import numpy as np
 
+from acme.wrappers import atari_wrapper
+
 
 class AtariWrapperDopamine(atari_wrapper.BaseAtariWrapper):
-  """Atari wrapper that matches exactly Dopamine's prepocessing.
+    """Atari wrapper that matches exactly Dopamine's prepocessing.
 
   Warning: using this wrapper requires that you have opencv and its dependencies
   installed. In general, opencv is not required for Acme.
   """
 
-  def _preprocess_pixels(self, timestep_stack: List[dm_env.TimeStep]):
-    """Preprocess Atari frames."""
+    def _preprocess_pixels(self, timestep_stack: List[dm_env.TimeStep]):
+        """Preprocess Atari frames."""
 
-    # 1. RBG to grayscale
-    def rgb_to_grayscale(obs):
-      if self._grayscaling:
-        return np.tensordot(obs, [0.2989, 0.5870, 0.1140], (-1, 0))
-      return obs
+        # 1. RBG to grayscale
+        def rgb_to_grayscale(obs):
+            if self._grayscaling:
+                return np.tensordot(obs, [0.2989, 0.5870, 0.1140], (-1, 0))
+            return obs
 
-    # 2. Max pooling
-    processed_pixels = np.max(
-        np.stack([
-            rgb_to_grayscale(s.observation[atari_wrapper.RGB_INDEX])
-            for s in timestep_stack[-self._pooled_frames:]
-        ]),
-        axis=0)
+        # 2. Max pooling
+        processed_pixels = np.max(
+            np.stack(
+                [
+                    rgb_to_grayscale(s.observation[atari_wrapper.RGB_INDEX])
+                    for s in timestep_stack[-self._pooled_frames :]
+                ]
+            ),
+            axis=0,
+        )
 
-    # 3. Resize
-    processed_pixels = np.round(processed_pixels).astype(np.uint8)
-    if self._scale_dims != processed_pixels.shape[:2]:
-      processed_pixels = cv2.resize(
-          processed_pixels, (self._width, self._height),
-          interpolation=cv2.INTER_AREA)
+        # 3. Resize
+        processed_pixels = np.round(processed_pixels).astype(np.uint8)
+        if self._scale_dims != processed_pixels.shape[:2]:
+            processed_pixels = cv2.resize(
+                processed_pixels,
+                (self._width, self._height),
+                interpolation=cv2.INTER_AREA,
+            )
 
-      processed_pixels = np.round(processed_pixels).astype(np.uint8)
+            processed_pixels = np.round(processed_pixels).astype(np.uint8)
 
-    return processed_pixels
+        return processed_pixels

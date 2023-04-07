@@ -17,9 +17,7 @@
 import dataclasses
 from typing import Any, Dict, List
 
-from acme import core
-from acme import types
-
+from acme import core, types
 from acme.multiagent import types as ma_types
 
 LearnerState = Any
@@ -27,32 +25,33 @@ LearnerState = Any
 
 @dataclasses.dataclass
 class SynchronousDecentralizedLearnerSetState:
-  """State of a SynchronousDecentralizedLearnerSet."""
-  # States of the learners keyed by their names.
-  learner_states: Dict[ma_types.AgentID, LearnerState]
+    """State of a SynchronousDecentralizedLearnerSet."""
+
+    # States of the learners keyed by their names.
+    learner_states: Dict[ma_types.AgentID, LearnerState]
 
 
 class SynchronousDecentralizedLearnerSet(core.Learner):
-  """Creates a composed learner which wraps a set of local agent learners."""
+    """Creates a composed learner which wraps a set of local agent learners."""
 
-  def __init__(self,
-               learners: Dict[ma_types.AgentID, core.Learner],
-               separator: str = '-'):
-    """Initializer.
+    def __init__(
+        self, learners: Dict[ma_types.AgentID, core.Learner], separator: str = "-"
+    ):
+        """Initializer.
 
     Args:
       learners: a dict specifying the learners for all sub-agents.
       separator: separator character used to disambiguate sub-learner variables.
     """
-    self._learners = learners
-    self._separator = separator
+        self._learners = learners
+        self._separator = separator
 
-  def step(self):
-    for learner in self._learners.values():
-      learner.step()
+    def step(self):
+        for learner in self._learners.values():
+            learner.step()
 
-  def get_variables(self, names: List[str]) -> List[types.NestedArray]:
-    """Return the named variables as a collection of (nested) numpy arrays.
+    def get_variables(self, names: List[str]) -> List[types.NestedArray]:
+        """Return the named variables as a collection of (nested) numpy arrays.
 
     The variable names should be prefixed with the name of the child learners
     using the separator specified in the constructor, e.g. learner1/var.
@@ -67,19 +66,21 @@ class SynchronousDecentralizedLearnerSet(core.Learner):
       A list of (nested) numpy arrays `variables` such that `variables[i]`
       corresponds to the collection named by `names[i]`.
     """
-    variables = []
-    for name in names:
-      # Note: if separator is not found, learner_name=name, which is OK.
-      learner_id, _, variable_name = name.partition(self._separator)
-      learner = self._learners[learner_id]
-      variables.extend(learner.get_variables([variable_name]))
-    return variables
+        variables = []
+        for name in names:
+            # Note: if separator is not found, learner_name=name, which is OK.
+            learner_id, _, variable_name = name.partition(self._separator)
+            learner = self._learners[learner_id]
+            variables.extend(learner.get_variables([variable_name]))
+        return variables
 
-  def save(self) -> SynchronousDecentralizedLearnerSetState:
-    return SynchronousDecentralizedLearnerSetState(learner_states={
-        name: learner.save() for name, learner in self._learners.items()
-    })
+    def save(self) -> SynchronousDecentralizedLearnerSetState:
+        return SynchronousDecentralizedLearnerSetState(
+            learner_states={
+                name: learner.save() for name, learner in self._learners.items()
+            }
+        )
 
-  def restore(self, state: SynchronousDecentralizedLearnerSetState):
-    for name, learner in self._learners.items():
-      learner.restore(state.learner_states[name])
+    def restore(self, state: SynchronousDecentralizedLearnerSetState):
+        for name, learner in self._learners.items():
+            learner.restore(state.learner_states[name])

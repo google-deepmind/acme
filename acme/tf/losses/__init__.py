@@ -14,16 +14,13 @@
 
 """Various losses for training agent components (policies, critics, etc)."""
 
-from acme.tf.losses.distributional import categorical
-from acme.tf.losses.distributional import multiaxis_categorical
+from acme.tf.losses.distributional import categorical, multiaxis_categorical
 from acme.tf.losses.dpg import dpg
 from acme.tf.losses.huber import huber
-from acme.tf.losses.mompo import KLConstraint
-from acme.tf.losses.mompo import MultiObjectiveMPO
+from acme.tf.losses.mompo import KLConstraint, MultiObjectiveMPO
 from acme.tf.losses.mpo import MPO
-from acme.tf.losses.r2d2 import transformed_n_step_loss
 
 # Internal imports.
 # pylint: disable=g-bad-import-order,g-import-not-at-top
-from acme.tf.losses.quantile import NonUniformQuantileRegression
-from acme.tf.losses.quantile import QuantileDistribution
+from acme.tf.losses.quantile import NonUniformQuantileRegression, QuantileDistribution
+from acme.tf.losses.r2d2 import transformed_n_step_loss

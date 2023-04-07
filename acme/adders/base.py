@@ -16,12 +16,13 @@
 
 import abc
 
-from acme import types
 import dm_env
+
+from acme import types
 
 
 class Adder(abc.ABC):
-  """The Adder interface.
+    """The Adder interface.
 
   An adder packs together data to send to the replay buffer, and potentially
   performs some reduction/transformation to this data in the process.
@@ -49,9 +50,9 @@ class Adder(abc.ABC):
   timestep is named `next_timestep` precisely to emphasize this point.
   """
 
-  @abc.abstractmethod
-  def add_first(self, timestep: dm_env.TimeStep):
-    """Defines the interface for an adder's `add_first` method.
+    @abc.abstractmethod
+    def add_first(self, timestep: dm_env.TimeStep):
+        """Defines the interface for an adder's `add_first` method.
 
     We expect this to be called at the beginning of each episode and it will
     start a trajectory to be added to replay with an initial observation.
@@ -60,14 +61,14 @@ class Adder(abc.ABC):
       timestep: a dm_env TimeStep corresponding to the first step.
     """
 
-  @abc.abstractmethod
-  def add(
-      self,
-      action: types.NestedArray,
-      next_timestep: dm_env.TimeStep,
-      extras: types.NestedArray = (),
-  ):
-    """Defines the adder `add` interface.
+    @abc.abstractmethod
+    def add(
+        self,
+        action: types.NestedArray,
+        next_timestep: dm_env.TimeStep,
+        extras: types.NestedArray = (),
+    ):
+        """Defines the adder `add` interface.
 
     Args:
       action: A possibly nested structure corresponding to a_t.
@@ -76,7 +77,6 @@ class Adder(abc.ABC):
       extras: A possibly nested structure of extra data to add to replay.
     """
 
-  @abc.abstractmethod
-  def reset(self):
-    """Resets the adder's buffer."""
-
+    @abc.abstractmethod
+    def reset(self):
+        """Resets the adder's buffer."""

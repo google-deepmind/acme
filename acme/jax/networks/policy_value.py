@@ -21,17 +21,16 @@ import jax.numpy as jnp
 
 
 class PolicyValueHead(hk.Module):
-  """A network with two linear layers, for policy and value respectively."""
+    """A network with two linear layers, for policy and value respectively."""
 
-  def __init__(self, num_actions: int):
-    super().__init__(name='policy_value_network')
-    self._policy_layer = hk.Linear(num_actions)
-    self._value_layer = hk.Linear(1)
+    def __init__(self, num_actions: int):
+        super().__init__(name="policy_value_network")
+        self._policy_layer = hk.Linear(num_actions)
+        self._value_layer = hk.Linear(1)
 
-  def __call__(self, inputs: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    """Returns a (Logits, Value) tuple."""
-    logits = self._policy_layer(inputs)  # [B, A]
-    value = self._value_layer(inputs)[..., 0]  # [B]
+    def __call__(self, inputs: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        """Returns a (Logits, Value) tuple."""
+        logits = self._policy_layer(inputs)  # [B, A]
+        value = self._value_layer(inputs)[..., 0]  # [B]
 
-    return logits, value
-
+        return logits, value

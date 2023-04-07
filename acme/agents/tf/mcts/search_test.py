@@ -16,50 +16,48 @@
 
 from typing import Text
 
+import numpy as np
+from absl.testing import absltest, parameterized
+from bsuite.environments import catch
+
 from acme.agents.tf.mcts import search
 from acme.agents.tf.mcts.models import simulator
-from bsuite.environments import catch
-import numpy as np
-
-from absl.testing import absltest
-from absl.testing import parameterized
 
 
 class TestSearch(parameterized.TestCase):
+    @parameterized.parameters(
+        ["puct", "bfs",]
+    )
+    def test_catch(self, policy_type: Text):
+        env = catch.Catch(rows=2, seed=1)
+        num_actions = env.action_spec().num_values
+        model = simulator.Simulator(env)
+        eval_fn = lambda _: (np.ones(num_actions) / num_actions, 0.0)
 
-  @parameterized.parameters([
-      'puct',
-      'bfs',
-  ])
-  def test_catch(self, policy_type: Text):
-    env = catch.Catch(rows=2, seed=1)
-    num_actions = env.action_spec().num_values
-    model = simulator.Simulator(env)
-    eval_fn = lambda _: (np.ones(num_actions) / num_actions, 0.)
+        timestep = env.reset()
+        model.reset()
 
-    timestep = env.reset()
-    model.reset()
+        search_policy = search.bfs if policy_type == "bfs" else search.puct
 
-    search_policy = search.bfs if policy_type == 'bfs' else search.puct
+        root = search.mcts(
+            observation=timestep.observation,
+            model=model,
+            search_policy=search_policy,
+            evaluation=eval_fn,
+            num_simulations=100,
+            num_actions=num_actions,
+        )
 
-    root = search.mcts(
-        observation=timestep.observation,
-        model=model,
-        search_policy=search_policy,
-        evaluation=eval_fn,
-        num_simulations=100,
-        num_actions=num_actions)
+        values = np.array([c.value for c in root.children.values()])
+        best_action = search.argmax(values)
 
-    values = np.array([c.value for c in root.children.values()])
-    best_action = search.argmax(values)
-
-    if env._paddle_x > env._ball_x:
-      self.assertEqual(best_action, 0)
-    if env._paddle_x == env._ball_x:
-      self.assertEqual(best_action, 1)
-    if env._paddle_x < env._ball_x:
-      self.assertEqual(best_action, 2)
+        if env._paddle_x > env._ball_x:
+            self.assertEqual(best_action, 0)
+        if env._paddle_x == env._ball_x:
+            self.assertEqual(best_action, 1)
+        if env._paddle_x < env._ball_x:
+            self.assertEqual(best_action, 2)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

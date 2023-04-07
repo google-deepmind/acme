@@ -16,6 +16,8 @@
 
 from acme.agents.tf.mompo.agent import MultiObjectiveMPO
 from acme.agents.tf.mompo.agent_distributed import DistributedMultiObjectiveMPO
-from acme.agents.tf.mompo.learning import MultiObjectiveMPOLearner
-from acme.agents.tf.mompo.learning import QValueObjective
-from acme.agents.tf.mompo.learning import RewardObjective
+from acme.agents.tf.mompo.learning import (
+    MultiObjectiveMPOLearner,
+    QValueObjective,
+    RewardObjective,
+)

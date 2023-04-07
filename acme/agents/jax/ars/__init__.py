@@ -16,5 +16,4 @@
 
 from acme.agents.jax.ars.builder import ARSBuilder
 from acme.agents.jax.ars.config import ARSConfig
-from acme.agents.jax.ars.networks import make_networks
-from acme.agents.jax.ars.networks import make_policy_network
+from acme.agents.jax.ars.networks import make_networks, make_policy_network

@@ -15,22 +15,23 @@
 """Tools to train a policy network with BC."""
 from typing import Callable, Iterator
 
-from acme import types
-from acme.agents.jax.bc import learning
-from acme.agents.jax.bc import losses
-from acme.agents.jax.bc import networks as bc_networks
-from acme.jax import networks as networks_lib
-from acme.jax import utils
 import jax
 import optax
 
+from acme import types
+from acme.agents.jax.bc import learning, losses
+from acme.agents.jax.bc import networks as bc_networks
+from acme.jax import networks as networks_lib
+from acme.jax import utils
 
-def train_with_bc(make_demonstrations: Callable[[int],
-                                                Iterator[types.Transition]],
-                  networks: bc_networks.BCNetworks,
-                  loss: losses.BCLoss,
-                  num_steps: int = 100000) -> networks_lib.Params:
-  """Trains the given network with BC and returns the params.
+
+def train_with_bc(
+    make_demonstrations: Callable[[int], Iterator[types.Transition]],
+    networks: bc_networks.BCNetworks,
+    loss: losses.BCLoss,
+    num_steps: int = 100000,
+) -> networks_lib.Params:
+    """Trains the given network with BC and returns the params.
 
   Args:
     make_demonstrations: A function (batch_size) -> iterator with demonstrations
@@ -42,22 +43,22 @@ def train_with_bc(make_demonstrations: Callable[[int],
   Returns:
     The trained network params.
   """
-  demonstration_iterator = make_demonstrations(256)
-  prefetching_iterator = utils.sharded_prefetch(
-      demonstration_iterator,
-      buffer_size=2,
-      num_threads=jax.local_device_count())
+    demonstration_iterator = make_demonstrations(256)
+    prefetching_iterator = utils.sharded_prefetch(
+        demonstration_iterator, buffer_size=2, num_threads=jax.local_device_count()
+    )
 
-  learner = learning.BCLearner(
-      networks=networks,
-      random_key=jax.random.PRNGKey(0),
-      loss_fn=loss,
-      prefetching_iterator=prefetching_iterator,
-      optimizer=optax.adam(1e-4),
-      num_sgd_steps_per_step=1)
+    learner = learning.BCLearner(
+        networks=networks,
+        random_key=jax.random.PRNGKey(0),
+        loss_fn=loss,
+        prefetching_iterator=prefetching_iterator,
+        optimizer=optax.adam(1e-4),
+        num_sgd_steps_per_step=1,
+    )
 
-  # Train the agent
-  for _ in range(num_steps):
-    learner.step()
+    # Train the agent
+    for _ in range(num_steps):
+        learner.step()
 
-  return learner.get_variables(['policy'])[0]
+    return learner.get_variables(["policy"])[0]

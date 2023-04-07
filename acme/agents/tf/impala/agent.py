@@ -16,108 +16,105 @@
 
 from typing import Optional
 
-import acme
-from acme import datasets
-from acme import specs
-from acme import types
-from acme.adders import reverb as adders
-from acme.agents.tf.impala import acting
-from acme.agents.tf.impala import learning
-from acme.tf import utils as tf2_utils
-from acme.utils import counting
-from acme.utils import loggers
 import dm_env
 import numpy as np
 import reverb
 import sonnet as snt
 import tensorflow as tf
 
+import acme
+from acme import datasets, specs, types
+from acme.adders import reverb as adders
+from acme.agents.tf.impala import acting, learning
+from acme.tf import utils as tf2_utils
+from acme.utils import counting, loggers
+
 
 class IMPALA(acme.Actor):
-  """IMPALA Agent."""
+    """IMPALA Agent."""
 
-  def __init__(
-      self,
-      environment_spec: specs.EnvironmentSpec,
-      network: snt.RNNCore,
-      sequence_length: int,
-      sequence_period: int,
-      counter: Optional[counting.Counter] = None,
-      logger: Optional[loggers.Logger] = None,
-      discount: float = 0.99,
-      max_queue_size: int = 100000,
-      batch_size: int = 16,
-      learning_rate: float = 1e-3,
-      entropy_cost: float = 0.01,
-      baseline_cost: float = 0.5,
-      max_abs_reward: Optional[float] = None,
-      max_gradient_norm: Optional[float] = None,
-  ):
+    def __init__(
+        self,
+        environment_spec: specs.EnvironmentSpec,
+        network: snt.RNNCore,
+        sequence_length: int,
+        sequence_period: int,
+        counter: Optional[counting.Counter] = None,
+        logger: Optional[loggers.Logger] = None,
+        discount: float = 0.99,
+        max_queue_size: int = 100000,
+        batch_size: int = 16,
+        learning_rate: float = 1e-3,
+        entropy_cost: float = 0.01,
+        baseline_cost: float = 0.5,
+        max_abs_reward: Optional[float] = None,
+        max_gradient_norm: Optional[float] = None,
+    ):
 
-    num_actions = environment_spec.actions.num_values
-    self._logger = logger or loggers.TerminalLogger('agent')
+        num_actions = environment_spec.actions.num_values
+        self._logger = logger or loggers.TerminalLogger("agent")
 
-    extra_spec = {
-        'core_state': network.initial_state(1),
-        'logits': tf.ones(shape=(1, num_actions), dtype=tf.float32)
-    }
-    # Remove batch dimensions.
-    extra_spec = tf2_utils.squeeze_batch_dim(extra_spec)
+        extra_spec = {
+            "core_state": network.initial_state(1),
+            "logits": tf.ones(shape=(1, num_actions), dtype=tf.float32),
+        }
+        # Remove batch dimensions.
+        extra_spec = tf2_utils.squeeze_batch_dim(extra_spec)
 
-    queue = reverb.Table.queue(
-        name=adders.DEFAULT_PRIORITY_TABLE,
-        max_size=max_queue_size,
-        signature=adders.SequenceAdder.signature(
-            environment_spec,
-            extras_spec=extra_spec,
-            sequence_length=sequence_length))
-    self._server = reverb.Server([queue], port=None)
-    self._can_sample = lambda: queue.can_sample(batch_size)
-    address = f'localhost:{self._server.port}'
+        queue = reverb.Table.queue(
+            name=adders.DEFAULT_PRIORITY_TABLE,
+            max_size=max_queue_size,
+            signature=adders.SequenceAdder.signature(
+                environment_spec,
+                extras_spec=extra_spec,
+                sequence_length=sequence_length,
+            ),
+        )
+        self._server = reverb.Server([queue], port=None)
+        self._can_sample = lambda: queue.can_sample(batch_size)
+        address = f"localhost:{self._server.port}"
 
-    # Component to add things into replay.
-    adder = adders.SequenceAdder(
-        client=reverb.Client(address),
-        period=sequence_period,
-        sequence_length=sequence_length,
-    )
+        # Component to add things into replay.
+        adder = adders.SequenceAdder(
+            client=reverb.Client(address),
+            period=sequence_period,
+            sequence_length=sequence_length,
+        )
 
-    # The dataset object to learn from.
-    dataset = datasets.make_reverb_dataset(
-        server_address=address,
-        batch_size=batch_size)
+        # The dataset object to learn from.
+        dataset = datasets.make_reverb_dataset(
+            server_address=address, batch_size=batch_size
+        )
 
-    tf2_utils.create_variables(network, [environment_spec.observations])
+        tf2_utils.create_variables(network, [environment_spec.observations])
 
-    self._actor = acting.IMPALAActor(network, adder)
-    self._learner = learning.IMPALALearner(
-        environment_spec=environment_spec,
-        network=network,
-        dataset=dataset,
-        counter=counter,
-        logger=logger,
-        discount=discount,
-        learning_rate=learning_rate,
-        entropy_cost=entropy_cost,
-        baseline_cost=baseline_cost,
-        max_gradient_norm=max_gradient_norm,
-        max_abs_reward=max_abs_reward,
-    )
+        self._actor = acting.IMPALAActor(network, adder)
+        self._learner = learning.IMPALALearner(
+            environment_spec=environment_spec,
+            network=network,
+            dataset=dataset,
+            counter=counter,
+            logger=logger,
+            discount=discount,
+            learning_rate=learning_rate,
+            entropy_cost=entropy_cost,
+            baseline_cost=baseline_cost,
+            max_gradient_norm=max_gradient_norm,
+            max_abs_reward=max_abs_reward,
+        )
 
-  def observe_first(self, timestep: dm_env.TimeStep):
-    self._actor.observe_first(timestep)
+    def observe_first(self, timestep: dm_env.TimeStep):
+        self._actor.observe_first(timestep)
 
-  def observe(
-      self,
-      action: types.NestedArray,
-      next_timestep: dm_env.TimeStep,
-  ):
-    self._actor.observe(action, next_timestep)
+    def observe(
+        self, action: types.NestedArray, next_timestep: dm_env.TimeStep,
+    ):
+        self._actor.observe(action, next_timestep)
 
-  def update(self, wait: bool = False):
-    # Run a number of learner steps (usually gradient steps).
-    while self._can_sample():
-      self._learner.step()
+    def update(self, wait: bool = False):
+        # Run a number of learner steps (usually gradient steps).
+        while self._can_sample():
+            self._learner.step()
 
-  def select_action(self, observation: np.ndarray) -> int:
-    return self._actor.select_action(observation)
+    def select_action(self, observation: np.ndarray) -> int:
+        return self._actor.select_action(observation)

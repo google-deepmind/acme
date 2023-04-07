@@ -14,39 +14,36 @@
 
 """Multihead networks apply separate networks to the input."""
 
-from typing import Callable, Union, Sequence
-
-from acme import types
+from typing import Callable, Sequence, Union
 
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+from acme import types
+
 tfd = tfp.distributions
-TensorTransformation = Union[snt.Module, Callable[[types.NestedTensor],
-                                                  tf.Tensor]]
+TensorTransformation = Union[snt.Module, Callable[[types.NestedTensor], tf.Tensor]]
 
 
 class Multihead(snt.Module):
-  """Multi-head network module.
+    """Multi-head network module.
 
   This takes as input a list of N `network_heads`, and returns another network
   whose output is the stacked outputs of each of these network heads separately
   applied to the module input. The dimension of the output is [..., N].
   """
 
-  def __init__(self,
-               network_heads: Sequence[TensorTransformation]):
-    if not network_heads:
-      raise ValueError('Must specify non-empty, non-None critic_network_heads.')
-    self._network_heads = network_heads
-    super().__init__(name='multihead')
+    def __init__(self, network_heads: Sequence[TensorTransformation]):
+        if not network_heads:
+            raise ValueError("Must specify non-empty, non-None critic_network_heads.")
+        self._network_heads = network_heads
+        super().__init__(name="multihead")
 
-  def __call__(self,
-               inputs: tf.Tensor) -> Union[tf.Tensor, Sequence[tf.Tensor]]:
-    outputs = [network_head(inputs) for network_head in self._network_heads]
-    if isinstance(outputs[0], tfd.Distribution):
-      # Cannot stack distributions
-      return outputs
-    outputs = tf.stack(outputs, axis=-1)
-    return outputs
+    def __call__(self, inputs: tf.Tensor) -> Union[tf.Tensor, Sequence[tf.Tensor]]:
+        outputs = [network_head(inputs) for network_head in self._network_heads]
+        if isinstance(outputs[0], tfd.Distribution):
+            # Cannot stack distributions
+            return outputs
+        outputs = tf.stack(outputs, axis=-1)
+        return outputs
