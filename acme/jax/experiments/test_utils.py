@@ -20,12 +20,14 @@ from acme.utils import counting
 
 
 def restore_counter(
-    checkpointing_config: experiments.CheckpointingConfig) -> counting.Counter:
-  """Restores a counter from the latest checkpoint saved with this config."""
-  counter = counting.Counter()
-  savers.Checkpointer(
-      objects_to_save={'counter': counter},
-      directory=checkpointing_config.directory,
-      add_uid=checkpointing_config.add_uid,
-      max_to_keep=checkpointing_config.max_to_keep)
-  return counter
+    checkpointing_config: experiments.CheckpointingConfig,
+) -> counting.Counter:
+    """Restores a counter from the latest checkpoint saved with this config."""
+    counter = counting.Counter()
+    savers.Checkpointer(
+        objects_to_save={"counter": counter},
+        directory=checkpointing_config.directory,
+        add_uid=checkpointing_config.add_uid,
+        max_to_keep=checkpointing_config.max_to_keep,
+    )
+    return counter

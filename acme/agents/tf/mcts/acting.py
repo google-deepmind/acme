@@ -16,105 +16,104 @@
 
 from typing import Optional, Tuple
 
-import acme
-from acme import adders
-from acme import specs
-from acme.agents.tf.mcts import models
-from acme.agents.tf.mcts import search
-from acme.agents.tf.mcts import types
-from acme.tf import variable_utils as tf2_variable_utils
-
 import dm_env
 import numpy as np
-from scipy import special
 import sonnet as snt
 import tensorflow as tf
+from scipy import special
+
+import acme
+from acme import adders, specs
+from acme.agents.tf.mcts import models, search, types
+from acme.tf import variable_utils as tf2_variable_utils
 
 
 class MCTSActor(acme.Actor):
-  """Executes a policy- and value-network guided MCTS search."""
+    """Executes a policy- and value-network guided MCTS search."""
 
-  _prev_timestep: dm_env.TimeStep
+    _prev_timestep: dm_env.TimeStep
 
-  def __init__(
-      self,
-      environment_spec: specs.EnvironmentSpec,
-      model: models.Model,
-      network: snt.Module,
-      discount: float,
-      num_simulations: int,
-      adder: Optional[adders.Adder] = None,
-      variable_client: Optional[tf2_variable_utils.VariableClient] = None,
-  ):
+    def __init__(
+        self,
+        environment_spec: specs.EnvironmentSpec,
+        model: models.Model,
+        network: snt.Module,
+        discount: float,
+        num_simulations: int,
+        adder: Optional[adders.Adder] = None,
+        variable_client: Optional[tf2_variable_utils.VariableClient] = None,
+    ):
 
-    # Internalize components: model, network, data sink and variable source.
-    self._model = model
-    self._network = tf.function(network)
-    self._variable_client = variable_client
-    self._adder = adder
+        # Internalize components: model, network, data sink and variable source.
+        self._model = model
+        self._network = tf.function(network)
+        self._variable_client = variable_client
+        self._adder = adder
 
-    # Internalize hyperparameters.
-    self._num_actions = environment_spec.actions.num_values
-    self._num_simulations = num_simulations
-    self._actions = list(range(self._num_actions))
-    self._discount = discount
+        # Internalize hyperparameters.
+        self._num_actions = environment_spec.actions.num_values
+        self._num_simulations = num_simulations
+        self._actions = list(range(self._num_actions))
+        self._discount = discount
 
-    # We need to save the policy so as to add it to replay on the next step.
-    self._probs = np.ones(
-        shape=(self._num_actions,), dtype=np.float32) / self._num_actions
+        # We need to save the policy so as to add it to replay on the next step.
+        self._probs = (
+            np.ones(shape=(self._num_actions,), dtype=np.float32) / self._num_actions
+        )
 
-  def _forward(
-      self, observation: types.Observation) -> Tuple[types.Probs, types.Value]:
-    """Performs a forward pass of the policy-value network."""
-    logits, value = self._network(tf.expand_dims(observation, axis=0))
+    def _forward(
+        self, observation: types.Observation
+    ) -> Tuple[types.Probs, types.Value]:
+        """Performs a forward pass of the policy-value network."""
+        logits, value = self._network(tf.expand_dims(observation, axis=0))
 
-    # Convert to numpy & take softmax.
-    logits = logits.numpy().squeeze(axis=0)
-    value = value.numpy().item()
-    probs = special.softmax(logits)
+        # Convert to numpy & take softmax.
+        logits = logits.numpy().squeeze(axis=0)
+        value = value.numpy().item()
+        probs = special.softmax(logits)
 
-    return probs, value
+        return probs, value
 
-  def select_action(self, observation: types.Observation) -> types.Action:
-    """Computes the agent's policy via MCTS."""
-    if self._model.needs_reset:
-      self._model.reset(observation)
+    def select_action(self, observation: types.Observation) -> types.Action:
+        """Computes the agent's policy via MCTS."""
+        if self._model.needs_reset:
+            self._model.reset(observation)
 
-    # Compute a fresh MCTS plan.
-    root = search.mcts(
-        observation,
-        model=self._model,
-        search_policy=search.puct,
-        evaluation=self._forward,
-        num_simulations=self._num_simulations,
-        num_actions=self._num_actions,
-        discount=self._discount,
-    )
+        # Compute a fresh MCTS plan.
+        root = search.mcts(
+            observation,
+            model=self._model,
+            search_policy=search.puct,
+            evaluation=self._forward,
+            num_simulations=self._num_simulations,
+            num_actions=self._num_actions,
+            discount=self._discount,
+        )
 
-    # The agent's policy is softmax w.r.t. the *visit counts* as in AlphaZero.
-    probs = search.visit_count_policy(root)
-    action = np.int32(np.random.choice(self._actions, p=probs))
+        # The agent's policy is softmax w.r.t. the *visit counts* as in AlphaZero.
+        probs = search.visit_count_policy(root)
+        action = np.int32(np.random.choice(self._actions, p=probs))
 
-    # Save the policy probs so that we can add them to replay in `observe()`.
-    self._probs = probs.astype(np.float32)
+        # Save the policy probs so that we can add them to replay in `observe()`.
+        self._probs = probs.astype(np.float32)
 
-    return action
+        return action
 
-  def update(self, wait: bool = False):
-    """Fetches the latest variables from the variable source, if needed."""
-    if self._variable_client:
-      self._variable_client.update(wait)
+    def update(self, wait: bool = False):
+        """Fetches the latest variables from the variable source, if needed."""
+        if self._variable_client:
+            self._variable_client.update(wait)
 
-  def observe_first(self, timestep: dm_env.TimeStep):
-    self._prev_timestep = timestep
-    if self._adder:
-      self._adder.add_first(timestep)
+    def observe_first(self, timestep: dm_env.TimeStep):
+        self._prev_timestep = timestep
+        if self._adder:
+            self._adder.add_first(timestep)
 
-  def observe(self, action: types.Action, next_timestep: dm_env.TimeStep):
-    """Updates the agent's internal model and adds the transition to replay."""
-    self._model.update(self._prev_timestep, action, next_timestep)
+    def observe(self, action: types.Action, next_timestep: dm_env.TimeStep):
+        """Updates the agent's internal model and adds the transition to replay."""
+        self._model.update(self._prev_timestep, action, next_timestep)
 
-    self._prev_timestep = next_timestep
+        self._prev_timestep = next_timestep
 
-    if self._adder:
-      self._adder.add(action, next_timestep, extras={'pi': self._probs})
+        if self._adder:
+            self._adder.add(action, next_timestep, extras={"pi": self._probs})

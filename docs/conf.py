@@ -15,27 +15,24 @@
 """Sphinx configuration.
 """
 
-project = 'Acme'
-author = 'DeepMind Technologies Limited'
-copyright = '2018, DeepMind Technologies Limited'  # pylint: disable=redefined-builtin
-version = ''
-release = ''
-master_doc = 'index'
+project = "Acme"
+author = "DeepMind Technologies Limited"
+copyright = "2018, DeepMind Technologies Limited"  # pylint: disable=redefined-builtin
+version = ""
+release = ""
+master_doc = "index"
 
-extensions = [
-    'myst_parser'
-]
+extensions = ["myst_parser"]
 
-html_theme = 'sphinx_rtd_theme'
-html_logo = 'imgs/acme.png'
+html_theme = "sphinx_rtd_theme"
+html_logo = "imgs/acme.png"
 html_theme_options = {
-    'logo_only': True,
+    "logo_only": True,
 }
 html_css_files = [
-    'custom.css',
+    "custom.css",
 ]
 
 templates_path = []
-html_static_path = ['_static']
-exclude_patterns = ['_build', 'requirements.txt']
-
+html_static_path = ["_static"]
+exclude_patterns = ["_build", "requirements.txt"]

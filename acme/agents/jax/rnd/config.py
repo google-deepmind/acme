@@ -18,13 +18,13 @@ import dataclasses
 
 @dataclasses.dataclass
 class RNDConfig:
-  """Configuration options for RND."""
+    """Configuration options for RND."""
 
-  # Learning rate for the predictor.
-  predictor_learning_rate: float = 1e-4
+    # Learning rate for the predictor.
+    predictor_learning_rate: float = 1e-4
 
-  # If True, the direct rl algorithm is using the SequenceAdder data format.
-  is_sequence_based: bool = False
+    # If True, the direct rl algorithm is using the SequenceAdder data format.
+    is_sequence_based: bool = False
 
-  # How many gradient updates to perform per step.
-  num_sgd_steps_per_step: int = 1
+    # How many gradient updates to perform per step.
+    num_sgd_steps_per_step: int = 1

@@ -16,11 +16,11 @@
 
 from typing import Any, Callable, Dict, Tuple
 
+import reverb
+
 from acme import specs
 from acme.agents.jax import builders as jax_builders
 from acme.utils.loggers import base
-import reverb
-
 
 # Sub-agent types
 AgentID = str
@@ -32,10 +32,11 @@ PolicyNetwork = Any
 LoggerFn = Callable[[], base.Logger]
 InitNetworkFn = Callable[[GenericAgent, specs.EnvironmentSpec], Networks]
 InitPolicyNetworkFn = Callable[
-    [GenericAgent, Networks, specs.EnvironmentSpec, AgentConfig, bool],
-    Networks]
-InitBuilderFn = Callable[[GenericAgent, AgentConfig],
-                         jax_builders.GenericActorLearnerBuilder]
+    [GenericAgent, Networks, specs.EnvironmentSpec, AgentConfig, bool], Networks
+]
+InitBuilderFn = Callable[
+    [GenericAgent, AgentConfig], jax_builders.GenericActorLearnerBuilder
+]
 
 # Multiagent types
 MultiAgentLoggerFn = Dict[AgentID, LoggerFn]
@@ -43,9 +44,8 @@ MultiAgentNetworks = Dict[AgentID, Networks]
 MultiAgentPolicyNetworks = Dict[AgentID, PolicyNetwork]
 MultiAgentSample = Tuple[reverb.ReplaySample, ...]
 NetworkFactory = Callable[[specs.EnvironmentSpec], MultiAgentNetworks]
-PolicyFactory = Callable[[MultiAgentNetworks, EvalMode],
-                         MultiAgentPolicyNetworks]
-BuilderFactory = Callable[[
-    Dict[AgentID, GenericAgent],
-    Dict[AgentID, AgentConfig],
-], Dict[AgentID, jax_builders.GenericActorLearnerBuilder]]
+PolicyFactory = Callable[[MultiAgentNetworks, EvalMode], MultiAgentPolicyNetworks]
+BuilderFactory = Callable[
+    [Dict[AgentID, GenericAgent], Dict[AgentID, AgentConfig],],
+    Dict[AgentID, jax_builders.GenericActorLearnerBuilder],
+]

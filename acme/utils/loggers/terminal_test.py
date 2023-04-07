@@ -14,33 +14,32 @@
 
 """Tests for terminal logger."""
 
-from acme.utils.loggers import terminal
-
 from absl.testing import absltest
+
+from acme.utils.loggers import terminal
 
 
 class LoggingTest(absltest.TestCase):
+    def test_logging_output_format(self):
+        inputs = {
+            "c": "foo",
+            "a": 1337,
+            "b": 42.0001,
+        }
+        expected_outputs = "A = 1337 | B = 42.000 | C = foo"
+        test_fn = lambda outputs: self.assertEqual(outputs, expected_outputs)
 
-  def test_logging_output_format(self):
-    inputs = {
-        'c': 'foo',
-        'a': 1337,
-        'b': 42.0001,
-    }
-    expected_outputs = 'A = 1337 | B = 42.000 | C = foo'
-    test_fn = lambda outputs: self.assertEqual(outputs, expected_outputs)
+        logger = terminal.TerminalLogger(print_fn=test_fn)
+        logger.write(inputs)
 
-    logger = terminal.TerminalLogger(print_fn=test_fn)
-    logger.write(inputs)
+    def test_label(self):
+        inputs = {"foo": "bar", "baz": 123}
+        expected_outputs = "[Test] Baz = 123 | Foo = bar"
+        test_fn = lambda outputs: self.assertEqual(outputs, expected_outputs)
 
-  def test_label(self):
-    inputs = {'foo': 'bar', 'baz': 123}
-    expected_outputs = '[Test] Baz = 123 | Foo = bar'
-    test_fn = lambda outputs: self.assertEqual(outputs, expected_outputs)
-
-    logger = terminal.TerminalLogger(print_fn=test_fn, label='test')
-    logger.write(inputs)
+        logger = terminal.TerminalLogger(print_fn=test_fn, label="test")
+        logger.write(inputs)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

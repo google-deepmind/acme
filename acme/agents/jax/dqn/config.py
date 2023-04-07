@@ -17,14 +17,15 @@
 import dataclasses
 from typing import Callable, Optional, Sequence, Union
 
-from acme.adders import reverb as adders_reverb
 import jax.numpy as jnp
 import numpy as np
+
+from acme.adders import reverb as adders_reverb
 
 
 @dataclasses.dataclass
 class DQNConfig:
-  """Configuration options for DQN agent.
+    """Configuration options for DQN agent.
 
   Attributes:
     epsilon: for use by epsilon-greedy policies. If multiple, the epsilons are
@@ -52,36 +53,36 @@ class DQNConfig:
     num_sgd_steps_per_step: How many gradient updates to perform per learner
       step.
   """
-  epsilon: Union[float, Sequence[float]] = 0.05
-  eval_epsilon: Optional[float] = None
-  # TODO(b/191706065): update all clients and remove this field.
-  seed: int = 1
 
-  # Learning rule
-  learning_rate: Union[float, Callable[[int], float]] = 1e-3
-  adam_eps: float = 1e-8  # Eps for Adam optimizer.
-  discount: float = 0.99  # Discount rate applied to value per timestep.
-  n_step: int = 5  # N-step TD learning.
-  target_update_period: int = 100  # Update target network every period.
-  max_gradient_norm: float = np.inf  # For gradient clipping.
+    epsilon: Union[float, Sequence[float]] = 0.05
+    eval_epsilon: Optional[float] = None
+    # TODO(b/191706065): update all clients and remove this field.
+    seed: int = 1
 
-  # Replay options
-  batch_size: int = 256
-  min_replay_size: int = 1_000
-  max_replay_size: int = 1_000_000
-  replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
-  importance_sampling_exponent: float = 0.2
-  priority_exponent: float = 0.6
-  prefetch_size: int = 4
-  samples_per_insert: float = 0.5
-  samples_per_insert_tolerance_rate: float = 0.1
+    # Learning rule
+    learning_rate: Union[float, Callable[[int], float]] = 1e-3
+    adam_eps: float = 1e-8  # Eps for Adam optimizer.
+    discount: float = 0.99  # Discount rate applied to value per timestep.
+    n_step: int = 5  # N-step TD learning.
+    target_update_period: int = 100  # Update target network every period.
+    max_gradient_norm: float = np.inf  # For gradient clipping.
 
-  num_sgd_steps_per_step: int = 1
+    # Replay options
+    batch_size: int = 256
+    min_replay_size: int = 1_000
+    max_replay_size: int = 1_000_000
+    replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
+    importance_sampling_exponent: float = 0.2
+    priority_exponent: float = 0.6
+    prefetch_size: int = 4
+    samples_per_insert: float = 0.5
+    samples_per_insert_tolerance_rate: float = 0.1
+
+    num_sgd_steps_per_step: int = 1
 
 
-def logspace_epsilons(num_epsilons: int, epsilon: float = 0.017
-                      ) -> Sequence[float]:
-  """`num_epsilons` of logspace-distributed values, with median `epsilon`."""
-  if num_epsilons <= 1:
-    return (epsilon,)
-  return jnp.logspace(1, 8, num_epsilons, base=epsilon ** (2./9.))
+def logspace_epsilons(num_epsilons: int, epsilon: float = 0.017) -> Sequence[float]:
+    """`num_epsilons` of logspace-distributed values, with median `epsilon`."""
+    if num_epsilons <= 1:
+        return (epsilon,)
+    return jnp.logspace(1, 8, num_epsilons, base=epsilon ** (2.0 / 9.0))

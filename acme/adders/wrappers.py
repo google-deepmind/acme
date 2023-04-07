@@ -16,47 +16,52 @@
 
 from typing import Iterable
 
+import dm_env
+
 from acme import types
 from acme.adders import base
-import dm_env
 
 
 class ForkingAdder(base.Adder):
-  """An adder that forks data into several other adders."""
+    """An adder that forks data into several other adders."""
 
-  def __init__(self, adders: Iterable[base.Adder]):
-    self._adders = adders
+    def __init__(self, adders: Iterable[base.Adder]):
+        self._adders = adders
 
-  def reset(self):
-    for adder in self._adders:
-      adder.reset()
+    def reset(self):
+        for adder in self._adders:
+            adder.reset()
 
-  def add_first(self, timestep: dm_env.TimeStep):
-    for adder in self._adders:
-      adder.add_first(timestep)
+    def add_first(self, timestep: dm_env.TimeStep):
+        for adder in self._adders:
+            adder.add_first(timestep)
 
-  def add(self,
-          action: types.NestedArray,
-          next_timestep: dm_env.TimeStep,
-          extras: types.NestedArray = ()):
-    for adder in self._adders:
-      adder.add(action, next_timestep, extras)
+    def add(
+        self,
+        action: types.NestedArray,
+        next_timestep: dm_env.TimeStep,
+        extras: types.NestedArray = (),
+    ):
+        for adder in self._adders:
+            adder.add(action, next_timestep, extras)
 
 
 class IgnoreExtrasAdder(base.Adder):
-  """An adder that ignores extras."""
+    """An adder that ignores extras."""
 
-  def __init__(self, adder: base.Adder):
-    self._adder = adder
+    def __init__(self, adder: base.Adder):
+        self._adder = adder
 
-  def reset(self):
-    self._adder.reset()
+    def reset(self):
+        self._adder.reset()
 
-  def add_first(self, timestep: dm_env.TimeStep):
-    self._adder.add_first(timestep)
+    def add_first(self, timestep: dm_env.TimeStep):
+        self._adder.add_first(timestep)
 
-  def add(self,
-          action: types.NestedArray,
-          next_timestep: dm_env.TimeStep,
-          extras: types.NestedArray = ()):
-    self._adder.add(action, next_timestep)
+    def add(
+        self,
+        action: types.NestedArray,
+        next_timestep: dm_env.TimeStep,
+        extras: types.NestedArray = (),
+    ):
+        self._adder.add(action, next_timestep)

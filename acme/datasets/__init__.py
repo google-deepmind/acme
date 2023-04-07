@@ -16,4 +16,5 @@
 
 from acme.datasets.numpy_iterator import NumpyIterator
 from acme.datasets.reverb import make_reverb_dataset
+
 # from acme.datasets.reverb import make_reverb_dataset_trajectory

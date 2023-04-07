@@ -14,7 +14,7 @@
 
 """PPO config."""
 import dataclasses
-from typing import Callable, Union, Optional
+from typing import Callable, Optional, Union
 
 from acme import types
 from acme.adders import reverb as adders_reverb
@@ -23,7 +23,7 @@ from acme.agents.jax.ppo import normalization
 
 @dataclasses.dataclass
 class PPOConfig:
-  """Configuration options for PPO.
+    """Configuration options for PPO.
 
   Attributes:
     unroll_length: Length of sequences added to the replay buffer.
@@ -61,28 +61,30 @@ class PPOConfig:
       normalization functions. Setting to None (default) disables observation
       normalization.
   """
-  unroll_length: int = 8
-  num_minibatches: int = 8
-  num_epochs: int = 2
-  batch_size: int = 256
-  replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
-  ppo_clipping_epsilon: float = 0.2
-  normalize_advantage: bool = False
-  normalize_value: bool = False
-  normalization_ema_tau: float = 0.995
-  clip_value: bool = False
-  value_clipping_epsilon: float = 0.2
-  max_abs_reward: Optional[float] = None
-  gae_lambda: float = 0.95
-  discount: float = 0.99
-  learning_rate: Union[float, Callable[[int], float]] = 3e-4
-  adam_epsilon: float = 1e-7
-  entropy_cost: float = 3e-4
-  value_cost: float = 1.
-  max_gradient_norm: float = 0.5
-  variable_update_period: int = 1
-  log_global_norm_metrics: bool = False
-  metrics_logging_period: int = 100
-  pmap_axis_name: str = 'devices'
-  obs_normalization_fns_factory: Optional[Callable[
-      [types.NestedSpec], normalization.NormalizationFns]] = None
+
+    unroll_length: int = 8
+    num_minibatches: int = 8
+    num_epochs: int = 2
+    batch_size: int = 256
+    replay_table_name: str = adders_reverb.DEFAULT_PRIORITY_TABLE
+    ppo_clipping_epsilon: float = 0.2
+    normalize_advantage: bool = False
+    normalize_value: bool = False
+    normalization_ema_tau: float = 0.995
+    clip_value: bool = False
+    value_clipping_epsilon: float = 0.2
+    max_abs_reward: Optional[float] = None
+    gae_lambda: float = 0.95
+    discount: float = 0.99
+    learning_rate: Union[float, Callable[[int], float]] = 3e-4
+    adam_epsilon: float = 1e-7
+    entropy_cost: float = 3e-4
+    value_cost: float = 1.0
+    max_gradient_norm: float = 0.5
+    variable_update_period: int = 1
+    log_global_norm_metrics: bool = False
+    metrics_logging_period: int = 100
+    pmap_axis_name: str = "devices"
+    obs_normalization_fns_factory: Optional[
+        Callable[[types.NestedSpec], normalization.NormalizationFns]
+    ] = None

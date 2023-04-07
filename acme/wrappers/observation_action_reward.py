@@ -16,47 +16,53 @@
 
 from typing import NamedTuple
 
-from acme import types
-from acme.wrappers import base
-
 import dm_env
 import tree
 
+from acme import types
+from acme.wrappers import base
+
 
 class OAR(NamedTuple):
-  """Container for (Observation, Action, Reward) tuples."""
-  observation: types.Nest
-  action: types.Nest
-  reward: types.Nest
+    """Container for (Observation, Action, Reward) tuples."""
+
+    observation: types.Nest
+    action: types.Nest
+    reward: types.Nest
 
 
 class ObservationActionRewardWrapper(base.EnvironmentWrapper):
-  """A wrapper that puts the previous action and reward into the observation."""
+    """A wrapper that puts the previous action and reward into the observation."""
 
-  def reset(self) -> dm_env.TimeStep:
-    # Initialize with zeros of the appropriate shape/dtype.
-    action = tree.map_structure(
-        lambda x: x.generate_value(), self._environment.action_spec())
-    reward = tree.map_structure(
-        lambda x: x.generate_value(), self._environment.reward_spec())
-    timestep = self._environment.reset()
-    new_timestep = self._augment_observation(action, reward, timestep)
-    return new_timestep
+    def reset(self) -> dm_env.TimeStep:
+        # Initialize with zeros of the appropriate shape/dtype.
+        action = tree.map_structure(
+            lambda x: x.generate_value(), self._environment.action_spec()
+        )
+        reward = tree.map_structure(
+            lambda x: x.generate_value(), self._environment.reward_spec()
+        )
+        timestep = self._environment.reset()
+        new_timestep = self._augment_observation(action, reward, timestep)
+        return new_timestep
 
-  def step(self, action: types.NestedArray) -> dm_env.TimeStep:
-    timestep = self._environment.step(action)
-    new_timestep = self._augment_observation(action, timestep.reward, timestep)
-    return new_timestep
+    def step(self, action: types.NestedArray) -> dm_env.TimeStep:
+        timestep = self._environment.step(action)
+        new_timestep = self._augment_observation(action, timestep.reward, timestep)
+        return new_timestep
 
-  def _augment_observation(self, action: types.NestedArray,
-                           reward: types.NestedArray,
-                           timestep: dm_env.TimeStep) -> dm_env.TimeStep:
-    oar = OAR(observation=timestep.observation,
-              action=action,
-              reward=reward)
-    return timestep._replace(observation=oar)
+    def _augment_observation(
+        self,
+        action: types.NestedArray,
+        reward: types.NestedArray,
+        timestep: dm_env.TimeStep,
+    ) -> dm_env.TimeStep:
+        oar = OAR(observation=timestep.observation, action=action, reward=reward)
+        return timestep._replace(observation=oar)
 
-  def observation_spec(self):
-    return OAR(observation=self._environment.observation_spec(),
-               action=self.action_spec(),
-               reward=self.reward_spec())
+    def observation_spec(self):
+        return OAR(
+            observation=self._environment.observation_spec(),
+            action=self.action_spec(),
+            reward=self.reward_spec(),
+        )

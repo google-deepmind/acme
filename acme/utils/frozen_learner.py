@@ -20,12 +20,12 @@ import acme
 
 
 class FrozenLearner(acme.Learner):
-  """Wraps a learner ignoring the step calls, i.e. freezing it."""
+    """Wraps a learner ignoring the step calls, i.e. freezing it."""
 
-  def __init__(self,
-               learner: acme.Learner,
-               step_fn: Optional[Callable[[], None]] = None):
-    """Initializes the frozen learner.
+    def __init__(
+        self, learner: acme.Learner, step_fn: Optional[Callable[[], None]] = None
+    ):
+        """Initializes the frozen learner.
 
     Args:
       learner: Learner to be wrapped.
@@ -33,26 +33,26 @@ class FrozenLearner(acme.Learner):
         This can be used, e.g. to drop samples from an iterator that would
         normally be consumed by the learner.
     """
-    self._learner = learner
-    self._step_fn = step_fn
+        self._learner = learner
+        self._step_fn = step_fn
 
-  def step(self):
-    """See base class."""
-    if self._step_fn:
-      self._step_fn()
+    def step(self):
+        """See base class."""
+        if self._step_fn:
+            self._step_fn()
 
-  def run(self, num_steps: Optional[int] = None):
-    """See base class."""
-    self._learner.run(num_steps)
+    def run(self, num_steps: Optional[int] = None):
+        """See base class."""
+        self._learner.run(num_steps)
 
-  def save(self):
-    """See base class."""
-    return self._learner.save()
+    def save(self):
+        """See base class."""
+        return self._learner.save()
 
-  def restore(self, state):
-    """See base class."""
-    self._learner.restore(state)
+    def restore(self, state):
+        """See base class."""
+        self._learner.restore(state)
 
-  def get_variables(self, names: Sequence[str]) -> List[acme.types.NestedArray]:
-    """See base class."""
-    return self._learner.get_variables(names)
+    def get_variables(self, names: Sequence[str]) -> List[acme.types.NestedArray]:
+        """See base class."""
+        return self._learner.get_variables(names)

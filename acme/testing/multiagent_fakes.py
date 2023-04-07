@@ -16,35 +16,36 @@
 
 from typing import Dict, List
 
-from acme import specs
 import numpy as np
+
+from acme import specs
 
 
 def _make_multiagent_spec(agent_indices: List[str]) -> Dict[str, specs.Array]:
-  """Returns dummy multiagent sub-spec (e.g., observation or action spec).
+    """Returns dummy multiagent sub-spec (e.g., observation or action spec).
 
   Args:
     agent_indices: a list of agent indices.
   """
-  return {
-      agent_id: specs.BoundedArray((1,), np.float32, 0, 1)
-      for agent_id in agent_indices
-  }
+    return {
+        agent_id: specs.BoundedArray((1,), np.float32, 0, 1)
+        for agent_id in agent_indices
+    }
 
 
-def make_multiagent_environment_spec(
-    agent_indices: List[str]) -> specs.EnvironmentSpec:
-  """Returns dummy multiagent environment spec.
+def make_multiagent_environment_spec(agent_indices: List[str]) -> specs.EnvironmentSpec:
+    """Returns dummy multiagent environment spec.
 
   Args:
     agent_indices: a list of agent indices.
   """
-  action_spec = _make_multiagent_spec(agent_indices)
-  discount_spec = specs.BoundedArray((), np.float32, 0.0, 1.0)
-  observation_spec = _make_multiagent_spec(agent_indices)
-  reward_spec = _make_multiagent_spec(agent_indices)
-  return specs.EnvironmentSpec(
-      actions=action_spec,
-      discounts=discount_spec,
-      observations=observation_spec,
-      rewards=reward_spec)
+    action_spec = _make_multiagent_spec(agent_indices)
+    discount_spec = specs.BoundedArray((), np.float32, 0.0, 1.0)
+    observation_spec = _make_multiagent_spec(agent_indices)
+    reward_spec = _make_multiagent_spec(agent_indices)
+    return specs.EnvironmentSpec(
+        actions=action_spec,
+        discounts=discount_spec,
+        observations=observation_spec,
+        rewards=reward_spec,
+    )

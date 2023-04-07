@@ -15,6 +15,7 @@
 """Losses for Deterministic Policy Gradients."""
 
 from typing import Optional
+
 import tensorflow as tf
 
 
@@ -25,35 +26,36 @@ def dpg(
     dqda_clipping: Optional[float] = None,
     clip_norm: bool = False,
 ) -> tf.Tensor:
-  """Deterministic policy gradient loss, similar to trfl.dpg."""
+    """Deterministic policy gradient loss, similar to trfl.dpg."""
 
-  # Calculate the gradient dq/da.
-  dqda = tape.gradient([q_max], [a_max])[0]
+    # Calculate the gradient dq/da.
+    dqda = tape.gradient([q_max], [a_max])[0]
 
-  if dqda is None:
-    raise ValueError('q_max needs to be a function of a_max.')
+    if dqda is None:
+        raise ValueError("q_max needs to be a function of a_max.")
 
-  # Clipping the gradient dq/da.
-  if dqda_clipping is not None:
-    if dqda_clipping <= 0:
-      raise ValueError('dqda_clipping should be bigger than 0, {} found'.format(
-          dqda_clipping))
-    if clip_norm:
-      dqda = tf.clip_by_norm(dqda, dqda_clipping, axes=-1)
-    else:
-      dqda = tf.clip_by_value(dqda, -1. * dqda_clipping, dqda_clipping)
+    # Clipping the gradient dq/da.
+    if dqda_clipping is not None:
+        if dqda_clipping <= 0:
+            raise ValueError(
+                "dqda_clipping should be bigger than 0, {} found".format(dqda_clipping)
+            )
+        if clip_norm:
+            dqda = tf.clip_by_norm(dqda, dqda_clipping, axes=-1)
+        else:
+            dqda = tf.clip_by_value(dqda, -1.0 * dqda_clipping, dqda_clipping)
 
-  # Target_a ensures correct gradient calculated during backprop.
-  target_a = dqda + a_max
-  # Stop the gradient going through Q network when backprop.
-  target_a = tf.stop_gradient(target_a)
-  # Gradient only go through actor network.
-  loss = 0.5 * tf.reduce_sum(tf.square(target_a - a_max), axis=-1)
-  # This recovers the DPG because (letting w be the actor network weights):
-  # d(loss)/dw = 0.5 * (2 * (target_a - a_max) * d(target_a - a_max)/dw)
-  #            = (target_a - a_max) * [d(target_a)/dw  - d(a_max)/dw]
-  #            = dq/da * [d(target_a)/dw  - d(a_max)/dw]  # by defn of target_a
-  #            = dq/da * [0 - d(a_max)/dw]                # by stop_gradient
-  #            = - dq/da * da/dw
+    # Target_a ensures correct gradient calculated during backprop.
+    target_a = dqda + a_max
+    # Stop the gradient going through Q network when backprop.
+    target_a = tf.stop_gradient(target_a)
+    # Gradient only go through actor network.
+    loss = 0.5 * tf.reduce_sum(tf.square(target_a - a_max), axis=-1)
+    # This recovers the DPG because (letting w be the actor network weights):
+    # d(loss)/dw = 0.5 * (2 * (target_a - a_max) * d(target_a - a_max)/dw)
+    #            = (target_a - a_max) * [d(target_a)/dw  - d(a_max)/dw]
+    #            = dq/da * [d(target_a)/dw  - d(a_max)/dw]  # by defn of target_a
+    #            = dq/da * [0 - d(a_max)/dw]                # by stop_gradient
+    #            = - dq/da * da/dw
 
-  return loss
+    return loss

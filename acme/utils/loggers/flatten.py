@@ -20,13 +20,12 @@ from acme.utils.loggers import base
 
 
 class FlattenDictLogger(base.Logger):
-  """Logger which flattens sub-dictionaries into the top level dict."""
+    """Logger which flattens sub-dictionaries into the top level dict."""
 
-  def __init__(self,
-               logger: base.Logger,
-               label: str = 'Logs',
-               raw_keys: Sequence[str] = ()):
-    """Initializer.
+    def __init__(
+        self, logger: base.Logger, label: str = "Logs", raw_keys: Sequence[str] = ()
+    ):
+        """Initializer.
 
     Args:
       logger: The wrapped logger.
@@ -36,24 +35,24 @@ class FlattenDictLogger(base.Logger):
         keys to be present in the logs (e.g. 'step', 'timestamp'), so these
         keys should not be prefixed.
     """
-    self._logger = logger
-    self._label = label
-    self._raw_keys = raw_keys
+        self._logger = logger
+        self._label = label
+        self._raw_keys = raw_keys
 
-  def write(self, values: base.LoggingData):
-    flattened_values = {}
-    for key, value in values.items():
-      if key in self._raw_keys:
-        flattened_values[key] = value
-        continue
-      name = f'{self._label}/{key}'
-      if isinstance(value, dict):
-        for sub_key, sub_value in value.items():
-          flattened_values[f'{name}/{sub_key}'] = sub_value
-      else:
-        flattened_values[name] = value
+    def write(self, values: base.LoggingData):
+        flattened_values = {}
+        for key, value in values.items():
+            if key in self._raw_keys:
+                flattened_values[key] = value
+                continue
+            name = f"{self._label}/{key}"
+            if isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    flattened_values[f"{name}/{sub_key}"] = sub_value
+            else:
+                flattened_values[name] = value
 
-    self._logger.write(flattened_values)
+        self._logger.write(flattened_values)
 
-  def close(self):
-    self._logger.close()
+    def close(self):
+        self._logger.close()

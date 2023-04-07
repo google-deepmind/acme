@@ -17,5 +17,4 @@
 from acme.agents.jax.impala.builder import IMPALABuilder
 from acme.agents.jax.impala.config import IMPALAConfig
 from acme.agents.jax.impala.learning import IMPALALearner
-from acme.agents.jax.impala.networks import IMPALANetworks
-from acme.agents.jax.impala.networks import make_atari_networks
+from acme.agents.jax.impala.networks import IMPALANetworks, make_atari_networks

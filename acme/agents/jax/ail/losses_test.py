@@ -14,66 +14,71 @@
 
 """Tests for the AIL discriminator losses."""
 
-from acme import types
-from acme.agents.jax.ail import losses
-from acme.jax import networks as networks_lib
 import jax
 import jax.numpy as jnp
 import tree
-
 from absl.testing import absltest
+
+from acme import types
+from acme.agents.jax.ail import losses
+from acme.jax import networks as networks_lib
 
 
 class AilLossTest(absltest.TestCase):
+    def test_gradient_penalty(self):
+        def dummy_discriminator(transition: types.Transition) -> networks_lib.Logits:
+            return transition.observation + jnp.square(transition.action)
 
-  def test_gradient_penalty(self):
+        zero_transition = types.Transition(0.0, 0.0, 0.0, 0.0, 0.0)
+        zero_transition = tree.map_structure(
+            lambda x: jnp.expand_dims(x, axis=0), zero_transition
+        )
+        self.assertEqual(
+            losses._compute_gradient_penalty(zero_transition, dummy_discriminator, 0.0),
+            1 ** 2 + 0 ** 2,
+        )
 
-    def dummy_discriminator(
-        transition: types.Transition) -> networks_lib.Logits:
-      return transition.observation + jnp.square(transition.action)
+        one_transition = types.Transition(1.0, 1.0, 0.0, 0.0, 0.0)
+        one_transition = tree.map_structure(
+            lambda x: jnp.expand_dims(x, axis=0), one_transition
+        )
+        self.assertEqual(
+            losses._compute_gradient_penalty(one_transition, dummy_discriminator, 0.0),
+            1 ** 2 + 2 ** 2,
+        )
 
-    zero_transition = types.Transition(0., 0., 0., 0., 0.)
-    zero_transition = tree.map_structure(lambda x: jnp.expand_dims(x, axis=0),
-                                         zero_transition)
-    self.assertEqual(
-        losses._compute_gradient_penalty(zero_transition, dummy_discriminator,
-                                         0.), 1**2 + 0**2)
+    def test_pugail(self):
+        def dummy_discriminator(
+            state: losses.State, transition: types.Transition
+        ) -> losses.DiscriminatorOutput:
+            return transition.observation, state
 
-    one_transition = types.Transition(1., 1., 0., 0., 0.)
-    one_transition = tree.map_structure(lambda x: jnp.expand_dims(x, axis=0),
-                                        one_transition)
-    self.assertEqual(
-        losses._compute_gradient_penalty(one_transition, dummy_discriminator,
-                                         0.), 1**2 + 2**2)
+        zero_transition = types.Transition(0.1, 0.0, 0.0, 0.0, 0.0)
+        zero_transition = tree.map_structure(
+            lambda x: jnp.expand_dims(x, axis=0), zero_transition
+        )
 
-  def test_pugail(self):
+        one_transition = types.Transition(1.0, 0.0, 0.0, 0.0, 0.0)
+        one_transition = tree.map_structure(
+            lambda x: jnp.expand_dims(x, axis=0), one_transition
+        )
 
-    def dummy_discriminator(
-        state: losses.State,
-        transition: types.Transition) -> losses.DiscriminatorOutput:
-      return transition.observation, state
+        prior = 0.7
+        loss_fn = losses.pugail_loss(
+            positive_class_prior=prior, entropy_coefficient=0.0
+        )
+        loss, _ = loss_fn(dummy_discriminator, {}, one_transition, zero_transition, ())
 
-    zero_transition = types.Transition(.1, 0., 0., 0., 0.)
-    zero_transition = tree.map_structure(lambda x: jnp.expand_dims(x, axis=0),
-                                         zero_transition)
+        d_one = jax.nn.sigmoid(dummy_discriminator({}, one_transition)[0])
+        d_zero = jax.nn.sigmoid(dummy_discriminator({}, zero_transition)[0])
+        expected_loss = (
+            -prior * jnp.log(d_one)
+            + -jnp.log(1.0 - d_zero)
+            - prior * -jnp.log(1 - d_one)
+        )
 
-    one_transition = types.Transition(1., 0., 0., 0., 0.)
-    one_transition = tree.map_structure(lambda x: jnp.expand_dims(x, axis=0),
-                                        one_transition)
-
-    prior = .7
-    loss_fn = losses.pugail_loss(
-        positive_class_prior=prior, entropy_coefficient=0.)
-    loss, _ = loss_fn(dummy_discriminator, {}, one_transition,
-                      zero_transition, ())
-
-    d_one = jax.nn.sigmoid(dummy_discriminator({}, one_transition)[0])
-    d_zero = jax.nn.sigmoid(dummy_discriminator({}, zero_transition)[0])
-    expected_loss = -prior * jnp.log(
-        d_one) + -jnp.log(1. - d_zero) - prior * -jnp.log(1 - d_one)
-
-    self.assertAlmostEqual(loss, expected_loss, places=6)
+        self.assertAlmostEqual(loss, expected_loss, places=6)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

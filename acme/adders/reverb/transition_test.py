@@ -14,30 +14,27 @@
 
 """Tests for NStepTransition adders."""
 
-from acme.adders.reverb import test_cases
-from acme.adders.reverb import test_utils
+from absl.testing import absltest, parameterized
+
+from acme.adders.reverb import test_cases, test_utils
 from acme.adders.reverb import transition as adders
 
-from absl.testing import absltest
-from absl.testing import parameterized
+
+class NStepTransitionAdderTest(test_utils.AdderTestMixin, parameterized.TestCase):
+    @parameterized.named_parameters(*test_cases.TEST_CASES_FOR_TRANSITION_ADDER)
+    def test_adder(
+        self, n_step, additional_discount, first, steps, expected_transitions
+    ):
+        adder = adders.NStepTransitionAdder(self.client, n_step, additional_discount)
+        super().run_test_adder(
+            adder=adder,
+            first=first,
+            steps=steps,
+            expected_items=expected_transitions,
+            stack_sequence_fields=False,
+            signature=adder.signature(*test_utils.get_specs(steps[0])),
+        )
 
 
-class NStepTransitionAdderTest(test_utils.AdderTestMixin,
-                               parameterized.TestCase):
-
-  @parameterized.named_parameters(*test_cases.TEST_CASES_FOR_TRANSITION_ADDER)
-  def test_adder(self, n_step, additional_discount, first, steps,
-                 expected_transitions):
-    adder = adders.NStepTransitionAdder(self.client, n_step,
-                                        additional_discount)
-    super().run_test_adder(
-        adder=adder,
-        first=first,
-        steps=steps,
-        expected_items=expected_transitions,
-        stack_sequence_fields=False,
-        signature=adder.signature(*test_utils.get_specs(steps[0])))
-
-
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

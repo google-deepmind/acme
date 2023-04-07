@@ -17,39 +17,38 @@
 import abc
 from typing import Tuple, TypeVar
 
-from acme import types
 import sonnet as snt
 import tensorflow_probability as tfp
 
-State = TypeVar('State')
+from acme import types
+
+State = TypeVar("State")
 
 
 class Module(snt.Module, abc.ABC):
-  """A base class for module with abstract __call__ method."""
+    """A base class for module with abstract __call__ method."""
 
-  @abc.abstractmethod
-  def __call__(self, *args, **kwargs) -> types.NestedTensor:
-    """Forward pass of the module."""
+    @abc.abstractmethod
+    def __call__(self, *args, **kwargs) -> types.NestedTensor:
+        """Forward pass of the module."""
 
 
 class DistributionalModule(snt.Module, abc.ABC):
-  """A base class for modules that output distributions."""
+    """A base class for modules that output distributions."""
 
-  @abc.abstractmethod
-  def __call__(self, *args, **kwargs) -> tfp.distributions.Distribution:
-    """Forward pass of the module."""
+    @abc.abstractmethod
+    def __call__(self, *args, **kwargs) -> tfp.distributions.Distribution:
+        """Forward pass of the module."""
 
 
 class RNNCore(snt.RNNCore, abc.ABC):
-  """An RNN core with a custom `unroll` function."""
+    """An RNN core with a custom `unroll` function."""
 
-  @abc.abstractmethod
-  def unroll(self,
-             inputs: types.NestedTensor,
-             state: State,
-             sequence_length: int,
-             ) -> Tuple[types.NestedTensor, State]:
-    """A custom function for doing static unrolls over sequences.
+    @abc.abstractmethod
+    def unroll(
+        self, inputs: types.NestedTensor, state: State, sequence_length: int,
+    ) -> Tuple[types.NestedTensor, State]:
+        """A custom function for doing static unrolls over sequences.
 
     This has the same API as `snt.static_unroll`, but allows the user to specify
     their own implementation to take advantage of the structure of the network

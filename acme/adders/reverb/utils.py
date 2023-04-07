@@ -16,16 +16,17 @@
 
 from typing import Dict, Union
 
-from acme import types
-from acme.adders.reverb import base
 import jax
 import jax.numpy as jnp
 import numpy as np
 import tree
 
+from acme import types
+from acme.adders.reverb import base
+
 
 def zeros_like(x: Union[np.ndarray, int, float, np.number]):
-  """Returns a zero-filled object of the same (d)type and shape as the input.
+    """Returns a zero-filled object of the same (d)type and shape as the input.
 
   The difference between this and `np.zeros_like()` is that this works well
   with `np.number`, `int`, `float`, and `jax.numpy.DeviceArray` objects without
@@ -37,39 +38,41 @@ def zeros_like(x: Union[np.ndarray, int, float, np.number]):
   Returns:
     A zero-filed object of the same (d)type and shape as the input.
   """
-  if isinstance(x, (int, float, np.number)):
-    return type(x)(0)
-  elif isinstance(x, jax.Array):
-    return jnp.zeros_like(x)
-  elif isinstance(x, np.ndarray):
-    return np.zeros_like(x)
-  else:
-    raise ValueError(
-        f'Input ({type(x)}) must be either a numpy array, an int, or a float.')
+    if isinstance(x, (int, float, np.number)):
+        return type(x)(0)
+    elif isinstance(x, jax.Array):
+        return jnp.zeros_like(x)
+    elif isinstance(x, np.ndarray):
+        return np.zeros_like(x)
+    else:
+        raise ValueError(
+            f"Input ({type(x)}) must be either a numpy array, an int, or a float."
+        )
 
 
-def final_step_like(step: base.Step,
-                    next_observation: types.NestedArray) -> base.Step:
-  """Return a list of steps with the final step zero-filled."""
-  # Make zero-filled components so we can fill out the last step.
-  zero_action, zero_reward, zero_discount, zero_extras = tree.map_structure(
-      zeros_like, (step.action, step.reward, step.discount, step.extras))
+def final_step_like(step: base.Step, next_observation: types.NestedArray) -> base.Step:
+    """Return a list of steps with the final step zero-filled."""
+    # Make zero-filled components so we can fill out the last step.
+    zero_action, zero_reward, zero_discount, zero_extras = tree.map_structure(
+        zeros_like, (step.action, step.reward, step.discount, step.extras)
+    )
 
-  # Return a final step that only has next_observation.
-  return base.Step(
-      observation=next_observation,
-      action=zero_action,
-      reward=zero_reward,
-      discount=zero_discount,
-      start_of_episode=False,
-      extras=zero_extras)
+    # Return a final step that only has next_observation.
+    return base.Step(
+        observation=next_observation,
+        action=zero_action,
+        reward=zero_reward,
+        discount=zero_discount,
+        start_of_episode=False,
+        extras=zero_extras,
+    )
 
 
 def calculate_priorities(
     priority_fns: base.PriorityFnMapping,
     trajectory_or_transition: Union[base.Trajectory, types.Transition],
 ) -> Dict[str, float]:
-  """Helper used to calculate the priority of a Trajectory or Transition.
+    """Helper used to calculate the priority of a Trajectory or Transition.
 
   This helper converts the leaves of the Trajectory or Transition from
   `reverb.TrajectoryColumn` objects into numpy arrays. The converted Trajectory
@@ -86,12 +89,13 @@ def calculate_priorities(
     A dictionary mapping from table names to the priority (a float) for the
     given collection Trajectory or Transition.
   """
-  if any([priority_fn is not None for priority_fn in priority_fns.values()]):
+    if any([priority_fn is not None for priority_fn in priority_fns.values()]):
 
-    trajectory_or_transition = tree.map_structure(lambda col: col.numpy(),
-                                                  trajectory_or_transition)
+        trajectory_or_transition = tree.map_structure(
+            lambda col: col.numpy(), trajectory_or_transition
+        )
 
-  return {
-      table: (priority_fn(trajectory_or_transition) if priority_fn else 1.0)
-      for table, priority_fn in priority_fns.items()
-  }
+    return {
+        table: (priority_fn(trajectory_or_transition) if priority_fn else 1.0)
+        for table, priority_fn in priority_fns.items()
+    }

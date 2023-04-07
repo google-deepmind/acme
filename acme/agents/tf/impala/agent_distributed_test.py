@@ -14,43 +14,43 @@
 
 """Integration test for the distributed agent."""
 
+import launchpad as lp
+from absl.testing import absltest
+
 import acme
 from acme.agents.tf import impala
 from acme.testing import fakes
 from acme.tf import networks
-import launchpad as lp
-
-from absl.testing import absltest
 
 
 class DistributedAgentTest(absltest.TestCase):
-  """Simple integration/smoke test for the distributed agent."""
+    """Simple integration/smoke test for the distributed agent."""
 
-  def test_atari(self):
-    """Tests that the agent can run for some steps without crashing."""
-    env_factory = lambda x: fakes.fake_atari_wrapped(oar_wrapper=True)
-    net_factory = lambda spec: networks.IMPALAAtariNetwork(spec.num_values)
+    def test_atari(self):
+        """Tests that the agent can run for some steps without crashing."""
+        env_factory = lambda x: fakes.fake_atari_wrapped(oar_wrapper=True)
+        net_factory = lambda spec: networks.IMPALAAtariNetwork(spec.num_values)
 
-    agent = impala.DistributedIMPALA(
-        environment_factory=env_factory,
-        network_factory=net_factory,
-        num_actors=2,
-        batch_size=32,
-        sequence_length=5,
-        sequence_period=1,
-    )
-    program = agent.build()
+        agent = impala.DistributedIMPALA(
+            environment_factory=env_factory,
+            network_factory=net_factory,
+            num_actors=2,
+            batch_size=32,
+            sequence_length=5,
+            sequence_period=1,
+        )
+        program = agent.build()
 
-    (learner_node,) = program.groups['learner']
-    learner_node.disable_run()
+        (learner_node,) = program.groups["learner"]
+        learner_node.disable_run()
 
-    lp.launch(program, launch_type='test_mt')
+        lp.launch(program, launch_type="test_mt")
 
-    learner: acme.Learner = learner_node.create_handle().dereference()
+        learner: acme.Learner = learner_node.create_handle().dereference()
 
-    for _ in range(5):
-      learner.step()
+        for _ in range(5):
+            learner.step()
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

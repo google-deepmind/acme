@@ -17,26 +17,28 @@
 import dataclasses
 from typing import Callable, Optional
 
+from typing_extensions import Protocol
+
 from acme.jax import networks as networks_lib
 from acme.jax import types
-from typing_extensions import Protocol
 
 
 class ApplyFn(Protocol):
-
-  def __call__(self,
-               params: networks_lib.Params,
-               observation: networks_lib.Observation,
-               *args,
-               is_training: bool,
-               key: Optional[types.PRNGKey] = None,
-               **kwargs) -> networks_lib.NetworkOutput:
-    ...
+    def __call__(
+        self,
+        params: networks_lib.Params,
+        observation: networks_lib.Observation,
+        *args,
+        is_training: bool,
+        key: Optional[types.PRNGKey] = None,
+        **kwargs
+    ) -> networks_lib.NetworkOutput:
+        ...
 
 
 @dataclasses.dataclass
 class BCPolicyNetwork:
-  """Holds a pair of pure functions defining a policy network for BC.
+    """Holds a pair of pure functions defining a policy network for BC.
 
   This is a feed-forward network taking params, obs, is_training, key as input.
 
@@ -44,20 +46,22 @@ class BCPolicyNetwork:
     init: A pure function. Initializes and returns the networks parameters.
     apply: A pure function. Computes and returns the outputs of a forward pass.
   """
-  init: Callable[[types.PRNGKey], networks_lib.Params]
-  apply: ApplyFn
+
+    init: Callable[[types.PRNGKey], networks_lib.Params]
+    apply: ApplyFn
 
 
-def identity_sample(output: networks_lib.NetworkOutput,
-                    key: types.PRNGKey) -> networks_lib.Action:
-  """Placeholder sampling function for non-distributional networks."""
-  del key
-  return output
+def identity_sample(
+    output: networks_lib.NetworkOutput, key: types.PRNGKey
+) -> networks_lib.Action:
+    """Placeholder sampling function for non-distributional networks."""
+    del key
+    return output
 
 
 @dataclasses.dataclass
 class BCNetworks:
-  """The network and pure functions for the BC agent.
+    """The network and pure functions for the BC agent.
 
   Attributes:
     policy_network: The policy network.
@@ -66,14 +70,16 @@ class BCNetworks:
     log_prob: A pure function. Computes log-probability for an action.
       Must be set for distributional networks. Otherwise None.
   """
-  policy_network: BCPolicyNetwork
-  sample_fn: networks_lib.SampleFn = identity_sample
-  log_prob: Optional[networks_lib.LogProbFn] = None
+
+    policy_network: BCPolicyNetwork
+    sample_fn: networks_lib.SampleFn = identity_sample
+    log_prob: Optional[networks_lib.LogProbFn] = None
 
 
 def convert_to_bc_network(
-    policy_network: networks_lib.FeedForwardNetwork) -> BCPolicyNetwork:
-  """Converts a policy network from SAC/TD3/D4PG/.. into a BC policy network.
+    policy_network: networks_lib.FeedForwardNetwork,
+) -> BCPolicyNetwork:
+    """Converts a policy network from SAC/TD3/D4PG/.. into a BC policy network.
 
   Args:
     policy_network: FeedForwardNetwork taking the observation as input and
@@ -83,21 +89,24 @@ def convert_to_bc_network(
     The BC policy network taking observation, is_training, key as input.
   """
 
-  def apply(params: networks_lib.Params,
-            observation: networks_lib.Observation,
-            *args,
-            is_training: bool = False,
-            key: Optional[types.PRNGKey] = None,
-            **kwargs) -> networks_lib.NetworkOutput:
-    del is_training, key
-    return policy_network.apply(params, observation, *args, **kwargs)
+    def apply(
+        params: networks_lib.Params,
+        observation: networks_lib.Observation,
+        *args,
+        is_training: bool = False,
+        key: Optional[types.PRNGKey] = None,
+        **kwargs
+    ) -> networks_lib.NetworkOutput:
+        del is_training, key
+        return policy_network.apply(params, observation, *args, **kwargs)
 
-  return BCPolicyNetwork(policy_network.init, apply)
+    return BCPolicyNetwork(policy_network.init, apply)
 
 
 def convert_policy_value_to_bc_network(
-    policy_value_network: networks_lib.FeedForwardNetwork) -> BCPolicyNetwork:
-  """Converts a policy-value network (e.g. from PPO) into a BC policy network.
+    policy_value_network: networks_lib.FeedForwardNetwork,
+) -> BCPolicyNetwork:
+    """Converts a policy-value network (e.g. from PPO) into a BC policy network.
 
   Args:
     policy_value_network: FeedForwardNetwork taking the observation as input.
@@ -106,15 +115,16 @@ def convert_policy_value_to_bc_network(
     The BC policy network taking observation, is_training, key as input.
   """
 
-  def apply(params: networks_lib.Params,
-            observation: networks_lib.Observation,
-            *args,
-            is_training: bool = False,
-            key: Optional[types.PRNGKey] = None,
-            **kwargs) -> networks_lib.NetworkOutput:
-    del is_training, key
-    actions, _ = policy_value_network.apply(params, observation, *args,
-                                            **kwargs)
-    return actions
+    def apply(
+        params: networks_lib.Params,
+        observation: networks_lib.Observation,
+        *args,
+        is_training: bool = False,
+        key: Optional[types.PRNGKey] = None,
+        **kwargs
+    ) -> networks_lib.NetworkOutput:
+        del is_training, key
+        actions, _ = policy_value_network.apply(params, observation, *args, **kwargs)
+        return actions
 
-  return BCPolicyNetwork(policy_value_network.init, apply)
+    return BCPolicyNetwork(policy_value_network.init, apply)

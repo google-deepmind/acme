@@ -14,27 +14,29 @@
 
 """Noise layers (for exploration)."""
 
-from acme import types
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
 import tree
 
+from acme import types
+
 tfd = tfp.distributions
 
 
 class ClippedGaussian(snt.Module):
-  """Sonnet module for adding clipped Gaussian noise to each output."""
+    """Sonnet module for adding clipped Gaussian noise to each output."""
 
-  def __init__(self, stddev: float, name: str = 'clipped_gaussian'):
-    super().__init__(name=name)
-    self._noise = tfd.Normal(loc=0., scale=stddev)
+    def __init__(self, stddev: float, name: str = "clipped_gaussian"):
+        super().__init__(name=name)
+        self._noise = tfd.Normal(loc=0.0, scale=stddev)
 
-  def __call__(self, inputs: types.NestedTensor) -> types.NestedTensor:
-    def add_noise(tensor: tf.Tensor):
-      output = tensor + tf.cast(self._noise.sample(tensor.shape),
-                                dtype=tensor.dtype)
-      output = tf.clip_by_value(output, -1.0, 1.0)
-      return output
+    def __call__(self, inputs: types.NestedTensor) -> types.NestedTensor:
+        def add_noise(tensor: tf.Tensor):
+            output = tensor + tf.cast(
+                self._noise.sample(tensor.shape), dtype=tensor.dtype
+            )
+            output = tf.clip_by_value(output, -1.0, 1.0)
+            return output
 
-    return tree.map_structure(add_noise, inputs)
+        return tree.map_structure(add_noise, inputs)

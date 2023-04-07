@@ -16,38 +16,42 @@
 
 from typing import Callable, Optional, Sequence
 
-from acme import types
-from acme.tf import utils as tf2_utils
-from acme.tf.networks import base
 import sonnet as snt
 import tensorflow as tf
 
+from acme import types
+from acme.tf import utils as tf2_utils
+from acme.tf.networks import base
+
 
 def _uniform_initializer():
-  return tf.initializers.VarianceScaling(
-      distribution='uniform', mode='fan_out', scale=0.333)
+    return tf.initializers.VarianceScaling(
+        distribution="uniform", mode="fan_out", scale=0.333
+    )
 
 
 class NearZeroInitializedLinear(snt.Linear):
-  """Simple linear layer, initialized at near zero weights and zero biases."""
+    """Simple linear layer, initialized at near zero weights and zero biases."""
 
-  def __init__(self, output_size: int, scale: float = 1e-4):
-    super().__init__(output_size, w_init=tf.initializers.VarianceScaling(scale))
+    def __init__(self, output_size: int, scale: float = 1e-4):
+        super().__init__(output_size, w_init=tf.initializers.VarianceScaling(scale))
 
 
 class LayerNormMLP(snt.Module):
-  """Simple feedforward MLP torso with initial layer-norm.
+    """Simple feedforward MLP torso with initial layer-norm.
 
   This module is an MLP which uses LayerNorm (with a tanh normalizer) on the
   first layer and non-linearities (elu) on all but the last remaining layers.
   """
 
-  def __init__(self,
-               layer_sizes: Sequence[int],
-               w_init: Optional[snt.initializers.Initializer] = None,
-               activation: Callable[[tf.Tensor], tf.Tensor] = tf.nn.elu,
-               activate_final: bool = False):
-    """Construct the MLP.
+    def __init__(
+        self,
+        layer_sizes: Sequence[int],
+        w_init: Optional[snt.initializers.Initializer] = None,
+        activation: Callable[[tf.Tensor], tf.Tensor] = tf.nn.elu,
+        activate_final: bool = False,
+    ):
+        """Construct the MLP.
 
     Args:
       layer_sizes: a sequence of ints specifying the size of each layer.
@@ -57,82 +61,86 @@ class LayerNormMLP(snt.Module):
       activate_final: whether or not to use the activation function on the final
         layer of the neural network.
     """
-    super().__init__(name='feedforward_mlp_torso')
+        super().__init__(name="feedforward_mlp_torso")
 
-    self._network = snt.Sequential([
-        snt.Linear(layer_sizes[0], w_init=w_init or _uniform_initializer()),
-        snt.LayerNorm(
-            axis=slice(1, None), create_scale=True, create_offset=True),
-        tf.nn.tanh,
-        snt.nets.MLP(
-            layer_sizes[1:],
-            w_init=w_init or _uniform_initializer(),
-            activation=activation,
-            activate_final=activate_final),
-    ])
+        self._network = snt.Sequential(
+            [
+                snt.Linear(layer_sizes[0], w_init=w_init or _uniform_initializer()),
+                snt.LayerNorm(
+                    axis=slice(1, None), create_scale=True, create_offset=True
+                ),
+                tf.nn.tanh,
+                snt.nets.MLP(
+                    layer_sizes[1:],
+                    w_init=w_init or _uniform_initializer(),
+                    activation=activation,
+                    activate_final=activate_final,
+                ),
+            ]
+        )
 
-  def __call__(self, observations: types.Nest) -> tf.Tensor:
-    """Forwards the policy network."""
-    return self._network(tf2_utils.batch_concat(observations))
+    def __call__(self, observations: types.Nest) -> tf.Tensor:
+        """Forwards the policy network."""
+        return self._network(tf2_utils.batch_concat(observations))
 
 
 class ResidualLayernormWrapper(snt.Module):
-  """Wrapper that applies residual connections and layer norm."""
+    """Wrapper that applies residual connections and layer norm."""
 
-  def __init__(self, layer: base.Module):
-    """Creates the Wrapper Class.
+    def __init__(self, layer: base.Module):
+        """Creates the Wrapper Class.
 
     Args:
       layer: module to wrap.
     """
 
-    super().__init__(name='ResidualLayernormWrapper')
-    self._layer = layer
+        super().__init__(name="ResidualLayernormWrapper")
+        self._layer = layer
 
-    self._layer_norm = snt.LayerNorm(
-        axis=-1, create_scale=True, create_offset=True)
+        self._layer_norm = snt.LayerNorm(axis=-1, create_scale=True, create_offset=True)
 
-  def __call__(self, inputs: tf.Tensor):
-    """Returns the result of the residual and layernorm computation.
+    def __call__(self, inputs: tf.Tensor):
+        """Returns the result of the residual and layernorm computation.
 
     Args:
       inputs: inputs to the main module.
     """
 
-    # Apply main module.
-    outputs = self._layer(inputs)
-    outputs = self._layer_norm(outputs + inputs)
+        # Apply main module.
+        outputs = self._layer(inputs)
+        outputs = self._layer_norm(outputs + inputs)
 
-    return outputs
+        return outputs
 
 
 class LayerNormAndResidualMLP(snt.Module):
-  """MLP with residual connections and layer norm.
+    """MLP with residual connections and layer norm.
 
   An MLP which applies residual connection and layer normalisation every two
   linear layers. Similar to Resnet, but with FC layers instead of convolutions.
   """
 
-  def __init__(self, hidden_size: int, num_blocks: int):
-    """Create the model.
+    def __init__(self, hidden_size: int, num_blocks: int):
+        """Create the model.
 
     Args:
       hidden_size: width of each hidden layer.
       num_blocks: number of blocks, each block being MLP([hidden_size,
         hidden_size]) + layer norm + residual connection.
     """
-    super().__init__(name='LayerNormAndResidualMLP')
+        super().__init__(name="LayerNormAndResidualMLP")
 
-    # Create initial MLP layer.
-    layers = [snt.nets.MLP([hidden_size], w_init=_uniform_initializer())]
+        # Create initial MLP layer.
+        layers = [snt.nets.MLP([hidden_size], w_init=_uniform_initializer())]
 
-    # Follow it up with num_blocks MLPs with layernorm and residual connections.
-    for _ in range(num_blocks):
-      mlp = snt.nets.MLP([hidden_size, hidden_size],
-                         w_init=_uniform_initializer())
-      layers.append(ResidualLayernormWrapper(mlp))
+        # Follow it up with num_blocks MLPs with layernorm and residual connections.
+        for _ in range(num_blocks):
+            mlp = snt.nets.MLP(
+                [hidden_size, hidden_size], w_init=_uniform_initializer()
+            )
+            layers.append(ResidualLayernormWrapper(mlp))
 
-    self._module = snt.Sequential(layers)
+        self._module = snt.Sequential(layers)
 
-  def __call__(self, inputs: tf.Tensor):
-    return self._module(inputs)
+    def __call__(self, inputs: tf.Tensor):
+        return self._module(inputs)

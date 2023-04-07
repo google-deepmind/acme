@@ -16,17 +16,16 @@
 
 from typing import Dict, Sequence
 
-import acme
-from acme import specs
-from acme import types
-from acme.agents.tf import ddpg
-from acme.testing import fakes
-from acme.tf import networks
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
-
 from absl.testing import absltest
+
+import acme
+from acme import specs, types
+from acme.agents.tf import ddpg
+from acme.testing import fakes
+from acme.tf import networks
 
 
 def make_networks(
@@ -34,49 +33,50 @@ def make_networks(
     policy_layer_sizes: Sequence[int] = (10, 10),
     critic_layer_sizes: Sequence[int] = (10, 10),
 ) -> Dict[str, snt.Module]:
-  """Creates networks used by the agent."""
+    """Creates networks used by the agent."""
 
-  num_dimensions = np.prod(action_spec.shape, dtype=int)
-  policy_layer_sizes = list(policy_layer_sizes) + [num_dimensions]
-  critic_layer_sizes = list(critic_layer_sizes) + [1]
+    num_dimensions = np.prod(action_spec.shape, dtype=int)
+    policy_layer_sizes = list(policy_layer_sizes) + [num_dimensions]
+    critic_layer_sizes = list(critic_layer_sizes) + [1]
 
-  policy_network = snt.Sequential(
-      [networks.LayerNormMLP(policy_layer_sizes), tf.tanh])
-  # The multiplexer concatenates the (maybe transformed) observations/actions.
-  critic_network = networks.CriticMultiplexer(
-      critic_network=networks.LayerNormMLP(critic_layer_sizes))
+    policy_network = snt.Sequential(
+        [networks.LayerNormMLP(policy_layer_sizes), tf.tanh]
+    )
+    # The multiplexer concatenates the (maybe transformed) observations/actions.
+    critic_network = networks.CriticMultiplexer(
+        critic_network=networks.LayerNormMLP(critic_layer_sizes)
+    )
 
-  return {
-      'policy': policy_network,
-      'critic': critic_network,
-  }
+    return {
+        "policy": policy_network,
+        "critic": critic_network,
+    }
 
 
 class DDPGTest(absltest.TestCase):
+    def test_ddpg(self):
+        # Create a fake environment to test with.
+        environment = fakes.ContinuousEnvironment(episode_length=10, bounded=True)
+        spec = specs.make_environment_spec(environment)
 
-  def test_ddpg(self):
-    # Create a fake environment to test with.
-    environment = fakes.ContinuousEnvironment(episode_length=10, bounded=True)
-    spec = specs.make_environment_spec(environment)
+        # Create the networks to optimize (online) and target networks.
+        agent_networks = make_networks(spec.actions)
 
-    # Create the networks to optimize (online) and target networks.
-    agent_networks = make_networks(spec.actions)
+        # Construct the agent.
+        agent = ddpg.DDPG(
+            environment_spec=spec,
+            policy_network=agent_networks["policy"],
+            critic_network=agent_networks["critic"],
+            batch_size=10,
+            samples_per_insert=2,
+            min_replay_size=10,
+        )
 
-    # Construct the agent.
-    agent = ddpg.DDPG(
-        environment_spec=spec,
-        policy_network=agent_networks['policy'],
-        critic_network=agent_networks['critic'],
-        batch_size=10,
-        samples_per_insert=2,
-        min_replay_size=10,
-    )
-
-    # Try running the environment loop. We have no assertions here because all
-    # we care about is that the agent runs without raising any errors.
-    loop = acme.EnvironmentLoop(environment, agent)
-    loop.run(num_episodes=2)
+        # Try running the environment loop. We have no assertions here because all
+        # we care about is that the agent runs without raising any errors.
+        loop = acme.EnvironmentLoop(environment, agent)
+        loop.run(num_episodes=2)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

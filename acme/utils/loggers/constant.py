@@ -18,29 +18,27 @@ from acme.utils.loggers import base
 
 
 class ConstantLogger(base.Logger):
-  """Logger for values that remain constant throughout the experiment.
+    """Logger for values that remain constant throughout the experiment.
 
   This logger is used to log additional values e.g. level_name or
   hyperparameters that do not change in an experiment. Having these values
   allows to group or facet plots when analysing data post-experiment.
   """
 
-  def __init__(
-      self,
-      constant_data: base.LoggingData,
-      to: base.Logger,
-  ):
-    """Initialise the extra info logger.
+    def __init__(
+        self, constant_data: base.LoggingData, to: base.Logger,
+    ):
+        """Initialise the extra info logger.
 
     Args:
       constant_data: Key-value pairs containing the constant info to be logged.
       to: The logger to add these extra info to.
     """
-    self._constant_data = constant_data
-    self._to = to
+        self._constant_data = constant_data
+        self._to = to
 
-  def write(self, data: base.LoggingData):
-    self._to.write({**self._constant_data, **data})
+    def write(self, data: base.LoggingData):
+        self._to.write({**self._constant_data, **data})
 
-  def close(self):
-    self._to.close()
+    def close(self):
+        self._to.close()

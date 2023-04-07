@@ -15,7 +15,9 @@
 """Specialized environment loops."""
 
 try:
-  # pylint: disable=g-import-not-at-top
-  from acme.environment_loops.open_spiel_environment_loop import OpenSpielEnvironmentLoop
+    # pylint: disable=g-import-not-at-top
+    from acme.environment_loops.open_spiel_environment_loop import (
+        OpenSpielEnvironmentLoop,
+    )
 except ImportError:
-  pass
+    pass

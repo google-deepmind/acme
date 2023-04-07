@@ -16,42 +16,46 @@
 
 import dataclasses
 
-from acme import specs
-from jax import lax
 import jax.numpy as jnp
+from jax import lax
+
+from acme import specs
 
 
 @dataclasses.dataclass
 class ClipToSpec:
-  """Clips inputs to within a BoundedArraySpec."""
-  spec: specs.BoundedArray
+    """Clips inputs to within a BoundedArraySpec."""
 
-  def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
-    return jnp.clip(inputs, self.spec.minimum, self.spec.maximum)
+    spec: specs.BoundedArray
+
+    def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
+        return jnp.clip(inputs, self.spec.minimum, self.spec.maximum)
 
 
 @dataclasses.dataclass
 class RescaleToSpec:
-  """Rescales inputs in [-1, 1] to match a BoundedArraySpec."""
-  spec: specs.BoundedArray
+    """Rescales inputs in [-1, 1] to match a BoundedArraySpec."""
 
-  def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
-    scale = self.spec.maximum - self.spec.minimum
-    offset = self.spec.minimum
-    inputs = 0.5 * (inputs + 1.0)  # [0, 1]
-    output = inputs * scale + offset  # [minimum, maximum]
-    return output
+    spec: specs.BoundedArray
+
+    def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
+        scale = self.spec.maximum - self.spec.minimum
+        offset = self.spec.minimum
+        inputs = 0.5 * (inputs + 1.0)  # [0, 1]
+        output = inputs * scale + offset  # [minimum, maximum]
+        return output
 
 
 @dataclasses.dataclass
 class TanhToSpec:
-  """Squashes real-valued inputs to match a BoundedArraySpec."""
-  spec: specs.BoundedArray
+    """Squashes real-valued inputs to match a BoundedArraySpec."""
 
-  def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
-    scale = self.spec.maximum - self.spec.minimum
-    offset = self.spec.minimum
-    inputs = lax.tanh(inputs)  # [-1, 1]
-    inputs = 0.5 * (inputs + 1.0)  # [0, 1]
-    output = inputs * scale + offset  # [minimum, maximum]
-    return output
+    spec: specs.BoundedArray
+
+    def __call__(self, inputs: jnp.ndarray) -> jnp.ndarray:
+        scale = self.spec.maximum - self.spec.minimum
+        offset = self.spec.minimum
+        inputs = lax.tanh(inputs)  # [-1, 1]
+        inputs = 0.5 * (inputs + 1.0)  # [0, 1]
+        output = inputs * scale + offset  # [minimum, maximum]
+        return output

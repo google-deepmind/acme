@@ -18,14 +18,12 @@ import abc
 import dataclasses
 from typing import Generic, Iterator, List, Optional
 
-from acme import adders
-from acme import core
-from acme import specs
+import reverb
+
+from acme import adders, core, specs
 from acme.jax import networks as networks_lib
 from acme.jax import types as jax_types
-from acme.utils import counting
-from acme.utils import loggers
-import reverb
+from acme.utils import counting, loggers
 
 Networks = jax_types.Networks
 Policy = jax_types.Policy
@@ -33,25 +31,25 @@ Sample = jax_types.Sample
 
 
 class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
-  """Interface for defining the components of an offline RL agent.
+    """Interface for defining the components of an offline RL agent.
 
   Implementations of this interface contain a complete specification of a
   concrete offline RL agent. An instance of this class can be used to build an
   offline RL agent that operates either locally or in a distributed setup.
   """
 
-  @abc.abstractmethod
-  def make_learner(
-      self,
-      random_key: networks_lib.PRNGKey,
-      networks: Networks,
-      dataset: Iterator[Sample],
-      logger_fn: loggers.LoggerFactory,
-      environment_spec: specs.EnvironmentSpec,
-      *,
-      counter: Optional[counting.Counter] = None,
-  ) -> core.Learner:
-    """Creates an instance of the learner.
+    @abc.abstractmethod
+    def make_learner(
+        self,
+        random_key: networks_lib.PRNGKey,
+        networks: Networks,
+        dataset: Iterator[Sample],
+        logger_fn: loggers.LoggerFactory,
+        environment_spec: specs.EnvironmentSpec,
+        *,
+        counter: Optional[counting.Counter] = None,
+    ) -> core.Learner:
+        """Creates an instance of the learner.
 
     Args:
       random_key: A key for random number generation.
@@ -64,15 +62,15 @@ class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
         evaluator steps, etc.) distributed throughout the agent.
     """
 
-  @abc.abstractmethod
-  def make_actor(
-      self,
-      random_key: networks_lib.PRNGKey,
-      policy: Policy,
-      environment_spec: specs.EnvironmentSpec,
-      variable_source: Optional[core.VariableSource] = None,
-  ) -> core.Actor:
-    """Create an actor instance to be used for evaluation.
+    @abc.abstractmethod
+    def make_actor(
+        self,
+        random_key: networks_lib.PRNGKey,
+        policy: Policy,
+        environment_spec: specs.EnvironmentSpec,
+        variable_source: Optional[core.VariableSource] = None,
+    ) -> core.Actor:
+        """Create an actor instance to be used for evaluation.
 
     Args:
       random_key: A key for random number generation.
@@ -82,11 +80,14 @@ class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
       variable_source: A source providing the necessary actor parameters.
     """
 
-  @abc.abstractmethod
-  def make_policy(self, networks: Networks,
-                  environment_spec: specs.EnvironmentSpec,
-                  evaluation: bool) -> Policy:
-    """Creates the agent policy to be used for evaluation.
+    @abc.abstractmethod
+    def make_policy(
+        self,
+        networks: Networks,
+        environment_spec: specs.EnvironmentSpec,
+        evaluation: bool,
+    ) -> Policy:
+        """Creates the agent policy to be used for evaluation.
 
     Args:
       networks: struct describing the networks needed to generate the policy.
@@ -103,9 +104,10 @@ class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
     """
 
 
-class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
-                          Generic[Networks, Policy, Sample]):
-  """Defines an interface for defining the components of an RL agent.
+class ActorLearnerBuilder(
+    OfflineBuilder[Networks, Policy, Sample], Generic[Networks, Policy, Sample]
+):
+    """Defines an interface for defining the components of an RL agent.
 
   Implementations of this interface contain a complete specification of a
   concrete RL agent. An instance of this class can be used to build an
@@ -113,13 +115,11 @@ class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
   distributed setup.
   """
 
-  @abc.abstractmethod
-  def make_replay_tables(
-      self,
-      environment_spec: specs.EnvironmentSpec,
-      policy: Policy,
-  ) -> List[reverb.Table]:
-    """Create tables to insert data into.
+    @abc.abstractmethod
+    def make_replay_tables(
+        self, environment_spec: specs.EnvironmentSpec, policy: Policy,
+    ) -> List[reverb.Table]:
+        """Create tables to insert data into.
 
     Args:
       environment_spec: A container for all relevant environment specs.
@@ -129,39 +129,36 @@ class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
       The replay tables used to store the experience the agent uses to train.
     """
 
-  @abc.abstractmethod
-  def make_dataset_iterator(
-      self,
-      replay_client: reverb.Client,
-  ) -> Iterator[Sample]:
-    """Create a dataset iterator to use for learning/updating the agent."""
+    @abc.abstractmethod
+    def make_dataset_iterator(self, replay_client: reverb.Client,) -> Iterator[Sample]:
+        """Create a dataset iterator to use for learning/updating the agent."""
 
-  @abc.abstractmethod
-  def make_adder(
-      self,
-      replay_client: reverb.Client,
-      environment_spec: Optional[specs.EnvironmentSpec],
-      policy: Optional[Policy],
-  ) -> Optional[adders.Adder]:
-    """Create an adder which records data generated by the actor/environment.
+    @abc.abstractmethod
+    def make_adder(
+        self,
+        replay_client: reverb.Client,
+        environment_spec: Optional[specs.EnvironmentSpec],
+        policy: Optional[Policy],
+    ) -> Optional[adders.Adder]:
+        """Create an adder which records data generated by the actor/environment.
 
     Args:
       replay_client: Reverb Client which points to the replay server.
       environment_spec: specs of the environment.
       policy: Agent's policy which can be used to extract the extras_spec.
     """
-    # TODO(sabela): make the parameters non-optional.
+        # TODO(sabela): make the parameters non-optional.
 
-  @abc.abstractmethod
-  def make_actor(
-      self,
-      random_key: networks_lib.PRNGKey,
-      policy: Policy,
-      environment_spec: specs.EnvironmentSpec,
-      variable_source: Optional[core.VariableSource] = None,
-      adder: Optional[adders.Adder] = None,
-  ) -> core.Actor:
-    """Create an actor instance.
+    @abc.abstractmethod
+    def make_actor(
+        self,
+        random_key: networks_lib.PRNGKey,
+        policy: Policy,
+        environment_spec: specs.EnvironmentSpec,
+        variable_source: Optional[core.VariableSource] = None,
+        adder: Optional[adders.Adder] = None,
+    ) -> core.Actor:
+        """Create an actor instance.
 
     Args:
       random_key: A key for random number generation.
@@ -172,18 +169,18 @@ class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
       adder: How data is recorded (e.g. added to replay).
     """
 
-  @abc.abstractmethod
-  def make_learner(
-      self,
-      random_key: networks_lib.PRNGKey,
-      networks: Networks,
-      dataset: Iterator[Sample],
-      logger_fn: loggers.LoggerFactory,
-      environment_spec: specs.EnvironmentSpec,
-      replay_client: Optional[reverb.Client] = None,
-      counter: Optional[counting.Counter] = None,
-  ) -> core.Learner:
-    """Creates an instance of the learner.
+    @abc.abstractmethod
+    def make_learner(
+        self,
+        random_key: networks_lib.PRNGKey,
+        networks: Networks,
+        dataset: Iterator[Sample],
+        logger_fn: loggers.LoggerFactory,
+        environment_spec: specs.EnvironmentSpec,
+        replay_client: Optional[reverb.Client] = None,
+        counter: Optional[counting.Counter] = None,
+    ) -> core.Learner:
+        """Creates an instance of the learner.
 
     Args:
       random_key: A key for random number generation.
@@ -199,11 +196,13 @@ class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
         actor steps, etc.) distributed throughout the agent.
     """
 
-  def make_policy(self,
-                  networks: Networks,
-                  environment_spec: specs.EnvironmentSpec,
-                  evaluation: bool = False) -> Policy:
-    """Creates the agent policy.
+    def make_policy(
+        self,
+        networks: Networks,
+        environment_spec: specs.EnvironmentSpec,
+        evaluation: bool = False,
+    ) -> Policy:
+        """Creates the agent policy.
 
        Creates the agent policy given the collection of network components and
        environment spec. An optional boolean can be given to indicate if the
@@ -220,68 +219,74 @@ class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
     Returns:
       Behavior policy or evaluation policy for the agent.
     """
-    # TODO(sabela): make abstract once all agents implement it.
-    del networks, environment_spec, evaluation
-    raise NotImplementedError
+        # TODO(sabela): make abstract once all agents implement it.
+        del networks, environment_spec, evaluation
+        raise NotImplementedError
 
 
 @dataclasses.dataclass(frozen=True)
-class ActorLearnerBuilderWrapper(ActorLearnerBuilder[Networks, Policy, Sample],
-                                 Generic[Networks, Policy, Sample]):
-  """An empty wrapper for ActorLearnerBuilder."""
+class ActorLearnerBuilderWrapper(
+    ActorLearnerBuilder[Networks, Policy, Sample], Generic[Networks, Policy, Sample]
+):
+    """An empty wrapper for ActorLearnerBuilder."""
 
-  wrapped: ActorLearnerBuilder[Networks, Policy, Sample]
+    wrapped: ActorLearnerBuilder[Networks, Policy, Sample]
 
-  def make_replay_tables(
-      self,
-      environment_spec: specs.EnvironmentSpec,
-      policy: Policy,
-  ) -> List[reverb.Table]:
-    return self.wrapped.make_replay_tables(environment_spec, policy)
+    def make_replay_tables(
+        self, environment_spec: specs.EnvironmentSpec, policy: Policy,
+    ) -> List[reverb.Table]:
+        return self.wrapped.make_replay_tables(environment_spec, policy)
 
-  def make_dataset_iterator(
-      self,
-      replay_client: reverb.Client,
-  ) -> Iterator[Sample]:
-    return self.wrapped.make_dataset_iterator(replay_client)
+    def make_dataset_iterator(self, replay_client: reverb.Client,) -> Iterator[Sample]:
+        return self.wrapped.make_dataset_iterator(replay_client)
 
-  def make_adder(
-      self,
-      replay_client: reverb.Client,
-      environment_spec: Optional[specs.EnvironmentSpec],
-      policy: Optional[Policy],
-  ) -> Optional[adders.Adder]:
-    return self.wrapped.make_adder(replay_client, environment_spec, policy)
+    def make_adder(
+        self,
+        replay_client: reverb.Client,
+        environment_spec: Optional[specs.EnvironmentSpec],
+        policy: Optional[Policy],
+    ) -> Optional[adders.Adder]:
+        return self.wrapped.make_adder(replay_client, environment_spec, policy)
 
-  def make_actor(
-      self,
-      random_key: networks_lib.PRNGKey,
-      policy: Policy,
-      environment_spec: specs.EnvironmentSpec,
-      variable_source: Optional[core.VariableSource] = None,
-      adder: Optional[adders.Adder] = None,
-  ) -> core.Actor:
-    return self.wrapped.make_actor(random_key, policy, environment_spec,
-                                   variable_source, adder)
+    def make_actor(
+        self,
+        random_key: networks_lib.PRNGKey,
+        policy: Policy,
+        environment_spec: specs.EnvironmentSpec,
+        variable_source: Optional[core.VariableSource] = None,
+        adder: Optional[adders.Adder] = None,
+    ) -> core.Actor:
+        return self.wrapped.make_actor(
+            random_key, policy, environment_spec, variable_source, adder
+        )
 
-  def make_learner(
-      self,
-      random_key: networks_lib.PRNGKey,
-      networks: Networks,
-      dataset: Iterator[Sample],
-      logger_fn: loggers.LoggerFactory,
-      environment_spec: specs.EnvironmentSpec,
-      replay_client: Optional[reverb.Client] = None,
-      counter: Optional[counting.Counter] = None,
-  ) -> core.Learner:
-    return self.wrapped.make_learner(random_key, networks, dataset, logger_fn,
-                                     environment_spec, replay_client, counter)
+    def make_learner(
+        self,
+        random_key: networks_lib.PRNGKey,
+        networks: Networks,
+        dataset: Iterator[Sample],
+        logger_fn: loggers.LoggerFactory,
+        environment_spec: specs.EnvironmentSpec,
+        replay_client: Optional[reverb.Client] = None,
+        counter: Optional[counting.Counter] = None,
+    ) -> core.Learner:
+        return self.wrapped.make_learner(
+            random_key,
+            networks,
+            dataset,
+            logger_fn,
+            environment_spec,
+            replay_client,
+            counter,
+        )
 
-  def make_policy(self,
-                  networks: Networks,
-                  environment_spec: specs.EnvironmentSpec,
-                  evaluation: bool = False) -> Policy:
-    return self.wrapped.make_policy(networks, environment_spec, evaluation)
+    def make_policy(
+        self,
+        networks: Networks,
+        environment_spec: specs.EnvironmentSpec,
+        evaluation: bool = False,
+    ) -> Policy:
+        return self.wrapped.make_policy(networks, environment_spec, evaluation)
 
 
 # TODO(sinopalnikov): deprecated, migrate all users and remove.

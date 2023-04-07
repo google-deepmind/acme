@@ -16,32 +16,34 @@
 
 from typing import Dict, List, Optional
 
-import acme
-from acme import types
-from acme.tf import savers as tf2_savers
-from acme.tf import utils as tf2_utils
-from acme.utils import counting
-from acme.utils import loggers
 import numpy as np
 import sonnet as snt
 import tensorflow as tf
 
+import acme
+from acme import types
+from acme.tf import savers as tf2_savers
+from acme.tf import utils as tf2_utils
+from acme.utils import counting, loggers
+
 
 class BCLearner(acme.Learner, tf2_savers.TFSaveable):
-  """BC learner.
+    """BC learner.
 
   This is the learning component of a BC agent. IE it takes a dataset as input
   and implements update functionality to learn from this dataset.
   """
 
-  def __init__(self,
-               network: snt.Module,
-               learning_rate: float,
-               dataset: tf.data.Dataset,
-               counter: Optional[counting.Counter] = None,
-               logger: Optional[loggers.Logger] = None,
-               checkpoint: bool = True):
-    """Initializes the learner.
+    def __init__(
+        self,
+        network: snt.Module,
+        learning_rate: float,
+        dataset: tf.data.Dataset,
+        counter: Optional[counting.Counter] = None,
+        logger: Optional[loggers.Logger] = None,
+        checkpoint: bool = True,
+    ):
+        """Initializes the learner.
 
     Args:
       network: the BC network (the one being optimized)
@@ -52,72 +54,73 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
       checkpoint: boolean indicating whether to checkpoint the learner.
     """
 
-    self._counter = counter or counting.Counter()
-    self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
+        self._counter = counter or counting.Counter()
+        self._logger = logger or loggers.TerminalLogger("learner", time_delta=1.0)
 
-    # Get an iterator over the dataset.
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
-    # TODO(b/155086959): Fix type stubs and remove.
+        # Get an iterator over the dataset.
+        self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+        # TODO(b/155086959): Fix type stubs and remove.
 
-    self._network = network
-    self._optimizer = snt.optimizers.Adam(learning_rate)
+        self._network = network
+        self._optimizer = snt.optimizers.Adam(learning_rate)
 
-    self._variables: List[List[tf.Tensor]] = [network.trainable_variables]
-    self._num_steps = tf.Variable(0, dtype=tf.int32)
+        self._variables: List[List[tf.Tensor]] = [network.trainable_variables]
+        self._num_steps = tf.Variable(0, dtype=tf.int32)
 
-    # Create a snapshotter object.
-    if checkpoint:
-      self._snapshotter = tf2_savers.Snapshotter(
-          objects_to_save={'network': network}, time_delta_minutes=60.)
-    else:
-      self._snapshotter = None
+        # Create a snapshotter object.
+        if checkpoint:
+            self._snapshotter = tf2_savers.Snapshotter(
+                objects_to_save={"network": network}, time_delta_minutes=60.0
+            )
+        else:
+            self._snapshotter = None
 
-  @tf.function
-  def _step(self) -> Dict[str, tf.Tensor]:
-    """Do a step of SGD and update the priorities."""
+    @tf.function
+    def _step(self) -> Dict[str, tf.Tensor]:
+        """Do a step of SGD and update the priorities."""
 
-    # Pull out the data needed for updates/priorities.
-    inputs = next(self._iterator)
-    transitions: types.Transition = inputs.data
+        # Pull out the data needed for updates/priorities.
+        inputs = next(self._iterator)
+        transitions: types.Transition = inputs.data
 
-    with tf.GradientTape() as tape:
-      # Evaluate our networks.
-      logits = self._network(transitions.observation)
-      cce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-      loss = cce(transitions.action, logits)
+        with tf.GradientTape() as tape:
+            # Evaluate our networks.
+            logits = self._network(transitions.observation)
+            cce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+            loss = cce(transitions.action, logits)
 
-    gradients = tape.gradient(loss, self._network.trainable_variables)
-    self._optimizer.apply(gradients, self._network.trainable_variables)
+        gradients = tape.gradient(loss, self._network.trainable_variables)
+        self._optimizer.apply(gradients, self._network.trainable_variables)
 
-    self._num_steps.assign_add(1)
+        self._num_steps.assign_add(1)
 
-    # Compute the global norm of the gradients for logging.
-    global_gradient_norm = tf.linalg.global_norm(gradients)
-    fetches = {'loss': loss, 'gradient_norm': global_gradient_norm}
+        # Compute the global norm of the gradients for logging.
+        global_gradient_norm = tf.linalg.global_norm(gradients)
+        fetches = {"loss": loss, "gradient_norm": global_gradient_norm}
 
-    return fetches
+        return fetches
 
-  def step(self):
-    # Do a batch of SGD.
-    result = self._step()
+    def step(self):
+        # Do a batch of SGD.
+        result = self._step()
 
-    # Update our counts and record it.
-    counts = self._counter.increment(steps=1)
-    result.update(counts)
+        # Update our counts and record it.
+        counts = self._counter.increment(steps=1)
+        result.update(counts)
 
-    # Snapshot and attempt to write logs.
-    if self._snapshotter is not None:
-      self._snapshotter.save()
-    self._logger.write(result)
+        # Snapshot and attempt to write logs.
+        if self._snapshotter is not None:
+            self._snapshotter.save()
+        self._logger.write(result)
 
-  def get_variables(self, names: List[str]) -> List[np.ndarray]:
-    return tf2_utils.to_numpy(self._variables)
+    def get_variables(self, names: List[str]) -> List[np.ndarray]:
+        return tf2_utils.to_numpy(self._variables)
 
-  @property
-  def state(self):
-    """Returns the stateful parts of the learner for checkpointing."""
-    return {
-        'network': self._network,
-        'optimizer': self._optimizer,
-        'num_steps': self._num_steps
-    }
+    @property
+    def state(self):
+        """Returns the stateful parts of the learner for checkpointing."""
+        return {
+            "network": self._network,
+            "optimizer": self._optimizer,
+            "num_steps": self._num_steps,
+        }

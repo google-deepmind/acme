@@ -20,24 +20,24 @@ from acme.utils.loggers import base
 
 
 class AutoCloseLogger(base.Logger):
-  """Logger which auto closes itself on exit if not already closed."""
+    """Logger which auto closes itself on exit if not already closed."""
 
-  def __init__(self, logger: base.Logger):
-    self._logger = logger
-    # The finalizer "logger.close" is invoked in one of the following scenario:
-    # 1) the current logger is GC
-    # 2) from the python doc, when the program exits, each remaining live
-    #    finalizer is called.
-    # Note that in the normal flow, where "close" is explicitly called,
-    # the finalizer is marked as dead using the detach function so that
-    # the underlying logger is not closed twice (once explicitly and once
-    # implicitly when the object is GC or when the program exits).
-    self._finalizer = weakref.finalize(self, logger.close)
+    def __init__(self, logger: base.Logger):
+        self._logger = logger
+        # The finalizer "logger.close" is invoked in one of the following scenario:
+        # 1) the current logger is GC
+        # 2) from the python doc, when the program exits, each remaining live
+        #    finalizer is called.
+        # Note that in the normal flow, where "close" is explicitly called,
+        # the finalizer is marked as dead using the detach function so that
+        # the underlying logger is not closed twice (once explicitly and once
+        # implicitly when the object is GC or when the program exits).
+        self._finalizer = weakref.finalize(self, logger.close)
 
-  def write(self, values: base.LoggingData):
-    self._logger.write(values)
+    def write(self, values: base.LoggingData):
+        self._logger.write(values)
 
-  def close(self):
-    if self._finalizer.detach():
-      self._logger.close()
-    self._logger = None
+    def close(self):
+        if self._finalizer.detach():
+            self._logger.close()
+        self._logger = None

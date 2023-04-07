@@ -17,80 +17,86 @@
 import functools
 from typing import Dict, Sequence
 
-from absl import app
-from absl import flags
-from acme import specs
-from acme import types
-from acme.agents.tf import dmpo
 import helpers
-from acme.tf import networks
-from acme.tf import utils as tf2_utils
 import launchpad as lp
 import numpy as np
 import sonnet as snt
+from absl import app, flags
+
+from acme import specs, types
+from acme.agents.tf import dmpo
+from acme.tf import networks
+from acme.tf import utils as tf2_utils
 
 # Flags which modify the behavior of the launcher.
 FLAGS = flags.FLAGS
 _MAX_ACTOR_STEPS = flags.DEFINE_integer(
-    'max_actor_steps', None,
-    'Number of actor steps to run; defaults to None for an endless loop.')
-_DOMAIN = flags.DEFINE_string('domain', 'cartpole',
-                              'Control suite domain name.')
-_TASK = flags.DEFINE_string('task', 'balance', 'Control suite task name.')
+    "max_actor_steps",
+    None,
+    "Number of actor steps to run; defaults to None for an endless loop.",
+)
+_DOMAIN = flags.DEFINE_string("domain", "cartpole", "Control suite domain name.")
+_TASK = flags.DEFINE_string("task", "balance", "Control suite task name.")
 
 
 def make_networks(
     action_spec: specs.BoundedArray,
     policy_layer_sizes: Sequence[int] = (256, 256, 256),
     critic_layer_sizes: Sequence[int] = (512, 512, 256),
-    vmin: float = -150.,
-    vmax: float = 150.,
+    vmin: float = -150.0,
+    vmax: float = 150.0,
     num_atoms: int = 51,
 ) -> Dict[str, types.TensorTransformation]:
-  """Creates networks used by the agent."""
+    """Creates networks used by the agent."""
 
-  num_dimensions = np.prod(action_spec.shape, dtype=int)
+    num_dimensions = np.prod(action_spec.shape, dtype=int)
 
-  policy_network = snt.Sequential([
-      networks.LayerNormMLP(policy_layer_sizes, activate_final=True),
-      networks.MultivariateNormalDiagHead(
-          num_dimensions, init_scale=0.7, use_tfd_independent=True)
-  ])
+    policy_network = snt.Sequential(
+        [
+            networks.LayerNormMLP(policy_layer_sizes, activate_final=True),
+            networks.MultivariateNormalDiagHead(
+                num_dimensions, init_scale=0.7, use_tfd_independent=True
+            ),
+        ]
+    )
 
-  # The multiplexer concatenates the (maybe transformed) observations/actions.
-  multiplexer = networks.CriticMultiplexer(
-      action_network=networks.ClipToSpec(action_spec))
-  critic_network = snt.Sequential([
-      multiplexer,
-      networks.LayerNormMLP(critic_layer_sizes, activate_final=True),
-      networks.DiscreteValuedHead(vmin, vmax, num_atoms)
-  ])
+    # The multiplexer concatenates the (maybe transformed) observations/actions.
+    multiplexer = networks.CriticMultiplexer(
+        action_network=networks.ClipToSpec(action_spec)
+    )
+    critic_network = snt.Sequential(
+        [
+            multiplexer,
+            networks.LayerNormMLP(critic_layer_sizes, activate_final=True),
+            networks.DiscreteValuedHead(vmin, vmax, num_atoms),
+        ]
+    )
 
-  return {
-      'policy': policy_network,
-      'critic': critic_network,
-      'observation': tf2_utils.batch_concat,
-  }
+    return {
+        "policy": policy_network,
+        "critic": critic_network,
+        "observation": tf2_utils.batch_concat,
+    }
 
 
 def main(_):
-  # Configure the environment factory with requested task.
-  make_environment = functools.partial(
-      helpers.make_environment,
-      domain_name=_DOMAIN.value,
-      task_name=_TASK.value)
+    # Configure the environment factory with requested task.
+    make_environment = functools.partial(
+        helpers.make_environment, domain_name=_DOMAIN.value, task_name=_TASK.value
+    )
 
-  # Construct the program.
-  program_builder = dmpo.DistributedDistributionalMPO(
-      make_environment,
-      make_networks,
-      target_policy_update_period=25,
-      max_actor_steps=_MAX_ACTOR_STEPS.value,
-      num_actors=4)
+    # Construct the program.
+    program_builder = dmpo.DistributedDistributionalMPO(
+        make_environment,
+        make_networks,
+        target_policy_update_period=25,
+        max_actor_steps=_MAX_ACTOR_STEPS.value,
+        num_actors=4,
+    )
 
-  # Launch experiment.
-  lp.launch(programs=program_builder.build())
+    # Launch experiment.
+    lp.launch(programs=program_builder.build())
 
 
-if __name__ == '__main__':
-  app.run(main)
+if __name__ == "__main__":
+    app.run(main)

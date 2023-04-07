@@ -16,42 +16,40 @@
 
 from typing import List
 
-from acme import core
-from acme import types
-
 from absl.testing import absltest
+
+from acme import core, types
 
 
 class StepCountingLearner(core.Learner):
-  """A learner which counts `num_steps` and then raises `StopIteration`."""
+    """A learner which counts `num_steps` and then raises `StopIteration`."""
 
-  def __init__(self, num_steps: int):
-    self.step_count = 0
-    self.num_steps = num_steps
+    def __init__(self, num_steps: int):
+        self.step_count = 0
+        self.num_steps = num_steps
 
-  def step(self):
-    self.step_count += 1
-    if self.step_count >= self.num_steps:
-      raise StopIteration()
+    def step(self):
+        self.step_count += 1
+        if self.step_count >= self.num_steps:
+            raise StopIteration()
 
-  def get_variables(self, unused: List[str]) -> List[types.NestedArray]:
-    del unused
-    return []
+    def get_variables(self, unused: List[str]) -> List[types.NestedArray]:
+        del unused
+        return []
 
 
 class CoreTest(absltest.TestCase):
+    def test_learner_run_with_limit(self):
+        learner = StepCountingLearner(100)
+        learner.run(7)
+        self.assertEqual(learner.step_count, 7)
 
-  def test_learner_run_with_limit(self):
-    learner = StepCountingLearner(100)
-    learner.run(7)
-    self.assertEqual(learner.step_count, 7)
-
-  def test_learner_run_no_limit(self):
-    learner = StepCountingLearner(100)
-    with self.assertRaises(StopIteration):
-      learner.run()
-    self.assertEqual(learner.step_count, 100)
+    def test_learner_run_no_limit(self):
+        learner = StepCountingLearner(100)
+        with self.assertRaises(StopIteration):
+            learner.run()
+        self.assertEqual(learner.step_count, 100)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

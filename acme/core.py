@@ -21,16 +21,17 @@ import abc
 import itertools
 from typing import Generic, Iterator, List, Optional, Sequence, TypeVar
 
-from acme import types
-from acme.utils import metrics
 import dm_env
 
-T = TypeVar('T')
+from acme import types
+from acme.utils import metrics
+
+T = TypeVar("T")
 
 
 @metrics.record_class_usage
 class Actor(abc.ABC):
-  """Interface for an agent that can act.
+    """Interface for an agent that can act.
 
   This interface defines an API for an Actor to interact with an EnvironmentLoop
   (see acme.environment_loop), e.g. a simple RL loop where each step is of the
@@ -49,13 +50,13 @@ class Actor(abc.ABC):
     actor.update()
   """
 
-  @abc.abstractmethod
-  def select_action(self, observation: types.NestedArray) -> types.NestedArray:
-    """Samples from the policy and returns an action."""
+    @abc.abstractmethod
+    def select_action(self, observation: types.NestedArray) -> types.NestedArray:
+        """Samples from the policy and returns an action."""
 
-  @abc.abstractmethod
-  def observe_first(self, timestep: dm_env.TimeStep):
-    """Make a first observation from the environment.
+    @abc.abstractmethod
+    def observe_first(self, timestep: dm_env.TimeStep):
+        """Make a first observation from the environment.
 
     Note that this need not be an initial state, it is merely beginning the
     recording of a trajectory.
@@ -64,22 +65,20 @@ class Actor(abc.ABC):
       timestep: first timestep.
     """
 
-  @abc.abstractmethod
-  def observe(
-      self,
-      action: types.NestedArray,
-      next_timestep: dm_env.TimeStep,
-  ):
-    """Make an observation of timestep data from the environment.
+    @abc.abstractmethod
+    def observe(
+        self, action: types.NestedArray, next_timestep: dm_env.TimeStep,
+    ):
+        """Make an observation of timestep data from the environment.
 
     Args:
       action: action taken in the environment.
       next_timestep: timestep produced by the environment given the action.
     """
 
-  @abc.abstractmethod
-  def update(self, wait: bool = False):
-    """Perform an update of the actor parameters from past observations.
+    @abc.abstractmethod
+    def update(self, wait: bool = False):
+        """Perform an update of the actor parameters from past observations.
 
     Args:
       wait: if True, the update will be blocking.
@@ -87,16 +86,16 @@ class Actor(abc.ABC):
 
 
 class VariableSource(abc.ABC):
-  """Abstract source of variables.
+    """Abstract source of variables.
 
   Objects which implement this interface provide a source of variables, returned
   as a collection of (nested) numpy arrays. Generally this will be used to
   provide variables to some learned policy/etc.
   """
 
-  @abc.abstractmethod
-  def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
-    """Return the named variables as a collection of (nested) numpy arrays.
+    @abc.abstractmethod
+    def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
+        """Return the named variables as a collection of (nested) numpy arrays.
 
     Args:
       names: args where each name is a string identifying a predefined subset of
@@ -110,27 +109,27 @@ class VariableSource(abc.ABC):
 
 @metrics.record_class_usage
 class Worker(abc.ABC):
-  """An interface for (potentially) distributed workers."""
+    """An interface for (potentially) distributed workers."""
 
-  @abc.abstractmethod
-  def run(self):
-    """Runs the worker."""
+    @abc.abstractmethod
+    def run(self):
+        """Runs the worker."""
 
 
 class Saveable(abc.ABC, Generic[T]):
-  """An interface for saveable objects."""
+    """An interface for saveable objects."""
 
-  @abc.abstractmethod
-  def save(self) -> T:
-    """Returns the state from the object to be saved."""
+    @abc.abstractmethod
+    def save(self) -> T:
+        """Returns the state from the object to be saved."""
 
-  @abc.abstractmethod
-  def restore(self, state: T):
-    """Given the state, restores the object."""
+    @abc.abstractmethod
+    def restore(self, state: T):
+        """Given the state, restores the object."""
 
 
 class Learner(VariableSource, Worker, Saveable):
-  """Abstract learner object.
+    """Abstract learner object.
 
   This corresponds to an object which implements a learning loop. A single step
   of learning should be implemented via the `step` method and this step
@@ -145,32 +144,32 @@ class Learner(VariableSource, Worker, Saveable):
   useful when the dataset is filled by an external process.
   """
 
-  @abc.abstractmethod
-  def step(self):
-    """Perform an update step of the learner's parameters."""
+    @abc.abstractmethod
+    def step(self):
+        """Perform an update step of the learner's parameters."""
 
-  def run(self, num_steps: Optional[int] = None) -> None:
-    """Run the update loop; typically an infinite loop which calls step."""
+    def run(self, num_steps: Optional[int] = None) -> None:
+        """Run the update loop; typically an infinite loop which calls step."""
 
-    iterator = range(num_steps) if num_steps is not None else itertools.count()
+        iterator = range(num_steps) if num_steps is not None else itertools.count()
 
-    for _ in iterator:
-      self.step()
+        for _ in iterator:
+            self.step()
 
-  def save(self):
-    raise NotImplementedError('Method "save" is not implemented.')
+    def save(self):
+        raise NotImplementedError('Method "save" is not implemented.')
 
-  def restore(self, state):
-    raise NotImplementedError('Method "restore" is not implemented.')
+    def restore(self, state):
+        raise NotImplementedError('Method "restore" is not implemented.')
 
 
 class PrefetchingIterator(Iterator[T], abc.ABC):
-  """Abstract iterator object which supports `ready` method."""
+    """Abstract iterator object which supports `ready` method."""
 
-  @abc.abstractmethod
-  def ready(self) -> bool:
-    """Is there any data waiting for processing."""
+    @abc.abstractmethod
+    def ready(self) -> bool:
+        """Is there any data waiting for processing."""
 
-  @abc.abstractmethod
-  def retrieved_elements(self) -> int:
-    """How many elements were retrieved from the iterator."""
+    @abc.abstractmethod
+    def retrieved_elements(self) -> int:
+        """How many elements were retrieved from the iterator."""

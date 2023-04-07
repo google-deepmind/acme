@@ -21,16 +21,15 @@ import pickle
 import time
 from typing import Mapping, Optional, Union
 
-from absl import logging
-from acme import core
-from acme.utils import signals
-from acme.utils import paths
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
 import tree
-
+from absl import logging
 from tensorflow.python.saved_model import revived_types
+
+from acme import core
+from acme.utils import paths, signals
 
 PythonState = tf.train.experimental.PythonState
 Checkpointable = Union[tf.Module, tf.Variable, PythonState]
@@ -40,16 +39,16 @@ _DEFAULT_SNAPSHOT_TTL = int(datetime.timedelta(days=90).total_seconds())
 
 
 class TFSaveable(abc.ABC):
-  """An interface for objects that expose their checkpointable TF state."""
+    """An interface for objects that expose their checkpointable TF state."""
 
-  @property
-  @abc.abstractmethod
-  def state(self) -> Mapping[str, Checkpointable]:
-    """Returns TensorFlow checkpointable state."""
+    @property
+    @abc.abstractmethod
+    def state(self) -> Mapping[str, Checkpointable]:
+        """Returns TensorFlow checkpointable state."""
 
 
 class Checkpointer:
-  """Convenience class for periodically checkpointing.
+    """Convenience class for periodically checkpointing.
 
   This can be used to checkpoint any object with trackable state (e.g.
   tensorflow variables or modules); see tf.train.Checkpoint for
@@ -72,20 +71,20 @@ class Checkpointer:
   ```
   """
 
-  def __init__(
-      self,
-      objects_to_save: Mapping[str, Union[Checkpointable, core.Saveable]],
-      *,
-      directory: str = '~/acme/',
-      subdirectory: str = 'default',
-      time_delta_minutes: float = 10.0,
-      enable_checkpointing: bool = True,
-      add_uid: bool = True,
-      max_to_keep: int = 1,
-      checkpoint_ttl_seconds: Optional[int] = _DEFAULT_CHECKPOINT_TTL,
-      keep_checkpoint_every_n_hours: Optional[int] = None,
-  ):
-    """Builds the saver object.
+    def __init__(
+        self,
+        objects_to_save: Mapping[str, Union[Checkpointable, core.Saveable]],
+        *,
+        directory: str = "~/acme/",
+        subdirectory: str = "default",
+        time_delta_minutes: float = 10.0,
+        enable_checkpointing: bool = True,
+        add_uid: bool = True,
+        max_to_keep: int = 1,
+        checkpoint_ttl_seconds: Optional[int] = _DEFAULT_CHECKPOINT_TTL,
+        keep_checkpoint_every_n_hours: Optional[int] = None,
+    ):
+        """Builds the saver object.
 
     Args:
       objects_to_save: Mapping specifying what to checkpoint.
@@ -102,41 +101,43 @@ class Checkpointer:
         tf.train.CheckpointManager.
     """
 
-    # Convert `Saveable` objects to TF `Checkpointable` first, if necessary.
-    def to_ckptable(x: Union[Checkpointable, core.Saveable]) -> Checkpointable:
-      if isinstance(x, core.Saveable):
-        return SaveableAdapter(x)
-      return x
+        # Convert `Saveable` objects to TF `Checkpointable` first, if necessary.
+        def to_ckptable(x: Union[Checkpointable, core.Saveable]) -> Checkpointable:
+            if isinstance(x, core.Saveable):
+                return SaveableAdapter(x)
+            return x
 
-    objects_to_save = {k: to_ckptable(v) for k, v in objects_to_save.items()}
+        objects_to_save = {k: to_ckptable(v) for k, v in objects_to_save.items()}
 
-    self._time_delta_minutes = time_delta_minutes
-    self._last_saved = 0.
-    self._enable_checkpointing = enable_checkpointing
-    self._checkpoint_manager = None
+        self._time_delta_minutes = time_delta_minutes
+        self._last_saved = 0.0
+        self._enable_checkpointing = enable_checkpointing
+        self._checkpoint_manager = None
 
-    if enable_checkpointing:
-      # Checkpoint object that handles saving/restoring.
-      self._checkpoint = tf.train.Checkpoint(**objects_to_save)
-      self._checkpoint_dir = paths.process_path(
-          directory,
-          'checkpoints',
-          subdirectory,
-          ttl_seconds=checkpoint_ttl_seconds,
-          backups=False,
-          add_uid=add_uid)
+        if enable_checkpointing:
+            # Checkpoint object that handles saving/restoring.
+            self._checkpoint = tf.train.Checkpoint(**objects_to_save)
+            self._checkpoint_dir = paths.process_path(
+                directory,
+                "checkpoints",
+                subdirectory,
+                ttl_seconds=checkpoint_ttl_seconds,
+                backups=False,
+                add_uid=add_uid,
+            )
 
-      # Create a manager to maintain different checkpoints.
-      self._checkpoint_manager = tf.train.CheckpointManager(
-          self._checkpoint,
-          directory=self._checkpoint_dir,
-          max_to_keep=max_to_keep,
-          keep_checkpoint_every_n_hours=keep_checkpoint_every_n_hours)
+            # Create a manager to maintain different checkpoints.
+            self._checkpoint_manager = tf.train.CheckpointManager(
+                self._checkpoint,
+                directory=self._checkpoint_dir,
+                max_to_keep=max_to_keep,
+                keep_checkpoint_every_n_hours=keep_checkpoint_every_n_hours,
+            )
 
-      self.restore()
+            self.restore()
 
-  def save(self, force: bool = False) -> bool:
-    """Save the checkpoint if it's the appropriate time, otherwise no-ops.
+    def save(self, force: bool = False) -> bool:
+        """Save the checkpoint if it's the appropriate time, otherwise no-ops.
 
     Args:
       force: Whether to force a save regardless of time elapsed since last save.
@@ -144,105 +145,104 @@ class Checkpointer:
     Returns:
       A boolean indicating if a save event happened.
     """
-    if not self._enable_checkpointing:
-      return False
+        if not self._enable_checkpointing:
+            return False
 
-    if (not force and
-        time.time() - self._last_saved < 60 * self._time_delta_minutes):
-      return False
+        if not force and time.time() - self._last_saved < 60 * self._time_delta_minutes:
+            return False
 
-    # Save any checkpoints.
-    logging.info('Saving checkpoint: %s', self._checkpoint_manager.directory)
-    self._checkpoint_manager.save()
-    self._last_saved = time.time()
+        # Save any checkpoints.
+        logging.info("Saving checkpoint: %s", self._checkpoint_manager.directory)
+        self._checkpoint_manager.save()
+        self._last_saved = time.time()
 
-    return True
+        return True
 
-  def restore(self):
-    # Restore from the most recent checkpoint (if it exists).
-    checkpoint_to_restore = self._checkpoint_manager.latest_checkpoint
-    logging.info('Attempting to restore checkpoint: %s',
-                 checkpoint_to_restore)
-    self._checkpoint.restore(checkpoint_to_restore)
+    def restore(self):
+        # Restore from the most recent checkpoint (if it exists).
+        checkpoint_to_restore = self._checkpoint_manager.latest_checkpoint
+        logging.info("Attempting to restore checkpoint: %s", checkpoint_to_restore)
+        self._checkpoint.restore(checkpoint_to_restore)
 
-  @property
-  def directory(self):
-    return self._checkpoint_manager.directory
+    @property
+    def directory(self):
+        return self._checkpoint_manager.directory
 
 
 class CheckpointingRunner(core.Worker):
-  """Wrap an object and expose a run method which checkpoints periodically.
+    """Wrap an object and expose a run method which checkpoints periodically.
 
   This internally creates a Checkpointer around `wrapped` object and exposes
   all of the methods of `wrapped`. Additionally, any `**kwargs` passed to the
   runner are forwarded to the internal Checkpointer.
   """
 
-  def __init__(
-      self,
-      wrapped: Union[Checkpointable, core.Saveable, TFSaveable],
-      key: str = 'wrapped',
-      *,
-      time_delta_minutes: int = 30,
-      **kwargs,
-  ):
+    def __init__(
+        self,
+        wrapped: Union[Checkpointable, core.Saveable, TFSaveable],
+        key: str = "wrapped",
+        *,
+        time_delta_minutes: int = 30,
+        **kwargs,
+    ):
 
-    if isinstance(wrapped, TFSaveable):
-      # If the object to be wrapped exposes its TF State, checkpoint that.
-      objects_to_save = wrapped.state
-    else:
-      # Otherwise checkpoint the wrapped object itself.
-      objects_to_save = wrapped
+        if isinstance(wrapped, TFSaveable):
+            # If the object to be wrapped exposes its TF State, checkpoint that.
+            objects_to_save = wrapped.state
+        else:
+            # Otherwise checkpoint the wrapped object itself.
+            objects_to_save = wrapped
 
-    self._wrapped = wrapped
-    self._time_delta_minutes = time_delta_minutes
-    self._checkpointer = Checkpointer(
-        objects_to_save={key: objects_to_save},
-        time_delta_minutes=time_delta_minutes,
-        **kwargs)
+        self._wrapped = wrapped
+        self._time_delta_minutes = time_delta_minutes
+        self._checkpointer = Checkpointer(
+            objects_to_save={key: objects_to_save},
+            time_delta_minutes=time_delta_minutes,
+            **kwargs,
+        )
 
-  # Handle preemption signal. Note that this must happen in the main thread.
-  def _signal_handler(self):
-    logging.info('Caught SIGTERM: forcing a checkpoint save.')
-    self._checkpointer.save(force=True)
+    # Handle preemption signal. Note that this must happen in the main thread.
+    def _signal_handler(self):
+        logging.info("Caught SIGTERM: forcing a checkpoint save.")
+        self._checkpointer.save(force=True)
 
-  def step(self):
-    if isinstance(self._wrapped, core.Learner):
-      # Learners have a step() method, so alternate between that and ckpt call.
-      self._wrapped.step()
-      self._checkpointer.save()
-    else:
-      # Wrapped object doesn't have a run method; set our run method to ckpt.
-      self.checkpoint()
+    def step(self):
+        if isinstance(self._wrapped, core.Learner):
+            # Learners have a step() method, so alternate between that and ckpt call.
+            self._wrapped.step()
+            self._checkpointer.save()
+        else:
+            # Wrapped object doesn't have a run method; set our run method to ckpt.
+            self.checkpoint()
 
-  def run(self):
-    """Runs the checkpointer."""
-    with signals.runtime_terminator(self._signal_handler):
-      while True:
-        self.step()
+    def run(self):
+        """Runs the checkpointer."""
+        with signals.runtime_terminator(self._signal_handler):
+            while True:
+                self.step()
 
-  def __dir__(self):
-    return dir(self._wrapped) + ['get_directory']
+    def __dir__(self):
+        return dir(self._wrapped) + ["get_directory"]
 
-  # TODO(b/195915583) : Throw when wrapped object has get_directory() method.
-  def __getattr__(self, name):
-    if name == 'get_directory':
-      return self.get_directory
-    return getattr(self._wrapped, name)
+    # TODO(b/195915583) : Throw when wrapped object has get_directory() method.
+    def __getattr__(self, name):
+        if name == "get_directory":
+            return self.get_directory
+        return getattr(self._wrapped, name)
 
-  def checkpoint(self):
-    self._checkpointer.save()
-    # Do not sleep for a long period of time to avoid LaunchPad program
-    # termination hangs (time.sleep is not interruptible).
-    for _ in range(self._time_delta_minutes * 60):
-      time.sleep(1)
+    def checkpoint(self):
+        self._checkpointer.save()
+        # Do not sleep for a long period of time to avoid LaunchPad program
+        # termination hangs (time.sleep is not interruptible).
+        for _ in range(self._time_delta_minutes * 60):
+            time.sleep(1)
 
-  def get_directory(self):
-    return self._checkpointer.directory
+    def get_directory(self):
+        return self._checkpointer.directory
 
 
 class Snapshotter:
-  """Convenience class for periodically snapshotting.
+    """Convenience class for periodically snapshotting.
 
   Objects which can be snapshotted are limited to Sonnet or tensorflow Modules
   which implement a __call__ method. This will save the module's graph and
@@ -266,15 +266,15 @@ class Snapshotter:
   ```
   """
 
-  def __init__(
-      self,
-      objects_to_save: Mapping[str, snt.Module],
-      *,
-      directory: str = '~/acme/',
-      time_delta_minutes: float = 30.0,
-      snapshot_ttl_seconds: int = _DEFAULT_SNAPSHOT_TTL,
-  ):
-    """Builds the saver object.
+    def __init__(
+        self,
+        objects_to_save: Mapping[str, snt.Module],
+        *,
+        directory: str = "~/acme/",
+        time_delta_minutes: float = 30.0,
+        snapshot_ttl_seconds: int = _DEFAULT_SNAPSHOT_TTL,
+    ):
+        """Builds the saver object.
 
     Args:
       objects_to_save: Mapping specifying what to snapshot.
@@ -282,23 +282,24 @@ class Snapshotter:
       time_delta_minutes: How often to save the snapshot, in minutes.
       snapshot_ttl_seconds: TTL (time to leave) in seconds for snapshots.
     """
-    objects_to_save = objects_to_save or {}
+        objects_to_save = objects_to_save or {}
 
-    self._time_delta_minutes = time_delta_minutes
-    self._last_saved = 0.
-    self._snapshots = {}
+        self._time_delta_minutes = time_delta_minutes
+        self._last_saved = 0.0
+        self._snapshots = {}
 
-    # Save the base directory path so we can refer to it if needed.
-    self.directory = paths.process_path(
-        directory, 'snapshots', ttl_seconds=snapshot_ttl_seconds)
+        # Save the base directory path so we can refer to it if needed.
+        self.directory = paths.process_path(
+            directory, "snapshots", ttl_seconds=snapshot_ttl_seconds
+        )
 
-    # Save a dictionary mapping paths to snapshot capable models.
-    for name, module in objects_to_save.items():
-      path = os.path.join(self.directory, name)
-      self._snapshots[path] = make_snapshot(module)
+        # Save a dictionary mapping paths to snapshot capable models.
+        for name, module in objects_to_save.items():
+            path = os.path.join(self.directory, name)
+            self._snapshots[path] = make_snapshot(module)
 
-  def save(self, force: bool = False) -> bool:
-    """Snapshots if it's the appropriate time, otherwise no-ops.
+    def save(self, force: bool = False) -> bool:
+        """Snapshots if it's the appropriate time, otherwise no-ops.
 
     Args:
       force: If True, save new snapshot no matter how long it's been since the
@@ -307,52 +308,53 @@ class Snapshotter:
     Returns:
       A boolean indicating if a save event happened.
     """
-    seconds_since_last = time.time() - self._last_saved
-    if (self._snapshots and
-        (force or seconds_since_last >= 60 * self._time_delta_minutes)):
-      # Save any snapshots.
-      for path, snapshot in self._snapshots.items():
-        tf.saved_model.save(snapshot, path)
+        seconds_since_last = time.time() - self._last_saved
+        if self._snapshots and (
+            force or seconds_since_last >= 60 * self._time_delta_minutes
+        ):
+            # Save any snapshots.
+            for path, snapshot in self._snapshots.items():
+                tf.saved_model.save(snapshot, path)
 
-      # Record the time we finished saving.
-      self._last_saved = time.time()
+            # Record the time we finished saving.
+            self._last_saved = time.time()
 
-      return True
+            return True
 
-    return False
+        return False
 
 
 class Snapshot(tf.Module):
-  """Thin wrapper which allows the module to be saved."""
+    """Thin wrapper which allows the module to be saved."""
 
-  def __init__(self):
-    super().__init__()
-    self._module = None
-    self._variables = None
-    self._trainable_variables = None
+    def __init__(self):
+        super().__init__()
+        self._module = None
+        self._variables = None
+        self._trainable_variables = None
 
-  @tf.function
-  def __call__(self, *args, **kwargs):
-    return self._module(*args, **kwargs)
+    @tf.function
+    def __call__(self, *args, **kwargs):
+        return self._module(*args, **kwargs)
 
-  @property
-  def submodules(self):
-    return [self._module]
+    @property
+    def submodules(self):
+        return [self._module]
 
-  @property
-  def variables(self):
-    return self._variables
+    @property
+    def variables(self):
+        return self._variables
 
-  @property
-  def trainable_variables(self):
-    return self._trainable_variables
+    @property
+    def trainable_variables(self):
+        return self._trainable_variables
 
 
 # Registers the Snapshot object above such that when it is restored by
 # tf.saved_model.load it will be restored as a Snapshot. This is important
 # because it allows us to expose the __call__, and *_variables properties.
 revived_types.register_revived_type(
-    'acme_snapshot',
+    "acme_snapshot",
     lambda obj: isinstance(obj, Snapshot),
     versions=[
         revived_types.VersionedTypeRegistration(
@@ -362,54 +364,59 @@ revived_types.register_revived_type(
             min_consumer_version=1,
             setter=setattr,
         )
-    ])
+    ],
+)
 
 
 def make_snapshot(module: snt.Module):
-  """Create a thin wrapper around a module to make it snapshottable."""
-  # Get the input signature as long as it has been created.
-  input_signature = _get_input_signature(module)
-  if input_signature is None:
-    raise ValueError(
-        ('module instance "{}" has no input_signature attribute, '
-         'which is required for snapshotting; run '
-         'create_variables to add this annotation.').format(module.name))
+    """Create a thin wrapper around a module to make it snapshottable."""
+    # Get the input signature as long as it has been created.
+    input_signature = _get_input_signature(module)
+    if input_signature is None:
+        raise ValueError(
+            (
+                'module instance "{}" has no input_signature attribute, '
+                "which is required for snapshotting; run "
+                "create_variables to add this annotation."
+            ).format(module.name)
+        )
 
-  # This function will return the object as a composite tensor if it is a
-  # distribution and will otherwise return it with no changes.
-  def as_composite(obj):
-    if isinstance(obj, tfp.distributions.Distribution):
-      return tfp.experimental.as_composite(obj)
-    else:
-      return obj
+    # This function will return the object as a composite tensor if it is a
+    # distribution and will otherwise return it with no changes.
+    def as_composite(obj):
+        if isinstance(obj, tfp.distributions.Distribution):
+            return tfp.experimental.as_composite(obj)
+        else:
+            return obj
 
-  # Replace any distributions returned by the module with composite tensors and
-  # wrap it up in tf.function so we can process it properly.
-  @tf.function
-  def wrapped_module(*args, **kwargs):
-    return tree.map_structure(as_composite, module(*args, **kwargs))
+    # Replace any distributions returned by the module with composite tensors and
+    # wrap it up in tf.function so we can process it properly.
+    @tf.function
+    def wrapped_module(*args, **kwargs):
+        return tree.map_structure(as_composite, module(*args, **kwargs))
 
-  # pylint: disable=protected-access
-  snapshot = Snapshot()
-  snapshot._module = wrapped_module
-  snapshot._variables = module.variables
-  snapshot._trainable_variables = module.trainable_variables
-  # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    snapshot = Snapshot()
+    snapshot._module = wrapped_module
+    snapshot._variables = module.variables
+    snapshot._trainable_variables = module.trainable_variables
+    # pylint: disable=protected-access
 
-  # Make sure the snapshot has the proper input signature.
-  snapshot.__call__.get_concrete_function(*input_signature)
+    # Make sure the snapshot has the proper input signature.
+    snapshot.__call__.get_concrete_function(*input_signature)
 
-  # If we are an RNN also save the initial-state generating function.
-  if isinstance(module, snt.RNNCore):
-    snapshot.initial_state = tf.function(module.initial_state)
-    snapshot.initial_state.get_concrete_function(
-        tf.TensorSpec(shape=(), dtype=tf.int32))
+    # If we are an RNN also save the initial-state generating function.
+    if isinstance(module, snt.RNNCore):
+        snapshot.initial_state = tf.function(module.initial_state)
+        snapshot.initial_state.get_concrete_function(
+            tf.TensorSpec(shape=(), dtype=tf.int32)
+        )
 
-  return snapshot
+    return snapshot
 
 
 def _get_input_signature(module: snt.Module) -> Optional[tf.TensorSpec]:
-  """Get module input signature.
+    """Get module input signature.
 
   Works even if the module with signature is wrapper into snt.Sequentual or
   snt.DeepRNN.
@@ -423,38 +430,39 @@ def _get_input_signature(module: snt.Module) -> Optional[tf.TensorSpec]:
   Returns:
     Input signature of the module or None if it's not available.
   """
-  if hasattr(module, '_input_signature'):
-    return module._input_signature  # pylint: disable=protected-access
+    if hasattr(module, "_input_signature"):
+        return module._input_signature  # pylint: disable=protected-access
 
-  if isinstance(module, snt.Sequential):
-    first_layer = module._layers[0]  # pylint: disable=protected-access
-    return _get_input_signature(first_layer)
+    if isinstance(module, snt.Sequential):
+        first_layer = module._layers[0]  # pylint: disable=protected-access
+        return _get_input_signature(first_layer)
 
-  if isinstance(module, snt.DeepRNN):
-    first_layer = module._layers[0]  # pylint: disable=protected-access
-    input_signature = _get_input_signature(first_layer)
+    if isinstance(module, snt.DeepRNN):
+        first_layer = module._layers[0]  # pylint: disable=protected-access
+        input_signature = _get_input_signature(first_layer)
 
-    # Wrapping a module in DeepRNN changes its state shape, so we need to bring
-    # it up to date.
-    state = module.initial_state(1)
-    input_signature[-1] = tree.map_structure(
-        lambda t: tf.TensorSpec((None,) + t.shape[1:], t.dtype), state)
+        # Wrapping a module in DeepRNN changes its state shape, so we need to bring
+        # it up to date.
+        state = module.initial_state(1)
+        input_signature[-1] = tree.map_structure(
+            lambda t: tf.TensorSpec((None,) + t.shape[1:], t.dtype), state
+        )
 
-    return input_signature
+        return input_signature
 
-  return None
+    return None
 
 
 class SaveableAdapter(tf.train.experimental.PythonState):
-  """Adapter which allows `Saveable` object to be checkpointed by TensorFlow."""
+    """Adapter which allows `Saveable` object to be checkpointed by TensorFlow."""
 
-  def __init__(self, object_to_save: core.Saveable):
-    self._object_to_save = object_to_save
+    def __init__(self, object_to_save: core.Saveable):
+        self._object_to_save = object_to_save
 
-  def serialize(self):
-    state = self._object_to_save.save()
-    return pickle.dumps(state)
+    def serialize(self):
+        state = self._object_to_save.save()
+        return pickle.dumps(state)
 
-  def deserialize(self, pickled: bytes):
-    state = pickle.loads(pickled)
-    self._object_to_save.restore(state)
+    def deserialize(self, pickled: bytes):
+        state = pickle.loads(pickled)
+        self._object_to_save.restore(state)

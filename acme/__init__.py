@@ -17,21 +17,14 @@
 # Internal import.
 
 # Expose specs and types modules.
-from acme import specs
-from acme import types
+from acme import specs, types
 
 # Make __version__ accessible.
 from acme._metadata import __version__
 
 # Expose core interfaces.
-from acme.core import Actor
-from acme.core import Learner
-from acme.core import Saveable
-from acme.core import VariableSource
-from acme.core import Worker
+from acme.core import Actor, Learner, Saveable, VariableSource, Worker
 
 # Expose the environment loop.
 from acme.environment_loop import EnvironmentLoop
-
 from acme.specs import make_environment_spec
-

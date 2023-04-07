@@ -16,12 +16,12 @@
 
 from typing import Mapping, Sequence
 
+import numpy as np
+import sonnet as snt
+
 from acme import specs
 from acme.tf import networks
 from acme.tf import utils as tf2_utils
-
-import numpy as np
-import sonnet as snt
 
 
 def make_default_networks(
@@ -33,44 +33,48 @@ def make_default_networks(
     critic_init_scale: float = 1e-3,
     critic_num_components: int = 5,
 ) -> Mapping[str, snt.Module]:
-  """Creates networks used by the agent."""
+    """Creates networks used by the agent."""
 
-  # Unpack the environment spec to get appropriate shapes, dtypes, etc.
-  act_spec = environment_spec.actions
-  obs_spec = environment_spec.observations
-  num_dimensions = np.prod(act_spec.shape, dtype=int)
+    # Unpack the environment spec to get appropriate shapes, dtypes, etc.
+    act_spec = environment_spec.actions
+    obs_spec = environment_spec.observations
+    num_dimensions = np.prod(act_spec.shape, dtype=int)
 
-  # Create the observation network and make sure it's a Sonnet module.
-  observation_network = tf2_utils.batch_concat
-  observation_network = tf2_utils.to_sonnet_module(observation_network)
+    # Create the observation network and make sure it's a Sonnet module.
+    observation_network = tf2_utils.batch_concat
+    observation_network = tf2_utils.to_sonnet_module(observation_network)
 
-  # Create the policy network.
-  policy_network = snt.Sequential([
-      networks.LayerNormMLP(policy_layer_sizes, activate_final=True),
-      networks.MultivariateNormalDiagHead(
-          num_dimensions,
-          init_scale=policy_init_scale,
-          use_tfd_independent=True)
-  ])
+    # Create the policy network.
+    policy_network = snt.Sequential(
+        [
+            networks.LayerNormMLP(policy_layer_sizes, activate_final=True),
+            networks.MultivariateNormalDiagHead(
+                num_dimensions, init_scale=policy_init_scale, use_tfd_independent=True
+            ),
+        ]
+    )
 
-  # The multiplexer concatenates the (maybe transformed) observations/actions.
-  critic_network = snt.Sequential([
-      networks.CriticMultiplexer(action_network=networks.ClipToSpec(act_spec)),
-      networks.LayerNormMLP(critic_layer_sizes, activate_final=True),
-      networks.GaussianMixtureHead(
-          num_dimensions=1,
-          num_components=critic_num_components,
-          init_scale=critic_init_scale)
-  ])
+    # The multiplexer concatenates the (maybe transformed) observations/actions.
+    critic_network = snt.Sequential(
+        [
+            networks.CriticMultiplexer(action_network=networks.ClipToSpec(act_spec)),
+            networks.LayerNormMLP(critic_layer_sizes, activate_final=True),
+            networks.GaussianMixtureHead(
+                num_dimensions=1,
+                num_components=critic_num_components,
+                init_scale=critic_init_scale,
+            ),
+        ]
+    )
 
-  # Create network variables.
-  # Get embedding spec by creating observation network variables.
-  emb_spec = tf2_utils.create_variables(observation_network, [obs_spec])
-  tf2_utils.create_variables(policy_network, [emb_spec])
-  tf2_utils.create_variables(critic_network, [emb_spec, act_spec])
+    # Create network variables.
+    # Get embedding spec by creating observation network variables.
+    emb_spec = tf2_utils.create_variables(observation_network, [obs_spec])
+    tf2_utils.create_variables(policy_network, [emb_spec])
+    tf2_utils.create_variables(critic_network, [emb_spec, act_spec])
 
-  return {
-      'policy': policy_network,
-      'critic': critic_network,
-      'observation': observation_network,
-  }
+    return {
+        "policy": policy_network,
+        "critic": critic_network,
+        "observation": observation_network,
+    }

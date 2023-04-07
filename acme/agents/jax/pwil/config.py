@@ -21,35 +21,36 @@ from acme import types
 
 @dataclasses.dataclass
 class PWILConfig:
-  """Configuration options for PWIL.
+    """Configuration options for PWIL.
 
   The default values correspond to the experiment setup from the PWIL
   publication http://arxiv.org/abs/2006.04678.
   """
 
-  # Number of transitions to fill the replay buffer with for pretraining.
-  num_transitions_rb: int = 50000
+    # Number of transitions to fill the replay buffer with for pretraining.
+    num_transitions_rb: int = 50000
 
-  # If False, uses only observations for computing the distance; if True, also
-  # uses the actions.
-  use_actions_for_distance: bool = True
+    # If False, uses only observations for computing the distance; if True, also
+    # uses the actions.
+    use_actions_for_distance: bool = True
 
-  # Scaling for the reward function, see equation (6) in
-  # http://arxiv.org/abs/2006.04678.
-  alpha: float = 5.
+    # Scaling for the reward function, see equation (6) in
+    # http://arxiv.org/abs/2006.04678.
+    alpha: float = 5.0
 
-  # Controls the kernel size of the reward function, see equation (6)
-  # in http://arxiv.org/abs/2006.04678.
-  beta: float = 5.
+    # Controls the kernel size of the reward function, see equation (6)
+    # in http://arxiv.org/abs/2006.04678.
+    beta: float = 5.0
 
-  # When False, uses the reward signal from the dataset during prefilling.
-  prefill_constant_reward: bool = True
+    # When False, uses the reward signal from the dataset during prefilling.
+    prefill_constant_reward: bool = True
 
-  num_sgd_steps_per_step: int = 1
+    num_sgd_steps_per_step: int = 1
 
 
 @dataclasses.dataclass
 class PWILDemonstrations:
-  """Unbatched, unshuffled transitions with approximate episode length."""
-  demonstrations: Iterator[types.Transition]
-  episode_length: int
+    """Unbatched, unshuffled transitions with approximate episode length."""
+
+    demonstrations: Iterator[types.Transition]
+    episode_length: int

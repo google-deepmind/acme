@@ -16,17 +16,19 @@
 
 # pylint: disable=unused-import
 
-from acme.adders.reverb.base import DEFAULT_PRIORITY_TABLE
-from acme.adders.reverb.base import PriorityFn
-from acme.adders.reverb.base import PriorityFnInput
-from acme.adders.reverb.base import ReverbAdder
-from acme.adders.reverb.base import Step
-from acme.adders.reverb.base import Trajectory
-
+from acme.adders.reverb.base import (
+    DEFAULT_PRIORITY_TABLE,
+    PriorityFn,
+    PriorityFnInput,
+    ReverbAdder,
+    Step,
+    Trajectory,
+)
 from acme.adders.reverb.episode import EpisodeAdder
-from acme.adders.reverb.sequence import EndBehavior
-from acme.adders.reverb.sequence import SequenceAdder
-from acme.adders.reverb.structured import create_n_step_transition_config
-from acme.adders.reverb.structured import create_step_spec
-from acme.adders.reverb.structured import StructuredAdder
+from acme.adders.reverb.sequence import EndBehavior, SequenceAdder
+from acme.adders.reverb.structured import (
+    StructuredAdder,
+    create_n_step_transition_config,
+    create_step_spec,
+)
 from acme.adders.reverb.transition import NStepTransitionAdder

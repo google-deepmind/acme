@@ -18,9 +18,10 @@ import operator
 from typing import Any, Iterator, List, Sequence
 
 
-def unzip_iterators(zipped_iterators: Iterator[Sequence[Any]],
-                    num_sub_iterators: int) -> List[Iterator[Any]]:
-  """Returns unzipped iterators.
+def unzip_iterators(
+    zipped_iterators: Iterator[Sequence[Any]], num_sub_iterators: int
+) -> List[Iterator[Any]]:
+    """Returns unzipped iterators.
 
   Note that simply returning:
     [(x[i] for x in iter_tuple[i]) for i in range(num_sub_iterators)]
@@ -31,8 +32,7 @@ def unzip_iterators(zipped_iterators: Iterator[Sequence[Any]],
     zipped_iterators: zipped iterators (e.g., from zip_iterators()).
     num_sub_iterators: the number of sub-iterators in the zipped iterator.
   """
-  iter_tuple = itertools.tee(zipped_iterators, num_sub_iterators)
-  return [
-      map(operator.itemgetter(i), iter_tuple[i])
-      for i in range(num_sub_iterators)
-  ]
+    iter_tuple = itertools.tee(zipped_iterators, num_sub_iterators)
+    return [
+        map(operator.itemgetter(i), iter_tuple[i]) for i in range(num_sub_iterators)
+    ]

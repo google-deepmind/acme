@@ -14,36 +14,43 @@
 
 """Reward-substituting adder wrapper."""
 
-from acme import adders
-from acme import types
-from acme.agents.jax.pwil import rewarder
 import dm_env
+
+from acme import adders, types
+from acme.agents.jax.pwil import rewarder
 
 
 class PWILAdder(adders.Adder):
-  """Adder wrapper substituting PWIL rewards."""
+    """Adder wrapper substituting PWIL rewards."""
 
-  def __init__(self, direct_rl_adder: adders.Adder,
-               pwil_rewarder: rewarder.WassersteinDistanceRewarder):
-    self._adder = direct_rl_adder
-    self._rewarder = pwil_rewarder
-    self._latest_observation = None
+    def __init__(
+        self,
+        direct_rl_adder: adders.Adder,
+        pwil_rewarder: rewarder.WassersteinDistanceRewarder,
+    ):
+        self._adder = direct_rl_adder
+        self._rewarder = pwil_rewarder
+        self._latest_observation = None
 
-  def add_first(self, timestep: dm_env.TimeStep):
-    self._rewarder.reset()
-    self._latest_observation = timestep.observation
-    self._adder.add_first(timestep)
+    def add_first(self, timestep: dm_env.TimeStep):
+        self._rewarder.reset()
+        self._latest_observation = timestep.observation
+        self._adder.add_first(timestep)
 
-  def add(self,
-          action: types.NestedArray,
-          next_timestep: dm_env.TimeStep,
-          extras: types.NestedArray = ()):
-    updated_timestep = next_timestep._replace(
-        reward=self._rewarder.append_and_compute_reward(
-            observation=self._latest_observation, action=action))
-    self._latest_observation = next_timestep.observation
-    self._adder.add(action, updated_timestep, extras)
+    def add(
+        self,
+        action: types.NestedArray,
+        next_timestep: dm_env.TimeStep,
+        extras: types.NestedArray = (),
+    ):
+        updated_timestep = next_timestep._replace(
+            reward=self._rewarder.append_and_compute_reward(
+                observation=self._latest_observation, action=action
+            )
+        )
+        self._latest_observation = next_timestep.observation
+        self._adder.add(action, updated_timestep, extras)
 
-  def reset(self):
-    self._latest_observation = None
-    self._adder.reset()
+    def reset(self):
+        self._latest_observation = None
+        self._adder.reset()

@@ -22,7 +22,7 @@ import numpy as np
 
 @dataclasses.dataclass
 class BVEConfig:
-  """Configuration options for BVE agent.
+    """Configuration options for BVE agent.
 
   Attributes:
     epsilon: for use by epsilon-greedy policies. If multiple, the epsilons are
@@ -41,18 +41,19 @@ class BVEConfig:
     num_sgd_steps_per_step: How many gradient updates to perform per learner
       step.
   """
-  epsilon: Union[float, Sequence[float]] = 0.05
-  # TODO(b/191706065): update all clients and remove this field.
-  seed: int = 1
 
-  # Learning rule
-  learning_rate: Union[float, Callable[[int], float]] = 3e-4
-  adam_eps: float = 1e-8  # Eps for Adam optimizer.
-  discount: float = 0.99  # Discount rate applied to value per timestep.
-  target_update_period: int = 2500  # Update target network every period.
-  max_gradient_norm: float = np.inf  # For gradient clipping.
-  max_abs_reward: float = 1.  # Maximum absolute value to clip the rewards.
-  huber_loss_parameter: float = 1.  # Huber loss delta parameter.
-  batch_size: int = 256  # Minibatch size.
-  prefetch_size = 500  # The amount of data to prefetch into the memory.
-  num_sgd_steps_per_step: int = 1
+    epsilon: Union[float, Sequence[float]] = 0.05
+    # TODO(b/191706065): update all clients and remove this field.
+    seed: int = 1
+
+    # Learning rule
+    learning_rate: Union[float, Callable[[int], float]] = 3e-4
+    adam_eps: float = 1e-8  # Eps for Adam optimizer.
+    discount: float = 0.99  # Discount rate applied to value per timestep.
+    target_update_period: int = 2500  # Update target network every period.
+    max_gradient_norm: float = np.inf  # For gradient clipping.
+    max_abs_reward: float = 1.0  # Maximum absolute value to clip the rewards.
+    huber_loss_parameter: float = 1.0  # Huber loss delta parameter.
+    batch_size: int = 256  # Minibatch size.
+    prefetch_size = 500  # The amount of data to prefetch into the memory.
+    num_sgd_steps_per_step: int = 1

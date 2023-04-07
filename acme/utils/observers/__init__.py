@@ -16,7 +16,6 @@
 
 from acme.utils.observers.action_metrics import ContinuousActionObserver
 from acme.utils.observers.action_norm import ActionNormObserver
-from acme.utils.observers.base import EnvLoopObserver
-from acme.utils.observers.base import Number
+from acme.utils.observers.base import EnvLoopObserver, Number
 from acme.utils.observers.env_info import EnvInfoObserver
 from acme.utils.observers.measurement_metrics import MeasurementObserver

@@ -15,17 +15,16 @@
 """Some types/assumptions used in the IMPALA agent."""
 from typing import Callable, Tuple
 
+import jax.numpy as jnp
+
 from acme.agents.jax.actor_core import RecurrentState
 from acme.jax import networks
 from acme.jax import types as jax_types
-import jax.numpy as jnp
 
 # Only simple observations & discrete action spaces for now.
 Observation = jnp.ndarray
 Action = int
 Outputs = Tuple[Tuple[networks.Logits, networks.Value], RecurrentState]
-PolicyValueInitFn = Callable[[networks.PRNGKey, RecurrentState],
-                             networks.Params]
-PolicyValueFn = Callable[[networks.Params, Observation, RecurrentState],
-                         Outputs]
+PolicyValueInitFn = Callable[[networks.PRNGKey, RecurrentState], networks.Params]
+PolicyValueFn = Callable[[networks.Params, Observation, RecurrentState], Outputs]
 RecurrentStateFn = Callable[[jax_types.PRNGKey], RecurrentState]

@@ -26,24 +26,26 @@ TODO(damienv): Mixing demonstrations and collected episodes could also be
 
 from typing import Any, Iterator, Tuple
 
-from acme import adders
-from acme import types
 import dm_env
+
+from acme import adders, types
 
 
 class LfdAdder(adders.Adder):
-  """Adder which adds from time to time some demonstrations.
+    """Adder which adds from time to time some demonstrations.
 
   Lfd stands for Learning From Demonstrations and is the same technique
   as the one used in R2D3.
   """
 
-  def __init__(self,
-               adder: adders.Adder,
-               demonstrations: Iterator[Tuple[Any, dm_env.TimeStep]],
-               initial_insert_count: int,
-               demonstration_ratio: float):
-    """LfdAdder constructor.
+    def __init__(
+        self,
+        adder: adders.Adder,
+        demonstrations: Iterator[Tuple[Any, dm_env.TimeStep]],
+        initial_insert_count: int,
+        demonstration_ratio: float,
+    ):
+        """LfdAdder constructor.
 
     Args:
       adder: The underlying adder used to add mixed episodes.
@@ -63,55 +65,58 @@ class LfdAdder(adders.Adder):
         Note also that this ratio is only a target ratio since the granularity
         is the episode.
     """
-    self._adder = adder
-    self._demonstrations = demonstrations
-    self._demonstration_ratio = demonstration_ratio
-    if demonstration_ratio < 0 or demonstration_ratio >= 1.:
-      raise ValueError('Invalid demonstration ratio.')
+        self._adder = adder
+        self._demonstrations = demonstrations
+        self._demonstration_ratio = demonstration_ratio
+        if demonstration_ratio < 0 or demonstration_ratio >= 1.0:
+            raise ValueError("Invalid demonstration ratio.")
 
-    # Number of demonstration steps that should have been added to the replay
-    # buffer to meet the target demonstration ratio minus what has been really
-    # added.
-    # As a consequence:
-    # - when this delta is zero, the effective ratio exactly matches the desired
-    #   ratio
-    # - when it is positive, more demonstrations need to be added to
-    #   reestablish the balance
-    # The initial value is set so that after exactly initial_insert_count
-    # inserts of demonstration steps, _delta_demonstration_step_count will be
-    # zero.
-    self._delta_demonstration_step_count = (
-        (1. - self._demonstration_ratio) * initial_insert_count)
+        # Number of demonstration steps that should have been added to the replay
+        # buffer to meet the target demonstration ratio minus what has been really
+        # added.
+        # As a consequence:
+        # - when this delta is zero, the effective ratio exactly matches the desired
+        #   ratio
+        # - when it is positive, more demonstrations need to be added to
+        #   reestablish the balance
+        # The initial value is set so that after exactly initial_insert_count
+        # inserts of demonstration steps, _delta_demonstration_step_count will be
+        # zero.
+        self._delta_demonstration_step_count = (
+            1.0 - self._demonstration_ratio
+        ) * initial_insert_count
 
-  def reset(self):
-    self._adder.reset()
+    def reset(self):
+        self._adder.reset()
 
-  def _add_demonstration_episode(self):
-    _, timestep = next(self._demonstrations)
-    if not timestep.first():
-      raise ValueError('Expecting the start of an episode.')
-    self._adder.add_first(timestep)
-    self._delta_demonstration_step_count -= (1. - self._demonstration_ratio)
-    while not timestep.last():
-      action, timestep = next(self._demonstrations)
-      self._adder.add(action, timestep)
-      self._delta_demonstration_step_count -= (1. - self._demonstration_ratio)
+    def _add_demonstration_episode(self):
+        _, timestep = next(self._demonstrations)
+        if not timestep.first():
+            raise ValueError("Expecting the start of an episode.")
+        self._adder.add_first(timestep)
+        self._delta_demonstration_step_count -= 1.0 - self._demonstration_ratio
+        while not timestep.last():
+            action, timestep = next(self._demonstrations)
+            self._adder.add(action, timestep)
+            self._delta_demonstration_step_count -= 1.0 - self._demonstration_ratio
 
-    # Reset is being called periodically to reset the connection to reverb.
-    # TODO(damienv, bshahr): Make the reset an internal detail of the reverb
-    # adder and remove it from the adder API.
-    self._adder.reset()
+        # Reset is being called periodically to reset the connection to reverb.
+        # TODO(damienv, bshahr): Make the reset an internal detail of the reverb
+        # adder and remove it from the adder API.
+        self._adder.reset()
 
-  def add_first(self, timestep: dm_env.TimeStep):
-    while self._delta_demonstration_step_count > 0.:
-      self._add_demonstration_episode()
+    def add_first(self, timestep: dm_env.TimeStep):
+        while self._delta_demonstration_step_count > 0.0:
+            self._add_demonstration_episode()
 
-    self._adder.add_first(timestep)
-    self._delta_demonstration_step_count += self._demonstration_ratio
+        self._adder.add_first(timestep)
+        self._delta_demonstration_step_count += self._demonstration_ratio
 
-  def add(self,
-          action: types.NestedArray,
-          next_timestep: dm_env.TimeStep,
-          extras: types.NestedArray = ()):
-    self._adder.add(action, next_timestep)
-    self._delta_demonstration_step_count += self._demonstration_ratio
+    def add(
+        self,
+        action: types.NestedArray,
+        next_timestep: dm_env.TimeStep,
+        extras: types.NestedArray = (),
+    ):
+        self._adder.add(action, next_timestep)
+        self._delta_demonstration_step_count += self._demonstration_ratio

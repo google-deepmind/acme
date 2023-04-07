@@ -15,6 +15,5 @@
 """Implementations of a (MoG) distributional MPO agent."""
 
 from acme.agents.tf.mog_mpo.agent_distributed import DistributedMoGMPO
-from acme.agents.tf.mog_mpo.learning import MoGMPOLearner
-from acme.agents.tf.mog_mpo.learning import PolicyEvaluationConfig
+from acme.agents.tf.mog_mpo.learning import MoGMPOLearner, PolicyEvaluationConfig
 from acme.agents.tf.mog_mpo.networks import make_default_networks

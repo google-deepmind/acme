@@ -16,8 +16,8 @@
 
 from typing import Type, TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def record_class_usage(cls: Type[T]) -> Type[T]:
-  return cls
+    return cls

@@ -19,8 +19,6 @@
 
 from typing import Callable, Mapping, Tuple
 
-from acme.agents.jax.impala import types
-from acme.jax import utils
 import haiku as hk
 import jax
 import jax.numpy as jnp
@@ -28,6 +26,9 @@ import numpy as np
 import reverb
 import rlax
 import tree
+
+from acme.agents.jax.impala import types
+from acme.jax import utils
 
 
 def impala_loss(
@@ -38,7 +39,7 @@ def impala_loss(
     baseline_cost: float = 1.0,
     entropy_cost: float = 0.0,
 ) -> Callable[[hk.Params, reverb.ReplaySample], jax.Array]:
-  """Builds the standard entropy-regularised IMPALA loss function.
+    """Builds the standard entropy-regularised IMPALA loss function.
 
   Args:
     unroll_fn: A `hk.Transformed` object containing a callable which maps
@@ -52,63 +53,71 @@ def impala_loss(
     A loss function with signature (params, data) -> (loss_scalar, metrics).
   """
 
-  def loss_fn(
-      params: hk.Params,
-      sample: reverb.ReplaySample,
-  ) -> Tuple[jax.Array, Mapping[str, jax.Array]]:
-    """Batched, entropy-regularised actor-critic loss with V-trace."""
+    def loss_fn(
+        params: hk.Params, sample: reverb.ReplaySample,
+    ) -> Tuple[jax.Array, Mapping[str, jax.Array]]:
+        """Batched, entropy-regularised actor-critic loss with V-trace."""
 
-    # Extract the data.
-    data = sample.data
-    observations, actions, rewards, discounts, extra = (data.observation,
-                                                        data.action,
-                                                        data.reward,
-                                                        data.discount,
-                                                        data.extras)
-    initial_state = tree.map_structure(lambda s: s[0], extra['core_state'])
-    behaviour_logits = extra['logits']
+        # Extract the data.
+        data = sample.data
+        observations, actions, rewards, discounts, extra = (
+            data.observation,
+            data.action,
+            data.reward,
+            data.discount,
+            data.extras,
+        )
+        initial_state = tree.map_structure(lambda s: s[0], extra["core_state"])
+        behaviour_logits = extra["logits"]
 
-    # Apply reward clipping.
-    rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
+        # Apply reward clipping.
+        rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
 
-    # Unroll current policy over observations.
-    (logits, values), _ = unroll_fn(params, observations, initial_state)
+        # Unroll current policy over observations.
+        (logits, values), _ = unroll_fn(params, observations, initial_state)
 
-    # Compute importance sampling weights: current policy / behavior policy.
-    rhos = rlax.categorical_importance_sampling_ratios(logits[:-1],
-                                                       behaviour_logits[:-1],
-                                                       actions[:-1])
+        # Compute importance sampling weights: current policy / behavior policy.
+        rhos = rlax.categorical_importance_sampling_ratios(
+            logits[:-1], behaviour_logits[:-1], actions[:-1]
+        )
 
-    # Critic loss.
-    vtrace_returns = rlax.vtrace_td_error_and_advantage(
-        v_tm1=values[:-1],
-        v_t=values[1:],
-        r_t=rewards[:-1],
-        discount_t=discounts[:-1] * discount,
-        rho_tm1=rhos)
-    critic_loss = jnp.square(vtrace_returns.errors)
+        # Critic loss.
+        vtrace_returns = rlax.vtrace_td_error_and_advantage(
+            v_tm1=values[:-1],
+            v_t=values[1:],
+            r_t=rewards[:-1],
+            discount_t=discounts[:-1] * discount,
+            rho_tm1=rhos,
+        )
+        critic_loss = jnp.square(vtrace_returns.errors)
 
-    # Policy gradient loss.
-    policy_gradient_loss = rlax.policy_gradient_loss(
-        logits_t=logits[:-1],
-        a_t=actions[:-1],
-        adv_t=vtrace_returns.pg_advantage,
-        w_t=jnp.ones_like(rewards[:-1]))
+        # Policy gradient loss.
+        policy_gradient_loss = rlax.policy_gradient_loss(
+            logits_t=logits[:-1],
+            a_t=actions[:-1],
+            adv_t=vtrace_returns.pg_advantage,
+            w_t=jnp.ones_like(rewards[:-1]),
+        )
 
-    # Entropy regulariser.
-    entropy_loss = rlax.entropy_loss(logits[:-1], jnp.ones_like(rewards[:-1]))
+        # Entropy regulariser.
+        entropy_loss = rlax.entropy_loss(logits[:-1], jnp.ones_like(rewards[:-1]))
 
-    # Combine weighted sum of actor & critic losses, averaged over the sequence.
-    mean_loss = jnp.mean(policy_gradient_loss + baseline_cost * critic_loss +
-                         entropy_cost * entropy_loss)  # []
+        # Combine weighted sum of actor & critic losses, averaged over the sequence.
+        mean_loss = jnp.mean(
+            policy_gradient_loss
+            + baseline_cost * critic_loss
+            + entropy_cost * entropy_loss
+        )  # []
 
-    metrics = {
-        'policy_loss': jnp.mean(policy_gradient_loss),
-        'critic_loss': jnp.mean(baseline_cost * critic_loss),
-        'entropy_loss': jnp.mean(entropy_cost * entropy_loss),
-        'entropy': jnp.mean(entropy_loss),
-    }
+        metrics = {
+            "policy_loss": jnp.mean(policy_gradient_loss),
+            "critic_loss": jnp.mean(baseline_cost * critic_loss),
+            "entropy_loss": jnp.mean(entropy_cost * entropy_loss),
+            "entropy": jnp.mean(entropy_loss),
+        }
 
-    return mean_loss, metrics
+        return mean_loss, metrics
 
-  return utils.mapreduce(loss_fn, in_axes=(None, 0))  # pytype: disable=bad-return-type  # jax-devicearray
+    return utils.mapreduce(
+        loss_fn, in_axes=(None, 0)
+    )  # pytype: disable=bad-return-type  # jax-devicearray

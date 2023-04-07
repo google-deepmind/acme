@@ -16,38 +16,39 @@
 """
 from typing import Dict
 
-from acme.utils.observers import base
 import dm_env
 import numpy as np
 
+from acme.utils.observers import base
+
 
 class EnvInfoObserver(base.EnvLoopObserver):
-  """An observer that collects and accumulates scalars from env's info."""
+    """An observer that collects and accumulates scalars from env's info."""
 
-  def __init__(self):
-    self._metrics = None
+    def __init__(self):
+        self._metrics = None
 
-  def _accumulate_metrics(self, env: dm_env.Environment) -> None:
-    if not hasattr(env, 'get_info'):
-      return
-    info = getattr(env, 'get_info')()
-    if not info:
-      return
-    for k, v in info.items():
-      if np.isscalar(v):
-        self._metrics[k] = self._metrics.get(k, 0) + v
+    def _accumulate_metrics(self, env: dm_env.Environment) -> None:
+        if not hasattr(env, "get_info"):
+            return
+        info = getattr(env, "get_info")()
+        if not info:
+            return
+        for k, v in info.items():
+            if np.isscalar(v):
+                self._metrics[k] = self._metrics.get(k, 0) + v
 
-  def observe_first(self, env: dm_env.Environment, timestep: dm_env.TimeStep
-                    ) -> None:
-    """Observes the initial state."""
-    self._metrics = {}
-    self._accumulate_metrics(env)
+    def observe_first(self, env: dm_env.Environment, timestep: dm_env.TimeStep) -> None:
+        """Observes the initial state."""
+        self._metrics = {}
+        self._accumulate_metrics(env)
 
-  def observe(self, env: dm_env.Environment, timestep: dm_env.TimeStep,
-              action: np.ndarray) -> None:
-    """Records one environment step."""
-    self._accumulate_metrics(env)
+    def observe(
+        self, env: dm_env.Environment, timestep: dm_env.TimeStep, action: np.ndarray
+    ) -> None:
+        """Records one environment step."""
+        self._accumulate_metrics(env)
 
-  def get_metrics(self) -> Dict[str, base.Number]:
-    """Returns metrics collected for the current episode."""
-    return self._metrics
+    def get_metrics(self) -> Dict[str, base.Number]:
+        """Returns metrics collected for the current episode."""
+        return self._metrics

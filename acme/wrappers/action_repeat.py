@@ -14,34 +14,35 @@
 
 """Wrapper that implements action repeats."""
 
+import dm_env
+
 from acme import types
 from acme.wrappers import base
-import dm_env
 
 
 class ActionRepeatWrapper(base.EnvironmentWrapper):
-  """Action repeat wrapper."""
+    """Action repeat wrapper."""
 
-  def __init__(self, environment: dm_env.Environment, num_repeats: int = 1):
-    super().__init__(environment)
-    self._num_repeats = num_repeats
+    def __init__(self, environment: dm_env.Environment, num_repeats: int = 1):
+        super().__init__(environment)
+        self._num_repeats = num_repeats
 
-  def step(self, action: types.NestedArray) -> dm_env.TimeStep:
-    # Initialize accumulated reward and discount.
-    reward = 0.
-    discount = 1.
+    def step(self, action: types.NestedArray) -> dm_env.TimeStep:
+        # Initialize accumulated reward and discount.
+        reward = 0.0
+        discount = 1.0
 
-    # Step the environment by repeating action.
-    for _ in range(self._num_repeats):
-      timestep = self._environment.step(action)
+        # Step the environment by repeating action.
+        for _ in range(self._num_repeats):
+            timestep = self._environment.step(action)
 
-      # Accumulate reward and discount.
-      reward += timestep.reward * discount
-      discount *= timestep.discount
+            # Accumulate reward and discount.
+            reward += timestep.reward * discount
+            discount *= timestep.discount
 
-      # Don't go over episode boundaries.
-      if timestep.last():
-        break
+            # Don't go over episode boundaries.
+            if timestep.last():
+                break
 
-    # Replace the final timestep's reward and discount.
-    return timestep._replace(reward=reward, discount=discount)
+        # Replace the final timestep's reward and discount.
+        return timestep._replace(reward=reward, discount=discount)

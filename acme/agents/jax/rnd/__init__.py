@@ -16,11 +16,15 @@
 
 from acme.agents.jax.rnd.builder import RNDBuilder
 from acme.agents.jax.rnd.config import RNDConfig
-from acme.agents.jax.rnd.learning import rnd_loss
-from acme.agents.jax.rnd.learning import rnd_update_step
-from acme.agents.jax.rnd.learning import RNDLearner
-from acme.agents.jax.rnd.learning import RNDTrainingState
-from acme.agents.jax.rnd.networks import compute_rnd_reward
-from acme.agents.jax.rnd.networks import make_networks
-from acme.agents.jax.rnd.networks import rnd_reward_fn
-from acme.agents.jax.rnd.networks import RNDNetworks
+from acme.agents.jax.rnd.learning import (
+    RNDLearner,
+    RNDTrainingState,
+    rnd_loss,
+    rnd_update_step,
+)
+from acme.agents.jax.rnd.networks import (
+    RNDNetworks,
+    compute_rnd_reward,
+    make_networks,
+    rnd_reward_fn,
+)

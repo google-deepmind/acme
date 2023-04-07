@@ -17,6 +17,8 @@
 from acme.agents.jax.value_dice.builder import ValueDiceBuilder
 from acme.agents.jax.value_dice.config import ValueDiceConfig
 from acme.agents.jax.value_dice.learning import ValueDiceLearner
-from acme.agents.jax.value_dice.networks import apply_policy_and_sample
-from acme.agents.jax.value_dice.networks import make_networks
-from acme.agents.jax.value_dice.networks import ValueDiceNetworks
+from acme.agents.jax.value_dice.networks import (
+    ValueDiceNetworks,
+    apply_policy_and_sample,
+    make_networks,
+)

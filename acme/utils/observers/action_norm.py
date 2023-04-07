@@ -16,29 +16,32 @@
 """
 from typing import Dict
 
-from acme.utils.observers import base
 import dm_env
 import numpy as np
 
+from acme.utils.observers import base
+
 
 class ActionNormObserver(base.EnvLoopObserver):
-  """An observer that collects action norm stats."""
+    """An observer that collects action norm stats."""
 
-  def __init__(self):
-    self._action_norms = None
+    def __init__(self):
+        self._action_norms = None
 
-  def observe_first(self, env: dm_env.Environment, timestep: dm_env.TimeStep
-                    ) -> None:
-    """Observes the initial state."""
-    self._action_norms = []
+    def observe_first(self, env: dm_env.Environment, timestep: dm_env.TimeStep) -> None:
+        """Observes the initial state."""
+        self._action_norms = []
 
-  def observe(self, env: dm_env.Environment, timestep: dm_env.TimeStep,
-              action: np.ndarray) -> None:
-    """Records one environment step."""
-    self._action_norms.append(np.linalg.norm(action))
+    def observe(
+        self, env: dm_env.Environment, timestep: dm_env.TimeStep, action: np.ndarray
+    ) -> None:
+        """Records one environment step."""
+        self._action_norms.append(np.linalg.norm(action))
 
-  def get_metrics(self) -> Dict[str, base.Number]:
-    """Returns metrics collected for the current episode."""
-    return {'action_norm_avg': np.mean(self._action_norms),
-            'action_norm_min': np.min(self._action_norms),
-            'action_norm_max': np.max(self._action_norms)}
+    def get_metrics(self) -> Dict[str, base.Number]:
+        """Returns metrics collected for the current episode."""
+        return {
+            "action_norm_avg": np.mean(self._action_norms),
+            "action_norm_min": np.min(self._action_norms),
+            "action_norm_max": np.max(self._action_norms),
+        }

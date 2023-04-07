@@ -17,12 +17,12 @@
 import dataclasses
 from typing import Any, Tuple
 
-from acme import specs
-from acme.jax import networks
-from acme.jax import utils
 import haiku as hk
 import jax.numpy as jnp
 import numpy as np
+
+from acme import specs
+from acme.jax import networks, utils
 
 # The term network is used in a general sense, e.g. for the CRR policy prior, it
 # will be a dataclass that encapsulates the networks used by the CRR (learner).
@@ -33,16 +33,17 @@ NStepReturnNetwork = Any
 
 @dataclasses.dataclass
 class MBOPNetworks:
-  """Container class to hold MBOP networks."""
-  world_model_network: WorldModelNetwork
-  policy_prior_network: PolicyPriorNetwork
-  n_step_return_network: NStepReturnNetwork
+    """Container class to hold MBOP networks."""
+
+    world_model_network: WorldModelNetwork
+    policy_prior_network: PolicyPriorNetwork
+    n_step_return_network: NStepReturnNetwork
 
 
 def make_network_from_module(
-    module: hk.Transformed,
-    spec: specs.EnvironmentSpec) -> networks.FeedForwardNetwork:
-  """Creates a network with dummy init arguments using the specified module.
+    module: hk.Transformed, spec: specs.EnvironmentSpec
+) -> networks.FeedForwardNetwork:
+    """Creates a network with dummy init arguments using the specified module.
 
   Args:
     module: Module that expects one batch axis and one features axis for its
@@ -53,86 +54,91 @@ def make_network_from_module(
     FeedForwardNetwork whose `init` method only takes a random key, and `apply`
     takes an observation and action and produces an output.
   """
-  dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
-  dummy_action = utils.add_batch_dim(utils.zeros_like(spec.actions))
-  return networks.FeedForwardNetwork(
-      lambda key: module.init(key, dummy_obs, dummy_action), module.apply)
+    dummy_obs = utils.add_batch_dim(utils.zeros_like(spec.observations))
+    dummy_action = utils.add_batch_dim(utils.zeros_like(spec.actions))
+    return networks.FeedForwardNetwork(
+        lambda key: module.init(key, dummy_obs, dummy_action), module.apply
+    )
 
 
 def make_world_model_network(
     spec: specs.EnvironmentSpec, hidden_layer_sizes: Tuple[int, ...] = (64, 64)
 ) -> networks.FeedForwardNetwork:
-  """Creates a world model network used by the agent."""
+    """Creates a world model network used by the agent."""
 
-  observation_size = np.prod(spec.observations.shape, dtype=int)
+    observation_size = np.prod(spec.observations.shape, dtype=int)
 
-  def _world_model_fn(observation_t, action_t, is_training=False, key=None):
-    # is_training and key allows to defined train/test dependant modules
-    # like dropout.
-    del is_training
-    del key
-    network = hk.nets.MLP(hidden_layer_sizes + (observation_size + 1,))
-    # World model returns both an observation and a reward.
-    observation_tp1, reward_t = jnp.split(
-        network(jnp.concatenate([observation_t, action_t], axis=-1)),
-        [observation_size],
-        axis=-1)
-    return observation_tp1, reward_t
+    def _world_model_fn(observation_t, action_t, is_training=False, key=None):
+        # is_training and key allows to defined train/test dependant modules
+        # like dropout.
+        del is_training
+        del key
+        network = hk.nets.MLP(hidden_layer_sizes + (observation_size + 1,))
+        # World model returns both an observation and a reward.
+        observation_tp1, reward_t = jnp.split(
+            network(jnp.concatenate([observation_t, action_t], axis=-1)),
+            [observation_size],
+            axis=-1,
+        )
+        return observation_tp1, reward_t
 
-  world_model = hk.without_apply_rng(hk.transform(_world_model_fn))
-  return make_network_from_module(world_model, spec)
+    world_model = hk.without_apply_rng(hk.transform(_world_model_fn))
+    return make_network_from_module(world_model, spec)
 
 
 def make_policy_prior_network(
     spec: specs.EnvironmentSpec, hidden_layer_sizes: Tuple[int, ...] = (64, 64)
 ) -> networks.FeedForwardNetwork:
-  """Creates a policy prior network used by the agent."""
+    """Creates a policy prior network used by the agent."""
 
-  action_size = np.prod(spec.actions.shape, dtype=int)
+    action_size = np.prod(spec.actions.shape, dtype=int)
 
-  def _policy_prior_fn(observation_t, action_tm1, is_training=False, key=None):
-    # is_training and key allows to defined train/test dependant modules
-    # like dropout.
-    del is_training
-    del key
-    network = hk.nets.MLP(hidden_layer_sizes + (action_size,))
-    # Policy prior returns an action.
-    return network(jnp.concatenate([observation_t, action_tm1], axis=-1))
+    def _policy_prior_fn(observation_t, action_tm1, is_training=False, key=None):
+        # is_training and key allows to defined train/test dependant modules
+        # like dropout.
+        del is_training
+        del key
+        network = hk.nets.MLP(hidden_layer_sizes + (action_size,))
+        # Policy prior returns an action.
+        return network(jnp.concatenate([observation_t, action_tm1], axis=-1))
 
-  policy_prior = hk.without_apply_rng(hk.transform(_policy_prior_fn))
-  return make_network_from_module(policy_prior, spec)
+    policy_prior = hk.without_apply_rng(hk.transform(_policy_prior_fn))
+    return make_network_from_module(policy_prior, spec)
 
 
 def make_n_step_return_network(
     spec: specs.EnvironmentSpec, hidden_layer_sizes: Tuple[int, ...] = (64, 64)
 ) -> networks.FeedForwardNetwork:
-  """Creates an N-step return network used by the agent."""
+    """Creates an N-step return network used by the agent."""
 
-  def _n_step_return_fn(observation_t, action_t, is_training=False, key=None):
-    # is_training and key allows to defined train/test dependant modules
-    # like dropout.
-    del is_training
-    del key
-    network = hk.nets.MLP(hidden_layer_sizes + (1,))
-    return network(jnp.concatenate([observation_t, action_t], axis=-1))
+    def _n_step_return_fn(observation_t, action_t, is_training=False, key=None):
+        # is_training and key allows to defined train/test dependant modules
+        # like dropout.
+        del is_training
+        del key
+        network = hk.nets.MLP(hidden_layer_sizes + (1,))
+        return network(jnp.concatenate([observation_t, action_t], axis=-1))
 
-  n_step_return = hk.without_apply_rng(hk.transform(_n_step_return_fn))
-  return make_network_from_module(n_step_return, spec)
+    n_step_return = hk.without_apply_rng(hk.transform(_n_step_return_fn))
+    return make_network_from_module(n_step_return, spec)
 
 
 def make_networks(
-    spec: specs.EnvironmentSpec,
-    hidden_layer_sizes: Tuple[int, ...] = (64, 64),
+    spec: specs.EnvironmentSpec, hidden_layer_sizes: Tuple[int, ...] = (64, 64),
 ) -> MBOPNetworks:
-  """Creates networks used by the agent."""
-  world_model_network = make_world_model_network(
-      spec, hidden_layer_sizes=hidden_layer_sizes)
-  policy_prior_network = make_policy_prior_network(
-      spec, hidden_layer_sizes=hidden_layer_sizes)
-  n_step_return_network = make_n_step_return_network(
-      spec, hidden_layer_sizes=hidden_layer_sizes)
+    """Creates networks used by the agent."""
+    world_model_network = make_world_model_network(
+        spec, hidden_layer_sizes=hidden_layer_sizes
+    )
+    policy_prior_network = make_policy_prior_network(
+        spec, hidden_layer_sizes=hidden_layer_sizes
+    )
+    n_step_return_network = make_n_step_return_network(
+        spec, hidden_layer_sizes=hidden_layer_sizes
+    )
 
-  return MBOPNetworks(
-      world_model_network=world_model_network,
-      policy_prior_network=policy_prior_network,
-      n_step_return_network=n_step_return_network)
+    return MBOPNetworks(
+        world_model_network=world_model_network,
+        policy_prior_network=policy_prior_network,
+        n_step_return_network=n_step_return_network,
+    )

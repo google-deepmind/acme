@@ -21,7 +21,7 @@ import optax
 
 @dataclasses.dataclass
 class AILConfig:
-  """Configuration options for AIL.
+    """Configuration options for AIL.
 
   Attributes:
     direct_rl_batch_size: Batch size of a direct rl algorithm (measured in
@@ -47,32 +47,33 @@ class AILConfig:
       expert transitions in the given proportions.
       policy_to_expert_data_ratio + 1 must divide the direct RL batch size.
   """
-  direct_rl_batch_size: int
-  is_sequence_based: bool = False
-  share_iterator: bool = True
-  num_sgd_steps_per_step: int = 1
-  discriminator_batch_size: int = 256
-  policy_variable_name: Optional[str] = None
-  discriminator_optimizer: Optional[optax.GradientTransformation] = None
-  replay_table_name: str = 'ail_table'
-  prefetch_size: int = 4
-  discount: float = 0.99
-  min_replay_size: int = 1000
-  max_replay_size: int = int(1e6)
-  policy_to_expert_data_ratio: Optional[int] = None
 
-  def __post_init__(self):
-    assert self.direct_rl_batch_size % self.discriminator_batch_size == 0
+    direct_rl_batch_size: int
+    is_sequence_based: bool = False
+    share_iterator: bool = True
+    num_sgd_steps_per_step: int = 1
+    discriminator_batch_size: int = 256
+    policy_variable_name: Optional[str] = None
+    discriminator_optimizer: Optional[optax.GradientTransformation] = None
+    replay_table_name: str = "ail_table"
+    prefetch_size: int = 4
+    discount: float = 0.99
+    min_replay_size: int = 1000
+    max_replay_size: int = int(1e6)
+    policy_to_expert_data_ratio: Optional[int] = None
+
+    def __post_init__(self):
+        assert self.direct_rl_batch_size % self.discriminator_batch_size == 0
 
 
 def get_per_learner_step_batch_size(config: AILConfig) -> int:
-  """Returns how many transitions should be sampled per direct learner step."""
-  # If the iterators are tied, the discriminator learning batch size has to
-  # match the direct RL one.
-  if config.share_iterator:
-    assert (config.direct_rl_batch_size % config.discriminator_batch_size) == 0
-    return config.direct_rl_batch_size
-  # Otherwise each iteration of the discriminator will sample a batch which will
-  # be split in num_sgd_steps_per_step batches, each of size
-  # discriminator_batch_size.
-  return config.discriminator_batch_size * config.num_sgd_steps_per_step
+    """Returns how many transitions should be sampled per direct learner step."""
+    # If the iterators are tied, the discriminator learning batch size has to
+    # match the direct RL one.
+    if config.share_iterator:
+        assert (config.direct_rl_batch_size % config.discriminator_batch_size) == 0
+        return config.direct_rl_batch_size
+    # Otherwise each iteration of the discriminator will sample a batch which will
+    # be split in num_sgd_steps_per_step batches, each of size
+    # discriminator_batch_size.
+    return config.discriminator_batch_size * config.num_sgd_steps_per_step

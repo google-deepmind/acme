@@ -17,58 +17,61 @@
 import time
 from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
 
-import acme
-from acme import types
-from acme.agents.jax.td3 import networks as td3_networks
-from acme.jax import networks as networks_lib
-from acme.jax import utils
-from acme.utils import counting
-from acme.utils import loggers
 import jax
 import jax.numpy as jnp
 import optax
 import reverb
 import rlax
 
+import acme
+from acme import types
+from acme.agents.jax.td3 import networks as td3_networks
+from acme.jax import networks as networks_lib
+from acme.jax import utils
+from acme.utils import counting, loggers
+
 
 class TrainingState(NamedTuple):
-  """Contains training state for the learner."""
-  policy_params: networks_lib.Params
-  target_policy_params: networks_lib.Params
-  critic_params: networks_lib.Params
-  target_critic_params: networks_lib.Params
-  twin_critic_params: networks_lib.Params
-  target_twin_critic_params: networks_lib.Params
-  policy_opt_state: optax.OptState
-  critic_opt_state: optax.OptState
-  twin_critic_opt_state: optax.OptState
-  steps: int
-  random_key: networks_lib.PRNGKey
+    """Contains training state for the learner."""
+
+    policy_params: networks_lib.Params
+    target_policy_params: networks_lib.Params
+    critic_params: networks_lib.Params
+    target_critic_params: networks_lib.Params
+    twin_critic_params: networks_lib.Params
+    target_twin_critic_params: networks_lib.Params
+    policy_opt_state: optax.OptState
+    critic_opt_state: optax.OptState
+    twin_critic_opt_state: optax.OptState
+    steps: int
+    random_key: networks_lib.PRNGKey
 
 
 class TD3Learner(acme.Learner):
-  """TD3 learner."""
+    """TD3 learner."""
 
-  _state: TrainingState
+    _state: TrainingState
 
-  def __init__(self,
-               networks: td3_networks.TD3Networks,
-               random_key: networks_lib.PRNGKey,
-               discount: float,
-               iterator: Iterator[reverb.ReplaySample],
-               policy_optimizer: optax.GradientTransformation,
-               critic_optimizer: optax.GradientTransformation,
-               twin_critic_optimizer: optax.GradientTransformation,
-               delay: int = 2,
-               target_sigma: float = 0.2,
-               noise_clip: float = 0.5,
-               tau: float = 0.005,
-               use_sarsa_target: bool = False,
-               bc_alpha: Optional[float] = None,
-               counter: Optional[counting.Counter] = None,
-               logger: Optional[loggers.Logger] = None,
-               num_sgd_steps_per_step: int = 1):
-    """Initializes the TD3 learner.
+    def __init__(
+        self,
+        networks: td3_networks.TD3Networks,
+        random_key: networks_lib.PRNGKey,
+        discount: float,
+        iterator: Iterator[reverb.ReplaySample],
+        policy_optimizer: optax.GradientTransformation,
+        critic_optimizer: optax.GradientTransformation,
+        twin_critic_optimizer: optax.GradientTransformation,
+        delay: int = 2,
+        target_sigma: float = 0.2,
+        noise_clip: float = 0.5,
+        tau: float = 0.005,
+        use_sarsa_target: bool = False,
+        bc_alpha: Optional[float] = None,
+        counter: Optional[counting.Counter] = None,
+        logger: Optional[loggers.Logger] = None,
+        num_sgd_steps_per_step: int = 1,
+    ):
+        """Initializes the TD3 learner.
 
     Args:
       networks: TD3 networks.
@@ -98,236 +101,257 @@ class TD3Learner(acme.Learner):
       num_sgd_steps_per_step: number of sgd steps to perform per learner 'step'.
     """
 
-    def policy_loss(
-        policy_params: networks_lib.Params,
-        critic_params: networks_lib.Params,
-        transition: types.NestedArray,
-    ) -> jnp.ndarray:
-      # Computes the discrete policy gradient loss.
-      action = networks.policy_network.apply(
-          policy_params, transition.observation)
-      grad_critic = jax.vmap(
-          jax.grad(networks.critic_network.apply, argnums=2),
-          in_axes=(None, 0, 0))
-      dq_da = grad_critic(critic_params, transition.observation, action)
-      batch_dpg_learning = jax.vmap(rlax.dpg_loss, in_axes=(0, 0))
-      loss = jnp.mean(batch_dpg_learning(action, dq_da))
-      if bc_alpha is not None:
-        # BC regularization for offline RL
-        q_sa = networks.critic_network.apply(critic_params,
-                                             transition.observation, action)
-        bc_factor = jax.lax.stop_gradient(bc_alpha / jnp.mean(jnp.abs(q_sa)))
-        loss += jnp.mean(jnp.square(action - transition.action)) / bc_factor
-      return loss
+        def policy_loss(
+            policy_params: networks_lib.Params,
+            critic_params: networks_lib.Params,
+            transition: types.NestedArray,
+        ) -> jnp.ndarray:
+            # Computes the discrete policy gradient loss.
+            action = networks.policy_network.apply(
+                policy_params, transition.observation
+            )
+            grad_critic = jax.vmap(
+                jax.grad(networks.critic_network.apply, argnums=2), in_axes=(None, 0, 0)
+            )
+            dq_da = grad_critic(critic_params, transition.observation, action)
+            batch_dpg_learning = jax.vmap(rlax.dpg_loss, in_axes=(0, 0))
+            loss = jnp.mean(batch_dpg_learning(action, dq_da))
+            if bc_alpha is not None:
+                # BC regularization for offline RL
+                q_sa = networks.critic_network.apply(
+                    critic_params, transition.observation, action
+                )
+                bc_factor = jax.lax.stop_gradient(bc_alpha / jnp.mean(jnp.abs(q_sa)))
+                loss += jnp.mean(jnp.square(action - transition.action)) / bc_factor
+            return loss
 
-    def critic_loss(
-        critic_params: networks_lib.Params,
-        state: TrainingState,
-        transition: types.Transition,
-        random_key: jnp.ndarray,
-    ):
-      # Computes the critic loss.
-      q_tm1 = networks.critic_network.apply(
-          critic_params, transition.observation, transition.action)
+        def critic_loss(
+            critic_params: networks_lib.Params,
+            state: TrainingState,
+            transition: types.Transition,
+            random_key: jnp.ndarray,
+        ):
+            # Computes the critic loss.
+            q_tm1 = networks.critic_network.apply(
+                critic_params, transition.observation, transition.action
+            )
 
-      if use_sarsa_target:
-        # TODO(b/222674779): use N-steps Trajectories to get the next actions.
-        assert 'next_action' in transition.extras, (
-            'next actions should be given as extras for one step RL.')
-        action = transition.extras['next_action']
-      else:
-        action = networks.policy_network.apply(state.target_policy_params,
-                                               transition.next_observation)
-        action = networks.add_policy_noise(action, random_key,
-                                           target_sigma, noise_clip)
+            if use_sarsa_target:
+                # TODO(b/222674779): use N-steps Trajectories to get the next actions.
+                assert (
+                    "next_action" in transition.extras
+                ), "next actions should be given as extras for one step RL."
+                action = transition.extras["next_action"]
+            else:
+                action = networks.policy_network.apply(
+                    state.target_policy_params, transition.next_observation
+                )
+                action = networks.add_policy_noise(
+                    action, random_key, target_sigma, noise_clip
+                )
 
-      q_t = networks.critic_network.apply(
-          state.target_critic_params,
-          transition.next_observation,
-          action)
-      twin_q_t = networks.twin_critic_network.apply(
-          state.target_twin_critic_params,
-          transition.next_observation,
-          action)
+            q_t = networks.critic_network.apply(
+                state.target_critic_params, transition.next_observation, action
+            )
+            twin_q_t = networks.twin_critic_network.apply(
+                state.target_twin_critic_params, transition.next_observation, action
+            )
 
-      q_t = jnp.minimum(q_t, twin_q_t)
+            q_t = jnp.minimum(q_t, twin_q_t)
 
-      target_q_tm1 = transition.reward + discount * transition.discount * q_t
-      td_error = jax.lax.stop_gradient(target_q_tm1) - q_tm1
+            target_q_tm1 = transition.reward + discount * transition.discount * q_t
+            td_error = jax.lax.stop_gradient(target_q_tm1) - q_tm1
 
-      return jnp.mean(jnp.square(td_error))
+            return jnp.mean(jnp.square(td_error))
 
-    def update_step(
-        state: TrainingState,
-        transitions: types.Transition,
-    ) -> Tuple[TrainingState, Dict[str, jnp.ndarray]]:
+        def update_step(
+            state: TrainingState, transitions: types.Transition,
+        ) -> Tuple[TrainingState, Dict[str, jnp.ndarray]]:
 
-      random_key, key_critic, key_twin = jax.random.split(state.random_key, 3)
+            random_key, key_critic, key_twin = jax.random.split(state.random_key, 3)
 
-      # Updates on the critic: compute the gradients, and update using
-      # Polyak averaging.
-      critic_loss_and_grad = jax.value_and_grad(critic_loss)
-      critic_loss_value, critic_gradients = critic_loss_and_grad(
-          state.critic_params, state, transitions, key_critic)
-      critic_updates, critic_opt_state = critic_optimizer.update(
-          critic_gradients, state.critic_opt_state)
-      critic_params = optax.apply_updates(state.critic_params, critic_updates)
-      # In the original authors' implementation the critic target update is
-      # delayed similarly to the policy update which we found empirically to
-      # perform slightly worse.
-      target_critic_params = optax.incremental_update(
-          new_tensors=critic_params,
-          old_tensors=state.target_critic_params,
-          step_size=tau)
+            # Updates on the critic: compute the gradients, and update using
+            # Polyak averaging.
+            critic_loss_and_grad = jax.value_and_grad(critic_loss)
+            critic_loss_value, critic_gradients = critic_loss_and_grad(
+                state.critic_params, state, transitions, key_critic
+            )
+            critic_updates, critic_opt_state = critic_optimizer.update(
+                critic_gradients, state.critic_opt_state
+            )
+            critic_params = optax.apply_updates(state.critic_params, critic_updates)
+            # In the original authors' implementation the critic target update is
+            # delayed similarly to the policy update which we found empirically to
+            # perform slightly worse.
+            target_critic_params = optax.incremental_update(
+                new_tensors=critic_params,
+                old_tensors=state.target_critic_params,
+                step_size=tau,
+            )
 
-      # Updates on the twin critic: compute the gradients, and update using
-      # Polyak averaging.
-      twin_critic_loss_value, twin_critic_gradients = critic_loss_and_grad(
-          state.twin_critic_params, state, transitions, key_twin)
-      twin_critic_updates, twin_critic_opt_state = twin_critic_optimizer.update(
-          twin_critic_gradients, state.twin_critic_opt_state)
-      twin_critic_params = optax.apply_updates(state.twin_critic_params,
-                                               twin_critic_updates)
-      # In the original authors' implementation the twin critic target update is
-      # delayed similarly to the policy update which we found empirically to
-      # perform slightly worse.
-      target_twin_critic_params = optax.incremental_update(
-          new_tensors=twin_critic_params,
-          old_tensors=state.target_twin_critic_params,
-          step_size=tau)
+            # Updates on the twin critic: compute the gradients, and update using
+            # Polyak averaging.
+            twin_critic_loss_value, twin_critic_gradients = critic_loss_and_grad(
+                state.twin_critic_params, state, transitions, key_twin
+            )
+            twin_critic_updates, twin_critic_opt_state = twin_critic_optimizer.update(
+                twin_critic_gradients, state.twin_critic_opt_state
+            )
+            twin_critic_params = optax.apply_updates(
+                state.twin_critic_params, twin_critic_updates
+            )
+            # In the original authors' implementation the twin critic target update is
+            # delayed similarly to the policy update which we found empirically to
+            # perform slightly worse.
+            target_twin_critic_params = optax.incremental_update(
+                new_tensors=twin_critic_params,
+                old_tensors=state.target_twin_critic_params,
+                step_size=tau,
+            )
 
-      # Updates on the policy: compute the gradients, and update using
-      # Polyak averaging (if delay enabled, the update might not be applied).
-      policy_loss_and_grad = jax.value_and_grad(policy_loss)
-      policy_loss_value, policy_gradients = policy_loss_and_grad(
-          state.policy_params, state.critic_params, transitions)
-      def update_policy_step():
-        policy_updates, policy_opt_state = policy_optimizer.update(
-            policy_gradients, state.policy_opt_state)
-        policy_params = optax.apply_updates(state.policy_params, policy_updates)
-        target_policy_params = optax.incremental_update(
-            new_tensors=policy_params,
-            old_tensors=state.target_policy_params,
-            step_size=tau)
-        return policy_params, target_policy_params, policy_opt_state
+            # Updates on the policy: compute the gradients, and update using
+            # Polyak averaging (if delay enabled, the update might not be applied).
+            policy_loss_and_grad = jax.value_and_grad(policy_loss)
+            policy_loss_value, policy_gradients = policy_loss_and_grad(
+                state.policy_params, state.critic_params, transitions
+            )
 
-      # The update on the policy is applied every `delay` steps.
-      current_policy_state = (state.policy_params, state.target_policy_params,
-                              state.policy_opt_state)
-      policy_params, target_policy_params, policy_opt_state = jax.lax.cond(
-          state.steps % delay == 0,
-          lambda _: update_policy_step(),
-          lambda _: current_policy_state,
-          operand=None)
+            def update_policy_step():
+                policy_updates, policy_opt_state = policy_optimizer.update(
+                    policy_gradients, state.policy_opt_state
+                )
+                policy_params = optax.apply_updates(state.policy_params, policy_updates)
+                target_policy_params = optax.incremental_update(
+                    new_tensors=policy_params,
+                    old_tensors=state.target_policy_params,
+                    step_size=tau,
+                )
+                return policy_params, target_policy_params, policy_opt_state
 
-      steps = state.steps + 1
+            # The update on the policy is applied every `delay` steps.
+            current_policy_state = (
+                state.policy_params,
+                state.target_policy_params,
+                state.policy_opt_state,
+            )
+            policy_params, target_policy_params, policy_opt_state = jax.lax.cond(
+                state.steps % delay == 0,
+                lambda _: update_policy_step(),
+                lambda _: current_policy_state,
+                operand=None,
+            )
 
-      new_state = TrainingState(
-          policy_params=policy_params,
-          critic_params=critic_params,
-          twin_critic_params=twin_critic_params,
-          target_policy_params=target_policy_params,
-          target_critic_params=target_critic_params,
-          target_twin_critic_params=target_twin_critic_params,
-          policy_opt_state=policy_opt_state,
-          critic_opt_state=critic_opt_state,
-          twin_critic_opt_state=twin_critic_opt_state,
-          steps=steps,
-          random_key=random_key,
-      )
+            steps = state.steps + 1
 
-      metrics = {
-          'policy_loss': policy_loss_value,
-          'critic_loss': critic_loss_value,
-          'twin_critic_loss': twin_critic_loss_value,
-      }
+            new_state = TrainingState(
+                policy_params=policy_params,
+                critic_params=critic_params,
+                twin_critic_params=twin_critic_params,
+                target_policy_params=target_policy_params,
+                target_critic_params=target_critic_params,
+                target_twin_critic_params=target_twin_critic_params,
+                policy_opt_state=policy_opt_state,
+                critic_opt_state=critic_opt_state,
+                twin_critic_opt_state=twin_critic_opt_state,
+                steps=steps,
+                random_key=random_key,
+            )
 
-      return new_state, metrics
+            metrics = {
+                "policy_loss": policy_loss_value,
+                "critic_loss": critic_loss_value,
+                "twin_critic_loss": twin_critic_loss_value,
+            }
 
-    # General learner book-keeping and loggers.
-    self._counter = counter or counting.Counter()
-    self._logger = logger or loggers.make_default_logger(
-        'learner',
-        asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
-        steps_key=self._counter.get_steps_key())
+            return new_state, metrics
 
-    # Create prefetching dataset iterator.
-    self._iterator = iterator
+        # General learner book-keeping and loggers.
+        self._counter = counter or counting.Counter()
+        self._logger = logger or loggers.make_default_logger(
+            "learner",
+            asynchronous=True,
+            serialize_fn=utils.fetch_devicearray,
+            steps_key=self._counter.get_steps_key(),
+        )
 
-    # Faster sgd step
-    update_step = utils.process_multiple_batches(update_step,
-                                                 num_sgd_steps_per_step)
-    # Use the JIT compiler.
-    self._update_step = jax.jit(update_step)
+        # Create prefetching dataset iterator.
+        self._iterator = iterator
 
-    (key_init_policy, key_init_twin, key_init_target, key_state
-     ) = jax.random.split(random_key, 4)
-    # Create the network parameters and copy into the target network parameters.
-    initial_policy_params = networks.policy_network.init(key_init_policy)
-    initial_critic_params = networks.critic_network.init(key_init_twin)
-    initial_twin_critic_params = networks.twin_critic_network.init(
-        key_init_target)
+        # Faster sgd step
+        update_step = utils.process_multiple_batches(
+            update_step, num_sgd_steps_per_step
+        )
+        # Use the JIT compiler.
+        self._update_step = jax.jit(update_step)
 
-    initial_target_policy_params = initial_policy_params
-    initial_target_critic_params = initial_critic_params
-    initial_target_twin_critic_params = initial_twin_critic_params
+        (key_init_policy, key_init_twin, key_init_target, key_state) = jax.random.split(
+            random_key, 4
+        )
+        # Create the network parameters and copy into the target network parameters.
+        initial_policy_params = networks.policy_network.init(key_init_policy)
+        initial_critic_params = networks.critic_network.init(key_init_twin)
+        initial_twin_critic_params = networks.twin_critic_network.init(key_init_target)
 
-    # Initialize optimizers.
-    initial_policy_opt_state = policy_optimizer.init(initial_policy_params)
-    initial_critic_opt_state = critic_optimizer.init(initial_critic_params)
-    initial_twin_critic_opt_state = twin_critic_optimizer.init(
-        initial_twin_critic_params)
+        initial_target_policy_params = initial_policy_params
+        initial_target_critic_params = initial_critic_params
+        initial_target_twin_critic_params = initial_twin_critic_params
 
-    # Create initial state.
-    self._state = TrainingState(
-        policy_params=initial_policy_params,
-        target_policy_params=initial_target_policy_params,
-        critic_params=initial_critic_params,
-        twin_critic_params=initial_twin_critic_params,
-        target_critic_params=initial_target_critic_params,
-        target_twin_critic_params=initial_target_twin_critic_params,
-        policy_opt_state=initial_policy_opt_state,
-        critic_opt_state=initial_critic_opt_state,
-        twin_critic_opt_state=initial_twin_critic_opt_state,
-        steps=0,
-        random_key=key_state
-    )
+        # Initialize optimizers.
+        initial_policy_opt_state = policy_optimizer.init(initial_policy_params)
+        initial_critic_opt_state = critic_optimizer.init(initial_critic_params)
+        initial_twin_critic_opt_state = twin_critic_optimizer.init(
+            initial_twin_critic_params
+        )
 
-    # Do not record timestamps until after the first learning step is done.
-    # This is to avoid including the time it takes for actors to come online and
-    # fill the replay buffer.
-    self._timestamp = None
+        # Create initial state.
+        self._state = TrainingState(
+            policy_params=initial_policy_params,
+            target_policy_params=initial_target_policy_params,
+            critic_params=initial_critic_params,
+            twin_critic_params=initial_twin_critic_params,
+            target_critic_params=initial_target_critic_params,
+            target_twin_critic_params=initial_target_twin_critic_params,
+            policy_opt_state=initial_policy_opt_state,
+            critic_opt_state=initial_critic_opt_state,
+            twin_critic_opt_state=initial_twin_critic_opt_state,
+            steps=0,
+            random_key=key_state,
+        )
 
-  def step(self):
-    # Get data from replay (dropping extras if any). Note there is no
-    # extra data here because we do not insert any into Reverb.
-    sample = next(self._iterator)
-    transitions = types.Transition(*sample.data)
+        # Do not record timestamps until after the first learning step is done.
+        # This is to avoid including the time it takes for actors to come online and
+        # fill the replay buffer.
+        self._timestamp = None
 
-    self._state, metrics = self._update_step(self._state, transitions)
+    def step(self):
+        # Get data from replay (dropping extras if any). Note there is no
+        # extra data here because we do not insert any into Reverb.
+        sample = next(self._iterator)
+        transitions = types.Transition(*sample.data)
 
-    # Compute elapsed time.
-    timestamp = time.time()
-    elapsed_time = timestamp - self._timestamp if self._timestamp else 0
-    self._timestamp = timestamp
+        self._state, metrics = self._update_step(self._state, transitions)
 
-    # Increment counts and record the current time
-    counts = self._counter.increment(steps=1, walltime=elapsed_time)
+        # Compute elapsed time.
+        timestamp = time.time()
+        elapsed_time = timestamp - self._timestamp if self._timestamp else 0
+        self._timestamp = timestamp
 
-    # Attempts to write the logs.
-    self._logger.write({**metrics, **counts})
+        # Increment counts and record the current time
+        counts = self._counter.increment(steps=1, walltime=elapsed_time)
 
-  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
-    variables = {
-        'policy': self._state.policy_params,
-        'critic': self._state.critic_params,
-        'twin_critic': self._state.twin_critic_params,
-    }
-    return [variables[name] for name in names]
+        # Attempts to write the logs.
+        self._logger.write({**metrics, **counts})
 
-  def save(self) -> TrainingState:
-    return self._state
+    def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
+        variables = {
+            "policy": self._state.policy_params,
+            "critic": self._state.critic_params,
+            "twin_critic": self._state.twin_critic_params,
+        }
+        return [variables[name] for name in names]
 
-  def restore(self, state: TrainingState):
-    self._state = state
+    def save(self) -> TrainingState:
+        return self._state
+
+    def restore(self, state: TrainingState):
+        self._state = state

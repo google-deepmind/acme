@@ -16,51 +16,51 @@
 
 from typing import Dict
 
-from acme.utils.observers import base
 import dm_env
 import numpy as np
 
+from acme.utils.observers import base
+
 
 class ContinuousActionObserver(base.EnvLoopObserver):
-  """Observer that tracks statstics of continuous actions taken by the agent.
+    """Observer that tracks statstics of continuous actions taken by the agent.
 
   Assumes the action is a np.ndarray, and for each dimension in the action,
   calculates some useful statistics for a particular episode.
   """
 
-  def __init__(self):
-    self._actions = None
+    def __init__(self):
+        self._actions = None
 
-  def observe_first(self, env: dm_env.Environment,
-                    timestep: dm_env.TimeStep) -> None:
-    """Observes the initial state."""
-    self._actions = []
+    def observe_first(self, env: dm_env.Environment, timestep: dm_env.TimeStep) -> None:
+        """Observes the initial state."""
+        self._actions = []
 
-  def observe(self, env: dm_env.Environment, timestep: dm_env.TimeStep,
-              action: np.ndarray) -> None:
-    """Records one environment step."""
-    self._actions.append(action)
+    def observe(
+        self, env: dm_env.Environment, timestep: dm_env.TimeStep, action: np.ndarray
+    ) -> None:
+        """Records one environment step."""
+        self._actions.append(action)
 
-  def get_metrics(self) -> Dict[str, base.Number]:
-    """Returns metrics collected for the current episode."""
-    aggregate_metrics = {}
-    if not self._actions:
-      return aggregate_metrics
+    def get_metrics(self) -> Dict[str, base.Number]:
+        """Returns metrics collected for the current episode."""
+        aggregate_metrics = {}
+        if not self._actions:
+            return aggregate_metrics
 
-    metrics = {
-        'action_max': np.max(self._actions, axis=0),
-        'action_min': np.min(self._actions, axis=0),
-        'action_mean': np.mean(self._actions, axis=0),
-        'action_p50': np.percentile(self._actions, q=50., axis=0)
-    }
+        metrics = {
+            "action_max": np.max(self._actions, axis=0),
+            "action_min": np.min(self._actions, axis=0),
+            "action_mean": np.mean(self._actions, axis=0),
+            "action_p50": np.percentile(self._actions, q=50.0, axis=0),
+        }
 
-    for index, sub_action_metric in np.ndenumerate(metrics['action_max']):
-      aggregate_metrics[f'action{list(index)}_max'] = sub_action_metric
-      aggregate_metrics[f'action{list(index)}_min'] = metrics['action_min'][
-          index]
-      aggregate_metrics[f'action{list(index)}_mean'] = metrics['action_mean'][
-          index]
-      aggregate_metrics[f'action{list(index)}_p50'] = metrics['action_p50'][
-          index]
+        for index, sub_action_metric in np.ndenumerate(metrics["action_max"]):
+            aggregate_metrics[f"action{list(index)}_max"] = sub_action_metric
+            aggregate_metrics[f"action{list(index)}_min"] = metrics["action_min"][index]
+            aggregate_metrics[f"action{list(index)}_mean"] = metrics["action_mean"][
+                index
+            ]
+            aggregate_metrics[f"action{list(index)}_p50"] = metrics["action_p50"][index]
 
-    return aggregate_metrics
+        return aggregate_metrics
