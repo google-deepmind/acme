@@ -251,7 +251,7 @@ class _LearningActor(core.Actor):
         # Let iterator's prefetching thread get data from the table(s).
         time.sleep(0.001)
 
-  def update(self):
+  def update(self):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     if self._maybe_train():
       # Update the actor weights only when learner was updated.
       self._actor.update()

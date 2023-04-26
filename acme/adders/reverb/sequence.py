@@ -166,7 +166,7 @@ class SequenceAdder(base.ReverbAdder):
       raise ValueError('end_of_episod_behavior must be an instance of '
                        f'EndBehavior, received {end_of_episode_behavior}.')
 
-  def reset(self):
+  def reset(self):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     """Resets the adder's buffer."""
     # If we do not write on end of episode, we should not reset the writer.
     if self._end_of_episode_behavior is EndBehavior.CONTINUE:

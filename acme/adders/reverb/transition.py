@@ -132,7 +132,7 @@ class NStepTransitionAdder(base.ReverbAdder):
 
     super().add(*args, **kwargs)
 
-  def reset(self):
+  def reset(self):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
     super().reset()
     self._first_idx = 0
     self._last_idx = 0
