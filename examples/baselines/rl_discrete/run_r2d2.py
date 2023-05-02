@@ -14,6 +14,8 @@
 
 """Example running R2D2 on discrete control tasks."""
 
+import os
+import signal
 from absl import flags
 from acme.agents.jax import r2d2
 import helpers
@@ -25,6 +27,7 @@ import launchpad as lp
 from datetime import datetime, timedelta
 from acme.jax import inference_server as inference_server_lib
 from get_local_resources import _get_local_resources
+start_time = datetime.now()
 
 # Flags which modify the behavior of the launcher.
 flags.DEFINE_bool(
@@ -40,13 +43,14 @@ flags.DEFINE_integer('num_actors_per_node', 1, 'Actors per node (not sure what t
 flags.DEFINE_boolean('multiprocessing_colocate_actors', False, 'Not sure, maybe whether to put actors in different processes?')
 flags.DEFINE_boolean('actors_on_gpu', False, 'Whether we put actors on GPU (default is on CPU)')
 flags.DEFINE_boolean('learner_on_cpu', False, 'For testing whether learner on GPU makes inference faster')
-flags.DEFINE_integer('num_steps', 200_000_000,
+flags.DEFINE_integer('num_steps', 50_000_000,
                      'Number of environment steps to run for.')
 flags.DEFINE_float('spi', 1.0,
                      'Number of samples per insert. 0 means does not constrain, other values do.')
 
 flags.DEFINE_integer('actor_cpu_start', -1, "If we're partitioning actors by CPU")
 flags.DEFINE_integer('actor_cpu_end', -1, "If we're partitioning actors by CPU")
+flags.DEFINE_string('acme_id', None, 'Experiment identifier to use for Acme.')
 
 FLAGS = flags.FLAGS
 
@@ -130,9 +134,52 @@ def build_experiment_config():
       max_num_actor_steps=FLAGS.num_steps)
 
 
+def _get_local_resources(launch_type):
+   assert launch_type in ('local_mp', 'local_mt'), launch_type
+   from launchpad.nodes.python.local_multi_processing import PythonProcess
+   if launch_type == 'local_mp':
+     local_resources = {
+       "learner":PythonProcess(env={
+         "CUDA_VISIBLE_DEVICES": str(0),
+         "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+         "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+       }),
+       "actor":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(0)}),
+       "evaluator":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(0)}),
+       "inference_server":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+       "counter":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+       "replay":PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)}),
+     }
+   else:
+     local_resources = {}
+   return local_resources
+
+
+def sigterm_log_endtime_handler(_signo, _stack_frame):
+  """
+  log end time gracefully on SIGTERM
+  we use SIGTERM because this is what acme throws when the experiments end by reaching nun_steps
+  """
+  end_time = datetime.now()
+  # log start and end time 
+  log_dir = os.path.expanduser(os.path.join('~/acme', FLAGS.acme_id))
+  # don't print because it will be lost, especially because acme stops experiment by throwing an Error when reaching num_steps
+  from helpers import save_start_and_end_time
+  save_start_and_end_time(log_dir, start_time, end_time)
+
+  # log the command used
+  from helpers import save_command_used
+  save_command_used(log_dir)
+
+  # log git stuff
+  from helpers import is_under_git_control, save_git_information
+  if is_under_git_control():
+      save_git_information(log_dir)
+
+
 def main(_):
-  print(FLAGS.acme_id)
-  # exit()
+  import os
+  FLAGS.append_flags_into_file('/tmp/temp_flags')  # hack: so that subprocesses can load FLAGS
   config = build_experiment_config()
   print(FLAGS.use_inference_server)
   if FLAGS.run_distributed:
@@ -176,12 +223,9 @@ def main(_):
               terminal="tmux_session")
   else:
     experiments.run_experiment(experiment=config)
-
+  
 
 if __name__ == '__main__':
-  start_time = datetime.now()
+  signal.signal(signal.SIGTERM, sigterm_log_endtime_handler)
   app.run(main)
-  end_time = datetime.now()
-  print('End Time: {}'.format(end_time))
-  print('Duration: {}'.format(end_time - start_time))
 

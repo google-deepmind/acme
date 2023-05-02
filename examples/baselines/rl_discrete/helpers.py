@@ -15,7 +15,9 @@
 """Shared helpers for different discrete RL experiment flavours."""
 
 import functools
+import subprocess
 import os
+import sys
 from typing import Tuple
 
 from absl import flags
@@ -32,6 +34,62 @@ import jax.numpy as jnp
 
 
 FLAGS = flags.FLAGS
+
+
+def is_return_code_zero(args):
+    """Return true iff the given command's return code is zero.
+    All the messages to stdout or stderr are suppressed.
+    """
+    with open(os.devnull, "wb") as FNULL:
+        try:
+            subprocess.check_call(args, stdout=FNULL, stderr=FNULL)
+        except subprocess.CalledProcessError:
+            # The given command returned an error
+            return False
+        except OSError:
+            # The given command was not found
+            return False
+        return True
+
+
+def is_under_git_control():
+    """Return true iff the current directory is under git control."""
+    return is_return_code_zero(["git", "rev-parse"])
+
+
+def save_git_information(outdir):
+    # Save `git rev-parse HEAD` (SHA of the current commit)
+    with open(os.path.join(outdir, "git-head.txt"), "wb") as f:
+        f.write(subprocess.check_output("git rev-parse HEAD".split()))
+
+    # Save `git status`
+    with open(os.path.join(outdir, "git-status.txt"), "wb") as f:
+        f.write(subprocess.check_output("git status".split()))
+
+    # Save `git log`
+    with open(os.path.join(outdir, "git-log.txt"), "wb") as f:
+        f.write(subprocess.check_output("git log".split()))
+
+    # Save `git diff`
+    with open(os.path.join(outdir, "git-diff.txt"), "wb") as f:
+        f.write(subprocess.check_output("git diff HEAD".split()))
+
+
+def save_command_used(outdir):
+  with open(os.path.join(outdir, "command.txt"), "w") as f:
+      f.write(" ".join(sys.argv) + '\n')
+
+
+def save_start_and_end_time(outdir, start_time, end_time):
+  start_time_file = os.path.join(outdir, 'start_time.txt')
+  end_time_file = os.path.join(outdir, 'end_time.txt')
+  duration_file = os.path.join(outdir, 'duration_time.txt')
+  with open(start_time_file, 'w') as f:
+    f.write(str(start_time) + '\n')
+  with open(end_time_file, 'w') as f:
+    f.write(str(end_time) + '\n')
+  with open(duration_file, 'w') as f:
+    f.write(str(end_time - start_time) + '\n')
 
 
 def make_atari_environment(
