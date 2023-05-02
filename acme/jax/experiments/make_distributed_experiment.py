@@ -41,6 +41,8 @@ InferenceServer = inference_server_lib.InferenceServer[
     actor_core.SelectActionFn]
 
 
+inference_server_count = 0
+
 
 
 def make_distributed_experiment(
@@ -60,6 +62,7 @@ def make_distributed_experiment(
     ] = None,
     name: str = 'agent',
     program: Optional[lp.Program] = None,
+    split_actor_cpus=False,
 ) -> lp.Program:
   """Builds a Launchpad program for running the experiment.
 
@@ -204,8 +207,11 @@ def make_distributed_experiment(
   def build_inference_server(
       inference_server_config: inference_server_lib.InferenceServerConfig,
       variable_source: core.VariableSource,
+      server_number=0, # to distribute GPUs
   ) -> InferenceServer:
     """Builds an inference server for `ActorCore` policies."""
+    # global inference_server_count
+    print('Doing the inference_server_count thing to use different GPUs for different inference servers')
     dummy_seed = 1
     spec = (
         experiment.environment_spec or
@@ -223,6 +229,13 @@ def make_distributed_experiment(
           f'{type(policy)}. InferenceServer only supports `ActorCore` policies.'
       )
 
+    num_devices = len(jax.local_devices())
+    print(f'How many inference devices? {num_devices}')
+    print(f"This is number {server_number}")
+    device = jax.local_devices()[server_number % num_devices]
+    print(f"Using device {device}")
+    # inference_server_count += 1
+
     return InferenceServer(
         handler=jax.jit(
             jax.vmap(
@@ -233,7 +246,8 @@ def make_distributed_experiment(
                 # leading axis by the inference server.
             ),),
         variable_source=variable_source,
-        devices=jax.local_devices(),
+        # devices=jax.local_devices(),
+        devices=[device],
         config=inference_server_config,
     )
 
@@ -246,6 +260,11 @@ def make_distributed_experiment(
       inference_server: Optional[InferenceServer],
   ) -> environment_loop.EnvironmentLoop:
     """The actor process."""
+    import os
+    # print('printing xla_flags')
+    # print(os.environ['XLA_FLAGS'])
+    # print('printed xla_flags')
+
     environment_key, actor_key = jax.random.split(random_key)
     # Create environment and policy core.
 
@@ -340,15 +359,16 @@ def make_distributed_experiment(
         # NOTE: Do not pass the counter to the secondary learners to avoid
         # double counting of learner steps.
 
+  import functools
   if inference_server_config is not None:
     num_actors_per_server = math.ceil(num_actors / num_inference_servers)
     with program.group('inference_server'):
       inference_nodes = []
-      for _ in range(num_inference_servers):
+      for server_num in range(num_inference_servers):
         inference_nodes.append(
             program.add_node(
                 lp.CourierNode(
-                    build_inference_server,
+                    functools.partial(build_inference_server, server_number=server_num),
                     inference_server_config,
                     learner,
                     courier_kwargs={'thread_pool_size': num_actors_per_server
@@ -360,8 +380,15 @@ def make_distributed_experiment(
   num_actor_nodes, remainder = divmod(num_actors, num_actors_per_node)
   num_actor_nodes += int(remainder > 0)
 
+  # Here we'll want to assign each one to its own CPU somehow.
+  # How should we? I guess we could pass in something like actor-cpu-range
+  # and divide evenly. Question is, how do we instantiate that?
+  # The answer is something along the lines of 
 
-  with program.group('actor'):
+  from contextlib import nullcontext
+  actor_context = nullcontext() if split_actor_cpus else program.group('actor')
+  # with program.group('actor'):
+  with actor_context:
     # Create all actor threads.
     *actor_keys, key = jax.random.split(key, num_actors + 1)
 
@@ -371,29 +398,35 @@ def make_distributed_experiment(
         itertools.cycle(variable_sources),
         itertools.cycle(inference_nodes),
     ):
-      colocation_nodes = []
+      actor_node_context = program.group(f'actor_{node_id}') if split_actor_cpus else nullcontext()
+      with actor_node_context:
+        # print(f'making actor node for actor id {actor_id}')
+        colocation_nodes = []
 
-      first_actor_id = node_id * num_actors_per_node
-      for actor_id in range(
-          first_actor_id, min(first_actor_id + num_actors_per_node, num_actors)
-      ):
-        actor = lp.CourierNode(
-            build_actor,
-            actor_keys[actor_id],
-            replay,
-            variable_source,
-            counter,
-            actor_id,
-            inference_node,
-        )
-        colocation_nodes.append(actor)
+        first_actor_id = node_id * num_actors_per_node
+        for actor_id in range(
+            first_actor_id, min(first_actor_id + num_actors_per_node, num_actors)
+        ):
+          # sub_actor_context = program.group(f'actor_{actor_id}') if split_actor_cpus else nullcontext()
+          # with sub_actor_context:
+            # print(f'making actor node for actor id {actor_id}')
+          actor = lp.CourierNode(
+              build_actor,
+              actor_keys[actor_id],
+              replay,
+              variable_source,
+              counter,
+              actor_id,
+              inference_node,
+          )
+          colocation_nodes.append(actor)
 
-      if len(colocation_nodes) == 1:
-        program.add_node(colocation_nodes[0])
-      elif multiprocessing_colocate_actors:
-        program.add_node(lp.MultiProcessingColocation(colocation_nodes))
-      else:
-        program.add_node(lp.MultiThreadingColocation(colocation_nodes))
+        if len(colocation_nodes) == 1:
+          program.add_node(colocation_nodes[0])
+        elif multiprocessing_colocate_actors:
+          program.add_node(lp.MultiProcessingColocation(colocation_nodes))
+        else:
+          program.add_node(lp.MultiThreadingColocation(colocation_nodes))
 
   for evaluator in experiment.get_evaluator_factories():
     evaluator_key, key = jax.random.split(key)

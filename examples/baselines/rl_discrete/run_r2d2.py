@@ -24,6 +24,7 @@ import dm_env
 import launchpad as lp
 from datetime import datetime, timedelta
 from acme.jax import inference_server as inference_server_lib
+from get_local_resources import _get_local_resources
 
 # Flags which modify the behavior of the launcher.
 flags.DEFINE_bool(
@@ -41,14 +42,19 @@ flags.DEFINE_boolean('actors_on_gpu', False, 'Whether we put actors on GPU (defa
 flags.DEFINE_boolean('learner_on_cpu', False, 'For testing whether learner on GPU makes inference faster')
 flags.DEFINE_integer('num_steps', 200_000_000,
                      'Number of environment steps to run for.')
+flags.DEFINE_float('spi', 1.0,
+                     'Number of samples per insert. 0 means does not constrain, other values do.')
+
+flags.DEFINE_integer('actor_cpu_start', -1, "If we're partitioning actors by CPU")
+flags.DEFINE_integer('actor_cpu_end', -1, "If we're partitioning actors by CPU")
 
 FLAGS = flags.FLAGS
 
 
 def build_experiment_config():
   """Builds R2D2 experiment config which can be executed in different ways."""
-  # batch_size = 32
-  batch_size = 8
+  batch_size = 32
+  # batch_size = 8
 
   # The env_name must be dereferenced outside the environment factory as FLAGS
   # cannot be pickled and pickling is necessary when launching distributed
@@ -67,34 +73,54 @@ def build_experiment_config():
         flatten_frame_stack=True,
         grayscaling=False)
 
-  # Configure the agent.
+  # Their default config:
   config = r2d2.R2D2Config(
-      # burn_in_length=8,
-      # trace_length=40,
-      # sequence_period=20,
-      burn_in_length=2,
-      trace_length=10,
-      sequence_period=4,
+      burn_in_length=8,
+      trace_length=40,
+      sequence_period=20,
       # min_replay_size=10_000,
-      # min_replay_size=200,
-      # max_replay_size=10000,
-      min_replay_size=10000,
-      max_replay_size=100000,
+      min_replay_size=1000,
       batch_size=batch_size,
-      # prefetch_size=1,
-      prefetch_size=0,
-      samples_per_insert=0,
-      # samples_per_insert=1,
-      # samples_per_insert=4.0, # shouldn't this be 0.25 to match DQN? I dunno. Maybe this is more sample efficent.
-      # can see what it means/does.
+      prefetch_size=1,
+      # samples_per_insert=1.0,
+      samples_per_insert= FLAGS.spi,
       evaluation_epsilon=1e-3,
-      # learning_rate=1e-4,
-      # target_update_period=1200,
-      # variable_update_period=100,
-      # actor_jit=False,
-      # actor_jit=False,
+      learning_rate=1e-4,
+      target_update_period=1200,
+      variable_update_period=100,
       actor_jit=not FLAGS.use_inference_server, # we don't use this if we're doing inference-server
   )
+
+  # # Configure the agent.
+
+  # batch_size = 8
+  # config = r2d2.R2D2Config(
+  #     # burn_in_length=8,
+  #     # trace_length=40,
+  #     # sequence_period=20,
+  #     burn_in_length=2,
+  #     trace_length=10,
+  #     sequence_period=4,
+  #     # min_replay_size=10_000,
+  #     # min_replay_size=200,
+  #     # max_replay_size=10000,
+  #     min_replay_size=10000,
+  #     max_replay_size=100000,
+  #     batch_size=batch_size,
+  #     # prefetch_size=1,
+  #     prefetch_size=0,
+  #     samples_per_insert=0,
+  #     # samples_per_insert=1,
+  #     # samples_per_insert=4.0, # shouldn't this be 0.25 to match DQN? I dunno. Maybe this is more sample efficent.
+  #     # can see what it means/does.
+  #     evaluation_epsilon=1e-3,
+  #     # learning_rate=1e-4,
+  #     # target_update_period=1200,
+  #     # variable_update_period=100,
+  #     # actor_jit=False,
+  #     # actor_jit=False,
+  #     actor_jit=not FLAGS.use_inference_server, # we don't use this if we're doing inference-server
+  # )
 
   return experiments.ExperimentConfig(
       builder=r2d2.R2D2Builder(config),
@@ -104,33 +130,9 @@ def build_experiment_config():
       max_num_actor_steps=FLAGS.num_steps)
 
 
-def _get_local_resources(launch_type):
-  assert launch_type in ('local_mp', 'local_mt'), launch_type
-  from launchpad.nodes.python.local_multi_processing import PythonProcess
-  if launch_type == 'local_mp':
-    def make_with_gpu_dict():
-      return PythonProcess(env={
-        "CUDA_VISIBLE_DEVICES": str(0),
-        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
-        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-      })
-    def make_without_gpu_dict():
-      return PythonProcess(env={"CUDA_VISIBLE_DEVICES": str(-1)})
-
-    local_resources = {
-      "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict(), # reversed from other
-      "inference_server": make_with_gpu_dict(),
-      "counter": make_without_gpu_dict(),
-      "replay": make_without_gpu_dict(),
-      "evaluator": make_without_gpu_dict(),
-      "actor": make_with_gpu_dict() if FLAGS.actors_on_gpu else make_without_gpu_dict(),
-    }
-  else:
-    local_resources = {}
-  return local_resources
-
-
 def main(_):
+  print(FLAGS.acme_id)
+  # exit()
   config = build_experiment_config()
   print(FLAGS.use_inference_server)
   if FLAGS.run_distributed:
@@ -140,9 +142,10 @@ def main(_):
     launch_type = FLAGS.lp_launch_type
     if FLAGS.use_inference_server:
       print('inference batch size ', inference_batch_size)
+      # print('but not using it')
       inference_server_config = inference_server_lib.InferenceServerConfig(
         # batch_size=max(num_actors_per_node // 2, 1),
-        batch_size=inference_batch_size,
+        batch_size=inference_batch_size, 
         update_period=400,
         # update_period=5,
         timeout=timedelta(
@@ -160,7 +163,10 @@ def main(_):
         experiment=config, num_actors=num_actors,
         inference_server_config=inference_server_config,
         num_inference_servers=FLAGS.num_inference_servers,
-        num_actors_per_node=num_actors_per_node, multiprocessing_colocate_actors=FLAGS.multiprocessing_colocate_actors)
+        num_actors_per_node=num_actors_per_node,
+        multiprocessing_colocate_actors=FLAGS.multiprocessing_colocate_actors,
+        split_actor_cpus=(FLAGS.actor_cpu_start >= 0 and FLAGS.actor_cpu_end >= 0)
+        )
     # program = experiments.make_distributed_experiment(
     #     experiment=config, num_actors=64 if lp_utils.is_local_run() else 80)
     lp.launch(program,
