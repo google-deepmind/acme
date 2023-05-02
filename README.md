@@ -1,3 +1,18 @@
+This fork of acme tries to run R2D2 locally. 
+
+You have to do the following to run the example script
+```bash
+# GPU memory issues
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+# python path
+export LD_LIBRARY_PATH=~/anaconda3/envs/acme-env/lib
+# running
+cd examples/baselines/rl_discrete
+python3 run_r2d2.py --lp_launch_type local_mp  # multiprocessing is much faster than multithreading
+```
+
+
 <img src="docs/imgs/acme.png" width="50%">
 
 # Acme: a research framework for reinforcement learning
