@@ -27,7 +27,7 @@ def pin_process_to_cpu(python_process, cpu_num):
   return python_process
 
 
-def make_process_dict(gpu_str="-1", pin_to_single_cpu=False):
+def make_process_dict(gpu_str="-1", pin_to_single_cpu=-1):
   process = PythonProcess(env={
     "CUDA_VISIBLE_DEVICES": gpu_str,
     "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
@@ -35,14 +35,15 @@ def make_process_dict(gpu_str="-1", pin_to_single_cpu=False):
     "ACME_ID": FLAGS.acme_id,
   },
   )
-  if pin_to_single_cpu:
-    # This is just a relatively simple way to pin to the first CPU, to make `counter` take less threads.
+  if pin_to_single_cpu >= 0:
+    # This is just a relatively simple way to pin to a single CPU, to make `counter` take less threads.
+    # relative indexing
     print('cpu_count: ', psutil.cpu_count())
     p = psutil.Process()
     cpu_ids = p.cpu_affinity()
     print('cpu_ids: ', cpu_ids)
-    first_cpu_id = cpu_ids[0]
-    process = pin_process_to_cpu(process, first_cpu_id)
+    cpu_id = cpu_ids[pin_to_single_cpu]
+    process = pin_process_to_cpu(process, cpu_id)
   return process
 
     
@@ -132,9 +133,9 @@ def _get_local_resources(launch_type):
       # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0"), # reversed from other      # "inference_server": make_with_gpu_dict(),
       "inference_server": make_process_dict(",".join(FLAGS.inference_server_gpu_ids)),
       # "inference_server": make_with_gpu_dict("1"),
-      "counter": make_process_dict(pin_to_single_cpu=one_cpu_per_actor),
+      "counter": make_process_dict(pin_to_single_cpu=0 if one_cpu_per_actor else -1),
       "replay": make_process_dict(),
-      "evaluator": make_process_dict(),
+      "evaluator": make_process_dict(pin_to_single_cpu=1 if one_cpu_per_actor else -1),
     }
     # TODO: Be able to choose actor GPU so that we can compare 1 and 2 GPU utilization etc.
     # actor_resources = make_actor_resources(
