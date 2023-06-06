@@ -14,18 +14,20 @@
 
 """Utility definitions for Acme experiments."""
 
-from typing import Optional
+from typing import Optional, Union
 
 from acme.utils import loggers
 
 
 def make_experiment_logger(label: str,
                            steps_key: Optional[str] = None,
-                           task_instance: int = 0) -> loggers.Logger:
+                           task_instance: int = 0,
+                           save_dir: Optional[Union[str, None]] = None,) -> loggers.Logger:
+  # save_dir = "~/acme_experiment_utils"
   del task_instance
   if steps_key is None:
     steps_key = f'{label}_steps'
-  return loggers.make_default_logger(label=label, steps_key=steps_key)
+  return loggers.make_default_logger(label=label, steps_key=steps_key, save_dir=save_dir)
 
 
 def create_experiment_logger_factory() -> loggers.LoggerFactory:

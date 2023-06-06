@@ -35,6 +35,7 @@ from acme.utils import lp_utils
 import jax
 import launchpad as lp
 import reverb
+import functools
 
 ActorId = int
 InferenceServer = inference_server_lib.InferenceServer[
@@ -62,7 +63,7 @@ def make_distributed_experiment(
     ] = None,
     name: str = 'agent',
     program: Optional[lp.Program] = None,
-    split_actor_cpus=False,
+    split_actor_specs=False,
 ) -> lp.Program:
   """Builds a Launchpad program for running the experiment.
 
@@ -294,6 +295,7 @@ def make_distributed_experiment(
 
     adder = experiment.builder.make_adder(replay, environment_spec,
                                           policy_network)
+    # import ipdb; ipdb.set_trace()
     actor = experiment.builder.make_actor(actor_key, policy_network,
                                           environment_spec, variable_source,
                                           adder)
@@ -359,7 +361,7 @@ def make_distributed_experiment(
         # NOTE: Do not pass the counter to the secondary learners to avoid
         # double counting of learner steps.
 
-  import functools
+  # import functools
   if inference_server_config is not None:
     num_actors_per_server = math.ceil(num_actors / num_inference_servers)
     with program.group('inference_server'):
@@ -386,7 +388,7 @@ def make_distributed_experiment(
   # The answer is something along the lines of 
 
   from contextlib import nullcontext
-  actor_context = nullcontext() if split_actor_cpus else program.group('actor')
+  actor_context = nullcontext() if split_actor_specs else program.group('actor')
   # with program.group('actor'):
   with actor_context:
     # Create all actor threads.
@@ -398,7 +400,7 @@ def make_distributed_experiment(
         itertools.cycle(variable_sources),
         itertools.cycle(inference_nodes),
     ):
-      actor_node_context = program.group(f'actor_{node_id}') if split_actor_cpus else nullcontext()
+      actor_node_context = program.group(f'actor_{node_id}') if split_actor_specs else nullcontext()
       with actor_node_context:
         # print(f'making actor node for actor id {actor_id}')
         colocation_nodes = []
@@ -407,7 +409,7 @@ def make_distributed_experiment(
         for actor_id in range(
             first_actor_id, min(first_actor_id + num_actors_per_node, num_actors)
         ):
-          # sub_actor_context = program.group(f'actor_{actor_id}') if split_actor_cpus else nullcontext()
+          # sub_actor_context = program.group(f'actor_{actor_id}') if split_actor_specs else nullcontext()
           # with sub_actor_context:
             # print(f'making actor node for actor id {actor_id}')
           actor = lp.CourierNode(
@@ -430,8 +432,11 @@ def make_distributed_experiment(
 
   for evaluator in experiment.get_evaluator_factories():
     evaluator_key, key = jax.random.split(key)
+    print('putting evaluator on CPU always, for now')
+    # make_cpu_actor = functools.partial(experiment.builder.make_actor, backend='cpu')
     program.add_node(
         lp.CourierNode(evaluator, evaluator_key, learner, counter,
+                      # make_cpu_actor),
                        experiment.builder.make_actor),
         label='evaluator')
 

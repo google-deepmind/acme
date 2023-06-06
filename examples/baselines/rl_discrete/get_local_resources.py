@@ -65,6 +65,7 @@ def test_cpu_range():
   print('great success on test_cpu_range!')
 
 def modify_python_process(python_process, cpu_range=None):
+  raise Exception("Not doing this for now")
   if not cpu_range:
     raise Exception("don't call")
     return python_process
@@ -76,26 +77,44 @@ def modify_python_process(python_process, cpu_range=None):
   python_process._absolute_interpreter_path = new_interpreter_path
   return python_process # not necessary
 
-def make_actor_resources(num_actors, cpu_start=0, cpu_end=1, gpu_str="-1"):
+def make_process_dict(gpu_str="-1"):
+  return PythonProcess(env={
+    "CUDA_VISIBLE_DEVICES": gpu_str,
+    "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+    "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+    "ACME_ID": FLAGS.acme_id,
+  },
+  )
+
+# def make_actor_resources(num_actors, cpu_start=-1, cpu_end=-1, gpu_str="-1"):
+def make_actor_resources(num_actors):
   # If you don't specify CPU range, then just do them all like before I guess.
-  if cpu_start < 0 or cpu_end < 0:
-    print('doing the regular way')
-    return {
-      "actor" : PythonProcess(env={
-        "CUDA_VISIBLE_DEVICES": gpu_str,
-        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
-        "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-      })
-    }
+  # What if I always modify it? I think that's better actually.
+  actor_gpu_ids = FLAGS.actor_gpu_ids
+  assert isinstance(actor_gpu_ids, list) and len(actor_gpu_ids) > 0, actor_gpu_ids
+
+  # if cpu_start < 0 or cpu_end < 0:
+  #   print('doing the regular way')
+  #   return {
+  #     "actor" : PythonProcess(env={
+  #       "CUDA_VISIBLE_DEVICES": gpu_str,
+  #       "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+  #       "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+  #       "ACME_ID": FLAGS.acme_id,
+  #     })
+  #   }
   process_dict = {}
   for actor_num in range(num_actors):
     print('doing the other way!')
+    gpu_id = actor_gpu_ids[actor_num % len(actor_gpu_ids)]
     actor_key = f"actor_{actor_num}"
-    process = PythonProcess(env={
-      "CUDA_VISIBLE_DEVICES": gpu_str,
-      "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
-      "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-    })
+    process = make_process_dict(gpu_id)
+    # process = PythonProcess(env={
+    #   "CUDA_VISIBLE_DEVICES": gpu_id,
+    #   "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+    #   "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+    #   "ACME_ID": FLAGS.acme_id,
+    # })
     # Maybe this should be where we do the whole ulimit thing actually, it would be much less burid this way.
     # cpu_range = get_cpu_range(cpu_start=cpu_start, cpu_end=cpu_end, num_actors=num_actors, num_actors_per_node=1, actor_num=actor_num)
     # process = modify_python_process(process, cpu_range)
@@ -104,41 +123,45 @@ def make_actor_resources(num_actors, cpu_start=0, cpu_end=1, gpu_str="-1"):
   return process_dict
     
 
-def make_with_gpu_dict(gpu_str="0"):
-  return PythonProcess(env={
-    # "CUDA_VISIBLE_DEVICES": str(0),
-    "CUDA_VISIBLE_DEVICES": gpu_str,
-    "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
-    "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-    # # "XLA_FLAGS": r"--xla_cpu_multi_thread_eigen=false\ intra_op_parallelism_threads=1\ inter_op_parallelism_threads=1",
-    # # "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false",
-    # # "XLA_FLAGS": "intra_op_parallelism_threads=1",
-    "XLA_FLAGS": r"--xla_force_host_platform_device_count=1\ --xla_cpu_multi_thread_eigen=false\ intra_op_parallelism_threads=1\ inter_op_parallelism_threads=1",
-  },
-  # pre_command="ulimit -u 100000"
-  )
 
-def make_without_gpu_dict():
-  return PythonProcess(env={
-    "CUDA_VISIBLE_DEVICES": str(-1),
-    # # "XLA_FLAGS": "intra_op_parallelism_threads=1",
-    # # "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false",
-    # "XLA_FLAGS": r"--xla_cpu_multi_thread_eigen=false\ intra_op_parallelism_threads=1\ inter_op_parallelism_threads=1",
-    # # "XLA_FLAGS": "--xla_force_host_platform_device_count=1"
-    "XLA_FLAGS": r"--xla_force_host_platform_device_count=1\ --xla_cpu_multi_thread_eigen=false\ intra_op_parallelism_threads=1\ inter_op_parallelism_threads=1",
-    "OPENBLAS_NUM_THREADS": "1",
-    "MKL_NUM_THREADS": "1",
-    "OMP_NUM_THREAD": "1",
-    },
-    # pre_command="ulimit -u 100000"
-  )
+
+# def make_with_gpu_dict(gpu_str="0"):
+#   return PythonProcess(env={
+#     # "CUDA_VISIBLE_DEVICES": str(0),
+#     "CUDA_VISIBLE_DEVICES": gpu_str,
+#     "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+#     "TF_FORCE_GPU_ALLOW_GROWTH": "true",
+#     # # "XLA_FLAGS": r"--xla_cpu_multi_thread_eigen=false\ intra_op_parallelism_threads=1\ inter_op_parallelism_threads=1",
+#     # # "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false",
+#     # # "XLA_FLAGS": "intra_op_parallelism_threads=1",
+#     # "XLA_FLAGS": r"--xla_force_host_platform_device_count=1\ --xla_cpu_multi_thread_eigen=false\ intra_op_parallelism_threads=1\ inter_op_parallelism_threads=1",
+#     # The flags do nothing :(
+#     "ACME_ID": FLAGS.acme_id,
+#   },
+#   # pre_command="ulimit -u 100000"
+#   )
+
+# def make_without_gpu_dict():
+#   return PythonProcess(env={
+#     "CUDA_VISIBLE_DEVICES": str(-1),
+#     # # "XLA_FLAGS": "intra_op_parallelism_threads=1",
+#     # # "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false",
+#     # "XLA_FLAGS": r"--xla_cpu_multi_thread_eigen=false\ intra_op_parallelism_threads=1\ inter_op_parallelism_threads=1",
+#     # # "XLA_FLAGS": "--xla_force_host_platform_device_count=1"
+#     "XLA_FLAGS": r"--xla_force_host_platform_device_count=1\ --xla_cpu_multi_thread_eigen=false\ intra_op_parallelism_threads=1\ inter_op_parallelism_threads=1",
+#     "OPENBLAS_NUM_THREADS": "1",
+#     "MKL_NUM_THREADS": "1",
+#     "OMP_NUM_THREAD": "1",
+#     "ACME_ID": FLAGS.acme_id,
+#     },
+#     # pre_command="ulimit -u 100000"
+#   )
 
 def _get_local_resources(launch_type):
   num_actors = FLAGS.num_actors
   num_actors_per_node = FLAGS.num_actors_per_node
   actor_cpu_start = FLAGS.actor_cpu_start
   actor_cpu_end = FLAGS.actor_cpu_end
-  actor_use_gpu = FLAGS.actors_on_gpu
 
   assert num_actors_per_node == 1, num_actors_per_node
 
@@ -150,19 +173,23 @@ def _get_local_resources(launch_type):
       # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0,1,2,3"), # reversed from other      # "inference_server": make_with_gpu_dict(),
       # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0,1,2,3"), # reversed from other      # "inference_server": make_with_gpu_dict(),
       # "inference_server": make_with_gpu_dict("4,5,6,7"),
-      "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0"), # reversed from other      # "inference_server": make_with_gpu_dict(),
-      "inference_server": make_with_gpu_dict("1"),
-      "counter": make_without_gpu_dict(),
-      "replay": make_without_gpu_dict(),
-      "evaluator": make_without_gpu_dict(),
-      # "actor": make_with_gpu_dict() if FLAGS.actors_on_gpu else make_without_gpu_dict(),
+      "learner": make_process_dict(",".join(FLAGS.learner_gpu_ids)),
+      # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0"), # reversed from other      # "inference_server": make_with_gpu_dict(),
+      "inference_server": make_process_dict(",".join(FLAGS.inference_server_gpu_ids)),
+      # "inference_server": make_with_gpu_dict("1"),
+      "counter": make_process_dict(),
+      "replay": make_process_dict(),
+      "evaluator": make_process_dict(),
     }
-    actor_resources = make_actor_resources(
-      num_actors=num_actors, cpu_start=actor_cpu_start, cpu_end=actor_cpu_end, gpu_str= "0" if actor_use_gpu else "-1")
+    # TODO: Be able to choose actor GPU so that we can compare 1 and 2 GPU utilization etc.
+    # actor_resources = make_actor_resources(
+    #   num_actors=num_actors, cpu_start=actor_cpu_start, cpu_end=actor_cpu_end, gpu_str= "0" if actor_use_gpu else "-1")
+    actor_resources = make_actor_resources(num_actors=num_actors)
     local_resources.update(actor_resources)
   else:
     local_resources = {}
   # import ipdb; ipdb.set_trace()
+  print('local_resources keys: ', local_resources.keys())
   return local_resources
 
 if __name__ == '__main__':

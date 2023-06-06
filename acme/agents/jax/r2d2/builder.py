@@ -42,6 +42,9 @@ from reverb import structured_writer as sw
 import tensorflow as tf
 import tree
 
+from absl import flags
+FLAGS = flags.FLAGS
+
 # TODO(b/450949030): extrac the private functions to a library once other agents
 # reuse them.
 
@@ -239,6 +242,8 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
       environment_spec: specs.EnvironmentSpec,
       variable_source: Optional[core.VariableSource] = None,
       adder: Optional[adders.Adder] = None,
+      # backend: Optional[str] = 'cpu',
+      force_cpu: Optional[bool] = False,
   ) -> acme.Actor:
     del environment_spec
     # Create variable client.
@@ -247,8 +252,16 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
         key='actor_variables',
         update_period=self._config.variable_update_period)
 
+    print('jax devices:', jax.devices())
+    import os
+    print('cuda_visible_devices', os.environ.get('CUDA_VISIBLE_DEVICES'))
+    if force_cpu:
+      print('forcing cpu')
+    actor_backend = 'cpu' if force_cpu else self._config.actor_backend
+    print('actor backend', actor_backend)
+    # print('actor backend', backend)
     return actors.GenericActor(
-        policy, random_key, variable_client, adder, backend='cpu',
+        policy, random_key, variable_client, adder, backend=actor_backend,
         jit=self._config.actor_jit)
     # return actors.GenericActor(
     #     policy, random_key, variable_client, adder, backend='gpu',

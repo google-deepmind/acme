@@ -53,4 +53,5 @@ class R2D2Config:
   max_priority_weight: float = 0.9
 
   # actor options
-  actor_jit: bool =True
+  actor_jit: bool = True
+  actor_backend: str = 'cpu'

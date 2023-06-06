@@ -15,7 +15,7 @@
 """Default logger."""
 
 import logging
-from typing import Any, Callable, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional, Union
 
 from acme.utils.loggers import aggregators
 from acme.utils.loggers import asynchronous as async_logger
@@ -33,6 +33,7 @@ def make_default_logger(
     print_fn: Optional[Callable[[str], None]] = None,
     serialize_fn: Optional[Callable[[Mapping[str, Any]], str]] = base.to_numpy,
     steps_key: str = 'steps',
+    save_dir: Optional[Union[str, None]] = None,
 ) -> base.Logger:
   """Makes a default Acme logger.
 
@@ -45,6 +46,7 @@ def make_default_logger(
     serialize_fn: An optional function to apply to the write inputs before
       passing them to the various loggers.
     steps_key: Ignored.
+    save_dir: if not None, where you want to save the data
 
   Returns:
     A logger object that responds to logger.write(some_dict).
@@ -57,7 +59,10 @@ def make_default_logger(
   loggers = [terminal_logger]
 
   if save_data:
-    loggers.append(csv.CSVLogger(label=label))
+    if save_dir is not None:
+      loggers.append(csv.CSVLogger(label=label, directory_or_file=save_dir))
+    else:
+      loggers.append(csv.CSVLogger(label=label))
 
   # Dispatch to all writers and filter Nones and by time.
   logger = aggregators.Dispatcher(loggers, serialize_fn)
