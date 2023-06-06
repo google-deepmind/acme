@@ -1,5 +1,7 @@
 from launchpad.nodes.python.local_multi_processing import PythonProcess
 from absl import flags
+import psutil
+
 FLAGS = flags.FLAGS
 
 # Let's just write out what we need. We'll start with just actors.
@@ -14,110 +16,62 @@ def _get_num_actor_nodes(num_actors, num_actors_per_node):
   num_actor_nodes += int(remainder > 0)
   return num_actor_nodes
 
-def get_cpu_range(*, cpu_start, cpu_end, num_actors, num_actors_per_node, actor_num):
-  # We'll add one to cpu_end to make the range contain all.
-  # How about we make sure the range is evenly divisble.
-  # Oh, this isn't right if we're doing actors_per_node. Darn.
 
-  # If we had 4 actors and 2 CPUs you want the first 2 actors to share and the second 2.
-  # 0-0.5, 0.5-1, 1-1.5, 1.5-2. Hmm. seems like it wants a round down, which is dumb.
-  # Maybe we do a lt somehow. Yeah. You assign it to the ones it overlaps with.
-  # so, [cpu for cpu in cpu_range if ]
-  # assert num_actors_per_node == 1, f"for now num_actors_per_node is 1, got {num_actors_per_node}"
-  # assert isinstance(cpu_start, int) and isinstance(cpu_end, int) and cpu_end >= cpu_start
-  # assert isinstance(actor_num, int) and actor_num >= 0 and actor_num < num_actors 
-  # assert isinstance(num_actors, int) and num_actors > 0
-  # cpu_range = list(range(cpu_start, cpu_end + 1))
-  # cpu_length = len(cpu_range)
-  # assert cpu_length % num_actors == 0, f"just for now we'll assume evenly divisible, but got {num_actors} actors and {cpu_length} cpus"
-  # cpus_per = cpu_length // num_actors
-  # return cpu_range[actor_num*cpus_per:(actor_num+1)*cpus_per]
-
-  assert num_actors_per_node == 1, f"for now num_actors_per_node is 1, got {num_actors_per_node}"
-  assert isinstance(cpu_start, int) and isinstance(cpu_end, int) and cpu_end >= cpu_start
-  assert isinstance(actor_num, int) and actor_num >= 0 and actor_num < num_actors 
-  assert isinstance(num_actors, int) and num_actors > 0
-  cpu_range = list(range(cpu_start, cpu_end + 1))
-  cpu_length = len(cpu_range)
-  # assert cpu_length % num_actors == 0, f"just for now we'll assume evenly divisible, but got {num_actors} actors and {cpu_length} cpus"
-  cpus_per = cpu_length / num_actors
-  first_cpu = cpu_start + (actor_num*cpus_per)
-  last_cpu = cpu_start+ ((actor_num+1)*cpus_per)
-  
-  return [cpu for cpu in cpu_range if cpu >= int(first_cpu) and cpu < last_cpu]
-  # cpu_start = actor_num*cpus_per
-  # return cpu_range[actor_num*cpus_per:(actor_num+1)*cpus_per]
-
-
-
-
-def get_range_str_from_list(range_list):
-  return ",".join([str(cpu) for cpu in range_list])
-
-def test_cpu_range():
-  assert get_cpu_range(cpu_start=0, cpu_end=0, num_actors=1, num_actors_per_node=1, actor_num=0) == [0]
-  assert get_cpu_range(cpu_start=3, cpu_end=3, num_actors=1, num_actors_per_node=1, actor_num=0) == [3]
-  assert get_cpu_range(cpu_start=3, cpu_end=3, num_actors=2, num_actors_per_node=1, actor_num=0) == [3]
-  assert get_cpu_range(cpu_start=3, cpu_end=3, num_actors=2, num_actors_per_node=1, actor_num=1) == [3]
-  assert get_cpu_range(cpu_start=3, cpu_end=4, num_actors=1, num_actors_per_node=1, actor_num=0) == [3,4]
-  assert get_cpu_range(cpu_start=3, cpu_end=4, num_actors=2, num_actors_per_node=1, actor_num=0) == [3]
-  assert get_cpu_range(cpu_start=3, cpu_end=4, num_actors=2, num_actors_per_node=1, actor_num=1) == [4]
-  print('great success on test_cpu_range!')
-
-def modify_python_process(python_process, cpu_range=None):
-  raise Exception("Not doing this for now")
-  if not cpu_range:
-    raise Exception("don't call")
-    return python_process
-  cpu_range_string = get_range_str_from_list(cpu_range)
+def pin_process_to_cpu(python_process, cpu_num):
   interpreter = python_process.absolute_interpreter_path
-  new_interpreter_path = f"taskset -c {cpu_range_string} {interpreter}"
-  print('setting interpreter path to', new_interpreter_path)
-
+  print('old interpreter', interpreter)
+  new_interpreter_path = f"taskset -c {cpu_num} {interpreter}"
+  # python_process._absolute_interpreter_path = interpreter
   python_process._absolute_interpreter_path = new_interpreter_path
-  return python_process # not necessary
+  print('new interpreter', new_interpreter_path)
+  return python_process
 
-def make_process_dict(gpu_str="-1"):
-  return PythonProcess(env={
+
+def make_process_dict(gpu_str="-1", pin_to_single_cpu=False):
+  process = PythonProcess(env={
     "CUDA_VISIBLE_DEVICES": gpu_str,
     "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
     "TF_FORCE_GPU_ALLOW_GROWTH": "true",
     "ACME_ID": FLAGS.acme_id,
   },
   )
+  if pin_to_single_cpu:
+    # This is just a relatively simple way to pin to the first CPU, to make `counter` take less threads.
+    print('cpu_count: ', psutil.cpu_count())
+    p = psutil.Process()
+    cpu_ids = p.cpu_affinity()
+    print('cpu_ids: ', cpu_ids)
+    first_cpu_id = cpu_ids[0]
+    process = pin_process_to_cpu(process, first_cpu_id)
+  return process
+
+    
 
 # def make_actor_resources(num_actors, cpu_start=-1, cpu_end=-1, gpu_str="-1"):
-def make_actor_resources(num_actors):
+# def make_actor_resources(num_actors, one_cpu_per_actor=False):
+def make_actor_resources(num_actors, one_cpu_per_actor=False):
   # If you don't specify CPU range, then just do them all like before I guess.
   # What if I always modify it? I think that's better actually.
   actor_gpu_ids = FLAGS.actor_gpu_ids
   assert isinstance(actor_gpu_ids, list) and len(actor_gpu_ids) > 0, actor_gpu_ids
 
-  # if cpu_start < 0 or cpu_end < 0:
-  #   print('doing the regular way')
-  #   return {
-  #     "actor" : PythonProcess(env={
-  #       "CUDA_VISIBLE_DEVICES": gpu_str,
-  #       "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
-  #       "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-  #       "ACME_ID": FLAGS.acme_id,
-  #     })
-  #   }
+  if one_cpu_per_actor:
+    import psutil
+    print('cpu_count: ', psutil.cpu_count())
+    p = psutil.Process()
+    cpu_ids = p.cpu_affinity()
+    print('cpu_ids: ', cpu_ids)
+
   process_dict = {}
   for actor_num in range(num_actors):
     print('doing the other way!')
     gpu_id = actor_gpu_ids[actor_num % len(actor_gpu_ids)]
     actor_key = f"actor_{actor_num}"
     process = make_process_dict(gpu_id)
-    # process = PythonProcess(env={
-    #   "CUDA_VISIBLE_DEVICES": gpu_id,
-    #   "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
-    #   "TF_FORCE_GPU_ALLOW_GROWTH": "true",
-    #   "ACME_ID": FLAGS.acme_id,
-    # })
-    # Maybe this should be where we do the whole ulimit thing actually, it would be much less burid this way.
-    # cpu_range = get_cpu_range(cpu_start=cpu_start, cpu_end=cpu_end, num_actors=num_actors, num_actors_per_node=1, actor_num=actor_num)
-    # process = modify_python_process(process, cpu_range)
+    if one_cpu_per_actor:
+      cpu_id = cpu_ids[actor_num % len(cpu_ids)]
+      process = pin_process_to_cpu(process, cpu_id)
+
     process_dict[actor_key] = process
 
   return process_dict
@@ -160,6 +114,7 @@ def make_actor_resources(num_actors):
 def _get_local_resources(launch_type):
   num_actors = FLAGS.num_actors
   num_actors_per_node = FLAGS.num_actors_per_node
+  one_cpu_per_actor = FLAGS.one_cpu_per_actor
   actor_cpu_start = FLAGS.actor_cpu_start
   actor_cpu_end = FLAGS.actor_cpu_end
 
@@ -177,14 +132,14 @@ def _get_local_resources(launch_type):
       # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0"), # reversed from other      # "inference_server": make_with_gpu_dict(),
       "inference_server": make_process_dict(",".join(FLAGS.inference_server_gpu_ids)),
       # "inference_server": make_with_gpu_dict("1"),
-      "counter": make_process_dict(),
+      "counter": make_process_dict(pin_to_single_cpu=one_cpu_per_actor),
       "replay": make_process_dict(),
       "evaluator": make_process_dict(),
     }
     # TODO: Be able to choose actor GPU so that we can compare 1 and 2 GPU utilization etc.
     # actor_resources = make_actor_resources(
     #   num_actors=num_actors, cpu_start=actor_cpu_start, cpu_end=actor_cpu_end, gpu_str= "0" if actor_use_gpu else "-1")
-    actor_resources = make_actor_resources(num_actors=num_actors)
+    actor_resources = make_actor_resources(num_actors=num_actors, one_cpu_per_actor=one_cpu_per_actor)
     local_resources.update(actor_resources)
   else:
     local_resources = {}
@@ -193,4 +148,4 @@ def _get_local_resources(launch_type):
   return local_resources
 
 if __name__ == '__main__':
-  test_cpu_range()
+  pass
