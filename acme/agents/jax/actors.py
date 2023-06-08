@@ -14,7 +14,7 @@
 
 """Simple JAX actors."""
 
-from typing import Generic, Optional
+from typing import Generic, Optional, Callable
 
 from acme import adders
 from acme import core
@@ -43,7 +43,8 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
       adder: Optional[adders.Adder] = None,
       jit: bool = True,
       backend: Optional[str] = 'cpu',
-      per_episode_update: bool = False
+      per_episode_update: bool = False,
+      obs_map_function: Optional[Callable] = None,
   ):
     """Initializes a feed forward actor.
 
@@ -61,6 +62,7 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
     self._variable_client = variable_client
     self._adder = adder
     self._state = None
+    self._obs_map_function = obs_map_function
 
     # Unpack ActorCore, jitting if requested.
     if jit:
@@ -80,14 +82,10 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
   def select_action(self,
                     observation: network_lib.Observation) -> types.NestedArray:
     
-    from acme.wrappers.observation_action_reward import OAR
-    import jax.numpy as jnp
-    new_observation = OAR(
-      observation=jnp.array(observation.observation),
-      action=jnp.array(observation.action),
-      reward=jnp.array(observation.reward))
+    if self._obs_map_function:
+      observation = self._obs_map_function(observation)
 
-    action, self._state = self._policy(self._params, new_observation, self._state)
+    action, self._state = self._policy(self._params, observation, self._state)
     return utils.to_numpy(action)
 
   def observe_first(self, timestep: dm_env.TimeStep):

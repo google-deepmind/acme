@@ -4,6 +4,10 @@ import psutil
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_bool(
+    'limit_all_cpus', False,
+    'Separate from one_cpu_per_actor, this puts limits on the other nodes. Arbitrarily chooses 4 CPUs per node.')
+
 # Let's just write out what we need. We'll start with just actors.
 # num_actors, num_actors_per_node, then we calculate num_actor_nodes.
 # Then we need the CPU range for actors.
@@ -27,7 +31,8 @@ def pin_process_to_cpu(python_process, cpu_num):
   return python_process
 
 
-def make_process_dict(gpu_str="-1", pin_to_single_cpu=-1):
+def make_process_dict(gpu_str="-1", pin_to=None):
+  # Has ability to modify process to pin to specified CPUs using taskset. Good for controlling jax thread numbers
   process = PythonProcess(env={
     "CUDA_VISIBLE_DEVICES": gpu_str,
     "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
@@ -35,15 +40,17 @@ def make_process_dict(gpu_str="-1", pin_to_single_cpu=-1):
     "ACME_ID": FLAGS.acme_id,
   },
   )
-  if pin_to_single_cpu >= 0:
-    # This is just a relatively simple way to pin to a single CPU, to make `counter` take less threads.
-    # relative indexing
+  if pin_to is not None:
+    if isinstance(pin_to, int):
+      pin_to = [pin_to]
     print('cpu_count: ', psutil.cpu_count())
     p = psutil.Process()
-    cpu_ids = p.cpu_affinity()
-    print('cpu_ids: ', cpu_ids)
-    cpu_id = cpu_ids[pin_to_single_cpu]
-    process = pin_process_to_cpu(process, cpu_id)
+    all_cpu_ids = p.cpu_affinity()
+    these_cpu_ids = [str(all_cpu_ids[i % len(all_cpu_ids)]) for i in pin_to]
+    these_cpu_ids = list(set(these_cpu_ids))
+    cpu_str = ",".join(these_cpu_ids)
+    process = pin_process_to_cpu(process, cpu_str)
+
   return process
 
     
@@ -116,30 +123,30 @@ def _get_local_resources(launch_type):
   num_actors = FLAGS.num_actors
   num_actors_per_node = FLAGS.num_actors_per_node
   one_cpu_per_actor = FLAGS.one_cpu_per_actor
-  actor_cpu_start = FLAGS.actor_cpu_start
-  actor_cpu_end = FLAGS.actor_cpu_end
 
   assert num_actors_per_node == 1, num_actors_per_node
 
   assert launch_type in ('local_mp', 'local_mt'), launch_type
   from launchpad.nodes.python.local_multi_processing import PythonProcess
   if launch_type == 'local_mp':
+    if FLAGS.limit_all_cpus:
+      cpu_dict = {
+        'learner'   : [0, 1, 2, 3],
+        'replay'    : [4, 5, 6, 7],
+        'inference_server'   : [8, 9, 10, 11],
+        'counter' : [12, 13],
+        'evaluator': [14],
+      }
+    else:
+      cpu_dict = {}
     local_resources = {
-      # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0,1,2,3"), # reversed from other
-      # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0,1,2,3"), # reversed from other      # "inference_server": make_with_gpu_dict(),
-      # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0,1,2,3"), # reversed from other      # "inference_server": make_with_gpu_dict(),
-      # "inference_server": make_with_gpu_dict("4,5,6,7"),
-      "learner": make_process_dict(",".join(FLAGS.learner_gpu_ids)),
-      # "learner": make_without_gpu_dict() if FLAGS.learner_on_cpu else make_with_gpu_dict("0"), # reversed from other      # "inference_server": make_with_gpu_dict(),
-      "inference_server": make_process_dict(",".join(FLAGS.inference_server_gpu_ids)),
-      # "inference_server": make_with_gpu_dict("1"),
-      "counter": make_process_dict(pin_to_single_cpu=0 if one_cpu_per_actor else -1),
-      "replay": make_process_dict(),
-      "evaluator": make_process_dict(pin_to_single_cpu=1 if one_cpu_per_actor else -1),
+      "learner": make_process_dict(",".join(FLAGS.learner_gpu_ids), pin_to=cpu_dict.get('learner')),
+      "inference_server": make_process_dict(",".join(FLAGS.inference_server_gpu_ids), pin_to=cpu_dict.get('inference_server')),
+      "counter": make_process_dict(pin_to=cpu_dict.get('counter')),
+      "replay": make_process_dict(pin_to=cpu_dict.get('replay')),
+      "evaluator": make_process_dict(pin_to=cpu_dict.get('evaluator')),
     }
     # TODO: Be able to choose actor GPU so that we can compare 1 and 2 GPU utilization etc.
-    # actor_resources = make_actor_resources(
-    #   num_actors=num_actors, cpu_start=actor_cpu_start, cpu_end=actor_cpu_end, gpu_str= "0" if actor_use_gpu else "-1")
     actor_resources = make_actor_resources(num_actors=num_actors, one_cpu_per_actor=one_cpu_per_actor)
     local_resources.update(actor_resources)
   else:

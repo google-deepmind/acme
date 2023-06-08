@@ -44,8 +44,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
 
   def __init__(self,
                config: dqn_config.DQNConfig,
-               loss_fn: learning_lib.LossFn,
-               actor_backend: Optional[str] = 'cpu'):
+               loss_fn: learning_lib.LossFn):
     """Creates DQN learner and the behavior policies.
 
     Args:
@@ -55,7 +54,6 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
     """
     self._config = config
     self._loss_fn = loss_fn
-    self._actor_backend = actor_backend
 
   def make_learner(
       self,
@@ -101,7 +99,8 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
         random_key=random_key,
         variable_client=variable_client,
         adder=adder,
-        backend=self._actor_backend)
+        backend=self._config.actor_backend,
+        jit=self._config.actor_jit)
 
   def make_replay_tables(
       self,

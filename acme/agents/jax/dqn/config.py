@@ -78,6 +78,10 @@ class DQNConfig:
 
   num_sgd_steps_per_step: int = 1
 
+  # actor options
+  actor_jit: bool = True
+  actor_backend: str = 'cpu'
+
 
 def logspace_epsilons(num_epsilons: int, epsilon: float = 0.017
                       ) -> Sequence[float]:

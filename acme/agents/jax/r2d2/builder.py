@@ -41,6 +41,8 @@ import reverb
 from reverb import structured_writer as sw
 import tensorflow as tf
 import tree
+import jax.numpy as jnp
+from acme.wrappers.observation_action_reward import OAR
 
 from absl import flags
 FLAGS = flags.FLAGS
@@ -259,17 +261,17 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
       print('forcing cpu')
     actor_backend = 'cpu' if force_cpu else self._config.actor_backend
     print('actor backend', actor_backend)
-    # print('actor backend', backend)
+
+    def _obs_map_function(obs):
+      new_observation = OAR(
+        observation=jnp.array(obs.observation),
+        action=jnp.array(obs.action),
+        reward=jnp.array(obs.reward))
+      return new_observation
+
     return actors.GenericActor(
         policy, random_key, variable_client, adder, backend=actor_backend,
-        jit=self._config.actor_jit)
-    # return actors.GenericActor(
-    #     policy, random_key, variable_client, adder, backend='gpu',
-    #     jit=self._config.actor_jit)
-    # return actors.GenericActor(
-    #     policy, random_key, variable_client, adder, backend='cpu')
-    # return actors.GenericActor(
-    #     policy, random_key, variable_client, adder, backend='gpu')
+        jit=self._config.actor_jit, obs_map_function=_obs_map_function)
 
   def make_policy(self,
                   networks: r2d2_networks.R2D2Networks,

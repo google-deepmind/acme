@@ -52,8 +52,6 @@ flags.DEFINE_float('spi', 1.0,
 flags.DEFINE_list("actor_gpu_ids", ["-1"], "Which GPUs to use for actors. Actors select GPU in round-robin fashion")
 flags.DEFINE_list("learner_gpu_ids", ["0"], "Which GPUs to use for learner. Gets all")
 flags.DEFINE_list("inference_server_gpu_ids", ["1"], "Which GPUs to use for inference servers. For now, all get all")
-flags.DEFINE_integer('actor_cpu_start', -1, "If we're partitioning actors by CPU")
-flags.DEFINE_integer('actor_cpu_end', -1, "If we're partitioning actors by CPU")
 flags.DEFINE_string('acme_id', None, 'Experiment identifier to use for Acme.')
 flags.DEFINE_string('acme_dir', '~/acme', 'Directory to do acme logging')
 
@@ -209,7 +207,7 @@ def main(_):
     # ipdb.set_trace(context=10)
     local_resources = _get_local_resources(launch_type)
     print(local_resources)
-    # TODO: Obviously not great to have split_actor_specs be the name when we really want it to be "split_actor_specs"
+
     program = experiments.make_distributed_experiment(
         experiment=config, num_actors=num_actors,
         inference_server_config=inference_server_config,
@@ -217,7 +215,6 @@ def main(_):
         num_actors_per_node=num_actors_per_node,
         multiprocessing_colocate_actors=FLAGS.multiprocessing_colocate_actors,
         split_actor_specs=True,
-        # split_actor_specs=(FLAGS.actor_cpu_start >= 0 and FLAGS.actor_cpu_end >= 0)
         )
     # program = experiments.make_distributed_experiment(
     #     experiment=config, num_actors=64 if lp_utils.is_local_run() else 80)
