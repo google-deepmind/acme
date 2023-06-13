@@ -237,8 +237,7 @@ class BaseAtariWrapper(abc.ABC, base.EnvironmentWrapper):
     reward = sum(timestep_t.reward for timestep_t in timestep_stack)
 
     # Multiply discount over stack (will either be 0. or 1.).
-    discount = np.product(
-        [timestep_t.discount for timestep_t in timestep_stack])
+    discount = np.prod([timestep_t.discount for timestep_t in timestep_stack])
 
     observation = self._observation_from_timestep_stack(timestep_stack)
 
