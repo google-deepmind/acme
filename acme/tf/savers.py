@@ -27,7 +27,6 @@ from acme.utils import signals
 from acme.utils import paths
 import sonnet as snt
 import tensorflow as tf
-import tensorflow_probability as tfp
 import tree
 
 from tensorflow.python.saved_model import revived_types
@@ -375,19 +374,10 @@ def make_snapshot(module: snt.Module):
          'which is required for snapshotting; run '
          'create_variables to add this annotation.').format(module.name))
 
-  # This function will return the object as a composite tensor if it is a
-  # distribution and will otherwise return it with no changes.
-  def as_composite(obj):
-    if isinstance(obj, tfp.distributions.Distribution):
-      return tfp.experimental.as_composite(obj)
-    else:
-      return obj
-
-  # Replace any distributions returned by the module with composite tensors and
-  # wrap it up in tf.function so we can process it properly.
+  # Wrap the module up in tf.function so we can process it properly.
   @tf.function
   def wrapped_module(*args, **kwargs):
-    return tree.map_structure(as_composite, module(*args, **kwargs))
+    return module(*args, **kwargs)
 
   # pylint: disable=protected-access
   snapshot = Snapshot()
