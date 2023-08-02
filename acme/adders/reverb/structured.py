@@ -153,7 +153,7 @@ class StructuredAdder(adders_base.Adder):
           extras: types.NestedArray = ()):
     """Record an action and the following timestep."""
 
-    if not self._writer.step_is_open:
+    if self._writer is None or not self._writer.step_is_open:
       raise ValueError('adder.add_first must be called before adder.add.')
 
     # Add the timestep to the buffer.
