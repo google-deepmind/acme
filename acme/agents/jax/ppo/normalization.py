@@ -132,9 +132,12 @@ def build_ema_mean_std_normalizer(
         biased_second_moment=second_moment,
     )
 
-  def _normalize_leaf(x: jnp.array, ema_counter: jnp.int32,
-                      biased_first_moment: jnp.array,
-                      biased_second_moment: jnp.array) -> jnp.ndarray:
+  def _normalize_leaf(
+      x: jnp.ndarray,
+      ema_counter: jnp.int32,
+      biased_first_moment: jnp.ndarray,
+      biased_second_moment: jnp.ndarray,
+  ) -> jnp.ndarray:
     zero_debias = 1. / (1. - jnp.power(tau, ema_counter))
     mean = biased_first_moment * zero_debias
     second_moment = biased_second_moment * zero_debias
