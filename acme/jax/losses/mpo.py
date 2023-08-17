@@ -50,24 +50,24 @@ class MPOParams(NamedTuple):
 
 class MPOStats(NamedTuple):
   """NamedTuple to store loss statistics."""
-  dual_alpha_mean: float
-  dual_alpha_stddev: float
-  dual_temperature: float
+  dual_alpha_mean: Union[float, jnp.ndarray]
+  dual_alpha_stddev: Union[float, jnp.ndarray]
+  dual_temperature: Union[float, jnp.ndarray]
 
-  loss_policy: float
-  loss_alpha: float
-  loss_temperature: float
-  kl_q_rel: float
+  loss_policy: Union[float, jnp.ndarray]
+  loss_alpha: Union[float, jnp.ndarray]
+  loss_temperature: Union[float, jnp.ndarray]
+  kl_q_rel: Union[float, jnp.ndarray]
 
-  kl_mean_rel: float
-  kl_stddev_rel: float
+  kl_mean_rel: Union[float, jnp.ndarray]
+  kl_stddev_rel: Union[float, jnp.ndarray]
 
-  q_min: float
-  q_max: float
+  q_min: Union[float, jnp.ndarray]
+  q_max: Union[float, jnp.ndarray]
 
-  pi_stddev_min: float
-  pi_stddev_max: float
-  pi_stddev_cond: float
+  pi_stddev_min: Union[float, jnp.ndarray]
+  pi_stddev_max: Union[float, jnp.ndarray]
+  pi_stddev_cond: Union[float, jnp.ndarray]
 
   penalty_kl_q_rel: Optional[float] = None
 

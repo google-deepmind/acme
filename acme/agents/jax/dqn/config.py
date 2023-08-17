@@ -79,8 +79,9 @@ class DQNConfig:
   num_sgd_steps_per_step: int = 1
 
 
-def logspace_epsilons(num_epsilons: int, epsilon: float = 0.017
-                      ) -> Sequence[float]:
+def logspace_epsilons(
+    num_epsilons: int, epsilon: float = 0.017
+) -> Union[Sequence[float], jnp.ndarray]:
   """`num_epsilons` of logspace-distributed values, with median `epsilon`."""
   if num_epsilons <= 1:
     return (epsilon,)

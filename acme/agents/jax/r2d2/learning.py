@@ -78,8 +78,8 @@ class R2D2Learner(acme.Learner):
         params: networks_lib.Params,
         target_params: networks_lib.Params,
         key_grad: networks_lib.PRNGKey,
-        sample: reverb.ReplaySample
-    ) -> Tuple[jnp.ndarray, Tuple[jnp.ndarray, jnp.ndarray]]:
+        sample: reverb.ReplaySample,
+    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
       """Computes mean transformed N-step loss for a batch of sequences."""
 
       # Get core state & warm it up on observations for a burn-in period.

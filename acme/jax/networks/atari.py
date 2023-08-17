@@ -22,7 +22,7 @@ Glossary of shapes:
 - X?: X is optional (e.g. optional batch/sequence dimension).
 
 """
-from typing import Optional, Tuple, Sequence
+from typing import Any, Optional, Sequence, Tuple
 
 from acme.jax.networks import base
 from acme.jax.networks import duelling
@@ -120,9 +120,9 @@ class DeepIMPALAAtariNetwork(hk.RNNCore):
     self._head = policy_value.PolicyValueHead(num_actions)
     self._num_actions = num_actions
 
-  def __call__(self, inputs: observation_action_reward.OAR,
-               state: hk.LSTMState) -> base.LSTMOutputs:
-
+  def __call__(
+      self, inputs: observation_action_reward.OAR, state: hk.LSTMState
+  ) -> Any:
     embeddings = self._embed(inputs)  # [B?, D+A+1]
     embeddings, new_state = self._core(embeddings, state)
     logits, value = self._head(embeddings)  # logits: [B?, A], value: [B?, 1]
@@ -133,8 +133,9 @@ class DeepIMPALAAtariNetwork(hk.RNNCore):
                     **unused_kwargs) -> hk.LSTMState:
     return self._core.initial_state(batch_size)
 
-  def unroll(self, inputs: observation_action_reward.OAR,
-             state: hk.LSTMState) -> base.LSTMOutputs:
+  def unroll(
+      self, inputs: observation_action_reward.OAR, state: hk.LSTMState
+  ) -> Any:
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
     embeddings = self._embed(inputs)
     embeddings, new_states = hk.static_unroll(self._core, embeddings, state)
