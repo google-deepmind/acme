@@ -17,9 +17,8 @@
 from unittest import mock
 
 from acme.testing import test_utils
-import acme.utils.paths as paths
+import acme.utils.paths as paths  # pylint: disable=consider-using-from-import
 
-from absl.testing import flagsaver
 from absl.testing import absltest
 
 
@@ -33,7 +32,8 @@ class PathTest(test_utils.TestCase):
     self.assertEqual(path, f'{root_directory}/test/foo/bar')
 
   def test_unique_id_with_flag(self):
-    with flagsaver.flagsaver((paths.ACME_ID, 'test_flag')):
+    with mock.patch.object(paths, 'ACME_ID') as mock_acme_id:
+      mock_acme_id.value = 'test_flag'
       self.assertEqual(paths.get_unique_id(), ('test_flag',))
 
 
