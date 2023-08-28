@@ -107,8 +107,9 @@ class MPOLearner(acme.Learner):
       retrace_lambda: float = 0.95,
       model_rollout_length: int = 0,
       optimizer: Optional[optax.GradientTransformation] = None,
-      learning_rate: Optional[Union[float, optax.Schedule]] = None,
+      learning_rate: optax.ScalarOrSchedule = 1e-4,
       dual_optimizer: Optional[optax.GradientTransformation] = None,
+      dual_learning_rate: optax.ScalarOrSchedule = 1e-2,
       grad_norm_clip: float = 40.0,
       reward_clip: float = np.float32('inf'),
       value_tx_pair: rlax.TxPair = rlax.IDENTITY_PAIR,
@@ -206,10 +207,12 @@ class MPOLearner(acme.Learner):
           distributional_loss_fn=self._distributional_loss)
 
     # Create optimizers if they aren't given.
-    self._optimizer = optimizer or _get_default_optimizer(1e-4, grad_norm_clip)
+    self._optimizer = optimizer or _get_default_optimizer(
+        learning_rate, grad_norm_clip
+    )
     self._dual_optimizer = dual_optimizer or _get_default_optimizer(
-        1e-2, grad_norm_clip)
-    self._lr_schedule = learning_rate if callable(learning_rate) else None
+        dual_learning_rate, grad_norm_clip
+    )
 
     self._action_spec = environment_spec.actions
 
@@ -664,8 +667,6 @@ class MPOLearner(acme.Learner):
     metrics.update({
         'opt/grad_norm': gradients_norm,
         'opt/param_norm': optax.global_norm(params)})
-    if callable(self._lr_schedule):
-      metrics['opt/learning_rate'] = self._lr_schedule(state.steps)  # pylint: disable=not-callable
 
     dual_metrics = {
         'opt/dual_grad_norm': dual_gradients_norm,
@@ -739,8 +740,8 @@ class MPOLearner(acme.Learner):
 
 
 def _get_default_optimizer(
-    learning_rate: float,
-    max_grad_norm: Optional[float] = None) -> optax.GradientTransformation:
+    learning_rate: optax.ScalarOrSchedule, max_grad_norm: Optional[float] = None
+) -> optax.GradientTransformation:
   optimizer = optax.adam(learning_rate)
   if max_grad_norm and max_grad_norm > 0:
     optimizer = optax.chain(optax.clip_by_global_norm(max_grad_norm), optimizer)

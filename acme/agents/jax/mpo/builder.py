@@ -188,7 +188,6 @@ class MPOBuilder(builders.ActorLearnerBuilder):
           model_rollout_length=self.config.model_rollout_length,
           sgd_steps_per_learner_step=self.sgd_steps_per_learner_step,
           optimizer=optimizer,
-          learning_rate=learning_rate,
           dual_optimizer=optax.adam(self.config.dual_learning_rate),
           grad_norm_clip=self.config.grad_norm_clip,
           reward_clip=self.config.reward_clip,
