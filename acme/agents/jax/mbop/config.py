@@ -30,7 +30,9 @@ class MBOPConfig:
     num_sgd_steps_per_step: How many gradient updates to perform per learner
       step.
   """
-  mppi_config: mppi.MPPIConfig = mppi.MPPIConfig()
+  mppi_config: mppi.MPPIConfig = dataclasses.field(
+      default_factory=mppi.MPPIConfig
+  )
   learning_rate: float = 3e-4
   num_networks: int = 5
   num_sgd_steps_per_step: int = 1
