@@ -297,6 +297,7 @@ class BaseAtariWrapper(abc.ABC, base.EnvironmentWrapper):
   @property
   def raw_observation(self) -> np.ndarray:
     """Returns the raw observation, after any pooling has been applied."""
+    assert self._raw_observation is not None
     return self._raw_observation
 
 
