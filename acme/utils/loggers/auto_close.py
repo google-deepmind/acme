@@ -35,6 +35,8 @@ class AutoCloseLogger(base.Logger):
     self._finalizer = weakref.finalize(self, logger.close)
 
   def write(self, values: base.LoggingData):
+    if self._logger is None:
+      raise ValueError('init not called')
     self._logger.write(values)
 
   def close(self):
