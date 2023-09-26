@@ -99,10 +99,11 @@ def make_sequences_from_transitions(
                              transitions.next_observation)
   reward = duplicate(transitions.reward)
 
-  return adders.Step(
+  return adders.Step(  # pytype: disable=wrong-arg-types  # jnp-type
       observation=observation,
       action=duplicate(transitions.action),
       reward=reward,
       discount=duplicate(transitions.discount),
       start_of_episode=jnp.zeros_like(reward, dtype=jnp.bool_),
-      extras=jax.tree_map(duplicate, transitions.extras))
+      extras=jax.tree_map(duplicate, transitions.extras),
+  )

@@ -107,7 +107,7 @@ def rnd_loss(
   predictor_output = networks.predictor.apply(predictor_params,
                                               transitions.observation,
                                               transitions.action)
-  return jnp.mean(jnp.square(target_output - predictor_output))
+  return jnp.mean(jnp.square(target_output - predictor_output))  # pytype: disable=bad-return-type  # jnp-type
 
 
 class RNDLearner(acme.Learner):

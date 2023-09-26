@@ -71,6 +71,6 @@ def gail_reward(
       # pylint: disable=invalid-unary-operand-type
       rewards = jnp.clip(
           rewards, a_min=-max_reward_magnitude, a_max=max_reward_magnitude)
-    return rewards
+    return rewards  # pytype: disable=bad-return-type  # jnp-type
 
   return imitation_reward  # pytype: disable=bad-return-type  # jax-ndarray

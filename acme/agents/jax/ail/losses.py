@@ -114,7 +114,7 @@ def gail_loss(entropy_coefficient: float = 0.,
         'entropy_loss': entropy_loss,
         'classification_loss': classification_loss
     }
-    return total_loss, (metrics, discriminator_state)
+    return total_loss, (metrics, discriminator_state)  # pytype: disable=bad-return-type  # jnp-type
 
   return loss_fn
 
@@ -166,7 +166,7 @@ def pugail_loss(positive_class_prior: float,
         'entropy_loss': entropy_loss,
         'classification_loss': classification_loss
     }
-    return total_loss, (metrics, discriminator_state)
+    return total_loss, (metrics, discriminator_state)  # pytype: disable=bad-return-type  # jnp-type
 
   return loss_fn
 
@@ -194,7 +194,7 @@ def _compute_gradient_penalty(gradient_penalty_data: types.Transition,
                                gradients.next_observation])
   gradient_norms = jnp.linalg.norm(gradients + 1e-8)
   k = gradient_penalty_target * jnp.ones_like(gradient_norms)
-  return jnp.mean(jnp.square(gradient_norms - k))
+  return jnp.mean(jnp.square(gradient_norms - k))  # pytype: disable=bad-return-type  # jnp-type
 
 
 def add_gradient_penalty(base_loss: Loss,
@@ -231,6 +231,6 @@ def add_gradient_penalty(base_loss: Loss,
     total_loss = partial_loss + gradient_penalty
     losses['total_loss'] = total_loss
 
-    return total_loss, (losses, discriminator_state)
+    return total_loss, (losses, discriminator_state)  # pytype: disable=bad-return-type  # jnp-type
 
   return loss_fn

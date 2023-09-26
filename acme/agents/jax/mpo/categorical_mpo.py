@@ -165,7 +165,7 @@ class CategoricalMPO:
     loss = loss_policy + loss_kl + loss_dual
 
     # Create statistics.
-    stats = CategoricalMPOStats(
+    stats = CategoricalMPOStats(  # pytype: disable=wrong-arg-types  # jnp-type
         # Dual Variables.
         dual_alpha=jnp.mean(alpha),
         dual_temperature=jnp.mean(temperature),
@@ -183,7 +183,7 @@ class CategoricalMPO:
         q_min=jnp.mean(jnp.min(q_values, axis=0)),
         q_max=jnp.mean(jnp.max(q_values, axis=0)),
         entropy_online=jnp.mean(online_action_distribution.entropy()),
-        entropy_target=jnp.mean(target_action_distribution.entropy())
+        entropy_target=jnp.mean(target_action_distribution.entropy()),
     )
 
     return loss, stats

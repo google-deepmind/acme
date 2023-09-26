@@ -228,12 +228,13 @@ class R2D2Learner(acme.Learner):
     logging.info('Total number of params: %d',
                  sum(tree.flatten(sizes.values())))
 
-    state = TrainingState(
+    state = TrainingState(  # pytype: disable=wrong-arg-types  # jnp-type
         params=initial_params,
         target_params=initial_params,
         opt_state=opt_state,
         steps=jnp.array(0),
-        random_key=random_key)
+        random_key=random_key,
+    )
     # Replicate parameters.
     self._state = utils.replicate_in_all_devices(state)
 
