@@ -39,6 +39,8 @@ class ContinuousActionObserver(base.EnvLoopObserver):
   def observe(self, env: dm_env.Environment, timestep: dm_env.TimeStep,
               action: np.ndarray) -> None:
     """Records one environment step."""
+    if self._actions is None:
+      raise ValueError('observe_first not called')
     self._actions.append(action)
 
   def get_metrics(self) -> Dict[str, base.Number]:
