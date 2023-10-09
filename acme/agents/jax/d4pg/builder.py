@@ -19,7 +19,6 @@ import acme
 from acme import adders
 from acme import core
 from acme import specs
-from acme import types
 from acme.adders import reverb as adders_reverb
 from acme.adders.reverb import base as reverb_base
 from acme.agents.jax import actor_core as actor_core_lib
@@ -39,84 +38,12 @@ import optax
 import reverb
 from reverb import rate_limiters
 from reverb import structured_writer as sw
-import tensorflow as tf
-import tree
 
 
 def _make_adder_config(step_spec: reverb_base.Step, n_step: int,
                        table: str) -> List[sw.Config]:
   return adders_reverb.create_n_step_transition_config(
       step_spec=step_spec, n_step=n_step, table=table)
-
-
-def _as_n_step_transition(flat_trajectory: reverb.ReplaySample,
-                          agent_discount: float) -> reverb.ReplaySample:
-  """Compute discounted return and total discount for N-step transitions.
-
-  For N greater than 1, transitions are of the form:
-
-          (s_t, a_t, r_{t:t+n}, r_{t:t+n}, s_{t+N}, e_t),
-
-  where:
-
-      s_t = State (observation) at time t.
-      a_t = Action taken from state s_t.
-      g = the additional discount, used by the agent to discount future returns.
-      r_{t:t+n} = A vector of N-step rewards: [r_t r_{t+1} ... r_{t+n}]
-      d_{t:t+n} = A vector of N-step environment: [d_t d_{t+1} ... d_{t+n}]
-        For most environments d_i is 1 for all steps except the last,
-        i.e. it is the episode termination signal.
-      s_{t+n}: The "arrival" state, i.e. the state at time t+n.
-      e_t [Optional]: A nested structure of any 'extras' the user wishes to add.
-
-  As such postprocessing is necessary to calculate the N-Step discounted return
-  and the total discount as follows:
-
-          (s_t, a_t, R_{t:t+n}, D_{t:t+n}, s_{t+N}, e_t),
-
-    where:
-
-      R_{t:t+n} = N-step discounted return, i.e. accumulated over N rewards:
-            R_{t:t+n} := r_t + g * d_t * r_{t+1} + ...
-                            + g^{n-1} * d_t * ... * d_{t+n-2} * r_{t+n-1}.
-      D_{t:t+n}: N-step product of agent discounts g_i and environment
-        "discounts" d_i.
-            D_{t:t+n} := g^{n-1} * d_{t} * ... * d_{t+n-1},
-
-  Args:
-    flat_trajectory: An trajectory with n-step rewards and discounts to be
-      process.
-    agent_discount: An additional discount factor used by the agent to discount
-      futrue returns.
-
-  Returns:
-    A reverb.ReplaySample with computed discounted return and total discount.
-  """
-  trajectory = flat_trajectory.data
-
-  def compute_discount_and_reward(
-      state: types.NestedTensor,
-      discount_and_reward: types.NestedTensor) -> types.NestedTensor:
-    compounded_discount, discounted_reward = state
-    return (agent_discount * discount_and_reward[0] * compounded_discount,
-            discounted_reward + discount_and_reward[1] * compounded_discount)
-
-  initializer = (tf.constant(1, dtype=tf.float32),
-                 tf.constant(0, dtype=tf.float32))
-  elems = tf.stack((trajectory.discount, trajectory.reward), axis=-1)
-  total_discount, n_step_return = tf.scan(
-      compute_discount_and_reward, elems, initializer, reverse=True)
-  return reverb.ReplaySample(
-      info=flat_trajectory.info,
-      data=types.Transition(
-          observation=tree.map_structure(lambda x: x[0],
-                                         trajectory.observation),
-          action=tree.map_structure(lambda x: x[0], trajectory.action),
-          reward=n_step_return[0],
-          discount=total_discount[0],
-          next_observation=tree.map_structure(lambda x: x[-1],
-                                              trajectory.observation),
-          extras=tree.map_structure(lambda x: x[0], trajectory.extras)))
 
 
 class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
@@ -214,8 +141,14 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
     """Create a dataset iterator to use for learning/updating the agent."""
 
     def postprocess(
-        flat_trajectory: reverb.ReplaySample) -> reverb.ReplaySample:
-      return _as_n_step_transition(flat_trajectory, self._config.discount)
+        flat_trajectory: reverb.ReplaySample,
+    ) -> reverb.ReplaySample:
+      return reverb.ReplaySample(
+          info=flat_trajectory.info,
+          data=adders_reverb.n_step_from_trajectory(
+              flat_trajectory.data, self._config.discount
+          ),
+      )
 
     batch_size_per_device = self._config.batch_size // jax.device_count()
 
