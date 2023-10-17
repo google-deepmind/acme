@@ -64,8 +64,13 @@ class AilLossTest(absltest.TestCase):
     prior = .7
     loss_fn = losses.pugail_loss(
         positive_class_prior=prior, entropy_coefficient=0.)
-    loss, _ = loss_fn(dummy_discriminator, {}, one_transition,
-                      zero_transition, ())
+    loss, _ = loss_fn(  # pytype: disable=wrong-arg-types
+        dummy_discriminator,
+        {},
+        one_transition,
+        zero_transition,
+        (),
+    )
 
     d_one = jax.nn.sigmoid(dummy_discriminator({}, one_transition)[0])
     d_zero = jax.nn.sigmoid(dummy_discriminator({}, zero_transition)[0])

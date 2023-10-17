@@ -23,7 +23,7 @@ import dm_env
 import jax
 import jax.numpy as jnp
 
-PRNGKey = jax.random.KeyArray
+PRNGKey = jax.Array
 Networks = TypeVar('Networks')
 """Container for all agent network components."""
 Policy = TypeVar('Policy')
