@@ -21,7 +21,7 @@ from typing import NamedTuple
 from acme import specs
 from acme.jax import running_statistics
 import jax
-from jax.config import config as jax_config
+from jax import config as jax_config
 import jax.numpy as jnp
 import numpy as np
 import tree
