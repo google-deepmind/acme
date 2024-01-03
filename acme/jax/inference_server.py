@@ -98,6 +98,9 @@ class InferenceServer(Generic[InferenceServerHandler]):
           key=self._keys,
           update_period=self._config.update_period)
 
+    if self._variable_client is None:
+      raise ValueError('_variable_client not set')
+
     params = self._variable_client.params
     device_idx = self._call_cnt % len(self._devices)
     # Select device via round robin, and update its params if they changed.
