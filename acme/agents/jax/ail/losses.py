@@ -21,10 +21,10 @@ from acme import types
 from acme.jax import networks as networks_lib
 import jax
 import jax.numpy as jnp
-import tensorflow_probability as tfp
+import tensorflow_probability.substrates.jax as tfp
 import tree
 
-tfp = tfp.experimental.substrates.jax
+
 tfd = tfp.distributions
 
 # The loss is a function taking the discriminator, its state, the demo
