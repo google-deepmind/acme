@@ -27,10 +27,9 @@ from typing import NamedTuple, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
-import tensorflow_probability
+import tensorflow_probability.substrates.jax as tfp
 
-tfp = tensorflow_probability.substrates.jax
-tfd = tensorflow_probability.substrates.jax.distributions
+tfd = tfp.distributions
 
 _MPO_FLOAT_EPSILON = 1e-8
 _MIN_LOG_TEMPERATURE = -18.0
@@ -242,13 +241,19 @@ class MPO:
       diff_out_of_bound = actions - jnp.clip(actions, -1.0, 1.0)
       cost_out_of_bound = -jnp.linalg.norm(diff_out_of_bound, axis=-1)
 
-      penalty_normalized_weights, loss_penalty_temperature = compute_weights_and_temperature_loss(
-          cost_out_of_bound, self._epsilon_penalty, penalty_temperature)
+      penalty_normalized_weights, loss_penalty_temperature = (
+          compute_weights_and_temperature_loss(
+              cost_out_of_bound, self._epsilon_penalty, penalty_temperature
+          )
+      )
 
       # Only needed for diagnostics: Compute estimated actualized KL between the
       # non-parametric and current target policies.
-      penalty_kl_nonparametric = compute_nonparametric_kl_from_normalized_weights(
-          penalty_normalized_weights)
+      penalty_kl_nonparametric = (
+          compute_nonparametric_kl_from_normalized_weights(
+              penalty_normalized_weights
+          )
+      )
 
       # Combine normalized weights.
       normalized_weights += penalty_normalized_weights
@@ -283,8 +288,11 @@ class MPO:
     # Compute the alpha-weighted KL-penalty and dual losses to adapt the alphas.
     loss_kl_mean, loss_alpha_mean = compute_parametric_kl_penalty_and_dual_loss(
         kl_mean, alpha_mean, self._epsilon_mean)
-    loss_kl_stddev, loss_alpha_stddev = compute_parametric_kl_penalty_and_dual_loss(
-        kl_stddev, alpha_stddev, self._epsilon_stddev)
+    loss_kl_stddev, loss_alpha_stddev = (
+        compute_parametric_kl_penalty_and_dual_loss(
+            kl_stddev, alpha_stddev, self._epsilon_stddev
+        )
+    )
 
     # Combine losses.
     loss_policy = loss_policy_mean + loss_policy_stddev

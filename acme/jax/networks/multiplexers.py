@@ -19,9 +19,9 @@ from typing import Callable, Optional, Union
 from acme.jax import utils
 import haiku as hk
 import jax.numpy as jnp
-import tensorflow_probability
+import tensorflow_probability.substrates.jax as tfp
 
-tfd = tensorflow_probability.substrates.jax.distributions
+tfd = tfp.distributions
 ModuleOrArrayTransform = Union[hk.Module, Callable[[jnp.ndarray], jnp.ndarray]]
 
 
