@@ -345,6 +345,13 @@ def make_distributed_experiment(
   if inference_server_config is not None:
     num_inference_nodes = num_tasks_per_inference_server * num_inference_servers
     num_actors_per_server = math.ceil(num_actors / num_inference_nodes)
+    thread_pool_size = (
+        2 * max(
+            inference_server_config.batch_size,
+            num_actors_per_server,
+        )
+    )
+
     inference_nodes = []
     for i in range(num_inference_servers):
       with program.group(f'inference_server_{i}'):
@@ -355,9 +362,7 @@ def make_distributed_experiment(
                       build_inference_server,
                       inference_server_config,
                       learner,
-                      courier_kwargs={
-                          'thread_pool_size': num_actors_per_server,
-                      },
+                      courier_kwargs={'thread_pool_size': thread_pool_size},
                   )
               )
           )

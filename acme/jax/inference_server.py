@@ -137,9 +137,10 @@ class InferenceServer(Generic[InferenceServerHandler]):
       return handler(*args_with_dereferenced_params,
                      **kwargs_with_dereferenced_params)
 
+    max_parallelism = 2 * max(len(self._devices), self._config.batch_size)
     return lp.batched_handler(
         batch_size=self._config.batch_size,
         timeout=self._config.timeout,
         pad_batch=True,
-        max_parallelism=2 * len(self._devices))(
-            dereference_params_and_call_handler)
+        max_parallelism=max_parallelism,
+    )(dereference_params_and_call_handler)
