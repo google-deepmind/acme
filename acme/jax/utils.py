@@ -41,7 +41,7 @@ NUM_PREFETCH_THREADS = 1
 
 
 def add_batch_dim(values: types.Nest) -> types.NestedArray:
-  return jax.tree_map(lambda x: jnp.expand_dims(x, axis=0), values)
+  return jax.tree_util.tree_map(lambda x: jnp.expand_dims(x, axis=0), values)
 
 
 def _flatten(x: jnp.ndarray, num_batch_dims: int) -> jnp.ndarray:
@@ -76,24 +76,28 @@ def batch_concat(
 
 
 def zeros_like(nest: types.Nest, dtype=None) -> types.NestedArray:
-  return jax.tree_map(lambda x: jnp.zeros(x.shape, dtype or x.dtype), nest)
+  return jax.tree_util.tree_map(
+      lambda x: jnp.zeros(x.shape, dtype or x.dtype), nest
+  )
 
 
 def ones_like(nest: types.Nest, dtype=None) -> types.NestedArray:
-  return jax.tree_map(lambda x: jnp.ones(x.shape, dtype or x.dtype), nest)
+  return jax.tree_util.tree_map(
+      lambda x: jnp.ones(x.shape, dtype or x.dtype), nest
+  )
 
 
 def squeeze_batch_dim(nest: types.Nest) -> types.NestedArray:
-  return jax.tree_map(lambda x: jnp.squeeze(x, axis=0), nest)
+  return jax.tree_util.tree_map(lambda x: jnp.squeeze(x, axis=0), nest)
 
 
 def to_numpy_squeeze(values: types.Nest) -> types.NestedArray:
   """Converts to numpy and squeezes out dummy batch dimension."""
-  return jax.tree_map(lambda x: np.asarray(x).squeeze(axis=0), values)
+  return jax.tree_util.tree_map(lambda x: np.asarray(x).squeeze(axis=0), values)
 
 
 def to_numpy(values: types.Nest) -> types.NestedArray:
-  return jax.tree_map(np.asarray, values)
+  return jax.tree_util.tree_map(np.asarray, values)
 
 
 def fetch_devicearray(values: types.Nest) -> types.Nest:
@@ -108,8 +112,9 @@ def _fetch_devicearray(x):
 
 
 def batch_to_sequence(values: types.Nest) -> types.NestedArray:
-  return jax.tree_map(
-      lambda x: jnp.transpose(x, axes=(1, 0, *range(2, len(x.shape)))), values)
+  return jax.tree_util.tree_map(
+      lambda x: jnp.transpose(x, axes=(1, 0, *range(2, len(x.shape)))), values
+  )
 
 
 def tile_array(array: jnp.ndarray, multiple: int) -> jnp.ndarray:
@@ -120,7 +125,7 @@ def tile_array(array: jnp.ndarray, multiple: int) -> jnp.ndarray:
 def tile_nested(inputs: types.Nest, multiple: int) -> types.Nest:
   """Tiles tensors in a nested structure along a new leading axis."""
   tile = functools.partial(tile_array, multiple=multiple)
-  return jax.tree_map(tile, inputs)
+  return jax.tree_util.tree_map(tile, inputs)
 
 
 def maybe_recover_lstm_type(state: types.NestedArray) -> types.NestedArray:
@@ -379,7 +384,7 @@ def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
     the same device as the sharded device array). If `as_numpy=True` then the
     array will be copied to the host machine and converted into a `np.ndarray`.
   """
-  zeroth_nest = jax.tree_map(lambda x: x[0], nest)
+  zeroth_nest = jax.tree_util.tree_map(lambda x: x[0], nest)
   return jax.device_get(zeroth_nest) if as_numpy else zeroth_nest
 
 
@@ -411,7 +416,7 @@ def mapreduce(
   vmapped_f = jax.vmap(f, **vmap_kwargs)
 
   def g(*args, **kwargs):
-    return jax.tree_map(reduce_fn, vmapped_f(*args, **kwargs))
+    return jax.tree_util.tree_map(reduce_fn, vmapped_f(*args, **kwargs))
 
   return g
 
@@ -453,11 +458,12 @@ def process_multiple_batches(
     return _process_one_batch
 
   if postprocess_aux is None:
-    postprocess_aux = lambda x: jax.tree_map(jnp.mean, x)
+    postprocess_aux = lambda x: jax.tree_util.tree_map(jnp.mean, x)
 
   def _process_multiple_batches(state, data):
-    data = jax.tree_map(
-        lambda a: jnp.reshape(a, (num_batches, -1, *a.shape[1:])), data)
+    data = jax.tree_util.tree_map(
+        lambda a: jnp.reshape(a, (num_batches, -1, *a.shape[1:])), data
+    )
 
     state, aux = jax.lax.scan(
         process_one_batch, state, data, length=num_batches)

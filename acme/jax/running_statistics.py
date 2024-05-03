@@ -43,11 +43,15 @@ def _is_prefix(a: Path, b: Path) -> bool:
 
 
 def _zeros_like(nest: types.Nest, dtype=None) -> types.NestedArray:
-  return jax.tree_map(lambda x: jnp.zeros(x.shape, dtype or x.dtype), nest)
+  return jax.tree_util.tree_map(
+      lambda x: jnp.zeros(x.shape, dtype or x.dtype), nest
+  )
 
 
 def _ones_like(nest: types.Nest, dtype=None) -> types.NestedArray:
-  return jax.tree_map(lambda x: jnp.ones(x.shape, dtype or x.dtype), nest)
+  return jax.tree_util.tree_map(
+      lambda x: jnp.ones(x.shape, dtype or x.dtype), nest
+  )
 
 
 @chex.dataclass(frozen=True)

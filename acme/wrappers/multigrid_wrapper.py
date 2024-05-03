@@ -195,7 +195,7 @@ def _get_single_agent_spec(spec):
     else:
       raise ValueError(f'Unexpected spec type {type(spec)}.')
 
-  single_agent_spec = jax.tree_map(make_single_agent_spec, spec)
+  single_agent_spec = jax.tree_util.tree_map(make_single_agent_spec, spec)
   return single_agent_spec
 
 

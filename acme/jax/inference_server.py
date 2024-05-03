@@ -74,7 +74,9 @@ class InferenceServer(Generic[InferenceServerHandler]):
     self._device_params = [None] * len(self._devices)
     self._device_params_ids = [None] * len(self._devices)
     self._mutex = threading.Lock()
-    self._handler = jax.tree_map(self._build_handler, handler, is_leaf=callable)
+    self._handler = jax.tree_util.tree_map(
+        self._build_handler, handler, is_leaf=callable
+    )
 
   @property
   def handler(self) -> InferenceServerHandler:

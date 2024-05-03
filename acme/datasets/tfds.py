@@ -138,7 +138,8 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
     size = _dataset_size_upperbound(dataset)
     data = next(dataset.batch(size).as_numpy_iterator())
     self._dataset_size = jax.tree_flatten(
-        jax.tree_map(lambda x: x.shape[0], data))[0][0]
+        jax.tree_util.tree_map(lambda x: x.shape[0], data)
+    )[0][0]
     device = jax_utils._pmap_device_order()
     if not shard_dataset_across_devices:
       device = device[:1]
@@ -148,21 +149,25 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
     # len(device) needs to divide self._dataset_size evenly.
     assert self._dataset_size % len(device) == 0
     logging.info('Trying to load %s elements to %s', self._dataset_size, device)
-    logging.info('Dataset %s %s',
-                 ('before padding' if should_pmap else ''),
-                 jax.tree_map(lambda x: x.shape, data))
+    logging.info(
+        'Dataset %s %s',
+        ('before padding' if should_pmap else ''),
+        jax.tree_util.tree_map(lambda x: x.shape, data),
+    )
     if should_pmap:
-      shapes = jax.tree_map(lambda x: x.shape, data)
+      shapes = jax.tree_util.tree_map(lambda x: x.shape, data)
       # Padding to a multiple of 128 is needed to avoid excessive copying on TPU
-      data = jax.tree_map(_pad, data)
-      logging.info('Dataset after padding %s',
-                   jax.tree_map(lambda x: x.shape, data))
+      data = jax.tree_util.tree_map(_pad, data)
+      logging.info(
+          'Dataset after padding %s',
+          jax.tree_util.tree_map(lambda x: x.shape, data),
+      )
       def split_and_put(x: jnp.ndarray) -> jnp.ndarray:
         return jax.device_put_sharded(
             np.split(x[:self._dataset_size], len(device)), devices=device)
-      self._jax_dataset = jax.tree_map(split_and_put, data)
+      self._jax_dataset = jax.tree_util.tree_map(split_and_put, data)
     else:
-      self._jax_dataset = jax.tree_map(jax.device_put, data)
+      self._jax_dataset = jax.tree_util.tree_map(jax.device_put, data)
 
     self._key = (jnp.stack(jax.random.split(key, len(device)))
                  if should_pmap else key)
@@ -174,7 +179,9 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
           key1, (batch_size // len(device),),
           minval=0,
           maxval=self._dataset_size // len(device))
-      data_sample = jax.tree_map(lambda d: jnp.take(d, indices, axis=0), data)
+      data_sample = jax.tree_util.tree_map(
+          lambda d: jnp.take(d, indices, axis=0), data
+      )
       return data_sample, key2
 
     if should_pmap:
@@ -184,7 +191,7 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
         # since it avoids Host - Device communications.
         data_sample = jax.lax.all_gather(
             data_sample, axis_name=_PMAP_AXIS_NAME, axis=0, tiled=True)
-        data_sample = jax.tree_map(_unpad, data_sample, shapes)
+        data_sample = jax.tree_util.tree_map(_unpad, data_sample, shapes)
         return data_sample, key
 
       pmapped_sample = jax.pmap(sample, axis_name=_PMAP_AXIS_NAME)
@@ -193,7 +200,7 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
         data, key = pmapped_sample(self._jax_dataset, key)
         # All pmapped devices return the same data, so we just take the one from
         # the first device.
-        return jax.tree_map(lambda x: x[0], data), key
+        return jax.tree_util.tree_map(lambda x: x[0], data), key
       self._sample = sample_and_postprocess
     else:
       self._sample = jax.jit(

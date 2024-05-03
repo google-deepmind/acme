@@ -53,7 +53,7 @@ def tile_nested_array(nest: acme_types.NestedArray, num: int, axis: int):
     reps[axis] = num
     return jnp.tile(array, reps)
 
-  return jax.tree_map(_tile_array, nest)
+  return jax.tree_util.tree_map(_tile_array, nest)
 
 
 class ObservationStacker:
@@ -94,14 +94,18 @@ class ObservationStacker:
         inputs)
 
     # Concatenate frames along the final axis (assumed to be for channels).
-    output = jax.tree_map(lambda *x: jnp.concatenate(x, axis=-1),
-                          state.stack, inputs)
+    output = jax.tree_util.tree_map(
+        lambda *x: jnp.concatenate(x, axis=-1), state.stack, inputs
+    )
 
     # Update the frame stack by adding the input and dropping the first
     # observation in the stack. Note that we use the final dimension as each
     # leaf in the nested observation may have a different last dim.
     new_state = state._replace(
-        stack=jax.tree_map(lambda x, y: y[..., x.shape[-1]:], inputs, output))
+        stack=jax.tree_util.tree_map(
+            lambda x, y: y[..., x.shape[-1] :], inputs, output
+        )
+    )
 
     return output, new_state
 
@@ -118,8 +122,9 @@ def get_adjusted_environment_spec(environment_spec: specs.EnvironmentSpec,
     new_shape = obs_spec.shape[:-1] + (obs_spec.shape[-1] * stack_size,)
     return obs_spec.replace(shape=new_shape)
 
-  adjusted_observation_spec = jax.tree_map(stack_observation_spec,
-                                           environment_spec.observations)
+  adjusted_observation_spec = jax.tree_util.tree_map(
+      stack_observation_spec, environment_spec.observations
+  )
 
   return environment_spec._replace(observations=adjusted_observation_spec)
 

@@ -72,15 +72,17 @@ class JaxUtilsTest(absltest.TestCase):
 
     # Get zeroth device content as DeviceArray.
     device_arrays = utils.get_from_first_device(sharded, as_numpy=False)
-    jax.tree_map(
-        lambda x: self.assertIsInstance(x, jax.Array),
-        device_arrays)
-    jax.tree_map(np.testing.assert_array_equal, want, device_arrays)
+    jax.tree_util.tree_map(
+        lambda x: self.assertIsInstance(x, jax.Array), device_arrays
+    )
+    jax.tree_util.tree_map(np.testing.assert_array_equal, want, device_arrays)
 
     # Get the zeroth device content as numpy arrays.
     numpy_arrays = utils.get_from_first_device(sharded, as_numpy=True)
-    jax.tree_map(lambda x: self.assertIsInstance(x, np.ndarray), numpy_arrays)
-    jax.tree_map(np.testing.assert_array_equal, want, numpy_arrays)
+    jax.tree_util.tree_map(
+        lambda x: self.assertIsInstance(x, np.ndarray), numpy_arrays
+    )
+    jax.tree_util.tree_map(np.testing.assert_array_equal, want, numpy_arrays)
 
 
 if __name__ == '__main__':
