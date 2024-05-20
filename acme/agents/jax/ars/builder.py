@@ -50,8 +50,9 @@ def get_policy(policy_network: networks_lib.FeedForwardNetwork,
     normalized_obs = normalization_apply_fn(obs, normalization_params)
     action = policy_network.apply(policy_params, normalized_obs)
     return action, {
-        'params_key':
-            jax.tree_map(lambda x: jnp.expand_dims(x, axis=0), params_key)
+        'params_key': jax.tree.map(
+            lambda x: jnp.expand_dims(x, axis=0), params_key
+        )
     }
 
   return apply

@@ -194,7 +194,7 @@ class BCLearner(acme.Learner):
 
   def save(self) -> TrainingState:
     # Serialize only the first replica of parameters and optimizer state.
-    return jax.tree_map(utils.get_from_first_device, self._state)
+    return jax.tree.map(utils.get_from_first_device, self._state)
 
   def restore(self, state: TrainingState):
     self._state = utils.replicate_in_all_devices(state)

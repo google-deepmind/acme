@@ -337,9 +337,11 @@ class CQLLearner(acme.Learner):
           critic_grads, state.critic_optimizer_state)
       critic_params = optax.apply_updates(state.critic_params, critic_update)
 
-      new_target_critic_params = jax.tree_map(
-          lambda x, y: x * (1 - tau) + y * tau, state.target_critic_params,
-          critic_params)
+      new_target_critic_params = jax.tree.map(
+          lambda x, y: x * (1 - tau) + y * tau,
+          state.target_critic_params,
+          critic_params,
+      )
 
       metrics = {
           'critic_loss': critic_loss,

@@ -53,11 +53,13 @@ def world_model_loss(apply_fn: Callable[[networks.Observation, networks.Action],
   Returns:
     A scalar loss value as jnp.ndarray.
   """
-  observation_t = jax.tree_map(lambda obs: obs[:, dataset.CURRENT, ...],
-                               steps.observation)
+  observation_t = jax.tree.map(
+      lambda obs: obs[:, dataset.CURRENT, ...], steps.observation
+  )
   action_t = steps.action[:, dataset.CURRENT, ...]
-  observation_tp1 = jax.tree_map(lambda obs: obs[:, dataset.NEXT, ...],
-                                 steps.observation)
+  observation_tp1 = jax.tree.map(
+      lambda obs: obs[:, dataset.NEXT, ...], steps.observation
+  )
   reward_t = steps.reward[:, dataset.CURRENT, ...]
   (predicted_observation_tp1,
    predicted_reward_t) = apply_fn(observation_t, action_t)
@@ -86,8 +88,9 @@ def policy_prior_loss(
   Returns:
     A scalar loss value as jnp.ndarray.
   """
-  observation_t = jax.tree_map(lambda obs: obs[:, dataset.CURRENT, ...],
-                               steps.observation)
+  observation_t = jax.tree.map(
+      lambda obs: obs[:, dataset.CURRENT, ...], steps.observation
+  )
   action_tm1 = steps.action[:, dataset.PREVIOUS, ...]
   action_t = steps.action[:, dataset.CURRENT, ...]
 
@@ -109,8 +112,9 @@ def return_loss(apply_fn: Callable[[networks.Observation, networks.Action],
   Returns:
     A scalar loss value as jnp.ndarray.
   """
-  observation_t = jax.tree_map(lambda obs: obs[:, dataset.CURRENT, ...],
-                               steps.observation)
+  observation_t = jax.tree.map(
+      lambda obs: obs[:, dataset.CURRENT, ...], steps.observation
+  )
   action_t = steps.action[:, dataset.CURRENT, ...]
   n_step_return_t = steps.extras[dataset.N_STEP_RETURN][:, dataset.CURRENT, ...]
 

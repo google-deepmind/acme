@@ -210,11 +210,11 @@ def get_normalization_stats(
   """
   # Set up normalization:
   example = next(iterator)
-  unbatched_single_example = jax.tree_map(lambda x: x[0, PREVIOUS, :], example)
+  unbatched_single_example = jax.tree.map(lambda x: x[0, PREVIOUS, :], example)
   mean_std = running_statistics.init_state(unbatched_single_example)
 
   for batch in itertools.islice(iterator, num_normalization_batches - 1):
-    example = jax.tree_map(lambda x: x[:, PREVIOUS, :], batch)
+    example = jax.tree.map(lambda x: x[:, PREVIOUS, :], batch)
     mean_std = running_statistics.update(mean_std, example)
 
   return mean_std

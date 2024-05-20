@@ -259,7 +259,7 @@ def make_control_networks(
 def add_batch(nest, batch_size: Optional[int]):
   """Adds a batch dimension at axis 0 to the leaves of a nested structure."""
   broadcast = lambda x: jnp.broadcast_to(x, (batch_size,) + x.shape)
-  return jax.tree_map(broadcast, nest)
+  return jax.tree.map(broadcast, nest)
 
 
 def w_init_identity(shape: Sequence[int], dtype) -> jnp.ndarray:

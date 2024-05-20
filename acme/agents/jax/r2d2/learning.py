@@ -101,14 +101,14 @@ class R2D2Learner(acme.Learner):
 
       # Maybe burn the core state in.
       if burn_in_length:
-        burn_obs = jax.tree_map(lambda x: x[:burn_in_length], data.observation)
+        burn_obs = jax.tree.map(lambda x: x[:burn_in_length], data.observation)
         key_grad, key1, key2 = jax.random.split(key_grad, 3)
         _, online_state = networks.unroll(params, key1, burn_obs, online_state)
         _, target_state = networks.unroll(target_params, key2, burn_obs,
                                           target_state)
 
       # Only get data to learn on from after the end of the burn in period.
-      data = jax.tree_map(lambda seq: seq[burn_in_length:], data)
+      data = jax.tree.map(lambda seq: seq[burn_in_length:], data)
 
       # Unroll on sequences to get online and target Q-Values.
       key1, key2 = jax.random.split(key_grad)

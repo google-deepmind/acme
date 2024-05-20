@@ -681,7 +681,7 @@ class MPOLearner(acme.Learner):
             dual_params.log_penalty_temperature)
     elif isinstance(dual_params, discrete_losses.CategoricalMPOParams):
       dual_metrics['params/dual/log_alpha_avg'] = dual_params.log_alpha
-    metrics.update(jax.tree_map(jnp.mean, dual_metrics))
+    metrics.update(jax.tree.map(jnp.mean, dual_metrics))
 
     return new_state, metrics
 
@@ -733,7 +733,7 @@ class MPOLearner(acme.Learner):
     return [variables[name] for name in names]
 
   def save(self) -> TrainingState:
-    return jax.tree_map(mpo_utils.get_from_first_device, self._state)
+    return jax.tree.map(mpo_utils.get_from_first_device, self._state)
 
   def restore(self, state: TrainingState):
     self._state = utils.replicate_in_all_devices(state, self._local_devices)

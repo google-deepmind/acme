@@ -100,15 +100,17 @@ def apply_round_robin(base_apply: Callable[[networks.Params, Any], Any],
   num_networks = jax.tree_util.tree_leaves(params)[0].shape[0]
 
   # Reshape args and kwargs for the round-robin:
-  args = jax.tree_map(
-      functools.partial(_split_batch_dimension, num_networks), args)
-  kwargs = jax.tree_map(
-      functools.partial(_split_batch_dimension, num_networks), kwargs)
+  args = jax.tree.map(
+      functools.partial(_split_batch_dimension, num_networks), args
+  )
+  kwargs = jax.tree.map(
+      functools.partial(_split_batch_dimension, num_networks), kwargs
+  )
   # `out.shape` is `(num_networks, initial_batch_size/num_networks, ...)
   out = jax.vmap(base_apply)(params, *args, **kwargs)
   # Reshape to [initial_batch_size, <remaining dimensions>]. Using the 'F' order
   # forces the original values to the last dimension.
-  return jax.tree_map(lambda x: x.reshape((-1,) + x.shape[2:], order='F'), out)
+  return jax.tree.map(lambda x: x.reshape((-1,) + x.shape[2:], order='F'), out)
 
 
 def apply_all(base_apply: Callable[[networks.Params, Any], Any],
@@ -133,8 +135,8 @@ def apply_all(base_apply: Callable[[networks.Params, Any], Any],
   # `num_networks` is the size of the batch dimension in `params`.
   num_networks = jax.tree_util.tree_leaves(params)[0].shape[0]
 
-  args = jax.tree_map(functools.partial(_repeat_n, num_networks), args)
-  kwargs = jax.tree_map(functools.partial(_repeat_n, num_networks), kwargs)
+  args = jax.tree.map(functools.partial(_repeat_n, num_networks), args)
+  kwargs = jax.tree.map(functools.partial(_repeat_n, num_networks), kwargs)
   # `out` is of shape `(num_networks, batch_size, <remaining dimensions>)`.
   return jax.vmap(base_apply)(params, *args, **kwargs)
 
@@ -155,7 +157,7 @@ def apply_mean(base_apply: Callable[[networks.Params, Any], Any],
     Output shape will be [batch_size, <network output_dims>]
   """
   out = apply_all(base_apply, params, *args, **kwargs)
-  return jax.tree_map(functools.partial(jnp.mean, axis=0), out)
+  return jax.tree.map(functools.partial(jnp.mean, axis=0), out)
 
 
 def make_ensemble(base_network: networks.FeedForwardNetwork,

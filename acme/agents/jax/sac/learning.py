@@ -176,8 +176,9 @@ class SACLearner(acme.Learner):
           critic_grads, state.q_optimizer_state)
       q_params = optax.apply_updates(state.q_params, critic_update)
 
-      new_target_q_params = jax.tree_map(lambda x, y: x * (1 - tau) + y * tau,
-                                         state.target_q_params, q_params)
+      new_target_q_params = jax.tree.map(
+          lambda x, y: x * (1 - tau) + y * tau, state.target_q_params, q_params
+      )
 
       metrics = {
           'critic_loss': critic_loss,

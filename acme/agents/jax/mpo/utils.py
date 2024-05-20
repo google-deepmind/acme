@@ -42,7 +42,7 @@ def get_from_first_device(nest, as_numpy: bool = True):
     x = x[0]
     return _fetch_devicearray(x) if as_numpy else x
 
-  return jax.tree_map(_slice_and_maybe_to_numpy, nest)
+  return jax.tree.map(_slice_and_maybe_to_numpy, nest)
 
 
 def rolling_window(x: jnp.ndarray,
@@ -80,11 +80,11 @@ def tree_map_distribution(
   if isinstance(x, distrax.Distribution):
     safe_f = lambda y: f(y) if isinstance(y, jnp.ndarray) else y
     nil, tree_data = x.tree_flatten()
-    new_tree_data = jax.tree_map(safe_f, tree_data)
+    new_tree_data = jax.tree.map(safe_f, tree_data)
     new_x = x.tree_unflatten(new_tree_data, nil)
     return new_x
   elif isinstance(x, tfd.Distribution):
-    return jax.tree_map(f, x)
+    return jax.tree.map(f, x)
   else:
     return f(x)
 
@@ -95,8 +95,9 @@ def make_sequences_from_transitions(
   """Convert a batch of transitions into a batch of 1-step sequences."""
   stack = lambda x, y: jnp.stack((x, y), axis=num_batch_dims)
   duplicate = lambda x: stack(x, x)
-  observation = jax.tree_map(stack, transitions.observation,
-                             transitions.next_observation)
+  observation = jax.tree.map(
+      stack, transitions.observation, transitions.next_observation
+  )
   reward = duplicate(transitions.reward)
 
   return adders.Step(  # pytype: disable=wrong-arg-types  # jnp-type
@@ -105,5 +106,5 @@ def make_sequences_from_transitions(
       reward=reward,
       discount=duplicate(transitions.discount),
       start_of_episode=jnp.zeros_like(reward, dtype=jnp.bool_),
-      extras=jax.tree_map(duplicate, transitions.extras),
+      extras=jax.tree.map(duplicate, transitions.extras),
   )

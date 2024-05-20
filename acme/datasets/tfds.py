@@ -137,7 +137,7 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
     # we capture the whole dataset.
     size = _dataset_size_upperbound(dataset)
     data = next(dataset.batch(size).as_numpy_iterator())
-    self._dataset_size = jax.tree_flatten(
+    self._dataset_size = jax.tree.flatten(
         jax.tree_util.tree_map(lambda x: x.shape[0], data)
     )[0][0]
     device = jax_utils._pmap_device_order()
