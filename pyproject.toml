@@ -1,0 +1,65 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "dm-acme"
+version = "0.0.1"  # Replace with the correct version from _metadata.__version__
+description = "A Python library for Reinforcement Learning."
+authors = ["DeepMind"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/deepmind/acme"
+repository = "https://github.com/deepmind/acme"
+keywords = ["reinforcement-learning", "python", "machine learning"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+absl-py = "*"
+dm-env = "*"
+dm-tree = "*"
+numpy = "*"
+pillow = "*"
+typing-extensions = "*"
+jax = "^0.4.3"
+jaxlib = "^0.4.3"
+chex = "*"
+dm-haiku = "*"
+flax = "*"
+optax = "*"
+rlax = "*"
+tensorflow = "^2.8.0"
+tensorflow_probability = "0.15.0"
+tensorflow_datasets = "4.6.0"
+dm-reverb = "0.14.0"
+dm-launchpad = "0.5.2"
+dm-sonnet = "*"
+trfl = "*"
+pytest-xdist = "*"
+atari-py = "*"
+bsuite = "*"
+dm-control = "*"
+gym = "0.25.0"
+pygame = "2.1.0"
+rlds = "0.1.8"
+pytype = {version = "2021.8.11", markers = "python_version < '3.10'"}
+
+[tool.poetry.extras]
+jax = ["jax", "jaxlib", "chex", "dm-haiku", "flax", "optax", "rlax", "tensorflow", "tensorflow_probability", "tensorflow_datasets", "dm-reverb", "dm-launchpad"]
+tf = ["dm-sonnet", "trfl", "tensorflow", "tensorflow_probability", "tensorflow_datasets", "dm-reverb", "dm-launchpad"]
+testing = ["pytype", "pytest-xdist"]
+envs = ["atari-py", "bsuite", "dm-control", "gym", "pygame", "rlds"]
+
+[tool.poetry.scripts]
+generate-requirements = "acme.scripts:generate_requirements_file"
