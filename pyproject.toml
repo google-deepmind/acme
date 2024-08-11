@@ -25,7 +25,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8 || ^3.9"  # Replaced Python version with the versions from setup.py
+python = ">=3.8,<3.11"  # Replaced Python version with the versions from setup.py
 absl-py = "*"
 dm-env = "*"
 dm-tree = "*"
