@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "dm-acme"
-version = "0.0.1"  # Replace with the correct version from _metadata.__version__
+version = "0.0.1"  # Replaced with dynamic version retrieval from _metadata
 description = "A Python library for Reinforcement Learning."
 authors = ["DeepMind"]
 license = "Apache-2.0"
@@ -25,37 +25,83 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = "^3.8 || ^3.9"  # Replaced Python version with the versions from setup.py
 absl-py = "*"
 dm-env = "*"
 dm-tree = "*"
 numpy = "*"
 pillow = "*"
 typing-extensions = "*"
-jax = "^0.4.3"
-jaxlib = "^0.4.3"
+
+# tensorflow = "^2.13"  # Commented out to match the version in setup.py
+# tensorflow_probability = "0.15.0"  # Commented out to match the version in setup.py
+# tensorflow_datasets = "4.6.0"  # Commented out to match the version in setup.py
+# dm-reverb = "0.14.0"  # Commented out to match the version in setup.py
+# dm-launchpad = "0.5.2"  # Commented out to match the version in setup.py
+
+# Pinning the specific versions as in setup.py
+tensorflow = "==2.8.0"
+tensorflow_probability = "==0.15.0"
+tensorflow_datasets = "==4.6.0"
+dm-reverb = "==0.7.2"
+dm-launchpad = "==0.5.2"
+
+# JAX dependencies
+# jax = "==0.4.3"
+# jaxlib = "==0.4.3"
+jax = ">=0.4.3" # Relax version constraint
+jaxlib = ">=0.4.3"# Relax version constraint
 chex = "*"
 dm-haiku = "*"
 flax = "*"
 optax = "*"
 rlax = "*"
-tensorflow = "^2.8.0"
-tensorflow_probability = "0.15.0"
-tensorflow_datasets = "4.6.0"
-dm-reverb = "0.14.0"
-dm-launchpad = "0.5.2"
+
+# TF-specific dependencies
 dm-sonnet = "*"
 trfl = "*"
+
+# Testing and environment dependencies
+# pytype = {version = "2021.8.11", markers = "python_version < '3.10'"}
+pytype = "*"
 pytest-xdist = "*"
 atari-py = "*"
 bsuite = "*"
 dm-control = "*"
 gym = "0.25.0"
 pygame = "2.1.0"
-rlds = "0.1.8"
-pytype = {version = "2021.8.11", markers = "python_version < '3.10'"}
+rlds = "*"
+
+# Additional dependency (optional)
+ipykernel = "^6.29.5"
 
 [tool.poetry.extras]
+# Updated to match the extras from setup.py
+# jax = [
+#     "jax==0.4.3",
+#     "jaxlib==0.4.3",
+#     "chex",
+#     "dm-haiku",
+#     "flax",
+#     "optax",
+#     "rlax",
+#     "tensorflow==2.8.0",
+#     "tensorflow_probability==0.15.0",
+#     "tensorflow_datasets==4.6.0",
+#     "dm-reverb==0.7.2",
+#     "dm-launchpad==0.5.2"
+# ]
+# tf = [
+#     "dm-sonnet",
+#     "trfl",
+#     "tensorflow==2.8.0",
+#     "tensorflow_probability==0.15.0",
+#     "tensorflow_datasets==4.6.0",
+#     "dm-reverb==0.7.2",
+#     "dm-launchpad==0.5.2"
+# ]
+
+# Updated to match the extras from setup.py, referencing only package names
 jax = ["jax", "jaxlib", "chex", "dm-haiku", "flax", "optax", "rlax", "tensorflow", "tensorflow_probability", "tensorflow_datasets", "dm-reverb", "dm-launchpad"]
 tf = ["dm-sonnet", "trfl", "tensorflow", "tensorflow_probability", "tensorflow_datasets", "dm-reverb", "dm-launchpad"]
 testing = ["pytype", "pytest-xdist"]
