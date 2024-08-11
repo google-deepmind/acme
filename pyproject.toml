@@ -74,6 +74,7 @@ rlds = "*"
 
 # Additional dependency (optional)
 ipykernel = "^6.29.5"
+protobuf = "3.20.3"
 
 [tool.poetry.extras]
 # Updated to match the extras from setup.py
