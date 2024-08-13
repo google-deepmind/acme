@@ -75,11 +75,11 @@ def _convert_value(nested_value: types.Nest) -> types.Nest:
 
   def _convert_single_value(value):
     if value is not None:
-      value = np.array(value, copy=False)
+      value = np.asarray(value)
       if np.issubdtype(value.dtype, np.float64):
-        value = np.array(value, copy=False, dtype=np.float32)
+        value = np.asarray(value, dtype=np.float32)
       elif np.issubdtype(value.dtype, np.int64):
-        value = np.array(value, copy=False, dtype=np.int32)
+        value = np.asarray(value, dtype=np.int32)
     return value
 
   return tree.map_structure(_convert_single_value, nested_value)
