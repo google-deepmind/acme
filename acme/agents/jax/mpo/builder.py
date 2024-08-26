@@ -38,7 +38,6 @@ from acme.jax import utils
 from acme.jax import variable_utils
 from acme.utils import counting
 from acme.utils import loggers
-import chex
 import jax
 import optax
 import reverb
@@ -162,8 +161,7 @@ class MPOBuilder(builders.ActorLearnerBuilder):
         'learner',
         steps_key=counter.get_steps_key() if counter else 'learner_steps')
 
-    with chex.fake_pmap_and_jit(not self.config.jit_learner,
-                                not self.config.jit_learner):
+    with jax.disable_jit(not self.config.jit_learner):
       learner = learning.MPOLearner(
           iterator=dataset,
           networks=networks,

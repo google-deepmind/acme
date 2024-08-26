@@ -21,7 +21,6 @@ from acme.jax import networks as networks_lib
 from acme.jax import types as jax_types
 from acme.jax import utils
 from acme.testing import fakes
-import chex
 import haiku as hk
 import jax
 import jax.numpy as jnp
@@ -103,7 +102,7 @@ class BCTest(parameterized.TestCase):
       ('peerbc',)
       )
   def test_continuous_actions(self, loss_name):
-    with chex.fake_pmap_and_jit():
+    with jax.disable_jit():
       num_sgd_steps_per_step = 1
       num_steps = 5
 
@@ -145,7 +144,7 @@ class BCTest(parameterized.TestCase):
       ('logp',),
       ('rcal',))
   def test_discrete_actions(self, loss_name):
-    with chex.fake_pmap_and_jit():
+    with jax.disable_jit():
 
       num_sgd_steps_per_step = 1
       num_steps = 5

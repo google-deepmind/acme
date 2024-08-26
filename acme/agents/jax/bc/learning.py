@@ -150,20 +150,32 @@ class BCLearner(acme.Learner):
     # Split the input batch to `num_sgd_steps_per_step` minibatches in order
     # to achieve better performance on accelerators.
     sgd_step = utils.process_multiple_batches(sgd_step, num_sgd_steps_per_step)
-    self._sgd_step = jax.pmap(sgd_step, axis_name=_PMAP_AXIS_NAME)
-
-    random_key, init_key = jax.random.split(random_key)
-    policy_params = networks.policy_network.init(init_key)
-    optimizer_state = optimizer.init(policy_params)
-
-    # Create initial state.
-    state = TrainingState(
-        optimizer_state=optimizer_state,
-        policy_params=policy_params,
-        key=random_key,
-        steps=0,
+    self._sgd_step = jax.pmap(
+        sgd_step,
+        axis_name=_PMAP_AXIS_NAME,
+        in_axes=(None, 0),
+        out_axes=(None, 0),
     )
-    self._state = utils.replicate_in_all_devices(state)
+
+    def init_fn(random_key):
+      random_key, init_key = jax.random.split(random_key)
+      policy_params = networks.policy_network.init(init_key)
+      optimizer_state = optimizer.init(policy_params)
+
+      # Create initial state.
+      state = TrainingState(
+          optimizer_state=optimizer_state,
+          policy_params=policy_params,
+          key=random_key,
+          steps=0,
+      )
+      return state
+
+    state = jax.pmap(init_fn, out_axes=None)(
+        utils.replicate_in_all_devices(random_key)
+    )
+    self._state = state
+    self._state_sharding = jax.tree.map(lambda x: x.sharding, state)
 
     self._timestamp = None
 
@@ -188,13 +200,13 @@ class BCLearner(acme.Learner):
 
   def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
     variables = {
-        'policy': utils.get_from_first_device(self._state.policy_params),
+        'policy': self._state.policy_params,
     }
     return [variables[name] for name in names]
 
   def save(self) -> TrainingState:
     # Serialize only the first replica of parameters and optimizer state.
-    return jax.tree.map(utils.get_from_first_device, self._state)
+    return self._state
 
   def restore(self, state: TrainingState):
-    self._state = utils.replicate_in_all_devices(state)
+    self._state = jax.device_put(state, self._state_sharding)

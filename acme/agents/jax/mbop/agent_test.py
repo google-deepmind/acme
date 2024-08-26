@@ -23,7 +23,6 @@ from acme.agents.jax.mbop import losses as mbop_losses
 from acme.agents.jax.mbop import networks as mbop_networks
 from acme.testing import fakes
 from acme.utils import loggers
-import chex
 import jax
 import optax
 import rlds
@@ -34,7 +33,7 @@ from absl.testing import absltest
 class MBOPTest(absltest.TestCase):
 
   def test_learner(self):
-    with chex.fake_pmap_and_jit():
+    with jax.disable_jit():
       num_sgd_steps_per_step = 1
       num_steps = 5
       num_networks = 7
