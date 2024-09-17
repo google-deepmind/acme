@@ -201,6 +201,38 @@ class SnapshotterTest(test_utils.TestCase):
     assert np.allclose(outputs1, outputs2)
     assert all(tree.map_structure(np.allclose, list(grads1), list(grads2)))
 
+  def test_snapshot_no_ttl(self):
+    """Test that snapshotter correctly calls saves/restores snapshots w/o a TTL."""
+    # Create a test network.
+    net1 = networks.LayerNormMLP([10, 10])
+    spec = specs.Array([10], dtype=np.float32)
+    tf2_utils.create_variables(net1, [spec])
+
+    # Save the test network.
+    directory = self.get_tempdir()
+    objects_to_save = {'net': net1}
+    snapshotter = tf2_savers.Snapshotter(
+        objects_to_save, directory=directory, snapshot_ttl_seconds=None
+    )
+    snapshotter.save()
+
+    # Reload the test network.
+    net2 = tf.saved_model.load(os.path.join(snapshotter.directory, 'net'))
+    inputs = tf2_utils.add_batch_dim(tf2_utils.zeros_like(spec))
+
+    with tf.GradientTape() as tape:
+      outputs1 = net1(inputs)
+      loss1 = tf.math.reduce_sum(outputs1)
+      grads1 = tape.gradient(loss1, net1.trainable_variables)
+
+    with tf.GradientTape() as tape:
+      outputs2 = net2(inputs)
+      loss2 = tf.math.reduce_sum(outputs2)
+      grads2 = tape.gradient(loss2, net2.trainable_variables)
+
+    assert np.allclose(outputs1, outputs2)
+    assert all(tree.map_structure(np.allclose, list(grads1), list(grads2)))
+
   def test_snapshot_distribution(self):
     """Test that snapshotter correctly calls saves/restores snapshots."""
     # Create a test network.

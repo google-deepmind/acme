@@ -286,7 +286,7 @@ class Snapshotter:
       *,
       directory: str = '~/acme/',
       time_delta_minutes: float = 30.0,
-      snapshot_ttl_seconds: int = _DEFAULT_SNAPSHOT_TTL,
+      snapshot_ttl_seconds: int | None = _DEFAULT_SNAPSHOT_TTL,
   ):
     """Builds the saver object.
 
@@ -294,7 +294,8 @@ class Snapshotter:
       objects_to_save: Mapping specifying what to snapshot.
       directory: Which directory to put the snapshot in.
       time_delta_minutes: How often to save the snapshot, in minutes.
-      snapshot_ttl_seconds: TTL (time to leave) in seconds for snapshots.
+      snapshot_ttl_seconds: TTL (time to live) in seconds for snapshots. If
+        `None`, then snapshots will be created in `directory` without a TTL.
     """
     objects_to_save = objects_to_save or {}
 
