@@ -82,8 +82,8 @@ class Agent(core.Actor, core.VariableSource):
     self._num_observations += 1
     self._actor.observe(action, next_timestep)
 
-  def _has_data_for_training(self):
-    if self._iterator.ready():
+  def _has_data_for_training(self, iterator: core.PrefetchingIterator):
+    if iterator.ready():
       return True
     for (table, batch_size) in zip(self._replay_tables,
                                    self._batch_size_upper_bounds):
@@ -95,7 +95,7 @@ class Agent(core.Actor, core.VariableSource):
     if self._iterator:
       # Perform learner steps as long as iterator has data.
       update_actor = False
-      while self._has_data_for_training():
+      while self._has_data_for_training(self._iterator):
         # Run learner steps (usually means gradient steps).
         total_batches = self._iterator.retrieved_elements()
         self._learner.step()
