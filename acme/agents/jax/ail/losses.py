@@ -147,7 +147,7 @@ def pugail_loss(positive_class_prior: float,
     negative_loss = jax.nn.softplus(
         rb_logits) - positive_class_prior * jax.nn.softplus(demo_logits)
     if pugail_beta is not None:
-      negative_loss = jnp.clip(negative_loss, a_min=-1. * pugail_beta)
+      negative_loss = jnp.clip(negative_loss, min=-1.0 * pugail_beta)
 
     classification_loss = jnp.mean(positive_loss + negative_loss)
 

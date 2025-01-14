@@ -330,9 +330,9 @@ class MunchausenQLearning(learning_lib.LossFn):
     munchausen_term = self.entropy_temperature * jax.nn.log_softmax(
         q_target_s / self.entropy_temperature, axis=-1)
     munchausen_term_a = jnp.sum(action_one_hot * munchausen_term, axis=-1)
-    munchausen_term_a = jnp.clip(munchausen_term_a,
-                                 a_min=self.clip_value_min,
-                                 a_max=0.)
+    munchausen_term_a = jnp.clip(
+        munchausen_term_a, min=self.clip_value_min, max=0.0
+    )
 
     # Soft Bellman operator applied to q
     next_v = self.entropy_temperature * jax.nn.logsumexp(

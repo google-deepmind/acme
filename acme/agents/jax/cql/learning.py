@@ -312,8 +312,7 @@ class CQLLearner(acme.Learner):
                                       -_CQL_GRAD_CLIPPING_VALUE,
                                       _CQL_GRAD_CLIPPING_VALUE)
         cql_alpha = jnp.exp(state.log_cql_alpha)
-        cql_alpha = jnp.clip(
-            cql_alpha, a_min=0., a_max=_CQL_COEFFICIENT_MAX_VALUE)
+        cql_alpha = jnp.clip(cql_alpha, min=0.0, max=_CQL_COEFFICIENT_MAX_VALUE)
       else:
         cql_alpha = fixed_cql_coefficient
 

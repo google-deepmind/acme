@@ -277,7 +277,7 @@ class RunningStatisticsTest(absltest.TestCase):
 
     clipped_z = running_statistics.clip(z, config)
 
-    clipped_x = jnp.clip(a=x, a_min=-max_abs_x, a_max=max_abs_x)
+    clipped_x = jnp.clip(x, min=-max_abs_x, max=max_abs_x)
     np.testing.assert_array_equal(clipped_z['x'], clipped_x)
 
     np.testing.assert_array_equal(clipped_z['y'], z['y'])

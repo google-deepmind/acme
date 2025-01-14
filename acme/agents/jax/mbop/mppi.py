@@ -193,8 +193,9 @@ def mppi_planner(
   if config.previous_trajectory_clip is not None:
     action_tm1 = jnp.clip(
         action_tm1,
-        a_min=-config.previous_trajectory_clip,
-        a_max=config.previous_trajectory_clip)
+        min=-config.previous_trajectory_clip,
+        max=config.previous_trajectory_clip,
+    )
 
   # First check if planning is unnecessary:
   if config.horizon == 0:

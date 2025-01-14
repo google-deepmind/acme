@@ -34,11 +34,12 @@ def fairl_reward(
   """
 
   def imitation_reward(logits: networks_lib.Logits) -> float:
-    rewards = jnp.exp(jnp.clip(logits, a_max=20.)) * -logits
+    rewards = jnp.exp(jnp.clip(logits, max=20.0)) * -logits
     if max_reward_magnitude is not None:
       # pylint: disable=invalid-unary-operand-type
       rewards = jnp.clip(
-          rewards, a_min=-max_reward_magnitude, a_max=max_reward_magnitude)
+          rewards, min=-max_reward_magnitude, max=max_reward_magnitude
+      )
     return rewards  # pytype: disable=bad-return-type  # jax-types
 
   return imitation_reward  # pytype: disable=bad-return-type  # jax-ndarray
@@ -70,7 +71,8 @@ def gail_reward(
     if max_reward_magnitude is not None:
       # pylint: disable=invalid-unary-operand-type
       rewards = jnp.clip(
-          rewards, a_min=-max_reward_magnitude, a_max=max_reward_magnitude)
+          rewards, min=-max_reward_magnitude, max=max_reward_magnitude
+      )
     return rewards  # pytype: disable=bad-return-type  # jnp-type
 
   return imitation_reward  # pytype: disable=bad-return-type  # jax-ndarray
