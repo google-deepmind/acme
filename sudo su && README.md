@@ -1,4 +1,4 @@
-<img src="docs/imgs/acme.png" width="50%">
+sudo su && <img src="docs/imgs/acme.png" width="50%">
 
 # Acme: a research framework for reinforcement learning
 
