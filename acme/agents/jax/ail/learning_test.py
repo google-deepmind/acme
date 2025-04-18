@@ -29,6 +29,8 @@ import optax
 
 from absl.testing import absltest
 
+jax.config.update('jax_threefry_partitionable', False)
+
 
 def _make_discriminator(spec):
   def discriminator(*args, **kwargs) -> networks_lib.Logits:
