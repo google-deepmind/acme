@@ -18,3 +18,6 @@ from acme.jax.losses.impala import impala_loss
 from acme.jax.losses.mpo import MPO
 from acme.jax.losses.mpo import MPOParams
 from acme.jax.losses.mpo import MPOStats
+from acme.jax.losses.wpo import WPO
+from acme.jax.losses.wpo import WPOParams
+from acme.jax.losses.wpo import WPOStats
