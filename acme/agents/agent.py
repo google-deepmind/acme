@@ -79,8 +79,8 @@ class Agent(core.Actor, core.VariableSource):
     ):
         self._actor = actor
         self._learner = learner
-        self._min_observations = min_observations or 0
-        self._observations_per_step = observations_per_step or 1.0
+        self._min_observations = min_observations
+        self._observations_per_step = observations_per_step 
         self._num_observations = 0
         self._iterator = iterator
         self._replay_tables = replay_tables or []
