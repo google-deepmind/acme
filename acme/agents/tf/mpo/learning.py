@@ -172,23 +172,24 @@ class MPOLearner(acme.Learner):
     # Get next batch of data.
     inputs = next(self._iterator)
 
-    # Get data from replay (dropping extras if any). Note there is no
-    # extra data here because we do not insert any into Reverb.
+    # Get data from replay (dropping extras if any).
     transitions: types.Transition = inputs.data
 
+    # This is the fix for issue #342.
+    # The `transitions` object from reverb contains numpy arrays for reward and
+    # discount. When this `_step` function is compiled by `tf.function`, these
+    # numpy arrays cause a `ValueError`, as they are not graph-compatible
+    # Tensor objects.
+    # By explicitly converting them to Tensors here, we solve the error.
+    reward = tf.convert_to_tensor(transitions.reward, dtype=tf.float32)
+    discount = tf.convert_to_tensor(transitions.discount, dtype=tf.float32)
+
     # Cast the additional discount to match the environment discount dtype.
-    discount = tf.cast(self._discount, dtype=transitions.discount.dtype)
+    agent_discount = tf.cast(self._discount, dtype=discount.dtype)
 
     with tf.GradientTape(persistent=True) as tape:
       # Maybe transform the observation before feeding into policy and critic.
-      # Transforming the observations this way at the start of the learning
-      # step effectively means that the policy and critic share observation
-      # network weights.
       o_tm1 = self._observation_network(transitions.observation)
-      # This stop_gradient prevents gradients to propagate into the target
-      # observation network. In addition, since the online policy network is
-      # evaluated at o_t, this also means the policy loss does not influence
-      # the observation network training.
       o_t = tf.stop_gradient(
           self._target_observation_network(transitions.next_observation))
 
@@ -202,12 +203,10 @@ class MPOLearner(acme.Learner):
 
       # Compute the target critic's Q-value of the sampled actions in state o_t.
       sampled_q_t = self._target_critic_network(
-          # Merge batch dimensions; to shape [N*B, ...].
           snt.merge_leading_dims(tiled_o_t, num_dims=2),
           snt.merge_leading_dims(sampled_actions, num_dims=2))
 
-      # Reshape Q-value samples back to original batch dimensions and average
-      # them to compute the TD-learning bootstrap target.
+      # Reshape Q-value samples back to original batch dimensions and average.
       sampled_q_t = tf.reshape(sampled_q_t, (self._num_samples, -1))  # [N, B]
       q_t = tf.reduce_mean(sampled_q_t, axis=0)  # [B]
 
@@ -215,9 +214,9 @@ class MPOLearner(acme.Learner):
       q_tm1 = self._critic_network(o_tm1, transitions.action)  # [B, 1]
       q_tm1 = tf.squeeze(q_tm1, axis=-1)  # [B]; necessary for trfl.td_learning.
 
-      # Critic loss.
-      critic_loss = trfl.td_learning(q_tm1, transitions.reward,
-                                     discount * transitions.discount, q_t).loss
+      # Critic loss. Use the converted tensors here.
+      critic_loss = trfl.td_learning(q_tm1, reward,
+                                     agent_discount * discount, q_t).loss
       critic_loss = tf.reduce_mean(critic_loss)
 
       # Actor learning.
@@ -229,11 +228,9 @@ class MPOLearner(acme.Learner):
 
     # For clarity, explicitly define which variables are trained by which loss.
     critic_trainable_variables = (
-        # In this agent, the critic loss trains the observation network.
         self._observation_network.trainable_variables +
         self._critic_network.trainable_variables)
     policy_trainable_variables = self._policy_network.trainable_variables
-    # The following are the MPO dual variables, stored in the loss module.
     dual_trainable_variables = self._policy_loss_module.trainable_variables
 
     # Compute gradients.
@@ -285,3 +282,5 @@ class MPOLearner(acme.Learner):
 
   def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
     return [tf2_utils.to_numpy(self._variables[name]) for name in names]
+
+
