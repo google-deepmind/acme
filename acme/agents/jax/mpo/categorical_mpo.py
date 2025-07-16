@@ -238,4 +238,4 @@ def clip_categorical_mpo_params(
 
 
 def get_temperature_from_params(params: CategoricalMPOParams) -> float:
-  return jax.nn.softplus(params.log_temperature) + _MPO_FLOAT_EPSILON
+  return jax.nn.softplus(params.log_temperature) + _MPO_FLOAT_EPSILON  # pytype: disable=bad-return-type  # jax-nn-types
