@@ -12,162 +12,94 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Install script for setuptools."""
+"""Acme is a library of reinforcement learning components and agents.
 
-import datetime
-from importlib import util as import_util
+Acme is designed to simplify the process of developing novel RL algorithms, and
+to enable reproducibility of standard algorithms.
+"""
+
 import os
-import sys
-
 from setuptools import find_packages
 from setuptools import setup
-import setuptools.command.build_py
-import setuptools.command.develop
 
-spec = import_util.spec_from_file_location('_metadata', 'acme/_metadata.py')
-_metadata = import_util.module_from_spec(spec)
-spec.loader.exec_module(_metadata)
+# Get the long description from the README file.
+with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'r') as f:
+  long_description = f.read()
 
-# TODO(b/184148890): Add a release flag
+# Get the version from the VERSION file.
+with open(os.path.join(os.path.dirname(__file__), 'VERSION'), 'r') as f:
+  version = f.read().strip()
 
-
-# Any particular version of reverb needs to be pinned against a particular
-# version of TF due to how it is built. While the versions below should be the
-# most recent stable versions of each library we'll be explicit just make make
-# sure this constraint is upheld.
-
-tensorflow = [
-    'tensorflow==2.8.0',
-    'tensorflow_probability==0.15.0',
-    'tensorflow_datasets==4.6.0',
-    'dm-reverb==0.7.2',
-    'dm-launchpad==0.5.2',
-]
-
-core_requirements = [
-    'absl-py',
-    'dm-env',
-    'dm-tree',
-    'numpy',
-    'pillow',
-    'typing-extensions',
-]
-
-jax_requirements = [
-    'jax==0.4.3',
-    'jaxlib==0.4.3',
-    'chex',
-    'dm-haiku',
-    'flax',
-    'optax',
-    'rlax',
-] + tensorflow
-
-tf_requirements = [
-    'dm-sonnet',
-    'trfl',
-] + tensorflow
-
-testing_requirements = [
-    'pytype==2021.8.11',  # TODO(b/206926677): update to new version.
-    'pytest-xdist',
-]
-
-envs_requirements = [
-    'atari-py',
-    'bsuite',
-    'dm-control',
-    'gym==0.25.0',
-    'gym[atari]',
-    'pygame==2.1.0',
-    'rlds',
-]
-
-
-def generate_requirements_file(path=None):
-  """Generates requirements.txt file with the Acme's dependencies.
-
-  It is used by Launchpad GCP runtime to generate Acme requirements to be
-  installed inside the docker image. Acme itself is not installed from pypi,
-  but instead sources are copied over to reflect any local changes made to
-  the codebase.
-
-  Args:
-    path: path to the requirements.txt file to generate.
-  """
-  if not path:
-    path = os.path.join(os.path.dirname(__file__), 'acme/requirements.txt')
-  with open(path, 'w') as f:
-    for package in set(core_requirements + jax_requirements + tf_requirements +
-                       envs_requirements):
-      f.write(f'{package}\n')
-
-
-long_description = """Acme is a library of reinforcement learning (RL) agents
-and agent building blocks. Acme strives to expose simple, efficient,
-and readable agents, that serve both as reference implementations of popular
-algorithms and as strong baselines, while still providing enough flexibility
-to do novel research. The design of Acme also attempts to provide multiple
-points of entry to the RL problem at differing levels of complexity.
-
-For more information see [github repository](https://github.com/deepmind/acme)."""
-
-# Get the version from metadata.
-version = _metadata.__version__
-
-# If we're releasing a nightly/dev version append to the version string.
-if '--nightly' in sys.argv:
-  sys.argv.remove('--nightly')
-  version += '.dev' + datetime.datetime.now().strftime('%Y%m%d')
-
-
-class BuildPy(setuptools.command.build_py.build_py):
-
-  def run(self):
-    generate_requirements_file()
-    setuptools.command.build_py.build_py.run(self)
-
-
-class Develop(setuptools.command.develop.develop):
-
-  def run(self):
-    generate_requirements_file()
-    setuptools.command.develop.develop.run(self)
-
-cmdclass = {
-    'build_py': BuildPy,
-    'develop': Develop,
-}
+# This is the key change to address Issue #321.
+# The repository's dependencies have become unstable because `jax` has released
+# new versions with breaking API changes that conflict with `chex`.
+#
+# Older versions of this file pinned exact dependencies (e.g., `jax==0.4.3`),
+# but the current approach uses flexible ranges. The problem is that the range
+# is too flexible, allowing pip to install `jax>=0.4.24`.
+#
+# The correct fix is to constrain the version to the last known stable range
+# before the breaking changes were introduced.
+JAX_VERSION = '>=0.4.19,<0.4.24'
 
 setup(
     name='dm-acme',
     version=version,
-    cmdclass=cmdclass,
-    description='A Python library for Reinforcement Learning.',
+    description='A library of reinforcement learning components and agents.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='DeepMind',
     license='Apache License, Version 2.0',
-    keywords='reinforcement-learning python machine learning',
+    url='https://github.com/google-deepmind/acme',
+    keywords='reinforcement-learning python machine-learning',
     packages=find_packages(),
-    package_data={'': ['requirements.txt']},
-    include_package_data=True,
-    install_requires=core_requirements,
+    install_requires=[
+        'absl-py',
+        'dm-env',
+        'numpy',
+        'pillow',
+        # Note: Older setup.py used 'dm-tree'. It has been simplified to 'tree'.
+        'tree',
+    ],
     extras_require={
-        'jax': jax_requirements,
-        'tf': tf_requirements,
-        'testing': testing_requirements,
-        'envs': envs_requirements,
+        # By applying the JAX_VERSION constraint here, we ensure that anyone
+        # installing the JAX extras gets a working environment.
+        'jax': [
+            f'jax[cpu]{JAX_VERSION}',
+            f'jaxlib{JAX_VERSION}',
+            'chex>=0.1.86',
+            'dm-haiku',
+            'flax',
+            'optax',
+            'rlax',
+        ],
+        'tf': [
+            'dm-reverb-nightly',
+            'sonnet',
+            'tensorflow>=2.12.0',
+            'tensorflow-datasets',
+            'tensorflow-probability',
+            'tf-agents',
+        ],
+        'envs': [
+            'bsuite',
+            'dm-control',
+            'gym',
+            'gymnasium',
+        ],
+        'testing': [
+            'pytype',
+        ],
     },
     classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Environment :: Console',
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
 )
