@@ -77,6 +77,9 @@ class PPONetworks:
   entropy: EntropyFn
   sample: networks_lib.SampleFn
   sample_eval: Optional[networks_lib.SampleFn] = None
+  extra_loss: Optional[
+      Callable[[networks_lib.NetworkOutput], networks_lib.Value]
+  ] = None
 
 
 def make_inference_fn(

@@ -140,6 +140,10 @@ class PPOLearner(acme.Learner):
         # values = values * jnp.fmax(value_std, 1e-6) + value_mean
         target_values = (target_values - value_mean) / jnp.fmax(value_std, 1e-6)
       policy_log_probs = ppo_networks.log_prob(distribution_params, actions)
+      if ppo_networks.extra_loss is not None:
+        extra_loss = ppo_networks.extra_loss(distribution_params)
+      else:
+        extra_loss = 0.0
       key, sub_key = jax.random.split(key)
       policy_entropies = ppo_networks.entropy(distribution_params, sub_key)
 
@@ -168,10 +172,11 @@ class PPOLearner(acme.Learner):
         # https://arxiv.org/pdf/2006.05990.pdf
         value_loss = jnp.mean(unclipped_value_loss)
 
-      total_ppo_loss = total_policy_loss + value_cost * value_loss
+      total_ppo_loss = total_policy_loss + value_cost * value_loss + extra_loss
       return total_ppo_loss, {  # pytype: disable=bad-return-type  # numpy-scalars
           'loss_total': total_ppo_loss,
           'loss_policy_total': total_policy_loss,
+          'loss_extra': extra_loss,
           'loss_policy_pg': clipped_ppo_policy_loss,
           'loss_policy_entropy': policy_entropy_loss,
           'loss_critic': value_loss,
