@@ -32,6 +32,9 @@ import rlax
 from absl.testing import absltest
 from absl.testing import parameterized
 
+# NOTE(dsuo): This test is flaky when using the new pmap implementation.
+jax.config.update('jax_pmap_shmap_merge', False)
+
 
 def make_networks(spec: specs.EnvironmentSpec,
                   discrete_actions: bool = False) -> bc.BCNetworks:
