@@ -29,9 +29,6 @@ import rlds
 
 from absl.testing import absltest
 
-# NOTE(dsuo): This test is flaky when using the new pmap implementation.
-jax.config.update('jax_pmap_shmap_merge', False)
-
 
 class MBOPTest(absltest.TestCase):
 
