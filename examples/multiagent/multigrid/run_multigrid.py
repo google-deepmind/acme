@@ -101,7 +101,8 @@ def main(_):
   if _RUN_DISTRIBUTED.value:
     program = experiments.make_distributed_experiment(
         experiment=config, num_actors=4)
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
+    lp_utils.launch_with_termination_handler(
+        program, xm_resources=lp_utils.make_xm_docker_resources(program))
   else:
     experiments.run_experiment(
         experiment=config, eval_every=_EVAL_EVERY.value, num_eval_episodes=5)

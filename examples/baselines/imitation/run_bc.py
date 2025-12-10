@@ -183,7 +183,8 @@ def main(_):
   config = build_experiment_config()
   if FLAGS.run_distributed:
     program = experiments.make_distributed_offline_experiment(experiment=config)
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
+    lp_utils.launch_with_termination_handler(
+        program, xm_resources=lp_utils.make_xm_docker_resources(program))
   else:
     experiments.run_offline_experiment(
         experiment=config,
