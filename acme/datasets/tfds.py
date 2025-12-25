@@ -200,6 +200,15 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
         data, key = pmapped_sample(self._jax_dataset, key)
         # All pmapped devices return the same data, so we just take the one from
         # the first device.
+        # Avoid degraded performance under the new jax.pmap. See
+        # https://docs.jax.dev/en/latest/migrate_pmap.html#int-indexing-into-sharded-arrays.
+        if jax.config.jax_pmap_shmap_merge:
+          return (
+              jax.tree_util.tree_map(
+                  lambda x: x.addressable_shards[0].data.squeeze(0), data
+              ),
+              key,
+          )
         return jax.tree_util.tree_map(lambda x: x[0], data), key
       self._sample = sample_and_postprocess
     else:

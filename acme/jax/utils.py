@@ -384,7 +384,14 @@ def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
     the same device as the sharded device array). If `as_numpy=True` then the
     array will be copied to the host machine and converted into a `np.ndarray`.
   """
-  zeroth_nest = jax.tree_util.tree_map(lambda x: x[0], nest)
+  # Avoid degraded performance under the new jax.pmap. See
+  # https://docs.jax.dev/en/latest/migrate_pmap.html#int-indexing-into-sharded-arrays.
+  if jax.config.jax_pmap_shmap_merge:
+    zeroth_nest = jax.tree_util.tree_map(
+        lambda x: x.addressable_shards[0].data.squeeze(0), nest
+    )
+  else:
+    zeroth_nest = jax.tree_util.tree_map(lambda x: x[0], nest)
   return jax.device_get(zeroth_nest) if as_numpy else zeroth_nest
 
 
