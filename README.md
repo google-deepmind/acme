@@ -49,6 +49,11 @@ in our [technical report][Paper].
 
 ## Installation
 
+> ⚠️ **Important Note**: The PyPI package (`dm-acme`) may be significantly out of
+> date compared to this repository. If you want to run the examples or use the
+> latest agents, we strongly recommend **installing from source** (see option 2
+> below).
+
 To get up and running quickly just follow the steps below:
 
 1.  While you can install Acme in your standard python environment, we
@@ -63,31 +68,41 @@ To get up and running quickly just follow the steps below:
     pip install --upgrade pip setuptools wheel
     ```
 
-1.  While the core `dm-acme` library can be pip installed directly, the set of
+2.  **Recommended: Installing from source** (required for running examples):
+
+    The examples in this repository require the latest code which may not be
+    available in the PyPI package. Install from source by cloning this repository:
+
+    ```bash
+    git clone https://github.com/google-deepmind/acme.git
+    cd acme
+    pip install -e .[jax,tf,envs]
+    ```
+
+    This installs Acme in "editable" mode, allowing you to run all examples and
+    use the latest agents.
+
+3.  **Alternative: Installing from PyPI** (may be outdated):
+
+    While the core `dm-acme` library can be pip installed directly, the set of
     dependencies included for installation is minimal. In particular, to run any
     of the included agents you will also need either [JAX] or [TensorFlow]
-    depending on the agent. As a result we recommend installing these components
-    as well, i.e.
+    depending on the agent:
 
     ```bash
     pip install dm-acme[jax,tf]
     ```
 
-1.  Finally, to install a few example environments (including [gym],
-    [dm_control], and [bsuite]):
+    To install a few example environments (including [gym], [dm_control], and
+    [bsuite]):
 
     ```bash
     pip install dm-acme[envs]
     ```
 
-1.  **Installing from github**: if you're interested in running the
-    bleeding-edge version of Acme, you can do so by cloning the Acme GitHub
-    repository and then executing following command from the main directory
-    (where `setup.py` is located):
-
-    ```bash
-    pip install .[jax,tf,testing,envs]
-    ```
+    > Note: If you encounter import errors when running examples after pip
+    > install (e.g., `cannot import name 'sac' from 'acme.agents.jax'`), please
+    > install from source using option 2 above.
 
 ## Citing Acme
 
