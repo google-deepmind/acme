@@ -65,21 +65,8 @@ class MaskedSequential(snt.Module):
     return outputs
 
 
-# FIXME: Add functionality to support decaying epsilon parameter.
-# FIXME: This is a modified version of trfl's epsilon_greedy() which
-# incorporates code from the bug fix described here
-# https://github.com/deepmind/trfl/pull/28
-class EpsilonGreedy(snt.Module):
-  """Computes an epsilon-greedy distribution over actions.
-
-  This policy does the following:
-  - With probability 1 - epsilon, take the action corresponding to the highest
-  action value, breaking ties uniformly at random.
-  - With probability epsilon, take an action uniformly at random.
-  """
-
   def __init__(self,
-               epsilon: Union[tf.Tensor, float],
+               epsilon: Union[tf.Tensor, float, tf.Variable],
                threshold: float,
                name: str = 'EpsilonGreedy'):
     """Initialize the policy.
@@ -95,7 +82,10 @@ class EpsilonGreedy(snt.Module):
         policy.
     """
     super().__init__(name=name)
-    self._epsilon = tf.Variable(epsilon, trainable=False)
+    if isinstance(epsilon, tf.Variable):
+      self._epsilon = epsilon
+    else:
+      self._epsilon = tf.Variable(epsilon, trainable=False)
     self._threshold = threshold
 
   def __call__(self, action_values: tf.Tensor) -> tfd.Categorical:
