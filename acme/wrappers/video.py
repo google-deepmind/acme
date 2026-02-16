@@ -18,30 +18,64 @@ The code used to generate animations in this wrapper is based on that used in
 the `dm_control/tutorial.ipynb` file.
 """
 
+import os.path
+import tempfile
 from typing import Callable, Optional, Sequence, Tuple, Union
 
-from absl import logging
 from acme.utils import paths
 from acme.wrappers import base
 import dm_env
+
+import matplotlib
+matplotlib.use('Agg')  # Switch to headless 'Agg' to inhibit figure rendering.
+import matplotlib.animation as anim  # pylint: disable=g-import-not-at-top
+import matplotlib.pyplot as plt
 import numpy as np
 
+# Internal imports.
+# Make sure you have FFMpeg configured.
 
 def make_animation(
-    frames: Sequence[np.ndarray],
-    frame_rate: float,
-    figsize: Optional[Union[float, Tuple[int, int]]],
-):
+    frames: Sequence[np.ndarray], frame_rate: float,
+    figsize: Optional[Union[float, Tuple[int, int]]]) -> anim.Animation:
   """Generates a matplotlib animation from a stack of frames."""
-  logging.warning(
-      'make_animation is deprecated and currently acts as a no-op in order to '
-      'avoid using ffmpeg directly. The old behavior can be restored by '
-      'replacing the direct call to ffmpeg within matplotlib.'
-  )
-  del frames
-  del frame_rate
-  del figsize
-  return None
+
+  # Set animation characteristics.
+  if figsize is None:
+    height, width, _ = frames[0].shape
+  elif isinstance(figsize, tuple):
+    height, width = figsize
+  else:
+    diagonal = figsize
+    height, width, _ = frames[0].shape
+    scale_factor = diagonal / np.sqrt(height**2 + width**2)
+    width *= scale_factor
+    height *= scale_factor
+
+  dpi = 70
+  interval = int(round(1e3 / frame_rate))  # Time (in ms) between frames.
+
+  # Create and configure the figure.
+  fig, ax = plt.subplots(1, 1, figsize=(width / dpi, height / dpi), dpi=dpi)
+  ax.set_axis_off()
+  ax.set_aspect('equal')
+  ax.set_position([0, 0, 1, 1])
+
+  # Initialize the first frame.
+  im = ax.imshow(frames[0])
+
+  # Create the function that will modify the frame, creating an animation.
+  def update(frame):
+    im.set_data(frame)
+    return [im]
+
+  return anim.FuncAnimation(
+      fig=fig,
+      func=update,
+      frames=frames,
+      interval=interval,
+      blit=True,
+      repeat=False)
 
 
 class VideoWrapper(base.EnvironmentWrapper):
@@ -66,23 +100,77 @@ class VideoWrapper(base.EnvironmentWrapper):
       figsize: Optional[Union[float, Tuple[int, int]]] = None,
       to_html: bool = True,
   ):
-    logging.warning(
-        'VideoWrapper is deprecated and currently acts as a no-op in order to '
-        'avoid using ffmpeg directly. The old behavior can be restored by '
-        'replacing the direct call to ffmpeg within matplotlib.'
-    )
     super(VideoWrapper, self).__init__(environment)
+    self._path = process_path(path, 'videos')
+    self._filename = filename
+    self._record_every = record_every
+    self._frame_rate = frame_rate
+    self._frames = []
+    self._counter = 0
+    self._figsize = figsize
+    self._to_html = to_html
+
+  def _render_frame(self, observation):
+    """Renders a frame from the given environment observation."""
+    return observation
+
+  def _write_frames(self):
+    """Writes frames to video."""
+    if self._counter % self._record_every == 0:
+      animation = make_animation(self._frames, self._frame_rate, self._figsize)
+      path_without_extension = os.path.join(
+          self._path, f'{self._filename}_{self._counter:04d}'
+      )
+      if self._to_html:
+        path = path_without_extension + '.html'
+        video = animation.to_html5_video()
+        with open(path, 'w') as f:
+          f.write(video)
+      else:
+        path = path_without_extension + '.m4v'
+        # Animation.save can save only locally. Save first and copy using
+        # gfile.
+        with tempfile.TemporaryDirectory() as tmp_dir:
+          tmp_path = os.path.join(tmp_dir, 'temp.m4v')
+          animation.save(tmp_path)
+          with open(path, 'wb') as f:
+            with open(tmp_path, 'rb') as g:
+              f.write(g.read())
+
+    # Clear the frame buffer whether a video was generated or not.
+    self._frames = []
+
+  def _append_frame(self, observation):
+    """Appends a frame to the sequence of frames."""
+    if self._counter % self._record_every == 0:
+      self._frames.append(self._render_frame(observation))
 
   def step(self, action) -> dm_env.TimeStep:
-    return self.environment.step(action)
+    timestep = self.environment.step(action)
+    self._append_frame(timestep.observation)
+    return timestep
 
   def reset(self) -> dm_env.TimeStep:
-    return self.environment.reset()
+    # If the frame buffer is nonempty, flush it and record video
+    if self._frames:
+      self._write_frames()
+    self._counter += 1
+    timestep = self.environment.reset()
+    self._append_frame(timestep.observation)
+    return timestep
 
   def make_html_animation(self):
-    return None
+    if self._frames:
+      return make_animation(self._frames, self._frame_rate,
+                            self._figsize).to_html5_video()
+    else:
+      raise ValueError('make_html_animation should be called after running a '
+                       'trajectory and before calling reset().')
 
   def close(self):
+    if self._frames:
+      self._write_frames()
+      self._frames = []
     self.environment.close()
 
 
@@ -127,3 +215,42 @@ class MujocoVideoWrapper(VideoWrapper):
     self._camera_id = camera_id
     self._height = height
     self._width = width
+
+  def _render_frame(self, unused_observation):
+    del unused_observation
+
+    # We've checked above that this attribute should exist. Pytype won't like
+    # it if we just try and do self.environment.physics, so we use the slightly
+    # grosser version below.
+    physics = getattr(self.environment, 'physics')
+
+    if self._camera_id is not None:
+      frame = physics.render(
+          camera_id=self._camera_id, height=self._height, width=self._width)
+    else:
+      # If camera_id is None, we create a minimal canvas that will accommodate
+      # physics.model.ncam frames, and render all of them on a grid.
+      num_cameras = physics.model.ncam
+      num_columns = int(np.ceil(np.sqrt(num_cameras)))
+      num_rows = int(np.ceil(float(num_cameras)/num_columns))
+      height = self._height
+      width = self._width
+
+      # Make a black canvas.
+      frame = np.zeros((num_rows*height, num_columns*width, 3), dtype=np.uint8)
+
+      for col in range(num_columns):
+        for row in range(num_rows):
+
+          camera_id = row*num_columns + col
+
+          if camera_id >= num_cameras:
+            break
+
+          subframe = physics.render(
+              camera_id=camera_id, height=height, width=width)
+
+          # Place the frame in the appropriate rectangle on the pixel canvas.
+          frame[row*height:(row+1)*height, col*width:(col+1)*width] = subframe
+
+    return frame
