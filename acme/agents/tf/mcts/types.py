@@ -14,7 +14,7 @@
 
 """Type aliases and assumptions that are specific to the MCTS agent."""
 
-from typing import Callable, Tuple, Union
+from typing import Any, Callable, Tuple, Union
 import numpy as np
 
 # pylint: disable=invalid-name
@@ -22,8 +22,9 @@ import numpy as np
 # Assumption: actions are scalar and discrete (integral).
 Action = Union[int, np.int32, np.int64]
 
-# Assumption: observations are array-like.
-Observation = np.ndarray
+# Observations can be array-like or nested structures (e.g., dicts, tuples).
+# This allows MCTS to work with environments that have complex observation spaces.
+Observation = Any
 
 # Assumption: rewards and discounts are scalar.
 Reward = Union[float, np.float32, np.float64]
