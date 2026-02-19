@@ -37,10 +37,10 @@ spec.loader.exec_module(_metadata)
 # sure this constraint is upheld.
 
 tensorflow = [
-    'tensorflow==2.8.0',
-    'tensorflow_probability==0.15.0',
-    'tensorflow_datasets==4.6.0',
-    'dm-reverb==0.7.2',
+    'tensorflow==2.16.1',
+    'tensorflow_probability==0.24.0',
+    'tensorflow_datasets==4.9.4',
+    'dm-reverb==0.13.0',
     'dm-launchpad==0.5.2',
 ]
 
@@ -54,13 +54,13 @@ core_requirements = [
 ]
 
 jax_requirements = [
-    'jax==0.4.3',
-    'jaxlib==0.4.3',
-    'chex',
-    'dm-haiku',
-    'flax',
-    'optax',
-    'rlax',
+    'jax==0.4.28',
+    'jaxlib==0.4.28',
+    'chex>=0.1.86',
+    'dm-haiku>=0.0.12',
+    'flax>=0.8.2',
+    'optax>=0.2.2',
+    'rlax>=0.1.7',
 ] + tensorflow
 
 tf_requirements = [
@@ -69,7 +69,7 @@ tf_requirements = [
 ] + tensorflow
 
 testing_requirements = [
-    'pytype==2021.8.11',  # TODO(b/206926677): update to new version.
+    'pytype>=2023.10.31',
     'pytest-xdist',
 ]
 
@@ -77,7 +77,7 @@ envs_requirements = [
     'atari-py',
     'bsuite',
     'dm-control',
-    'gym==0.25.0',
+    'gym==0.26.2',
     'gym[atari]',
     'pygame==2.1.0',
     'rlds',
@@ -98,8 +98,12 @@ def generate_requirements_file(path=None):
   if not path:
     path = os.path.join(os.path.dirname(__file__), 'acme/requirements.txt')
   with open(path, 'w') as f:
-    for package in set(core_requirements + jax_requirements + tf_requirements +
-                       envs_requirements):
+    for package in set(
+        core_requirements
+        + jax_requirements
+        + tf_requirements
+        + envs_requirements
+    ):
       f.write(f'{package}\n')
 
 
@@ -133,6 +137,7 @@ class Develop(setuptools.command.develop.develop):
   def run(self):
     generate_requirements_file()
     setuptools.command.develop.develop.run(self)
+
 
 cmdclass = {
     'build_py': BuildPy,
