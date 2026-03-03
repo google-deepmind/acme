@@ -384,26 +384,21 @@ def get_from_first_device(nest: N, as_numpy: bool = True) -> N:
     the same device as the sharded device array). If `as_numpy=True` then the
     array will be copied to the host machine and converted into a `np.ndarray`.
   """
-  # Avoid degraded performance under the new jax.pmap. See
-  # https://docs.jax.dev/en/latest/migrate_pmap.html#int-indexing-into-sharded-arrays.
-  if jax.config.jax_pmap_shmap_merge:
+  # Avoid degraded performance under the new jax.pmap.
+  def _unreplicate(x):
+    if hasattr(x, 'ndim') and x.ndim == 0:
+      return x
+    if not hasattr(x, 'sharding') or isinstance(
+        x.sharding, jax.sharding.SingleDeviceSharding
+    ):
+      return x
+    if len(jax.local_devices()) == 1:
+      return x[0]
+    if x.sharding.is_fully_replicated:
+      return x.addressable_shards[0].data
+    return x.addressable_shards[0].data.squeeze(0)
 
-    def _unreplicate(x):
-      if hasattr(x, 'ndim') and x.ndim == 0:
-        return x
-      if not hasattr(x, 'sharding') or isinstance(
-          x.sharding, jax.sharding.SingleDeviceSharding
-      ):
-        return x
-      if len(jax.local_devices()) == 1:
-        return x[0]
-      if x.sharding.is_fully_replicated:
-        return x.addressable_shards[0].data
-      return x.addressable_shards[0].data.squeeze(0)
-
-    zeroth_nest = jax.tree_util.tree_map(_unreplicate, nest)
-  else:
-    zeroth_nest = jax.tree_util.tree_map(lambda x: x[0], nest)
+  zeroth_nest = jax.tree_util.tree_map(_unreplicate, nest)
   return jax.device_get(zeroth_nest) if as_numpy else zeroth_nest
 
 
