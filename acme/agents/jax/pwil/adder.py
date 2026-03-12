@@ -38,6 +38,7 @@ class PWILAdder(adders.Adder):
           action: types.NestedArray,
           next_timestep: dm_env.TimeStep,
           extras: types.NestedArray = ()):
+    assert self._latest_observation is not None
     updated_timestep = next_timestep._replace(
         reward=self._rewarder.append_and_compute_reward(
             observation=self._latest_observation, action=action))
