@@ -37,11 +37,11 @@ spec.loader.exec_module(_metadata)
 # sure this constraint is upheld.
 
 tensorflow = [
-    'tensorflow==2.8.0',
-    'tensorflow_probability==0.15.0',
-    'tensorflow_datasets==4.6.0',
-    'dm-reverb==0.7.2',
-    'dm-launchpad==0.5.2',
+    'tensorflow>=2.8.0',
+    'tensorflow_probability>=0.15.0',
+    'tensorflow_datasets>=4.6.0',
+    'dm-reverb>=0.7.2',
+    'dm-launchpad>=0.5.2',
 ]
 
 core_requirements = [
@@ -54,8 +54,8 @@ core_requirements = [
 ]
 
 jax_requirements = [
-    'jax==0.4.3',
-    'jaxlib==0.4.3',
+    'jax>=0.4.3',
+    'jaxlib>=0.4.3',
     'chex',
     'dm-haiku',
     'flax',
@@ -77,9 +77,9 @@ envs_requirements = [
     'atari-py',
     'bsuite',
     'dm-control',
-    'gym==0.25.0',
+    'gym>=0.25.0,<0.26.0',
     'gym[atari]',
-    'pygame==2.1.0',
+    'pygame>=2.1.0',
     'rlds',
 ]
 
