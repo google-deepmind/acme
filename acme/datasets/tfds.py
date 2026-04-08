@@ -163,8 +163,11 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
           jax.tree_util.tree_map(lambda x: x.shape, data),
       )
       def split_and_put(x: jnp.ndarray) -> jnp.ndarray:
-        return jax.device_put_sharded(
-            np.split(x[:self._dataset_size], len(device)), devices=device)
+        mesh = jax.sharding.Mesh(np.array(device), ('_device_put_sharded',))
+        sharding = jax.NamedSharding(mesh, jax.P('_device_put_sharded'))
+        return jax.device_put(
+            np.stack(np.split(x[: self._dataset_size], len(device))), sharding
+        )
       self._jax_dataset = jax.tree_util.tree_map(split_and_put, data)
     else:
       self._jax_dataset = jax.tree_util.tree_map(jax.device_put, data)

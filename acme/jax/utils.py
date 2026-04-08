@@ -299,7 +299,12 @@ class PutToDevicesIterable(Iterable[types.NestedArray]):
       if len(items) < self.num_devices:
         raise StopIteration
       if self.split_fn is None:
-        return jax.device_put_sharded(tuple(items), self.devices)
+        mesh = jax.sharding.Mesh(
+            np.array(self.devices), ('_device_put_sharded',)
+        )
+        sharding = jax.NamedSharding(mesh, jax.P('_device_put_sharded'))
+        stacked = tree.map_structure(lambda *x: np.stack(x), *items)
+        return jax.device_put(stacked, sharding)
       else:
         # ((host: x1, device: y1), ..., (host: xN, device: yN)).
         items_split = (self.split_fn(item) for item in items)
@@ -307,9 +312,17 @@ class PutToDevicesIterable(Iterable[types.NestedArray]):
         split = tree.map_structure_up_to(
             PrefetchingSplit(None, None), lambda *x: x, *items_split)
 
+        mesh = jax.sharding.Mesh(
+            np.array(self.devices), ('_device_put_sharded',)
+        )
+        sharding = jax.NamedSharding(mesh, jax.P('_device_put_sharded'))
         return PrefetchingSplit(
-            host=np.stack(split.host),
-            device=jax.device_put_sharded(split.device, self.devices))
+            host=tree.map_structure(lambda *x: np.stack(x), *split.host),
+            device=jax.device_put(
+                tree.map_structure(lambda *x: np.stack(x), *split.device),
+                sharding,
+            ),
+        )
 
     except StopIteration:
       raise
@@ -367,7 +380,15 @@ def replicate_in_all_devices(
 ) -> N:
   """Replicate array nest in all available devices."""
   devices = devices or jax.local_devices()
-  return jax.device_put_sharded([nest] * len(devices), devices)
+  mesh = jax.sharding.Mesh(np.array(devices), ('_device_put_sharded',))
+  sharding = jax.NamedSharding(mesh, jax.P('_device_put_sharded'))
+
+  def _replicate(x):
+    if isinstance(x, jax.Array):
+      return jax.device_put(jnp.stack([x] * len(devices)), sharding)
+    return jax.device_put(np.stack([x] * len(devices)), sharding)
+
+  return jax.tree_util.tree_map(_replicate, nest)
 
 
 def get_from_first_device(nest: N, as_numpy: bool = True) -> N:

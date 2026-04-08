@@ -26,6 +26,7 @@ from acme.utils import counting
 from acme.utils import loggers
 import jax
 import jax.numpy as jnp
+import numpy as np
 import optax
 import reverb
 import rlax
@@ -414,7 +415,11 @@ class PPOLearner(acme.Learner):
       all_keys = jax.random.split(key, num=self.num_local_learner_devices + 1)
       key_init, key_state = all_keys[0], all_keys[1:]
       key_state = [key_state[i] for i in range(self.num_local_learner_devices)]
-      key_state = jax.device_put_sharded(key_state, self.local_learner_devices)
+      mesh = jax.sharding.Mesh(
+          np.array(self.local_learner_devices), ('_device_put_sharded',)
+      )
+      sharding = jax.NamedSharding(mesh, jax.P('_device_put_sharded'))
+      key_state = jax.device_put(jnp.stack(key_state), sharding)
 
       initial_params = ppo_networks.network.init(key_init)
       initial_opt_state = optimizer.init(initial_params)
@@ -422,16 +427,30 @@ class PPOLearner(acme.Learner):
       # would need to do jax_enable_x64.
       params_num_sgd_steps = jnp.zeros(shape=(), dtype=jnp.float32)
 
-      initial_params = jax.device_put_replicated(initial_params,
-                                                 self.local_learner_devices)
-      initial_opt_state = jax.device_put_replicated(initial_opt_state,
-                                                    self.local_learner_devices)
-      params_num_sgd_steps = jax.device_put_replicated(
-          params_num_sgd_steps, self.local_learner_devices)
+      mesh = jax.sharding.Mesh(
+          np.array(self.local_learner_devices), ('_device_put_sharded',)
+      )
+      replicate_sharding = jax.NamedSharding(mesh, jax.P('_device_put_sharded'))
+      stacked_params = jax.tree_util.tree_map(
+          lambda *xs: jnp.stack(xs),
+          *[initial_params] * len(self.local_learner_devices)
+      )
+      initial_params = jax.device_put(stacked_params, replicate_sharding)
+      stacked_opt_state = jax.tree_util.tree_map(
+          lambda *xs: jnp.stack(xs),
+          *[initial_opt_state] * len(self.local_learner_devices)
+      )
+      initial_opt_state = jax.device_put(stacked_opt_state, replicate_sharding)
+      params_num_sgd_steps = jax.device_put(
+          jnp.stack([params_num_sgd_steps] * len(self.local_learner_devices)),
+          replicate_sharding,
+      )
 
       ema_counter = jnp.float32(0)
-      ema_counter = jax.device_put_replicated(ema_counter,
-                                              self.local_learner_devices)
+      ema_counter = jax.device_put(
+          jnp.stack([ema_counter] * len(self.local_learner_devices)),
+          replicate_sharding,
+      )
 
       init_state = TrainingState(
           params=PPOParams(
@@ -442,22 +461,30 @@ class PPOLearner(acme.Learner):
       )
 
       if normalize_advantage:
-        biased_advantage_scale = jax.device_put_replicated(
-            jnp.zeros([]), self.local_learner_devices)
-        advantage_scale = jax.device_put_replicated(
-            jnp.zeros([]), self.local_learner_devices)
+        biased_advantage_scale = jax.device_put(
+            jnp.stack([jnp.zeros([])] * len(self.local_learner_devices)),
+            replicate_sharding,
+        )
+        advantage_scale = jax.device_put(
+            jnp.stack([jnp.zeros([])] * len(self.local_learner_devices)),
+            replicate_sharding,
+        )
 
         init_state = init_state._replace(
             biased_advantage_scale=biased_advantage_scale,
             advantage_scale=advantage_scale)
 
       if normalize_value:
-        biased_value_first_moment = jax.device_put_replicated(
-            jnp.zeros([]), self.local_learner_devices)
+        biased_value_first_moment = jax.device_put(
+            jnp.stack([jnp.zeros([])] * len(self.local_learner_devices)),
+            replicate_sharding,
+        )
         value_mean = biased_value_first_moment
 
-        biased_value_second_moment = jax.device_put_replicated(
-            jnp.zeros([]), self.local_learner_devices)
+        biased_value_second_moment = jax.device_put(
+            jnp.stack([jnp.zeros([])] * len(self.local_learner_devices)),
+            replicate_sharding,
+        )
         value_second_moment = biased_value_second_moment
         value_std = jnp.sqrt(jax.nn.relu(value_second_moment - value_mean**2))
 
@@ -469,8 +496,13 @@ class PPOLearner(acme.Learner):
 
       if normalize_obs:
         obs_norm_params = obs_normalization_fns.init()  # pytype: disable=attribute-error
-        obs_norm_params = jax.device_put_replicated(obs_norm_params,
-                                                    self.local_learner_devices)
+        stacked_obs_norm_params = jax.tree_util.tree_map(
+            lambda *xs: jnp.stack(xs),
+            *[obs_norm_params] * len(self.local_learner_devices)
+        )
+        obs_norm_params = jax.device_put(
+            stacked_obs_norm_params, replicate_sharding
+        )
         init_state = init_state._replace(
             obs_normalization_params=obs_norm_params)
 
@@ -513,11 +545,22 @@ class PPOLearner(acme.Learner):
     random_key = state.random_key
     random_key = jax.random.split(
         random_key, num=self.num_local_learner_devices)
-    random_key = jax.device_put_sharded(
-        [random_key[i] for i in range(self.num_local_learner_devices)],
-        self.local_learner_devices)
-
-    state = jax.device_put_replicated(state, self.local_learner_devices)
+    mesh = jax.sharding.Mesh(
+        np.array(self.local_learner_devices), ('_device_put_sharded',)
+    )
+    sharding = jax.NamedSharding(mesh, jax.P('_device_put_sharded'))
+    random_key = jax.device_put(
+        jnp.stack(
+            [random_key[i] for i in range(self.num_local_learner_devices)]
+        ),
+        sharding,
+    )
+    state = jax.tree_util.tree_map(
+        lambda x: jax.device_put(
+            jnp.stack([x] * len(self.local_learner_devices)), sharding
+        ),
+        state,
+    )
     state = state._replace(random_key=random_key)
     self._state = state
     self._cached_state = get_from_first_device(self._state, as_numpy=True)
