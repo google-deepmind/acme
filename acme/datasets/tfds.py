@@ -203,10 +203,9 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
         data, key = pmapped_sample(self._jax_dataset, key)
         # All pmapped devices return the same data, so we just take the one from
         # the first device.
+        from acme.jax import utils as jax_utils_acme
         return (
-            jax.tree_util.tree_map(
-                lambda x: x.addressable_shards[0].data.squeeze(0), data
-            ),
+            jax_utils_acme.get_from_first_device(data, as_numpy=False),
             key,
         )
       self._sample = sample_and_postprocess
