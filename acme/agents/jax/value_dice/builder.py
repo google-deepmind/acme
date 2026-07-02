@@ -148,7 +148,7 @@ class ValueDiceBuilder(
     variable_client = variable_utils.VariableClient(variable_source, 'policy',
                                                     device='cpu')
     return actors.GenericActor(
-        actor_core, random_key, variable_client, adder, backend='cpu')
+        actor_core, random_key, variable_client, adder, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
   def make_policy(self,
                   networks: value_dice_networks.ValueDiceNetworks,

@@ -104,7 +104,7 @@ class TD3Builder(builders.ActorLearnerBuilder[td3_networks.TD3Networks,
     variable_client = variable_utils.VariableClient(variable_source, 'policy',
                                                     device='cpu')
     return actors.GenericActor(
-        actor_core, random_key, variable_client, adder, backend='cpu')
+        actor_core, random_key, variable_client, adder, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
   def make_replay_tables(
       self,

@@ -84,6 +84,6 @@ class AZLearner(acme.Learner):
     loss = self._step()
     self._logger.write({'loss': loss})
 
-  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
+  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:  # pyrefly: ignore[bad-override]
     """Exposes the variables for actors to update from."""
     return tf2_utils.to_numpy(self._variables)

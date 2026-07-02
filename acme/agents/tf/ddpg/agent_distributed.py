@@ -193,7 +193,7 @@ class DistributedDDPG:
     agent_networks = self._network_factory(action_spec)
 
     # Create behavior network by adding some random dithering.
-    behavior_network = snt.Sequential([
+    behavior_network = snt.Sequential([  # pyrefly: ignore[bad-argument-type]
         agent_networks.get('observation', tf.identity),
         agent_networks.get('policy'),
         networks.ClippedGaussian(self._sigma),
@@ -245,7 +245,7 @@ class DistributedDDPG:
     agent_networks = self._network_factory(action_spec)
 
     # Create evaluator network.
-    evaluator_network = snt.Sequential([
+    evaluator_network = snt.Sequential([  # pyrefly: ignore[bad-argument-type]
         agent_networks.get('observation', tf.identity),
         agent_networks.get('policy'),
     ])

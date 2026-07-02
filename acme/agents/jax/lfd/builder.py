@@ -25,7 +25,7 @@ import dm_env
 LfdStep = Tuple[Any, dm_env.TimeStep]
 
 
-class LfdBuilder(builders.ActorLearnerBuilder[builders.Networks,
+class LfdBuilder(builders.ActorLearnerBuilder[builders.Networks,  # pyrefly: ignore[invalid-type-var]
                                               builders.Policy,
                                               builders.Sample,],
                  Generic[builders.Networks, builders.Policy, builders.Sample]):
@@ -65,7 +65,7 @@ class LfdBuilder(builders.ActorLearnerBuilder[builders.Networks,
 
   def make_adder(self, *args, **kwargs):
     demonstrations = self._demonstrations_factory()
-    return lfd_adder.LfdAdder(self._builder.make_adder(*args, **kwargs),
+    return lfd_adder.LfdAdder(self._builder.make_adder(*args, **kwargs),  # pyrefly: ignore[bad-argument-type]
                               demonstrations,
                               self._config.initial_insert_count,
                               self._config.demonstration_ratio)

@@ -51,7 +51,7 @@ class SynchronousDecentralizedLearnerSet(core.Learner):
     for learner in self._learners.values():
       learner.step()
 
-  def get_variables(self, names: List[str]) -> List[types.NestedArray]:
+  def get_variables(self, names: List[str]) -> List[types.NestedArray]:  # pyrefly: ignore[bad-override]
     """Return the named variables as a collection of (nested) numpy arrays.
 
     The variable names should be prefixed with the name of the child learners

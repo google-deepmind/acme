@@ -35,7 +35,7 @@ class EnvInfoObserver(base.EnvLoopObserver):
       return
     for k, v in info.items():
       if np.isscalar(v):
-        self._metrics[k] = self._metrics.get(k, 0) + v
+        self._metrics[k] = self._metrics.get(k, 0) + v  # pyrefly: ignore[missing-attribute, unsupported-operation]
 
   def observe_first(self, env: dm_env.Environment, timestep: dm_env.TimeStep
                     ) -> None:
@@ -50,4 +50,4 @@ class EnvInfoObserver(base.EnvLoopObserver):
 
   def get_metrics(self) -> Dict[str, base.Number]:
     """Returns metrics collected for the current episode."""
-    return self._metrics
+    return self._metrics  # pyrefly: ignore[bad-return]

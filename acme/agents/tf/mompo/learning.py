@@ -150,7 +150,7 @@ class MultiObjectiveMPOLearner(acme.Learner):
     self._reward_objectives = reward_objectives
     self._qvalue_objectives = qvalue_objectives
     if self._qvalue_objectives is None:
-      self._qvalue_objectives = []
+      self._qvalue_objectives = []  # pyrefly: ignore[bad-assignment]
     self._num_critic_heads = len(self._reward_objectives)  # C
     self._objective_names = (
         [x.name for x in self._reward_objectives] +
@@ -217,7 +217,7 @@ class MultiObjectiveMPOLearner(acme.Learner):
     # Do not record timestamps until after the first learning step is done.
     # This is to avoid including the time it takes for actors to come online and
     # fill the replay buffer.
-    self._timestamp: float = None
+    self._timestamp: float = None  # pyrefly: ignore[bad-assignment]
 
   @tf.function
   def _step(self) -> types.NestedTensor:
@@ -372,7 +372,7 @@ class MultiObjectiveMPOLearner(acme.Learner):
       self._snapshotter.save()
     self._logger.write(fetches)
 
-  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
+  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:  # pyrefly: ignore[bad-override]
     return [tf2_utils.to_numpy(self._variables[name]) for name in names]
 
 

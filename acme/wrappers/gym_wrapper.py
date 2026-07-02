@@ -41,8 +41,8 @@ class GymWrapper(dm_env.Environment):
     # Convert action and observation specs.
     obs_space = self._environment.observation_space
     act_space = self._environment.action_space
-    self._observation_spec = _convert_to_spec(obs_space, name='observation')
-    self._action_spec = _convert_to_spec(act_space, name='action')
+    self._observation_spec = _convert_to_spec(obs_space, name='observation')  # pyrefly: ignore[bad-argument-type]
+    self._action_spec = _convert_to_spec(act_space, name='action')  # pyrefly: ignore[bad-argument-type]
 
   def reset(self) -> dm_env.TimeStep:
     """Resets the episode."""
@@ -145,7 +145,7 @@ def _convert_to_spec(space: gym.Space,
     return specs.BoundedArray(
         shape=space.shape,
         dtype=space.dtype,
-        minimum=np.zeros(space.shape),
+        minimum=np.zeros(space.shape),  # pyrefly: ignore[no-matching-overload]
         maximum=space.nvec - 1,
         name=name)
 

@@ -55,7 +55,7 @@ def _prefill_with_demonstrations(adder: adders.Adder,
   if not demonstrations:
     return
 
-  reward = np.float32(reward) if reward is not None else reward
+  reward = np.float32(reward) if reward is not None else reward  # pyrefly: ignore[bad-assignment]
   remaining_transitions = min_num_transitions
   step_type = None
   action = None
@@ -157,7 +157,7 @@ class PWILBuilder(builders.ActorLearnerBuilder[DirectRLNetworks,
             self._config.alpha
             if self._config.prefill_constant_reward else None)
         _prefill_with_demonstrations(
-            adder=self._rl_agent.make_adder(replay_client, None, None),
+            adder=self._rl_agent.make_adder(replay_client, None, None),  # pyrefly: ignore[bad-argument-type]
             demonstrations=list(self._demonstrations_fn().demonstrations),
             min_num_transitions=self._config.num_transitions_rb,
             reward=prefill_reward)
@@ -176,7 +176,7 @@ class PWILBuilder(builders.ActorLearnerBuilder[DirectRLNetworks,
     """Creates the adder substituting imitation reward."""
     pwil_demonstrations = self._demonstrations_fn()
     return pwil_adder.PWILAdder(
-        direct_rl_adder=self._rl_agent.make_adder(replay_client,
+        direct_rl_adder=self._rl_agent.make_adder(replay_client,  # pyrefly: ignore[bad-argument-type]
                                                   environment_spec, policy),
         pwil_rewarder=rewarder.WassersteinDistanceRewarder(
             demonstrations_it=pwil_demonstrations.demonstrations,

@@ -84,7 +84,7 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
       # Evaluate our networks.
       logits = self._network(transitions.observation)
       cce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-      loss = cce(transitions.action, logits)
+      loss = cce(transitions.action, logits)  # pyrefly: ignore[not-callable]
 
     gradients = tape.gradient(loss, self._network.trainable_variables)
     self._optimizer.apply(gradients, self._network.trainable_variables)
@@ -110,7 +110,7 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
       self._snapshotter.save()
     self._logger.write(result)
 
-  def get_variables(self, names: List[str]) -> List[np.ndarray]:
+  def get_variables(self, names: List[str]) -> List[np.ndarray]:  # pyrefly: ignore[bad-override]
     return tf2_utils.to_numpy(self._variables)
 
   @property

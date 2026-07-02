@@ -52,8 +52,8 @@ def _generate_sqil_samples(
         reward=np.ones_like(demonstrations.reward))
 
     replay_transitions = replay_sample.data
-    replay_transitions = replay_transitions._replace(
-        reward=np.zeros_like(replay_transitions.reward))
+    replay_transitions = replay_transitions._replace(  # pyrefly: ignore[missing-attribute]
+        reward=np.zeros_like(replay_transitions.reward))  # pyrefly: ignore[missing-attribute]
 
     double_batch = tree.map_structure(lambda x, y: np.concatenate([x, y]),
                                       demonstrations, replay_transitions)
@@ -111,7 +111,7 @@ class SQILBuilder(Generic[DirectRLNetworks, DirectPolicyNetwork],
         networks,
         dataset=dataset,
         logger_fn=logger_fn,
-        environment_spec=environment_spec,
+        environment_spec=environment_spec,  # pyrefly: ignore[bad-argument-type]
         replay_client=replay_client,
         counter=direct_rl_counter)
 

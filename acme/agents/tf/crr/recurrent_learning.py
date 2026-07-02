@@ -307,7 +307,7 @@ class RCRRLearner(core.Learner):
         assert len(action_distribution_tm1.batch_shape) == 1
         policy_loss_batch = -action_distribution_tm1.log_prob(a_tm1)
 
-        advantage = q_tm1_mean - v_tm1_estimate
+        advantage = q_tm1_mean - v_tm1_estimate  # pyrefly: ignore[unbound-name]
         if self._policy_improvement_modes == 'exp':
           policy_loss_coef_t = tf.math.minimum(
               tf.math.exp(advantage / self._beta), self._ratio_upper_bound)
@@ -316,7 +316,7 @@ class RCRRLearner(core.Learner):
         elif self._policy_improvement_modes == 'all':
           # Regress against all actions (effectively pure BC).
           policy_loss_coef_t = 1.
-        policy_loss_coef_t = tf.stop_gradient(policy_loss_coef_t)
+        policy_loss_coef_t = tf.stop_gradient(policy_loss_coef_t)  # pyrefly: ignore[unbound-name]
 
         policy_loss_batch *= policy_loss_coef_t
         policy_loss_t = tf.reduce_mean(policy_loss_batch)
@@ -400,8 +400,8 @@ class RCRRLearner(core.Learner):
     # Checkpoint and attempt to write the logs.
     if self._checkpointer is not None:
       self._checkpointer.save()
-      self._snapshotter.save()
+      self._snapshotter.save()  # pyrefly: ignore[missing-attribute]
     self._logger.write(fetches)
 
-  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
+  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:  # pyrefly: ignore[bad-override]
     return [tf2_utils.to_numpy(self._variables[name]) for name in names]

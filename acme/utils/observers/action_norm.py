@@ -35,10 +35,10 @@ class ActionNormObserver(base.EnvLoopObserver):
   def observe(self, env: dm_env.Environment, timestep: dm_env.TimeStep,
               action: np.ndarray) -> None:
     """Records one environment step."""
-    self._action_norms.append(np.linalg.norm(action))
+    self._action_norms.append(np.linalg.norm(action))  # pyrefly: ignore[missing-attribute]
 
   def get_metrics(self) -> Dict[str, base.Number]:
     """Returns metrics collected for the current episode."""
-    return {'action_norm_avg': np.mean(self._action_norms),
-            'action_norm_min': np.min(self._action_norms),
-            'action_norm_max': np.max(self._action_norms)}
+    return {'action_norm_avg': np.mean(self._action_norms),  # pyrefly: ignore[no-matching-overload]
+            'action_norm_min': np.min(self._action_norms),  # pyrefly: ignore[no-matching-overload]
+            'action_norm_max': np.max(self._action_norms)}  # pyrefly: ignore[no-matching-overload]

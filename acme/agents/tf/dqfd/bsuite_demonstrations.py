@@ -44,7 +44,7 @@ class DemonstrationRecorder:
 
   def step(self, timestep: dm_env.TimeStep, action: np.ndarray):
     reward = np.array(timestep.reward or 0, np.float32)
-    self._episode_reward += reward
+    self._episode_reward += reward  # pyrefly: ignore[bad-assignment]
     self._episode.append((timestep.observation, action, reward,
                           np.array(timestep.discount or 0, np.float32)))
 
@@ -66,7 +66,7 @@ class DemonstrationRecorder:
   def make_tf_dataset(self):
     types = tree.map_structure(lambda x: x.dtype, self._demos[0])
     shapes = tree.map_structure(lambda x: x.shape, self._demos[0])
-    ds = tf.data.Dataset.from_generator(lambda: self._demos, types, shapes)
+    ds = tf.data.Dataset.from_generator(lambda: self._demos, types, shapes)  # pyrefly: ignore[bad-argument-type]
     return ds.repeat().shuffle(len(self._demos))
 
 
@@ -83,7 +83,7 @@ def _run_optimal_deep_sea_episode(environment: deep_sea.DeepSea,
     action = _optimal_deep_sea_policy(environment, timestep)
     recorder.step(timestep, action)
     timestep = environment.step(action)
-  recorder.step(timestep, np.zeros_like(action))
+  recorder.step(timestep, np.zeros_like(action))  # pyrefly: ignore[unbound-name]
 
 
 def _make_deep_sea_dataset(environment: deep_sea.DeepSea):

@@ -146,7 +146,7 @@ class D4PGBuilder(builders.ActorLearnerBuilder[d4pg_networks.D4PGNetworks,
       return reverb.ReplaySample(
           info=flat_trajectory.info,
           data=adders_reverb.n_step_from_trajectory(
-              flat_trajectory.data, self._config.discount
+              flat_trajectory.data, self._config.discount  # pyrefly: ignore[bad-argument-type]
           ),
       )
 

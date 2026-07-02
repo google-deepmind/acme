@@ -89,7 +89,7 @@ class CRRBuilder(builders.OfflineBuilder[crr_networks.CRRNetworks,
     variable_client = variable_utils.VariableClient(
         variable_source, 'policy', device='cpu')
     return actors.GenericActor(
-        actor_core, random_key, variable_client, backend='cpu')
+        actor_core, random_key, variable_client, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
   def make_policy(self, networks: crr_networks.CRRNetworks,
                   environment_spec: specs.EnvironmentSpec,

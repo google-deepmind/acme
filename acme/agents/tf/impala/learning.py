@@ -120,7 +120,7 @@ class IMPALALearner(acme.Learner, tf2_savers.TFSaveable):
       # Compute importance sampling weights: current policy / behavior policy.
       behaviour_logits = extra['logits']
       pi_behaviour = tfd.Categorical(logits=behaviour_logits[:-1])
-      pi_target = tfd.Categorical(logits=logits[:-1])
+      pi_target = tfd.Categorical(logits=logits[:-1])  # pyrefly: ignore[bad-index]
       log_rhos = pi_target.log_prob(actions) - pi_behaviour.log_prob(actions)
 
       # Optionally clip rewards.
@@ -133,10 +133,10 @@ class IMPALALearner(acme.Learner, tf2_savers.TFSaveable):
           log_rhos=tf.cast(log_rhos, tf.float32),
           discounts=tf.cast(self._discount * discounts, tf.float32),
           rewards=tf.cast(rewards, tf.float32),
-          values=tf.cast(values[:-1], tf.float32),
-          bootstrap_value=values[-1],
+          values=tf.cast(values[:-1], tf.float32),  # pyrefly: ignore[bad-index]
+          bootstrap_value=values[-1],  # pyrefly: ignore[bad-index]
       )
-      critic_loss = tf.square(vtrace_returns.vs - values[:-1])
+      critic_loss = tf.square(vtrace_returns.vs - values[:-1])  # pyrefly: ignore[bad-index]
 
       # Policy-gradient loss.
       policy_gradient_loss = trfl.policy_gradient(
@@ -186,5 +186,5 @@ class IMPALALearner(acme.Learner, tf2_savers.TFSaveable):
     self._snapshotter.save()
     self._logger.write(results)
 
-  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
+  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:  # pyrefly: ignore[bad-override]
     return [tf2_utils.to_numpy(self._variables)]

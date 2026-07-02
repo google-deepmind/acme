@@ -89,7 +89,7 @@ def get_actor_core(
 
   def get_extras(
       state: ImpalaActorState[actor_core_lib.RecurrentState]) -> ImpalaExtras:
-    return {'logits': state.logits, 'core_state': state.prev_recurrent_state}
+    return {'logits': state.logits, 'core_state': state.prev_recurrent_state}  # pyrefly: ignore[bad-return]
 
   return actor_core_lib.ActorCore(
       init=init, select_action=select_action, get_extras=get_extras)

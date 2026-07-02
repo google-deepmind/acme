@@ -67,8 +67,8 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
   ):
 
     if not isinstance(network, networks.RNNCore):
-      network.unroll = functools.partial(snt.static_unroll, network)
-      target_network.unroll = functools.partial(snt.static_unroll,
+      network.unroll = functools.partial(snt.static_unroll, network)  # pyrefly: ignore[bad-assignment]
+      target_network.unroll = functools.partial(snt.static_unroll,  # pyrefly: ignore[bad-assignment]
                                                 target_network)
 
     # Internalise agent components (replay buffer, networks, optimizer).
@@ -218,7 +218,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
     results.update(counts)
     self._logger.write(results)
 
-  def get_variables(self, names: List[str]) -> List[Variables]:
+  def get_variables(self, names: List[str]) -> List[Variables]:  # pyrefly: ignore[bad-override]
     return [tf2_utils.to_numpy(self._variables)]
 
   @property

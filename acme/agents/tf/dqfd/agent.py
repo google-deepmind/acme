@@ -123,7 +123,7 @@ class DQfD(agent.Agent):
 
     # Use constant 0.05 epsilon greedy policy by default.
     if epsilon is None:
-      epsilon = tf.Variable(0.05, trainable=False)
+      epsilon = tf.Variable(0.05, trainable=False)  # pyrefly: ignore[bad-assignment]
     policy_network = snt.Sequential([
         network,
         lambda q: trfl.epsilon_greedy(q, epsilon=epsilon).sample(),

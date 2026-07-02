@@ -156,7 +156,7 @@ class SACLearner(acme.Learner):
         alpha_loss, alpha_grads = alpha_grad(state.alpha_params,
                                              state.policy_params, transitions,
                                              key_alpha)
-        alpha = jnp.exp(state.alpha_params)
+        alpha = jnp.exp(state.alpha_params)  # pyrefly: ignore[bad-argument-type]
       else:
         alpha = entropy_coefficient
       critic_loss, critic_grads = critic_grad(state.q_params,
@@ -196,11 +196,11 @@ class SACLearner(acme.Learner):
       if adaptive_entropy_coefficient:
         # Apply alpha gradients
         alpha_update, alpha_optimizer_state = alpha_optimizer.update(
-            alpha_grads, state.alpha_optimizer_state)
-        alpha_params = optax.apply_updates(state.alpha_params, alpha_update)
+            alpha_grads, state.alpha_optimizer_state)  # pyrefly: ignore[bad-argument-type, unbound-name]
+        alpha_params = optax.apply_updates(state.alpha_params, alpha_update)  # pyrefly: ignore[bad-argument-type]
         metrics.update({
-            'alpha_loss': alpha_loss,
-            'alpha': jnp.exp(alpha_params),
+            'alpha_loss': alpha_loss,  # pyrefly: ignore[unbound-name]
+            'alpha': jnp.exp(alpha_params),  # pyrefly: ignore[bad-argument-type]
         })
         new_state = new_state._replace(
             alpha_optimizer_state=alpha_optimizer_state,
@@ -217,7 +217,7 @@ class SACLearner(acme.Learner):
     self._logger = logger or loggers.make_default_logger(
         'learner',
         asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
+        serialize_fn=utils.fetch_devicearray,  # pyrefly: ignore[bad-argument-type]
         steps_key=self._counter.get_steps_key())
 
     # Iterator on demonstration transitions.
@@ -276,7 +276,7 @@ class SACLearner(acme.Learner):
     # Attempts to write the logs.
     self._logger.write({**metrics, **counts})
 
-  def get_variables(self, names: List[str]) -> List[Any]:
+  def get_variables(self, names: List[str]) -> List[Any]:  # pyrefly: ignore[bad-override]
     variables = {
         'policy': self._state.policy_params,
         'critic': self._state.q_params,

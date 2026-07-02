@@ -211,7 +211,7 @@ class CheckpointingRunner(core.Worker):
     self._wrapped = wrapped
     self._time_delta_minutes = time_delta_minutes
     self._checkpointer = Checkpointer(
-        objects_to_save={key: objects_to_save},
+        objects_to_save={key: objects_to_save},  # pyrefly: ignore[bad-argument-type]
         time_delta_minutes=time_delta_minutes,
         **kwargs)
 
@@ -353,15 +353,15 @@ class Snapshot(tf.Module):
     return self._module(*args, **kwargs)
 
   @property
-  def submodules(self):
+  def submodules(self):  # pyrefly: ignore[bad-override]
     return [self._module]
 
   @property
-  def variables(self):
+  def variables(self):  # pyrefly: ignore[bad-override]
     return self._variables
 
   @property
-  def trainable_variables(self):
+  def trainable_variables(self):  # pyrefly: ignore[bad-override]
     return self._trainable_variables
 
 
@@ -445,7 +445,7 @@ def _get_input_signature(module: snt.Module) -> Optional[tf.TensorSpec]:
     # Wrapping a module in DeepRNN changes its state shape, so we need to bring
     # it up to date.
     state = module.initial_state(1)
-    input_signature[-1] = tree.map_structure(
+    input_signature[-1] = tree.map_structure(  # pyrefly: ignore[unsupported-operation]
         lambda t: tf.TensorSpec((None,) + t.shape[1:], t.dtype), state)
 
     return input_signature

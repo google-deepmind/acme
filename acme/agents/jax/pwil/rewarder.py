@@ -156,4 +156,4 @@ class WassersteinDistanceRewarder:
     else:
       reward = self._reward_scale * np.exp(-self._reward_sigma * cost)
 
-    return reward.astype('float32')
+    return reward.astype('float32')  # pyrefly: ignore[bad-return]

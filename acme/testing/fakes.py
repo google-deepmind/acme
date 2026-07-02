@@ -78,7 +78,7 @@ class VariableSource(core.VariableSource):
   def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
     if self._barrier is not None:
       self._barrier.wait()
-    return [self._variables[name] for name in names]
+    return [self._variables[name] for name in names]  # pyrefly: ignore[unsupported-operation]
 
 
 class Learner(core.Learner, VariableSource):
@@ -362,7 +362,7 @@ def transition_dataset_from_spec(
       reverb.SampleInfo.tf_dtypes())
   sample = reverb.ReplaySample(info=info, data=data)
 
-  return tf.data.Dataset.from_tensors(sample).repeat()
+  return tf.data.Dataset.from_tensors(sample).repeat()  # pyrefly: ignore[bad-argument-type]
 
 
 def transition_dataset(environment: dm_env.Environment) -> tf.data.Dataset:
@@ -396,7 +396,7 @@ def transition_iterator_from_spec(
   discount = _generate_from_spec(spec.discounts)
   data = types.Transition(observation, action, reward, discount, observation)
 
-  dataset = tf.data.Dataset.from_tensors(data).repeat()
+  dataset = tf.data.Dataset.from_tensors(data).repeat()  # pyrefly: ignore[bad-argument-type]
 
   return lambda batch_size: dataset.batch(batch_size).as_numpy_iterator()
 
@@ -468,7 +468,7 @@ def rlds_dataset_from_env_spec(
       rlds_types.IS_FIRST: [True] + [False] * (episode_length - 1),
       rlds_types.IS_LAST: [False] * (episode_length - 1) + [True],
   }
-  steps_dataset = tf.data.Dataset.from_tensor_slices(fake_steps)
+  steps_dataset = tf.data.Dataset.from_tensor_slices(fake_steps)  # pyrefly: ignore[bad-argument-type]
 
   return tf.data.Dataset.from_tensor_slices(
-      {rlds_types.STEPS: [steps_dataset] * episode_count})
+      {rlds_types.STEPS: [steps_dataset] * episode_count})  # pyrefly: ignore[bad-argument-type]

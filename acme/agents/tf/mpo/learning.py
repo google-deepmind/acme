@@ -283,5 +283,5 @@ class MPOLearner(acme.Learner):
       self._snapshotter.save()
     self._logger.write(fetches)
 
-  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
+  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:  # pyrefly: ignore[bad-override]
     return [tf2_utils.to_numpy(self._variables[name]) for name in names]

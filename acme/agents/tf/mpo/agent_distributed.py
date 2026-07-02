@@ -204,7 +204,7 @@ class DistributedMPO:
         agent_networks.get('policy'),
         networks.StochasticSamplingHead()
     ]
-    behavior_network = snt.Sequential(behavior_modules)
+    behavior_network = snt.Sequential(behavior_modules)  # pyrefly: ignore[bad-argument-type]
 
     # Ensure network variables are created.
     tf2_utils.create_variables(behavior_network, [observation_spec])
@@ -266,7 +266,7 @@ class DistributedMPO:
 
     if isinstance(action_spec, specs.BoundedArray):
       evaluator_modules += [networks.ClipToSpec(action_spec)]
-    evaluator_network = snt.Sequential(evaluator_modules)
+    evaluator_network = snt.Sequential(evaluator_modules)  # pyrefly: ignore[bad-argument-type]
 
     # Ensure network variables are created.
     tf2_utils.create_variables(evaluator_network, [observation_spec])

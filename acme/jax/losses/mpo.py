@@ -234,7 +234,7 @@ class MPO:
     if self._action_penalization:
       # Transform action penalization temperature.
       penalty_temperature = jax.nn.softplus(
-          params.log_penalty_temperature) + _MPO_FLOAT_EPSILON
+          params.log_penalty_temperature) + _MPO_FLOAT_EPSILON  # pyrefly: ignore[bad-argument-type]
 
       # Compute action penalization cost.
       # Note: the cost is zero in [-1, 1] and quadratic beyond.
@@ -313,7 +313,7 @@ class MPO:
         loss_temperature=jnp.mean(loss_temperature),
         # KL measurements.
         kl_q_rel=jnp.mean(kl_nonparametric) / self._epsilon,
-        penalty_kl_q_rel=((jnp.mean(penalty_kl_nonparametric) /
+        penalty_kl_q_rel=((jnp.mean(penalty_kl_nonparametric) /  # pyrefly: ignore[bad-argument-type, unbound-name]
                            self._epsilon_penalty)
                           if self._action_penalization else None),
         kl_mean_rel=jnp.mean(kl_mean, axis=0) / self._epsilon_mean,
@@ -457,4 +457,4 @@ def clip_mpo_params(params: MPOParams, per_dim_constraining: bool) -> MPOParams:
   else:
     return clipped_params._replace(
         log_penalty_temperature=jnp.maximum(_MIN_LOG_TEMPERATURE,
-                                            params.log_penalty_temperature))
+                                            params.log_penalty_temperature))  # pyrefly: ignore[bad-argument-type]

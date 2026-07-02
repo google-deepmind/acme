@@ -60,11 +60,11 @@ def impala_loss(
 
     # Extract the data.
     data = sample.data
-    observations, actions, rewards, discounts, extra = (data.observation,
-                                                        data.action,
-                                                        data.reward,
-                                                        data.discount,
-                                                        data.extras)
+    observations, actions, rewards, discounts, extra = (data.observation,  # pyrefly: ignore[missing-attribute]
+                                                        data.action,  # pyrefly: ignore[missing-attribute]
+                                                        data.reward,  # pyrefly: ignore[missing-attribute]
+                                                        data.discount,  # pyrefly: ignore[missing-attribute]
+                                                        data.extras)  # pyrefly: ignore[missing-attribute]
     initial_state = tree.map_structure(lambda s: s[0], extra['core_state'])
     behaviour_logits = extra['logits']
 

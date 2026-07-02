@@ -85,8 +85,8 @@ class Agent(core.Actor, core.VariableSource):
   def _has_data_for_training(self, iterator: core.PrefetchingIterator):
     if iterator.ready():
       return True
-    for (table, batch_size) in zip(self._replay_tables,
-                                   self._batch_size_upper_bounds):
+    for (table, batch_size) in zip(self._replay_tables,  # pyrefly: ignore[bad-argument-type]
+                                   self._batch_size_upper_bounds):  # pyrefly: ignore[bad-argument-type]
       if not table.can_sample(batch_size):
         return False
     return True
@@ -110,7 +110,7 @@ class Agent(core.Actor, core.VariableSource):
             't.')
         self._batch_size_upper_bounds = [
             math.ceil(t.info.rate_limiter_info.sample_stats.completed /
-                      (total_batches + 1)) for t in self._replay_tables
+                      (total_batches + 1)) for t in self._replay_tables  # pyrefly: ignore[not-iterable]
         ]
         update_actor = True
       if update_actor:
@@ -122,8 +122,8 @@ class Agent(core.Actor, core.VariableSource):
     # TODO(stanczyk): Remove when not used.
     num_steps = _calculate_num_learner_steps(
         num_observations=self._num_observations,
-        min_observations=self._min_observations,
-        observations_per_step=self._observations_per_step,
+        min_observations=self._min_observations,  # pyrefly: ignore[bad-argument-type]
+        observations_per_step=self._observations_per_step,  # pyrefly: ignore[bad-argument-type]
     )
     for _ in range(num_steps):
       # Run learner steps (usually means gradient steps).

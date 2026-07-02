@@ -119,7 +119,7 @@ class BaseAtariWrapper(abc.ABC, base.EnvironmentWrapper):
       super().__init__(environment)
 
     if not max_episode_len:
-      max_episode_len = np.inf
+      max_episode_len = np.inf  # pyrefly: ignore[bad-assignment]
 
     self._frame_stacker = frame_stacking.FrameStacker(
         num_frames=num_stacked_frames, flatten=flatten_frame_stack)
