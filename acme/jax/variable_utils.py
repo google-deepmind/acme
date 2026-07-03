@@ -69,11 +69,11 @@ class VariableClient:
     self._call_counter = 0
     self._last_call = time.time()
     self._client = client
-    self._params: Sequence[network_types.Params] = None
+    self._params: Sequence[network_types.Params] = None  # pyrefly: ignore[bad-assignment]
 
     self._device = device
     if isinstance(self._device, str):
-      self._device = jax.devices(device)[0]
+      self._device = jax.devices(device)[0]  # pyrefly: ignore[bad-argument-type]
 
     self._executor = futures.ThreadPoolExecutor(max_workers=1)
 
@@ -140,7 +140,7 @@ class VariableClient:
 
   @property
   def device(self) -> Optional[jax.Device]:
-    return self._device
+    return self._device  # pyrefly: ignore[bad-return]
 
   @property
   def params(self) -> Union[network_types.Params, List[network_types.Params]]:

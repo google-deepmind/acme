@@ -214,7 +214,7 @@ def stack_reverb_observation(sample: reverb.ReplaySample,
     return tf.concat(stack, axis=-1)
 
   # Maybe repeat the first observation, if at the start of an episode.
-  data = tf.cond(sample.data.start_of_episode[0],
+  data = tf.cond(sample.data.start_of_episode[0],  # pyrefly: ignore[missing-attribute]
                  lambda: tree.map_structure(_repeat_first, sample.data),
                  lambda: sample.data)
 

@@ -38,7 +38,7 @@ class RunExperimentTest(test_utils.TestCase):
         experiment_config, eval_every=10, num_eval_episodes=num_eval_episodes)
 
     checkpoint_counter = experiment_test_utils.restore_counter(
-        experiment_config.checkpointing)
+        experiment_config.checkpointing)  # pyrefly: ignore[bad-argument-type]
     self.assertIn('actor_steps', checkpoint_counter.get_counts())
     self.assertGreater(checkpoint_counter.get_counts()['actor_steps'], 0)
 
@@ -48,7 +48,7 @@ class RunExperimentTest(test_utils.TestCase):
         experiment_config, eval_every=50, num_eval_episodes=num_eval_episodes)
 
     checkpoint_counter = experiment_test_utils.restore_counter(
-        experiment_config.checkpointing)
+        experiment_config.checkpointing)  # pyrefly: ignore[bad-argument-type]
     self.assertIn('actor_steps', checkpoint_counter.get_counts())
     # Verify that the steps done in the first run are taken into account.
     self.assertLessEqual(checkpoint_counter.get_counts()['actor_steps'],
@@ -63,7 +63,7 @@ class RunExperimentTest(test_utils.TestCase):
         experiment_config, eval_every=70, num_eval_episodes=1)
 
     checkpoint_counter = experiment_test_utils.restore_counter(
-        experiment_config.checkpointing)
+        experiment_config.checkpointing)  # pyrefly: ignore[bad-argument-type]
     self.assertIn('actor_steps', checkpoint_counter.get_counts())
     self.assertGreater(checkpoint_counter.get_counts()['actor_steps'], 0)
     self.assertLessEqual(checkpoint_counter.get_counts()['actor_steps'],
@@ -86,7 +86,7 @@ class RunExperimentTest(test_utils.TestCase):
     return experiments.ExperimentConfig(
         builder=sac.SACBuilder(sac_config),
         environment_factory=environment_factory,
-        network_factory=sac.make_networks,
+        network_factory=sac.make_networks,  # pyrefly: ignore[bad-argument-type]
         seed=0,
         max_num_actor_steps=num_train_steps,
         checkpointing=checkpointing_config)

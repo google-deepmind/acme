@@ -125,6 +125,6 @@ def return_loss(apply_fn: Callable[[networks.Observation, networks.Action],
 @dataclasses.dataclass
 class MBOPLosses:
   """Losses for the world model, policy prior and the n-step return."""
-  world_model_loss: Optional[TransitionLoss] = world_model_loss
-  policy_prior_loss: Optional[TransitionLoss] = policy_prior_loss
-  n_step_return_loss: Optional[TransitionLoss] = return_loss
+  world_model_loss: Optional[TransitionLoss] = world_model_loss  # pyrefly: ignore[bad-assignment]
+  policy_prior_loss: Optional[TransitionLoss] = policy_prior_loss  # pyrefly: ignore[bad-assignment]
+  n_step_return_loss: Optional[TransitionLoss] = return_loss  # pyrefly: ignore[bad-assignment]

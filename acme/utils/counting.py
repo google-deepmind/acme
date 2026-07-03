@@ -112,8 +112,8 @@ class Counter(core.Saveable):
   def restore(self, state: Mapping[str, Mapping[str, Number]]):
     # Force a sync, if necessary, on the next get_counts call.
     self._last_sync_time = 0.
-    self._counts = state['counts']
-    self._cache = state['cache']
+    self._counts = state['counts']  # pyrefly: ignore[bad-assignment]
+    self._cache = state['cache']  # pyrefly: ignore[bad-assignment]
 
   def get_steps_key(self) -> str:
     """Returns the key to use for steps by this counter."""

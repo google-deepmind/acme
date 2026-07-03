@@ -134,7 +134,7 @@ def make_distributed_experiment(
     environment = experiment.environment_factory(0)
     spec = specs.make_environment_spec(environment)
     networks = experiment.network_factory(spec)
-    models = make_snapshot_models(networks, spec)
+    models = make_snapshot_models(networks, spec)  # pyrefly: ignore[not-callable]
     # TODO(raveman): Decouple checkpointing and snapshotting configs.
     return snapshotter.JAXSnapshotter(
         variable_source=variable_source,
@@ -346,7 +346,7 @@ def make_distributed_experiment(
     num_inference_nodes = num_tasks_per_inference_server * num_inference_servers
     num_actors_per_server = math.ceil(num_actors / num_inference_nodes)
     thread_pool_size = (
-        2 * max(
+        2 * max(  # pyrefly: ignore[bad-specialization, unsupported-operation]
             inference_server_config.batch_size,
             num_actors_per_server,
         )

@@ -29,4 +29,4 @@ def make_experiment_logger(label: str,
 
 
 def create_experiment_logger_factory() -> loggers.LoggerFactory:
-  return make_experiment_logger
+  return make_experiment_logger  # pyrefly: ignore[bad-return]

@@ -110,7 +110,7 @@ def run_offline_experiment(experiment: config.OfflineExperimentConfig,
   steps = 0
   while steps < max_num_learner_steps:
     learner_steps = min(eval_every, max_num_learner_steps - steps)
-    for _ in range(learner_steps):
+    for _ in range(learner_steps):  # pyrefly: ignore[bad-argument-type]
       learner.step()
       if checkpointer is not None:
         checkpointer.save()

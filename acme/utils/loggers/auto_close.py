@@ -42,4 +42,4 @@ class AutoCloseLogger(base.Logger):
   def close(self):
     if self._finalizer.detach():
       self._logger.close()
-    self._logger = None
+    self._logger = None  # pyrefly: ignore[bad-assignment]

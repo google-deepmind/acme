@@ -42,15 +42,15 @@ def make_actor_core(mpo_networks: networks.MPONetworks,
   def init(key: jax_types.PRNGKey) -> ActorState:
     next_key, key = jax.random.split(key, 2)
     batch_size = None
-    params_initial_state = mpo_networks.torso.initial_state_fn_init(
+    params_initial_state = mpo_networks.torso.initial_state_fn_init(  # pyrefly: ignore[missing-attribute]
         key, batch_size)
-    core_state = mpo_networks.torso.initial_state_fn(params_initial_state,
+    core_state = mpo_networks.torso.initial_state_fn(params_initial_state,  # pyrefly: ignore[missing-attribute]
                                                      batch_size)
     return ActorState(
         key=next_key,
         core_state=core_state,
         prev_core_state=core_state,
-        log_prob=np.zeros(shape=(), dtype=np.float32) if store_log_prob else ())
+        log_prob=np.zeros(shape=(), dtype=np.float32) if store_log_prob else ())  # pyrefly: ignore[bad-argument-type]
 
   def select_action(params: networks.MPONetworkParams,
                     observations: types.Observation,
@@ -59,7 +59,7 @@ def make_actor_core(mpo_networks: networks.MPONetworks,
     next_key, key = jax.random.split(state.key, 2)
 
     # Embed observations and apply stateful core (e.g. recurrent, transformer).
-    embeddings, core_state = mpo_networks.torso.apply(params.torso,
+    embeddings, core_state = mpo_networks.torso.apply(params.torso,  # pyrefly: ignore[missing-attribute]
                                                       observations,
                                                       state.core_state)
 

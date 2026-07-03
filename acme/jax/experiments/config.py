@@ -32,7 +32,7 @@ import jax
 from typing_extensions import Protocol
 
 
-class MakeActorFn(Protocol, Generic[builders.Policy]):
+class MakeActorFn(Protocol, Generic[builders.Policy]):  # pyrefly: ignore[invalid-type-var]
 
   def __call__(self, random_key: types.PRNGKey, policy: builders.Policy,
                environment_spec: specs.EnvironmentSpec,
@@ -40,21 +40,21 @@ class MakeActorFn(Protocol, Generic[builders.Policy]):
     ...
 
 
-class NetworkFactory(Protocol, Generic[builders.Networks]):
+class NetworkFactory(Protocol, Generic[builders.Networks]):  # pyrefly: ignore[invalid-type-var]
 
   def __call__(self,
                environment_spec: specs.EnvironmentSpec) -> builders.Networks:
     ...
 
 
-class DeprecatedPolicyFactory(Protocol, Generic[builders.Networks,
+class DeprecatedPolicyFactory(Protocol, Generic[builders.Networks,  # pyrefly: ignore[invalid-type-var]
                                                 builders.Policy]):
 
   def __call__(self, networks: builders.Networks) -> builders.Policy:
     ...
 
 
-class PolicyFactory(Protocol, Generic[builders.Networks, builders.Policy]):
+class PolicyFactory(Protocol, Generic[builders.Networks, builders.Policy]):  # pyrefly: ignore[invalid-type-var]
 
   def __call__(self, networks: builders.Networks,
                environment_spec: specs.EnvironmentSpec,
@@ -62,7 +62,7 @@ class PolicyFactory(Protocol, Generic[builders.Networks, builders.Policy]):
     ...
 
 
-class EvaluatorFactory(Protocol, Generic[builders.Policy]):
+class EvaluatorFactory(Protocol, Generic[builders.Policy]):  # pyrefly: ignore[invalid-type-var]
 
   def __call__(self, random_key: types.PRNGKey,
                variable_source: core.VariableSource, counter: counting.Counter,
@@ -70,7 +70,7 @@ class EvaluatorFactory(Protocol, Generic[builders.Policy]):
     ...
 
 
-class SnapshotModelFactory(Protocol, Generic[builders.Networks]):
+class SnapshotModelFactory(Protocol, Generic[builders.Networks]):  # pyrefly: ignore[invalid-type-var]
 
   def __call__(
       self, networks: builders.Networks, environment_spec: specs.EnvironmentSpec
@@ -120,7 +120,7 @@ class CheckpointingConfig:
 
 
 @dataclasses.dataclass(frozen=True)
-class ExperimentConfig(Generic[builders.Networks, builders.Policy,
+class ExperimentConfig(Generic[builders.Networks, builders.Policy,  # pyrefly: ignore[invalid-type-var]
                                builders.Sample]):
   """Config which defines aspects of constructing an experiment.
 
@@ -204,7 +204,7 @@ class ExperimentConfig(Generic[builders.Networks, builders.Policy,
 
 
 @dataclasses.dataclass
-class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
+class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,  # pyrefly: ignore[invalid-type-var]
                                       builders.Sample]):
   """Config which defines aspects of constructing an offline RL experiment.
 
@@ -268,7 +268,7 @@ class OfflineExperimentConfig(Generic[builders.Networks, builders.Policy,
     return [
         default_evaluator_factory(
             environment_factory=self.environment_factory,
-            network_factory=self.network_factory,
+            network_factory=self.network_factory,  # pyrefly: ignore[bad-argument-type]
             policy_factory=self.builder.make_policy,
             logger_factory=self.logger_factory,
             observers=self.observers)
@@ -309,7 +309,7 @@ def default_evaluator_factory(
     return environment_loop.EnvironmentLoop(
         environment, actor, counter, logger, observers=observers)
 
-  return evaluator
+  return evaluator  # pyrefly: ignore[bad-return]
 
 
 def make_policy(experiment: ExperimentConfig[builders.Networks, builders.Policy,

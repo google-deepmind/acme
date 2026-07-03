@@ -186,7 +186,7 @@ class AdderTestMixin(absltest.TestCase):
         action, ts = step[0], step[1]
 
         if has_extras:
-          extras = step[2]
+          extras = step[2]  # pyrefly: ignore[bad-index]
         else:
           extras = ()
 

@@ -194,7 +194,7 @@ class NStepTransitionAdder(base.ReverbAdder):
         reward=n_step_return,
         discount=total_discount,
         next_observation=s_,
-        extras=(extras if 'extras' in history else ()))
+        extras=(extras if 'extras' in history else ()))  # pyrefly: ignore[unbound-name]
 
     # Calculate the priority for this transition.
     table_priorities = utils.calculate_priorities(self._priority_fns,

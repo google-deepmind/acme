@@ -92,6 +92,6 @@ def calculate_priorities(
                                                   trajectory_or_transition)
 
   return {
-      table: (priority_fn(trajectory_or_transition) if priority_fn else 1.0)
+      table: (priority_fn(trajectory_or_transition) if priority_fn else 1.0)  # pyrefly: ignore[bad-argument-type]
       for table, priority_fn in priority_fns.items()
   }

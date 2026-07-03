@@ -63,7 +63,7 @@ class TimeFilter(base.Logger):
     now = time.time()
     if (now - self._time) > self._time_delta:
       self._to.write(values)
-      self._time = now
+      self._time = now  # pyrefly: ignore[bad-assignment]
 
   def close(self):
     self._to.close()

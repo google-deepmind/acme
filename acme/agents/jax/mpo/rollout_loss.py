@@ -83,7 +83,7 @@ class RolloutLoss:
       return mpo_utils.rolling_window(
           y, window=self._model_rollout_length, axis=axis, time_major=True)
 
-    return mpo_utils.tree_map_distribution(rw, x)
+    return mpo_utils.tree_map_distribution(rw, x)  # pyrefly: ignore[bad-return]
 
   def _compute_model_rollout_predictions(
       self, params: mpo_networks.MPONetworkParams,
@@ -97,7 +97,7 @@ class RolloutLoss:
     # Create batch of root states (embeddings) s_t for t \in {0, ..., R}.
     num_rollouts = action_sequence.shape[0] - self._model_rollout_length + 1
     root_state = self._dynamics_model.initial_state_fn(
-        params.dynamics_model_initial_state, state_embeddings[:num_rollouts])
+        params.dynamics_model_initial_state, state_embeddings[:num_rollouts])  # pyrefly: ignore[bad-argument-type]
     # TODO(abef): randomly choose (fewer?) root unroll states, as in Muesli?
 
     # Roll out K steps forward in time for each root embedding; [K, R, ...].
@@ -107,7 +107,7 @@ class RolloutLoss:
     # policy_rollout[k-i, t+i] share the same target.
     (policy_rollout, value_rollout, reward_rollout,
      embedding_rollout), _ = self._dynamics_model.unroll(
-         params.dynamics_model, rollout_actions, root_state)
+         params.dynamics_model, rollout_actions, root_state)  # pyrefly: ignore[bad-argument-type]
     # TODO(abef): try using the same params for both the root & rollout heads.
 
     chex.assert_shape([rollout_actions, embedding_rollout],
@@ -149,19 +149,19 @@ class RolloutLoss:
     # Rollout target shapes:
     #   - value: [N, Z, T-2] -> [N, Z, K, R-2],
     #   - reward: [T] -> [K, R].
-    value_targets = self._rolling_window(targets.value[..., 1:], axis=-1)
-    reward_targets = self._rolling_window(targets.reward)[None, None, ...]
+    value_targets = self._rolling_window(targets.value[..., 1:], axis=-1)  # pyrefly: ignore[unsupported-operation]
+    reward_targets = self._rolling_window(targets.reward)[None, None, ...]  # pyrefly: ignore[bad-argument-type, bad-index]
 
     # Define the value and reward rollout loss functions.
     def value_loss_fn(root_idx) -> jnp.ndarray:
       return self._distributional_loss_fn(
-          rollout.value[:, root_idx],  # [K, R-2, ...]
-          value_targets[..., root_idx])  # [..., K, R-2]
+          rollout.value[:, root_idx],  # [K, R-2, ...]  # pyrefly: ignore[unsupported-operation]
+          value_targets[..., root_idx])  # [..., K, R-2]  # pyrefly: ignore[bad-argument-type, bad-index]
 
     def reward_loss_fn(root_idx) -> jnp.ndarray:
       return self._distributional_loss_fn(
-          rollout.reward[:, root_idx],  # [K, R, ...]
-          reward_targets[..., root_idx])  # [..., K, R]
+          rollout.reward[:, root_idx],  # [K, R, ...]  # pyrefly: ignore[unsupported-operation]
+          reward_targets[..., root_idx])  # [..., K, R]  # pyrefly: ignore[bad-argument-type]
 
     # Reward and value losses.
     critic_loss = jnp.mean(jax.vmap(value_loss_fn)(indices[:-2]))
@@ -169,12 +169,12 @@ class RolloutLoss:
 
     # Define the MPO policy rollout loss.
     mpo_policy_loss = 0
-    if self._loss_scales.rollout.policy:
+    if self._loss_scales.rollout.policy:  # pyrefly: ignore[missing-attribute]
       # Rollout target shapes:
       #   - policy: [T-1, ...] -> [K, R-1, ...],
       #   - q_improvement: [N, T-1] -> [N, K, R-1].
-      policy_targets = self._rolling_window(targets.policy[1:])
-      q_improvement = self._rolling_window(targets.q_improvement[:, 1:], axis=1)
+      policy_targets = self._rolling_window(targets.policy[1:])  # pyrefly: ignore[unsupported-operation]
+      q_improvement = self._rolling_window(targets.q_improvement[:, 1:], axis=1)  # pyrefly: ignore[unsupported-operation]
 
       def policy_loss_fn(root_idx) -> jnp.ndarray:
         chex.assert_shape((rollout.policy.logits, policy_targets.logits),  # pytype: disable=attribute-error  # numpy-scalars
@@ -182,9 +182,9 @@ class RolloutLoss:
         chex.assert_shape(q_improvement,
                           (None, self._model_rollout_length, num_rollouts - 1))
         # Compute MPO's E-step unnormalized logits.
-        temperature = discrete_losses.get_temperature_from_params(dual_params)
+        temperature = discrete_losses.get_temperature_from_params(dual_params)  # pyrefly: ignore[bad-argument-type]
         policy_target_probs = jax.nn.softmax(
-            jnp.transpose(q_improvement[..., root_idx]) / temperature +
+            jnp.transpose(q_improvement[..., root_idx]) / temperature +  # pyrefly: ignore[bad-index]
             jax.nn.log_softmax(policy_targets[:, root_idx].logits, axis=-1))  # pytype: disable=attribute-error  # numpy-scalars
         return softmax_cross_entropy(rollout.policy[:, root_idx].logits,  # pytype: disable=bad-return-type  # numpy-scalars
                                      jax.lax.stop_gradient(policy_target_probs))
@@ -195,21 +195,21 @@ class RolloutLoss:
 
     # Define the BC policy rollout loss (only supported for discrete policies).
     bc_policy_loss, bc_policy_acc = 0, 0
-    if self._loss_scales.rollout.bc_policy:
-      num_actions = rollout.policy.logits.shape[-1]  # A
+    if self._loss_scales.rollout.bc_policy:  # pyrefly: ignore[missing-attribute]
+      num_actions = rollout.policy.logits.shape[-1]  # A  # pyrefly: ignore[missing-attribute]
       bc_targets = self._rolling_window(  # [T-1, A] -> [K, R-1, A]
           rlax.one_hot(sequence.action[1:], num_actions))
 
       def bc_policy_loss_fn(root_idx) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """Self-behavior-cloning loss (cross entropy on rollout actions)."""
         chex.assert_shape(
-            (rollout.policy.logits, bc_targets),
+            (rollout.policy.logits, bc_targets),  # pyrefly: ignore[missing-attribute]
             (self._model_rollout_length, num_rollouts - 1, num_actions))
-        loss = softmax_cross_entropy(rollout.policy.logits[:, root_idx],
-                                     bc_targets[:, root_idx])
+        loss = softmax_cross_entropy(rollout.policy.logits[:, root_idx],  # pyrefly: ignore[missing-attribute]
+                                     bc_targets[:, root_idx])  # pyrefly: ignore[bad-index]
         top1_accuracy = top1_accuracy_tiebreak(
-            rollout.policy.logits[:, root_idx],
-            bc_targets[:, root_idx],
+            rollout.policy.logits[:, root_idx],  # pyrefly: ignore[missing-attribute]
+            bc_targets[:, root_idx],  # pyrefly: ignore[bad-index]
             rng=key)
         return loss, top1_accuracy  # pytype: disable=bad-return-type  # numpy-scalars
 
@@ -220,10 +220,10 @@ class RolloutLoss:
 
     # Combine losses.
     loss = (
-        self._loss_scales.rollout.policy * mpo_policy_loss +
-        self._loss_scales.rollout.bc_policy * bc_policy_loss +
-        self._loss_scales.critic * self._loss_scales.rollout.critic *
-        critic_loss + self._loss_scales.rollout.reward * reward_loss)
+        self._loss_scales.rollout.policy * mpo_policy_loss +  # pyrefly: ignore[unsupported-operation]
+        self._loss_scales.rollout.bc_policy * bc_policy_loss +  # pyrefly: ignore[unsupported-operation]
+        self._loss_scales.critic * self._loss_scales.rollout.critic *  # pyrefly: ignore[missing-attribute]
+        critic_loss + self._loss_scales.rollout.reward * reward_loss)  # pyrefly: ignore[missing-attribute]
 
     logging_dict = {
         'rollout_critic_loss': critic_loss,

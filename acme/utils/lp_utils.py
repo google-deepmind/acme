@@ -156,7 +156,7 @@ def make_xm_docker_resources(program,
         # Generate requirements.txt file using setup.py.
         import importlib.util  # pylint: disable=g-import-not-at-top
         spec = importlib.util.spec_from_file_location('setup', setup)
-        setup = importlib.util.module_from_spec(spec)
+        setup = importlib.util.module_from_spec(spec)  # pyrefly: ignore[bad-argument-type]
         try:
           spec.loader.exec_module(setup)  # pytype: disable=attribute-error
         except SystemExit:

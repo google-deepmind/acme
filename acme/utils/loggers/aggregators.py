@@ -33,7 +33,7 @@ class Dispatcher(base.Logger):
   def write(self, values: base.LoggingData):
     """Writes `values` to the underlying `Logger` objects."""
     if self._serialize_fn:
-      values = self._serialize_fn(values)
+      values = self._serialize_fn(values)  # pyrefly: ignore[bad-assignment]
     for logger in self._to:
       logger.write(values)
 

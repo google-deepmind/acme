@@ -246,7 +246,7 @@ def mppi_planner(
     action_tm1 = action_t
 
   # De-normalize and append the final n_step return prediction:
-  n_step_return_t = n_step_return(n_step_return_params, observation_t, action_t)
+  n_step_return_t = n_step_return(n_step_return_params, observation_t, action_t)  # pyrefly: ignore[unbound-name]
   cum_reward += n_step_return_t
 
   # Average the set of `n_trajectories` trajectories into a single trajectory.

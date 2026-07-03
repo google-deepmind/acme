@@ -38,7 +38,7 @@ class OAREmbedding(hk.Module):
     expand_obs = len(inputs.observation.shape) == 3
     if expand_obs:
       inputs = inputs._replace(
-          observation=jnp.expand_dims(inputs.observation, axis=0))
+          observation=jnp.expand_dims(inputs.observation, axis=0))  # pyrefly: ignore[bad-argument-type]
     features = self.torso(inputs.observation)  # [T?, B, D]
     if expand_obs:
       features = jnp.squeeze(features, axis=0)
@@ -48,7 +48,7 @@ class OAREmbedding(hk.Module):
         inputs.action, num_classes=self.num_actions)  # [T?, B, A]
 
     # Map rewards -> [-1, 1].
-    reward = jnp.tanh(inputs.reward)
+    reward = jnp.tanh(inputs.reward)  # pyrefly: ignore[bad-argument-type]
 
     # Add dummy trailing dimensions to rewards if necessary.
     while reward.ndim < action.ndim:

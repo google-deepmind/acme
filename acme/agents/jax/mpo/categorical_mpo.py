@@ -138,8 +138,8 @@ class CategoricalMPO:
     # Compute the E-step logits and the temperature loss, used to adapt the
     # tempering of Q-values.
     logits_e_step, loss_temperature = compute_weights_and_temperature_loss(  # pytype: disable=wrong-arg-types  # jax-ndarray
-        q_values=q_values, logits=target_action_distribution.logits,
-        epsilon=self._epsilon, temperature=temperature)
+        q_values=q_values, logits=target_action_distribution.logits,  # pyrefly: ignore[bad-argument-type]
+        epsilon=self._epsilon, temperature=temperature)  # pyrefly: ignore[bad-argument-type]
     action_distribution_e_step = distrax.Categorical(logits=logits_e_step)
 
     # Only needed for diagnostics: Compute estimated actualized KL between the
@@ -167,23 +167,23 @@ class CategoricalMPO:
     # Create statistics.
     stats = CategoricalMPOStats(  # pytype: disable=wrong-arg-types  # jnp-type
         # Dual Variables.
-        dual_alpha=jnp.mean(alpha),
-        dual_temperature=jnp.mean(temperature),
+        dual_alpha=jnp.mean(alpha),  # pyrefly: ignore[bad-argument-type]
+        dual_temperature=jnp.mean(temperature),  # pyrefly: ignore[bad-argument-type]
         # Losses.
-        loss_e_step=loss_policy,
-        loss_m_step=loss_kl,
-        loss_dual=loss_dual,
-        loss_policy=jnp.mean(loss),
-        loss_alpha=jnp.mean(loss_alpha),
-        loss_temperature=jnp.mean(loss_temperature),
+        loss_e_step=loss_policy,  # pyrefly: ignore[bad-argument-type]
+        loss_m_step=loss_kl,  # pyrefly: ignore[bad-argument-type]
+        loss_dual=loss_dual,  # pyrefly: ignore[bad-argument-type]
+        loss_policy=jnp.mean(loss),  # pyrefly: ignore[bad-argument-type]
+        loss_alpha=jnp.mean(loss_alpha),  # pyrefly: ignore[bad-argument-type]
+        loss_temperature=jnp.mean(loss_temperature),  # pyrefly: ignore[bad-argument-type]
         # KL measurements.
-        kl_q_rel=jnp.mean(kl_nonparametric) / self._epsilon,
-        kl_mean_rel=mean_kl / self._epsilon_policy,
+        kl_q_rel=jnp.mean(kl_nonparametric) / self._epsilon,  # pyrefly: ignore[bad-argument-type]
+        kl_mean_rel=mean_kl / self._epsilon_policy,  # pyrefly: ignore[bad-argument-type]
         # Q measurements.
-        q_min=jnp.mean(jnp.min(q_values, axis=0)),
-        q_max=jnp.mean(jnp.max(q_values, axis=0)),
-        entropy_online=jnp.mean(online_action_distribution.entropy()),
-        entropy_target=jnp.mean(target_action_distribution.entropy()),
+        q_min=jnp.mean(jnp.min(q_values, axis=0)),  # pyrefly: ignore[bad-argument-type]
+        q_max=jnp.mean(jnp.max(q_values, axis=0)),  # pyrefly: ignore[bad-argument-type]
+        entropy_online=jnp.mean(online_action_distribution.entropy()),  # pyrefly: ignore[bad-argument-type]
+        entropy_target=jnp.mean(target_action_distribution.entropy()),  # pyrefly: ignore[bad-argument-type]
     )
 
     return loss, stats

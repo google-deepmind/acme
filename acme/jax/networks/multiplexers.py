@@ -57,15 +57,15 @@ class CriticMultiplexer(hk.Module):
 
     # Maybe transform observations and actions before feeding them on.
     if self._observation_network:
-      observation = self._observation_network(observation)
+      observation = self._observation_network(observation)  # pyrefly: ignore[not-callable]
     if self._action_network:
-      action = self._action_network(action)
+      action = self._action_network(action)  # pyrefly: ignore[not-callable]
 
     # Concat observations and actions, with one batch dimension.
     outputs = utils.batch_concat([observation, action])
 
     # Maybe transform output before returning.
     if self._critic_network:
-      outputs = self._critic_network(outputs)
+      outputs = self._critic_network(outputs)  # pyrefly: ignore[not-callable]
 
     return outputs

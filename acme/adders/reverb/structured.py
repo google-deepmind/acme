@@ -132,7 +132,7 @@ class StructuredAdder(adders_base.Adder):
 
       # Create a new writer unless the current one is too young.
       # This is to reduce the relative overhead of creating a new Reverb writer.
-      if time.time() - self._writer_created_at > _RESET_WRITER_EVERY_SECONDS:
+      if time.time() - self._writer_created_at > _RESET_WRITER_EVERY_SECONDS:  # pyrefly: ignore[unsupported-operation]
         self._writer = None
 
   def add_first(self, timestep: dm_env.TimeStep):
@@ -267,9 +267,9 @@ def create_sequence_config(
   if end_of_episode_behavior == EndBehavior.CONTINUE:
     raise NotImplementedError('Merging episodes is not supported.')
 
-  def _sequence_pattern(n: int) -> sw.Pattern:
+  def _sequence_pattern(n: int) -> sw.Pattern:  # pyrefly: ignore[invalid-type-var]
     return sw.pattern_from_transform(
-        step_spec, lambda step: sequence_pattern(n, step)
+        step_spec, lambda step: sequence_pattern(n, step)  # pyrefly: ignore[bad-argument-type]
     )
 
   # The base config is considered for all but the last step in the episode. No

@@ -95,7 +95,7 @@ class ExpQWeightedPolicy(snt.Module):
     action_idx = tf.stack((tf.range(b), action_idx), axis=1)
 
     tiled_actions = snt.split_leading_dim(tiled_actions, dummy_zeros_n_b, 2)
-    action_dim = len(tiled_actions.get_shape().as_list())
+    action_dim = len(tiled_actions.get_shape().as_list())  # pyrefly: ignore[missing-attribute]
     tiled_actions = tf.transpose(tiled_actions,
                                  perm=[1, 0] + list(range(2, action_dim)))
     # [B, ...]

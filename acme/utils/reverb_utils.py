@@ -114,12 +114,12 @@ def replay_sample_to_sars_transition(
   def roll(observation):
     return np.roll(observation, shift=-1, axis=1)
   transitions = types.Transition(
-      observation=steps.observation,
-      action=steps.action,
-      reward=steps.reward,
-      discount=steps.discount,
-      next_observation=tree.map_structure(roll, steps.observation),
-      extras=steps.extras)
+      observation=steps.observation,  # pyrefly: ignore[missing-attribute]
+      action=steps.action,  # pyrefly: ignore[missing-attribute]
+      reward=steps.reward,  # pyrefly: ignore[missing-attribute]
+      discount=steps.discount,  # pyrefly: ignore[missing-attribute]
+      next_observation=tree.map_structure(roll, steps.observation),  # pyrefly: ignore[missing-attribute]
+      extras=steps.extras)  # pyrefly: ignore[missing-attribute]
   if strip_last_transition:
     # We remove the last transition as its next_observation field is incorrect.
     # It has been obtained by rolling the observation field, such that

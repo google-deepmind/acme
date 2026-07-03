@@ -182,13 +182,13 @@ class MBOPLearner(core.Learner):
                                                  world_model_key,
                                                  world_model_iterator,
                                                  networks.world_model_network,
-                                                 losses.world_model_loss)
+                                                 losses.world_model_loss)  # pyrefly: ignore[bad-argument-type]
     self._policy_prior = make_policy_prior_learner(
         logger_fn, self._counter, policy_prior_key, policy_prior_iterator,
-        networks.policy_prior_network, losses.policy_prior_loss)
+        networks.policy_prior_network, losses.policy_prior_loss)  # pyrefly: ignore[bad-argument-type]
     self._n_step_return = make_n_step_return_learner(
         logger_fn, self._counter, n_step_return_key, n_step_return_iterator,
-        networks.n_step_return_network, losses.n_step_return_loss)
+        networks.n_step_return_network, losses.n_step_return_loss)  # pyrefly: ignore[bad-argument-type]
     # Start recording timestamps after the first learning step to not report
     # "warmup" time.
     self._timestamp = None
@@ -213,7 +213,7 @@ class MBOPLearner(core.Learner):
     # Attempt to write the logs.
     self._logger.write({**counts})
 
-  def get_variables(self, names: List[str]) -> List[types.NestedArray]:
+  def get_variables(self, names: List[str]) -> List[types.NestedArray]:  # pyrefly: ignore[bad-override]
     variables = []
     for name in names:
       # Variables will be prefixed by the learner names. If separator is not

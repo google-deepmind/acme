@@ -453,7 +453,7 @@ def mapreduce(
   def g(*args, **kwargs):
     return jax.tree_util.tree_map(reduce_fn, vmapped_f(*args, **kwargs))
 
-  return g
+  return g  # pyrefly: ignore[bad-return]
 
 
 _TrainingState = TypeVar('_TrainingState')

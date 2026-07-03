@@ -111,7 +111,7 @@ class MPOLearner(acme.Learner):
       dual_optimizer: Optional[optax.GradientTransformation] = None,
       dual_learning_rate: optax.ScalarOrSchedule = 1e-2,
       grad_norm_clip: float = 40.0,
-      reward_clip: float = np.float32('inf'),
+      reward_clip: float = np.float32('inf'),  # pyrefly: ignore[bad-function-definition]
       value_tx_pair: rlax.TxPair = rlax.IDENTITY_PAIR,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
@@ -196,12 +196,12 @@ class MPOLearner(acme.Learner):
 
     # Create the dynamics model rollout loss.
     if model_rollout_length > 0:
-      if not discrete_policy and (self._loss_scales.rollout.policy or
-                                  self._loss_scales.rollout.bc_policy):
+      if not discrete_policy and (self._loss_scales.rollout.policy or  # pyrefly: ignore[missing-attribute]
+                                  self._loss_scales.rollout.bc_policy):  # pyrefly: ignore[missing-attribute]
         raise ValueError('Policy rollout losses are only supported in the '
                          'discrete policy case.')
       self._model_rollout_loss_fn = rollout_loss.RolloutLoss(
-          dynamics_model=networks.dynamics_model,
+          dynamics_model=networks.dynamics_model,  # pyrefly: ignore[bad-argument-type]
           model_rollout_length=model_rollout_length,
           loss_scales=loss_scales,
           distributional_loss_fn=self._distributional_loss)
@@ -244,7 +244,7 @@ class MPOLearner(acme.Learner):
         action_dim=dummy_action_concat.shape[-1], dtype=jnp.float32)
 
     # Initialize optimizers.
-    opt_state = self._optimizer.init(network_params)
+    opt_state = self._optimizer.init(network_params)  # pyrefly: ignore[bad-argument-type]
     dual_opt_state = self._dual_optimizer.init(dual_params)
 
     # Initialise training state (parameters and optimiser state).
@@ -289,11 +289,11 @@ class MPOLearner(acme.Learner):
     chex.assert_rank(target, 3)  # [N, Z, T] except for Categorical is [1, T, L]
     if self._critic_type == CriticType.MIXTURE_OF_GAUSSIANS:
       # Sample-based cross-entropy loss.
-      loss = -prediction.log_prob(target[..., jnp.newaxis])
+      loss = -prediction.log_prob(target[..., jnp.newaxis])  # pyrefly: ignore[bad-index, unsupported-operation]
       loss = jnp.mean(loss, axis=[0, 1])  # [T]
     elif self._critic_type == CriticType.NONDISTRIBUTIONAL:
       # TD error.
-      prediction = prediction.squeeze(axis=-1)  # [T]
+      prediction = prediction.squeeze(axis=-1)  # [T]  # pyrefly: ignore[missing-attribute]
       loss = 0.5 * jnp.square(target - prediction)
       chex.assert_equal_shape([target, loss])  # Check broadcasting.
     elif self._critic_type == mpo_types.CriticType.CATEGORICAL_2HOT:
@@ -302,15 +302,15 @@ class MPOLearner(acme.Learner):
       # TODO(abef): Compute target differently? (e.g., do mean cross ent.).
       target_probs = rlax.transform_to_2hot(  # [T, L]
           target,
-          min_value=prediction.values.min(),
-          max_value=prediction.values.max(),
-          num_bins=prediction.logits.shape[-1])
-      logits = jnp.squeeze(prediction.logits, axis=1)  # [T, L]
+          min_value=prediction.values.min(),  # pyrefly: ignore[missing-attribute]
+          max_value=prediction.values.max(),  # pyrefly: ignore[missing-attribute]
+          num_bins=prediction.logits.shape[-1])  # pyrefly: ignore[missing-attribute]
+      logits = jnp.squeeze(prediction.logits, axis=1)  # [T, L]  # pyrefly: ignore[missing-attribute]
       chex.assert_equal_shape([target_probs, logits])
       loss = jax.vmap(rlax.categorical_cross_entropy)(target_probs, logits)
     elif self._critic_type == mpo_types.CriticType.CATEGORICAL:
       loss = jax.vmap(rlax.categorical_cross_entropy)(jnp.squeeze(
-          target, axis=0), jnp.squeeze(prediction.logits, axis=1))
+          target, axis=0), jnp.squeeze(prediction.logits, axis=1))  # pyrefly: ignore[missing-attribute]
     return jnp.mean(loss)  # [T] -> []
 
   def _compute_predictions(self, params: mpo_networks.MPONetworkParams,
@@ -323,7 +323,7 @@ class MPOLearner(acme.Learner):
           sequence.extras['core_state'])
       initial_state = tree.map_structure(lambda x: x[0], initial_state)
     else:
-      initial_state = self._networks.torso.initial_state_fn(
+      initial_state = self._networks.torso.initial_state_fn(  # pyrefly: ignore[missing-attribute]
           params.torso_initial_state, None)
 
     # Unroll the online core network. Note that this may pass the embeddings
@@ -357,7 +357,7 @@ class MPOLearner(acme.Learner):
           sequence.extras['core_state'])
       initial_state = tree.map_structure(lambda x: x[0], initial_state)
     else:
-      initial_state = self._networks.torso.initial_state_fn(
+      initial_state = self._networks.torso.initial_state_fn(  # pyrefly: ignore[missing-attribute]
           target_params.torso_initial_state, None)
 
     # Unroll the target core network. Note that this may pass the embeddings
@@ -552,16 +552,16 @@ class MPOLearner(acme.Learner):
 
     # Compute MPO policy loss on each state in the sequence.
     policy_loss, policy_stats = self._policy_loss_module(
-        params=dual_params,
-        online_action_distribution=predictions.policy,  # [T, ...].
-        target_action_distribution=targets.policy,  # [T, ...].
-        actions=targets.a_improvement,  # Unused in discrete case; [N, T].
-        q_values=targets.q_improvement)  # [N, T]
+        params=dual_params,  # pyrefly: ignore[bad-argument-type]
+        online_action_distribution=predictions.policy,  # [T, ...].  # pyrefly: ignore[bad-argument-type]
+        target_action_distribution=targets.policy,  # [T, ...].  # pyrefly: ignore[bad-argument-type]
+        actions=targets.a_improvement,  # Unused in discrete case; [N, T].  # pyrefly: ignore[bad-argument-type]
+        q_values=targets.q_improvement)  # [N, T]  # pyrefly: ignore[bad-argument-type]
 
     # Compute the critic loss on the states in the sequence.
     critic_loss = self._distributional_loss(
         prediction=predictions.q_value,  # [T-1, 1, ...]
-        target=targets.q_value)  # [N, Z, T-1]
+        target=targets.q_value)  # [N, Z, T-1]  # pyrefly: ignore[bad-argument-type]
 
     loss = (self._loss_scales.policy * policy_loss +
             self._loss_scales.critic * critic_loss)
@@ -630,16 +630,16 @@ class MPOLearner(acme.Learner):
 
     # Get optimizer updates and state.
     updates, opt_state = self._optimizer.update(
-        gradients, state.opt_state, state.params)
+        gradients, state.opt_state, state.params)  # pyrefly: ignore[bad-argument-type]
     dual_updates, dual_opt_state = self._dual_optimizer.update(
-        dual_gradients, state.dual_opt_state, state.dual_params)
+        dual_gradients, state.dual_opt_state, state.dual_params)  # pyrefly: ignore[bad-argument-type]
 
     # Apply optimizer updates to parameters.
-    params = optax.apply_updates(state.params, updates)
-    dual_params = optax.apply_updates(state.dual_params, dual_updates)
+    params = optax.apply_updates(state.params, updates)  # pyrefly: ignore[bad-argument-type]
+    dual_params = optax.apply_updates(state.dual_params, dual_updates)  # pyrefly: ignore[bad-argument-type]
 
     # Clip dual params at some minimum value.
-    dual_params = self._dual_clip_fn(dual_params)
+    dual_params = self._dual_clip_fn(dual_params)  # pyrefly: ignore[bad-argument-type]
 
     steps = state.steps + 1
 
@@ -648,12 +648,12 @@ class MPOLearner(acme.Learner):
       target_params = optax.periodic_update(params, state.target_params, steps,  # pytype: disable=wrong-arg-types  # numpy-scalars
                                             self._target_update_period)
     elif self._target_update_rate:
-      target_params = optax.incremental_update(params, state.target_params,
+      target_params = optax.incremental_update(params, state.target_params,  # pyrefly: ignore[bad-argument-type]
                                                self._target_update_rate)
 
     new_state = TrainingState(  # pytype: disable=wrong-arg-types  # numpy-scalars
-        params=params,
-        target_params=target_params,
+        params=params,  # pyrefly: ignore[bad-argument-type]
+        target_params=target_params,  # pyrefly: ignore[bad-argument-type, unbound-name]
         dual_params=dual_params,
         opt_state=opt_state,
         dual_opt_state=dual_opt_state,
@@ -719,7 +719,7 @@ class MPOLearner(acme.Learner):
       if self._logger:
         self._logger.write({**metrics, **counts})
 
-  def get_variables(self, names: List[str]) -> network_lib.Params:
+  def get_variables(self, names: List[str]) -> network_lib.Params:  # pyrefly: ignore[bad-override]
     params = mpo_utils.get_from_first_device(self._state.target_params)
 
     variables = {

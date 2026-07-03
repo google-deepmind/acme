@@ -190,4 +190,4 @@ def make_actor(actor_core: ActorCore,
       key=['world_model-policy', 'policy_prior-policy', 'n_step_return-policy'])
 
   return actors.GenericActor(
-      actor_core, random_key, variable_client, adder, backend=None)
+      actor_core, random_key, variable_client, adder, backend=None)  # pyrefly: ignore[bad-argument-type]

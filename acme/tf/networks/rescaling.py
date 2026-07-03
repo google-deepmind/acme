@@ -45,7 +45,7 @@ class RescaleToSpec(snt.Module):
     self._offset = spec.minimum
 
   def __call__(self, inputs: tf.Tensor) -> tf.Tensor:
-    inputs = 0.5 * (inputs + 1.0)  # [0, 1]
+    inputs = 0.5 * (inputs + 1.0)  # [0, 1]  # pyrefly: ignore[bad-assignment, unsupported-operation]
     output = inputs * self._scale + self._offset  # [minimum, maximum]
 
     return output

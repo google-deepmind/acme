@@ -402,7 +402,7 @@ class DiscreteValuedTfpHead(hk.Module):
     self._values = np.linspace(vmin, vmax, num=num_atoms, axis=-1)
     if not logits_shape:
       logits_shape = ()
-    self._logits_shape = logits_shape + (num_atoms,)
+    self._logits_shape = logits_shape + (num_atoms,)  # pyrefly: ignore[unsupported-operation]
     self._w_init = w_init
     self._b_init = b_init
 

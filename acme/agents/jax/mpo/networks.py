@@ -66,20 +66,20 @@ class MPONetworks:
 
   def policy_head_apply(self, params: MPONetworkParams,
                         obs_embedding: types.ObservationEmbedding):
-    return self.policy_head.apply(params.policy_head, obs_embedding)
+    return self.policy_head.apply(params.policy_head, obs_embedding)  # pyrefly: ignore[missing-attribute]
 
   def critic_head_apply(self, params: MPONetworkParams,
                         obs_embedding: types.ObservationEmbedding,
                         actions: types.Action):
-    return self.critic_head.apply(params.critic_head, obs_embedding, actions)
+    return self.critic_head.apply(params.critic_head, obs_embedding, actions)  # pyrefly: ignore[missing-attribute]
 
   def torso_unroll(self, params: MPONetworkParams,
                    observations: types.Observation, state: hk.LSTMState):
-    return self.torso.unroll(params.torso, observations, state)
+    return self.torso.unroll(params.torso, observations, state)  # pyrefly: ignore[missing-attribute]
 
   def dynamics_model_unroll(self, params: MPONetworkParams,
                             actions: types.Action, state: hk.LSTMState):
-    return self.dynamics_model.unroll(params.dynamics_model, actions, state)
+    return self.dynamics_model.unroll(params.dynamics_model, actions, state)  # pyrefly: ignore[missing-attribute]
 
 
 def init_params(
@@ -102,15 +102,15 @@ def init_params(
 
   # Initialize the state torso parameters and create a dummy core state.
   batch_size = 1 if add_batch_dim else None
-  params_torso_initial_state = networks.torso.initial_state_fn_init(
+  params_torso_initial_state = networks.torso.initial_state_fn_init(  # pyrefly: ignore[missing-attribute]
       rng_keys[0], batch_size)
-  state = networks.torso.initial_state_fn(
+  state = networks.torso.initial_state_fn(  # pyrefly: ignore[missing-attribute]
       params_torso_initial_state, batch_size)
 
   # Initialize the core and unroll one step to create a dummy core output.
   # The input to the core is the current action and the next observation.
-  params_torso = networks.torso.init(rng_keys[1], observations, state)
-  embeddings, _ = networks.torso.apply(params_torso, observations, state)
+  params_torso = networks.torso.init(rng_keys[1], observations, state)  # pyrefly: ignore[missing-attribute]
+  embeddings, _ = networks.torso.apply(params_torso, observations, state)  # pyrefly: ignore[missing-attribute]
 
   # Initialize the policy and critic heads by passing in the dummy embedding.
   params_policy_head, params_critic_head = {}, {}  # Cannot be None for BIT.

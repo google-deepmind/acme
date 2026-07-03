@@ -62,7 +62,7 @@ class ResNetTorso(snt.Module):
       pool_stride = (pool_stride, pool_stride)
 
     if isinstance(pool_stride[0], int):
-      pool_stride = self._num_layers * (pool_stride,)
+      pool_stride = self._num_layers * (pool_stride,)  # pyrefly: ignore[bad-assignment]
 
     # Create sequence of residual blocks.
     blocks = []
@@ -74,7 +74,7 @@ class ResNetTorso(snt.Module):
               conv_shape,
               conv_stride,
               pool_size,
-              pool_stride[i],
+              pool_stride[i],  # pyrefly: ignore[bad-index]
               data_format=data_format,
               activation=activation))
 
@@ -229,7 +229,7 @@ class DrQTorso(snt.Module):
     """Evaluates the ResidualPixelCore."""
 
     # Normalize to -0.5 to 0.5
-    preprocessed_inputs = _preprocess_inputs(inputs, self._output_dtype) - 0.5
+    preprocessed_inputs = _preprocess_inputs(inputs, self._output_dtype) - 0.5  # pyrefly: ignore[unsupported-operation]
 
     torso_output = self._network(preprocessed_inputs)
 

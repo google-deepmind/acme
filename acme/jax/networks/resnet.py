@@ -53,13 +53,13 @@ class ResidualBlock(hk.Module):
     if self.use_layer_norm:
       output = self.layernorm1(output)
     output = self.non_linearity(output)
-    output = self.inner_op1(output)
+    output = self.inner_op1(output)  # pyrefly: ignore[not-callable]
 
     # Second layer in residual block.
     if self.use_layer_norm:
       output = self.layernorm2(output)
     output = self.non_linearity(output)
-    output = self.inner_op2(output)
+    output = self.inner_op2(output)  # pyrefly: ignore[not-callable]
     return x + output
 
 

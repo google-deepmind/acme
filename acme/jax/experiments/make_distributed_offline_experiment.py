@@ -56,7 +56,7 @@ def make_distributed_offline_experiment(
     environment = experiment.environment_factory(0)
     spec = specs.make_environment_spec(environment)
     networks = experiment.network_factory(spec)
-    models = make_snapshot_models(networks, spec)
+    models = make_snapshot_models(networks, spec)  # pyrefly: ignore[not-callable]
     # TODO(raveman): Decouple checkpointing and snahpshotting configs.
     return snapshotter.JAXSnapshotter(
         variable_source=variable_source,

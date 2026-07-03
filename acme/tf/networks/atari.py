@@ -96,7 +96,7 @@ class R2D2AtariNetwork(base.RNNCore):
 
   # TODO(b/171287329): Figure out why return type annotation causes error.
   def initial_state(self, batch_size: int, **unused_kwargs) -> base.State:  # pytype: disable=invalid-annotation
-    return self._core.initial_state(batch_size)
+    return self._core.initial_state(batch_size)  # pyrefly: ignore[bad-return]
 
   def unroll(
       self,
@@ -141,7 +141,7 @@ class IMPALAAtariNetwork(snt.RNNCore):
 
     return (logits, value), new_state
 
-  def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:
+  def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:  # pyrefly: ignore[bad-override]
     return self._core.initial_state(batch_size)
 
 
@@ -173,7 +173,7 @@ class DeepIMPALAAtariNetwork(base.RNNCore):
 
     return (logits, value), new_state
 
-  def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:
+  def initial_state(self, batch_size: int, **unused_kwargs) -> snt.LSTMState:  # pyrefly: ignore[bad-override]
     return self._core.initial_state(batch_size)
 
   def unroll(
@@ -188,4 +188,4 @@ class DeepIMPALAAtariNetwork(base.RNNCore):
                                                sequence_length)
     logits, values = snt.BatchApply(self._head)(embeddings)
 
-    return (logits, values), new_states
+    return (logits, values), new_states  # pyrefly: ignore[bad-return]

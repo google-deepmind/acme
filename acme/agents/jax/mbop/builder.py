@@ -120,7 +120,7 @@ class MBOPBuilder(builders.OfflineBuilder[mbop_networks.MBOPNetworks,
   ) -> core.Actor:
     """See base class."""
     del environment_spec
-    return acting.make_actor(policy, random_key, variable_source)
+    return acting.make_actor(policy, random_key, variable_source)  # pyrefly: ignore[bad-argument-type]
 
   def make_policy(
       self,

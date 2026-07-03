@@ -83,9 +83,9 @@ class RNNUnpackWrapper(snt.RNNCore):
   def __call__(self, inputs: Sequence[types.NestedTensor],
                prev_state: RNNState) -> Tuple[types.NestedTensor, RNNState]:
     # Unpack the inputs before passing to the underlying module.
-    return self._module(*inputs, prev_state)
+    return self._module(*inputs, prev_state)  # pyrefly: ignore[bad-argument-count]
 
-  def initial_state(self, batch_size):
+  def initial_state(self, batch_size):  # pyrefly: ignore[bad-override]
     return self._module.initial_state(batch_size)
 
 
@@ -242,7 +242,7 @@ class RecurrentExpQWeightedPolicy(snt.RNNCore):
 
     return selected_action, selected_state
 
-  def initial_state(self, batch_size: int) -> PolicyCriticRNNState:
+  def initial_state(self, batch_size: int) -> PolicyCriticRNNState:  # pyrefly: ignore[bad-override]
     return PolicyCriticRNNState(
         policy=self._policy_network.initial_state(batch_size),
         critic=self._critic_network.initial_state(batch_size)
@@ -318,12 +318,12 @@ class DeepRNN(snt.DeepRNN, base.RNNCore):
       ValueError if the length of `state` does not match the number of
       unrollable layers.
     """
-    if len(state) != self._num_unrollable:
+    if len(state) != self._num_unrollable:  # pyrefly: ignore[bad-argument-type]
       raise ValueError(
           'DeepRNN was called with the wrong number of states. The length of '
           '`state` does not match the number of unrollable layers.')
 
-    states = iter(state)
+    states = iter(state)  # pyrefly: ignore[no-matching-overload]
     outputs = inputs
     next_states = []
     for layer in self._layers:
@@ -336,7 +336,7 @@ class DeepRNN(snt.DeepRNN, base.RNNCore):
         # Couldn't unroll(); assume that this is a stateless module.
         outputs = snt.BatchApply(layer, num_dims=2)(outputs)
 
-    return outputs, tuple(next_states)
+    return outputs, tuple(next_states)  # pyrefly: ignore[bad-return]
 
   @property
   def _input_signature(self) -> Optional[tf.TensorSpec]:
@@ -372,4 +372,4 @@ class LSTM(snt.LSTM, base.RNNCore):
              state: base.State,
              sequence_length: int,
              ) -> Tuple[types.NestedTensor, base.State]:
-    return snt.static_unroll(self, inputs, state, sequence_length)
+    return snt.static_unroll(self, inputs, state, sequence_length)  # pyrefly: ignore[bad-return]

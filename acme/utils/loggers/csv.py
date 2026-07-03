@@ -86,7 +86,7 @@ class CSVLogger(base.Logger):
           directory_or_file, 'logs', label, add_uid=self._add_uid)
       file_path = os.path.join(directory, 'logs.csv')
       self._file_owner = True
-      return self._open(file_path, mode='a')
+      return self._open(file_path, mode='a')  # pyrefly: ignore[no-matching-overload]
 
     # TextIO instance.
     file = directory_or_file
