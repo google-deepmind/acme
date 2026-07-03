@@ -241,8 +241,8 @@ class MPO(snt.Module):
           penalty_normalized_weights)
 
       # Combine normalized weights.
-      normalized_weights += penalty_normalized_weights
-      loss_temperature += loss_penalty_temperature
+      normalized_weights += penalty_normalized_weights  # pyrefly: ignore[unsupported-operation]
+      loss_temperature += loss_penalty_temperature  # pyrefly: ignore[unsupported-operation]
     # Decompose the online policy into fixed-mean & fixed-stddev distributions.
     # This has been documented as having better performance in bandit settings,
     # see e.g. https://arxiv.org/pdf/1812.02256.pdf.
@@ -276,9 +276,9 @@ class MPO(snt.Module):
         kl_stddev, alpha_stddev, self._epsilon_stddev)
 
     # Combine losses.
-    loss_policy = loss_policy_mean + loss_policy_stddev
-    loss_kl_penalty = loss_kl_mean + loss_kl_stddev
-    loss_dual = loss_alpha_mean + loss_alpha_stddev + loss_temperature
+    loss_policy = loss_policy_mean + loss_policy_stddev  # pyrefly: ignore[unsupported-operation]
+    loss_kl_penalty = loss_kl_mean + loss_kl_stddev  # pyrefly: ignore[unsupported-operation]
+    loss_dual = loss_alpha_mean + loss_alpha_stddev + loss_temperature  # pyrefly: ignore[unsupported-operation]
     loss = loss_policy + loss_kl_penalty + loss_dual
 
     stats = {}
@@ -288,14 +288,14 @@ class MPO(snt.Module):
     stats["dual_temperature"] = tf.reduce_mean(temperature)
     # Losses.
     stats["loss_policy"] = tf.reduce_mean(loss)
-    stats["loss_alpha"] = tf.reduce_mean(loss_alpha_mean + loss_alpha_stddev)
+    stats["loss_alpha"] = tf.reduce_mean(loss_alpha_mean + loss_alpha_stddev)  # pyrefly: ignore[unsupported-operation]
     stats["loss_temperature"] = tf.reduce_mean(loss_temperature)
     # KL measurements.
     stats["kl_q_rel"] = tf.reduce_mean(kl_nonparametric) / self._epsilon
 
     if self._action_penalization:
       stats["penalty_kl_q_rel"] = tf.reduce_mean(
-          penalty_kl_nonparametric) / self._epsilon_penalty
+          penalty_kl_nonparametric) / self._epsilon_penalty  # pyrefly: ignore[unbound-name]
 
     stats["kl_mean_rel"] = tf.reduce_mean(kl_mean) / self._epsilon_mean
     stats["kl_stddev_rel"] = tf.reduce_mean(kl_stddev) / self._epsilon_stddev

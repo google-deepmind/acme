@@ -183,7 +183,7 @@ class AILLearner(acme.Learner):
     self._logger = logger or loggers.make_default_logger(
         'learner',
         asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
+        serialize_fn=utils.fetch_devicearray,  # pyrefly: ignore[bad-argument-type]
         steps_key=self._counter.get_steps_key())
 
     # Use the JIT compiler.
@@ -231,7 +231,7 @@ class AILLearner(acme.Learner):
                                self._state.discriminator_state,
                                self._state.policy_params, transitions)
 
-    return sample._replace(data=sample.data._replace(reward=rewards))
+    return sample._replace(data=sample.data._replace(reward=rewards))  # pyrefly: ignore[missing-attribute]
 
   def step(self):
     sample = next(self._iterator)
@@ -268,7 +268,7 @@ class AILLearner(acme.Learner):
     # Attempts to write the logs.
     self._logger.write({**metrics, **counts})
 
-  def get_variables(self, names: List[str]) -> List[Any]:
+  def get_variables(self, names: List[str]) -> List[Any]:  # pyrefly: ignore[bad-override]
     rewarder_dict = {'discriminator': self._state.discriminator_params}
 
     learner_names = [name for name in names if name not in rewarder_dict]

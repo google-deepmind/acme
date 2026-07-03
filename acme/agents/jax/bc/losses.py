@@ -28,8 +28,8 @@ loss_args = [
     bc_networks.BCNetworks, networks_lib.Params, networks_lib.PRNGKey,
     types.Transition
 ]
-BCLossWithoutAux = Callable[loss_args, jnp.ndarray]
-BCLossWithAux = Callable[loss_args, Tuple[jnp.ndarray, loggers.LoggingData]]
+BCLossWithoutAux = Callable[loss_args, jnp.ndarray]  # pyrefly: ignore[bad-specialization, not-a-type]
+BCLossWithAux = Callable[loss_args, Tuple[jnp.ndarray, loggers.LoggingData]]  # pyrefly: ignore[bad-specialization, not-a-type]
 BCLoss = Union[BCLossWithoutAux, BCLossWithAux]
 
 
@@ -56,7 +56,7 @@ def logp() -> BCLossWithoutAux:
            transitions: types.Transition) -> jnp.ndarray:
     logits = networks.policy_network.apply(
         params, transitions.observation, is_training=True, key=key)
-    logp_action = networks.log_prob(logits, transitions.action)
+    logp_action = networks.log_prob(logits, transitions.action)  # pyrefly: ignore[not-callable]
     return -jnp.mean(logp_action)
 
   return loss

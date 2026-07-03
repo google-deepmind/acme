@@ -209,7 +209,7 @@ class SGDLearner(acme.Learner):
       result.update(metrics)
       self._logger.write(result)
 
-  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
+  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:  # pyrefly: ignore[bad-override]
     # Return first replica of parameters.
     return utils.get_from_first_device([self._state.params])
 

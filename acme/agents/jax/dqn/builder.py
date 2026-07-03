@@ -73,7 +73,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
         network=networks.policy_network,
         random_key=random_key,
         optimizer=optax.adam(
-            self._config.learning_rate, eps=self._config.adam_eps),
+            self._config.learning_rate, eps=self._config.adam_eps),  # pyrefly: ignore[bad-argument-type]
         target_update_period=self._config.target_update_period,
         data_iterator=dataset,
         loss_fn=self._loss_fn,
@@ -97,7 +97,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
     variable_client = variable_utils.VariableClient(
         variable_source, '', device='cpu')
     return actors.GenericActor(
-        actor=policy,
+        actor=policy,  # pyrefly: ignore[bad-argument-type]
         random_key=random_key,
         variable_client=variable_client,
         adder=adder,

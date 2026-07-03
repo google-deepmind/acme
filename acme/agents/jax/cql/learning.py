@@ -145,10 +145,10 @@ class CQLLearner(acme.Learner):
       """Eq 18 from https://arxiv.org/pdf/1812.05905.pdf."""
       dist_params = networks.policy_network.apply(policy_params,
                                                   transitions.observation)
-      action = networks.sample(dist_params, key)
+      action = networks.sample(dist_params, key)  # pyrefly: ignore[not-callable]
       log_prob = networks.log_prob(dist_params, action)
       sac_alpha = jnp.exp(log_sac_alpha)
-      sac_alpha_loss = sac_alpha * jax.lax.stop_gradient(-log_prob -
+      sac_alpha_loss = sac_alpha * jax.lax.stop_gradient(-log_prob -  # pyrefly: ignore[unsupported-operation]
                                                          target_entropy)
       return jnp.mean(sac_alpha_loss)
 
@@ -160,7 +160,7 @@ class CQLLearner(acme.Learner):
       """Computes the SAC part of the loss."""
       next_dist_params = networks.policy_network.apply(
           policy_params, transitions.next_observation)
-      next_action = networks.sample(next_dist_params, key)
+      next_action = networks.sample(next_dist_params, key)  # pyrefly: ignore[not-callable]
       next_q = networks.critic_network.apply(target_critic_params,
                                              transitions.next_observation,
                                              next_action)
@@ -260,7 +260,7 @@ class CQLLearner(acme.Learner):
                                                    transitions.observation,
                                                    transitions.action)
       return -cql_alpha * (
-          cql_critic_loss(q_old_action, critic_params, policy_params,
+          cql_critic_loss(q_old_action, critic_params, policy_params,  # pyrefly: ignore[unsupported-operation]
                           transitions, key) - cql_lagrange_threshold)
 
     def actor_loss(policy_params: networks_lib.Params,
@@ -274,7 +274,7 @@ class CQLLearner(acme.Learner):
         log_prob = networks.log_prob(dist_params, transitions.action)
         actor_loss = -jnp.mean(log_prob)
       else:
-        action = networks.sample(dist_params, key)
+        action = networks.sample(dist_params, key)  # pyrefly: ignore[not-callable]
         log_prob = networks.log_prob(dist_params, action)
         q_action = networks.critic_network.apply(critic_params,
                                                  transitions.observation,
@@ -300,7 +300,7 @@ class CQLLearner(acme.Learner):
         alpha_loss, alpha_grads = alpha_grad(state.log_sac_alpha,
                                              state.policy_params,
                                              rb_transitions, key_alpha)
-        sac_alpha = jnp.exp(state.log_sac_alpha)
+        sac_alpha = jnp.exp(state.log_sac_alpha)  # pyrefly: ignore[bad-argument-type]
       else:
         sac_alpha = fixed_entropy_coefficient
 
@@ -311,7 +311,7 @@ class CQLLearner(acme.Learner):
         cql_lagrange_grads = jnp.clip(cql_lagrange_grads,
                                       -_CQL_GRAD_CLIPPING_VALUE,
                                       _CQL_GRAD_CLIPPING_VALUE)
-        cql_alpha = jnp.exp(state.log_cql_alpha)
+        cql_alpha = jnp.exp(state.log_cql_alpha)  # pyrefly: ignore[bad-argument-type]
         cql_alpha = jnp.clip(cql_alpha, min=0.0, max=_CQL_COEFFICIENT_MAX_VALUE)
       else:
         cql_alpha = fixed_cql_coefficient
@@ -361,11 +361,11 @@ class CQLLearner(acme.Learner):
       if adaptive_entropy_coefficient and (not in_initial_bc_iters):
         # Apply sac_alpha gradients
         alpha_update, alpha_optimizer_state = alpha_optimizer.update(
-            alpha_grads, state.alpha_optimizer_state)
-        log_sac_alpha = optax.apply_updates(state.log_sac_alpha, alpha_update)
+            alpha_grads, state.alpha_optimizer_state)  # pyrefly: ignore[bad-argument-type, unbound-name]
+        log_sac_alpha = optax.apply_updates(state.log_sac_alpha, alpha_update)  # pyrefly: ignore[bad-argument-type]
         metrics.update({
-            'alpha_loss': alpha_loss,
-            'sac_alpha': jnp.exp(log_sac_alpha),
+            'alpha_loss': alpha_loss,  # pyrefly: ignore[unbound-name]
+            'sac_alpha': jnp.exp(log_sac_alpha),  # pyrefly: ignore[bad-argument-type]
         })
         new_state = new_state._replace(
             alpha_optimizer_state=alpha_optimizer_state,
@@ -377,11 +377,11 @@ class CQLLearner(acme.Learner):
       if adaptive_cql_coefficient:
         # Apply cql coeff gradients
         cql_update, cql_optimizer_state = cql_optimizer.update(
-            cql_lagrange_grads, state.cql_optimizer_state)
-        log_cql_alpha = optax.apply_updates(state.log_cql_alpha, cql_update)
+            cql_lagrange_grads, state.cql_optimizer_state)  # pyrefly: ignore[bad-argument-type, unbound-name]
+        log_cql_alpha = optax.apply_updates(state.log_cql_alpha, cql_update)  # pyrefly: ignore[bad-argument-type]
         metrics.update({
-            'cql_lagrange_loss': cql_lagrange_loss,
-            'cql_alpha': jnp.exp(log_cql_alpha),
+            'cql_lagrange_loss': cql_lagrange_loss,  # pyrefly: ignore[unbound-name]
+            'cql_alpha': jnp.exp(log_cql_alpha),  # pyrefly: ignore[bad-argument-type]
         })
         new_state = new_state._replace(
             cql_optimizer_state=cql_optimizer_state,
@@ -394,7 +394,7 @@ class CQLLearner(acme.Learner):
     self._logger = logger or loggers.make_default_logger(
         'learner',
         asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
+        serialize_fn=utils.fetch_devicearray,  # pyrefly: ignore[bad-argument-type]
         steps_key=self._counter.get_steps_key())
 
     # Iterator on demonstration transitions.
@@ -429,11 +429,11 @@ class CQLLearner(acme.Learner):
 
     if adaptive_entropy_coefficient:
       self._state = self._state._replace(
-          alpha_optimizer_state=alpha_optimizer_state,
-          log_sac_alpha=log_sac_alpha)
+          alpha_optimizer_state=alpha_optimizer_state,  # pyrefly: ignore[unbound-name]
+          log_sac_alpha=log_sac_alpha)  # pyrefly: ignore[unbound-name]
     if adaptive_cql_coefficient:
       self._state = self._state._replace(
-          cql_optimizer_state=cql_optimizer_state, log_cql_alpha=log_cql_alpha)
+          cql_optimizer_state=cql_optimizer_state, log_cql_alpha=log_cql_alpha)  # pyrefly: ignore[unbound-name]
 
     # Do not record timestamps until after the first learning step is done.
     # This is to avoid including the time it takes for actors to come online and
@@ -469,7 +469,7 @@ class CQLLearner(acme.Learner):
     # Attempts to write the logs.
     self._logger.write({**metrics, **counts})
 
-  def get_variables(self, names: List[str]) -> List[Any]:
+  def get_variables(self, names: List[str]) -> List[Any]:  # pyrefly: ignore[bad-override]
     variables = {
         'policy': self._state.policy_params,
     }

@@ -43,7 +43,7 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
       key: networks_lib.PRNGKey,
   ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
-    transitions: types.Transition = batch.data
+    transitions: types.Transition = batch.data  # pyrefly: ignore[bad-assignment]
     probs = batch.info.probability
 
     # Forward pass.
@@ -67,7 +67,7 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
     batch_loss = rlax.huber_loss(td_error, self.huber_loss_parameter)
 
     # Importance weighting.
-    importance_weights = (1. / probs).astype(jnp.float32)
+    importance_weights = (1. / probs).astype(jnp.float32)  # pyrefly: ignore[missing-attribute]
     importance_weights **= self.importance_sampling_exponent
     importance_weights /= jnp.max(importance_weights)
 
@@ -96,7 +96,7 @@ class QrDqn(learning_lib.LossFn):
       key: networks_lib.PRNGKey,
   ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
-    transitions: types.Transition = batch.data
+    transitions: types.Transition = batch.data  # pyrefly: ignore[bad-assignment]
     key1, key2 = jax.random.split(key)
     _, dist_q_tm1 = network.apply(
         params, transitions.observation, is_training=True, key=key1)
@@ -159,7 +159,7 @@ class PrioritizedCategoricalDoubleQLearning(learning_lib.LossFn):
       key: networks_lib.PRNGKey,
   ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
-    transitions: types.Transition = batch.data
+    transitions: types.Transition = batch.data  # pyrefly: ignore[bad-assignment]
     probs = batch.info.probability
 
     # Forward pass.
@@ -184,7 +184,7 @@ class PrioritizedCategoricalDoubleQLearning(learning_lib.LossFn):
                                d_t, atoms_t, logits_t, q_t_selector)
 
     # Importance weighting.
-    importance_weights = (1. / probs).astype(jnp.float32)
+    importance_weights = (1. / probs).astype(jnp.float32)  # pyrefly: ignore[missing-attribute]
     importance_weights **= self.importance_sampling_exponent
     importance_weights /= jnp.max(importance_weights)
 
@@ -216,7 +216,7 @@ class QLearning(learning_lib.LossFn):
       key: networks_lib.PRNGKey,
   ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
-    transitions: types.Transition = batch.data
+    transitions: types.Transition = batch.data  # pyrefly: ignore[bad-assignment]
 
     # Forward pass.
     key1, key2 = jax.random.split(key)
@@ -260,7 +260,7 @@ class RegularizedQLearning(learning_lib.LossFn):
       key: networks_lib.PRNGKey,
   ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
-    transitions: types.Transition = batch.data
+    transitions: types.Transition = batch.data  # pyrefly: ignore[bad-assignment]
 
     # Forward pass.
     key1, key2 = jax.random.split(key)
@@ -308,7 +308,7 @@ class MunchausenQLearning(learning_lib.LossFn):
       key: networks_lib.PRNGKey,
   ) -> Tuple[jax.Array, learning_lib.LossExtra]:
     """Calculate a loss on a single batch of data."""
-    transitions: types.Transition = batch.data
+    transitions: types.Transition = batch.data  # pyrefly: ignore[bad-assignment]
 
     # Forward pass.
     key1, key2, key3 = jax.random.split(key, 3)

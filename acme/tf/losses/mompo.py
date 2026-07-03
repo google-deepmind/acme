@@ -269,9 +269,9 @@ class MultiObjectiveMPO(snt.Module):
         kl_stddev, alpha_stddev, self._epsilon_stddev)
 
     # Combine losses.
-    loss_policy = loss_policy_mean + loss_policy_stddev
-    loss_kl_penalty = loss_kl_mean + loss_kl_stddev
-    loss_dual = loss_alpha_mean + loss_alpha_stddev + loss_temperature_mean
+    loss_policy = loss_policy_mean + loss_policy_stddev  # pyrefly: ignore[unsupported-operation]
+    loss_kl_penalty = loss_kl_mean + loss_kl_stddev  # pyrefly: ignore[unsupported-operation]
+    loss_dual = loss_alpha_mean + loss_alpha_stddev + loss_temperature_mean  # pyrefly: ignore[unsupported-operation]
     loss = loss_policy + loss_kl_penalty + loss_dual
 
     stats = {}
@@ -280,7 +280,7 @@ class MultiObjectiveMPO(snt.Module):
     stats["dual_alpha_stddev"] = tf.reduce_mean(alpha_stddev)
     # Losses.
     stats["loss_policy"] = tf.reduce_mean(loss)
-    stats["loss_alpha"] = tf.reduce_mean(loss_alpha_mean + loss_alpha_stddev)
+    stats["loss_alpha"] = tf.reduce_mean(loss_alpha_mean + loss_alpha_stddev)  # pyrefly: ignore[unsupported-operation]
     # KL measurements.
     stats["kl_mean_rel"] = tf.reduce_mean(kl_mean, axis=0) / self._epsilon_mean
     stats["kl_stddev_rel"] = tf.reduce_mean(

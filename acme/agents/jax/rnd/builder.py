@@ -43,7 +43,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
       rl_agent: builders.ActorLearnerBuilder[rnd_networks.DirectRLNetworks,
                                              Policy, reverb.ReplaySample],
       config: rnd_config.RNDConfig,
-      logger_fn: Callable[[], loggers.Logger] = lambda: None,
+      logger_fn: Callable[[], loggers.Logger] = lambda: None,  # pyrefly: ignore[bad-function-definition]
   ):
     """Implements a builder for RND using rl_agent as forward RL algorithm.
 
@@ -59,7 +59,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],
+      networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],  # pyrefly: ignore[invalid-type-var]
       dataset: Iterator[reverb.ReplaySample],
       logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
@@ -72,13 +72,13 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
     direct_rl_counter = counting.Counter(counter, 'direct_rl')
 
     def direct_rl_learner_factory(
-        networks: rnd_networks.DirectRLNetworks,
+        networks: rnd_networks.DirectRLNetworks,  # pyrefly: ignore[invalid-type-var]
         dataset: Iterator[reverb.ReplaySample]) -> core.Learner:
       return self._rl_agent.make_learner(
           direct_rl_learner_key,
           networks,
           dataset,
-          logger_fn=lambda name: self._logger_fn(),
+          logger_fn=lambda name: self._logger_fn(),  # pyrefly: ignore[bad-argument-type]
           environment_spec=environment_spec,
           replay_client=replay_client,
           counter=direct_rl_counter)

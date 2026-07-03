@@ -79,7 +79,7 @@ class WPONetworks:
                    observations: types.Observation, state: hk.LSTMState):
     if self.torso is None:
       raise ValueError('Torso is not initialized.')
-    return self.torso.unroll(params.torso, observations, state)
+    return self.torso.unroll(params.torso, observations, state)  # pyrefly: ignore[bad-argument-type]
 
 
 def init_params(

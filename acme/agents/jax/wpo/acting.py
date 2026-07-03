@@ -52,7 +52,7 @@ def make_actor_core(wpo_networks: networks.WPONetworks,
         key=next_key,
         core_state=core_state,
         prev_core_state=core_state,
-        log_prob=np.zeros(shape=(), dtype=np.float32) if store_log_prob else ())
+        log_prob=np.zeros(shape=(), dtype=np.float32) if store_log_prob else ())  # pyrefly: ignore[bad-argument-type]
 
   def select_action(params: networks.WPONetworkParams,
                     observations: types.Observation,
@@ -63,7 +63,7 @@ def make_actor_core(wpo_networks: networks.WPONetworks,
     # Embed observations and apply stateful core (e.g. recurrent, transformer).
     if wpo_networks.torso is None:
       raise ValueError('Torso is not initialized.')
-    embeddings, core_state = wpo_networks.torso.apply(params.torso,
+    embeddings, core_state = wpo_networks.torso.apply(params.torso,  # pyrefly: ignore[bad-argument-type]
                                                       observations,
                                                       state.core_state)
 

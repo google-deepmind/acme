@@ -164,7 +164,7 @@ def batched_recurrent_to_actor_core(
   def get_extras(
       state: SimpleActorCoreRecurrentState[RecurrentState]
   ) -> Mapping[str, jnp.ndarray]:
-    return {'core_state': state.recurrent_state}
+    return {'core_state': state.recurrent_state}  # pyrefly: ignore[bad-return]
 
   return ActorCore(init=init, select_action=select_action,
                    get_extras=get_extras)

@@ -66,7 +66,7 @@ def transformed_n_step_loss(
     * `LossCoreExtra`: namedtuple containing the fields `targets` and `errors`.
   """
 
-  with tf.name_scope(name):
+  with tf.name_scope(name):  # pyrefly: ignore[bad-instantiation]
     # Require correct tensor ranks---as long as we have shape information
     # available to check. If there isn't any, we print a warning.
     def check_rank(tensors: Iterable[tf.Tensor], ranks: Sequence[int]):
@@ -170,10 +170,10 @@ def _compute_n_step_sequence_targets(
 
 def _signed_hyperbolic_tx(x: tf.Tensor, eps: float = 1e-3) -> tf.Tensor:
   """Signed hyperbolic transform, inverse of signed_parabolic."""
-  return tf.sign(x) * (tf.sqrt(abs(x) + 1) - 1) + eps * x
+  return tf.sign(x) * (tf.sqrt(abs(x) + 1) - 1) + eps * x  # pyrefly: ignore[bad-argument-type, unsupported-operation]
 
 
 def _signed_parabolic_tx(x: tf.Tensor, eps: float = 1e-3) -> tf.Tensor:
   """Signed parabolic transform, inverse of signed_hyperbolic."""
-  z = tf.sqrt(1 + 4 * eps * (eps + 1 + abs(x))) / 2 / eps - 1 / 2 / eps
+  z = tf.sqrt(1 + 4 * eps * (eps + 1 + abs(x))) / 2 / eps - 1 / 2 / eps  # pyrefly: ignore[bad-argument-type]
   return tf.sign(x) * (tf.square(z) - 1)

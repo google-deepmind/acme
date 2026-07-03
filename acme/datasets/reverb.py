@@ -93,7 +93,7 @@ def make_reverb_dataset(
   if max_in_flight_samples_per_worker is None and batch_size is None:
     max_in_flight_samples_per_worker = 100
   elif max_in_flight_samples_per_worker is None:
-    max_in_flight_samples_per_worker = 2 * batch_size
+    max_in_flight_samples_per_worker = 2 * batch_size  # pyrefly: ignore[unsupported-operation]
 
   # Create mapping from tables to non-zero weights.
   if isinstance(table, str):
@@ -123,7 +123,7 @@ def make_reverb_dataset(
       datasets += (dataset,)
     if len(datasets) > 1:
       dataset = tf.data.Dataset.sample_from_datasets(
-          datasets, weights=tables.values())
+          datasets, weights=tables.values())  # pyrefly: ignore[bad-argument-type]
     else:
       dataset = datasets[0]
 

@@ -52,7 +52,7 @@ def alternating_epsilons_actor_core(policy_network: EpsilonPolicy,
   Returns:
     A feedforward policy.
   """
-  epsilons = jnp.array(epsilons)
+  epsilons = jnp.array(epsilons)  # pyrefly: ignore[bad-assignment]
 
   def apply_and_sample(params: networks_lib.Params,
                        observation: networks_lib.Observation,
@@ -64,7 +64,7 @@ def alternating_epsilons_actor_core(policy_network: EpsilonPolicy,
 
   def policy_init(random_key: networks_lib.PRNGKey):
     random_key, key = jax.random.split(random_key)
-    epsilon = jax.random.choice(key, epsilons)
+    epsilon = jax.random.choice(key, epsilons)  # pyrefly: ignore[bad-argument-type]
     return EpsilonActorState(rng=random_key, epsilon=epsilon)
 
   return actor_core_lib.ActorCore(

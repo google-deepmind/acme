@@ -67,7 +67,7 @@ def build_experiment_config():
   return experiments.ExperimentConfig(
       builder=agent_builder,
       environment_factory=lambda _: helpers.make_environment(suite, task),
-      network_factory=network_factory,
+      network_factory=network_factory,  # pyrefly: ignore[bad-argument-type]
       seed=SEED.value,
       max_num_actor_steps=NUM_STEPS.value)
 

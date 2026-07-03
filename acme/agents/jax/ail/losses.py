@@ -227,9 +227,9 @@ def add_gradient_penalty(base_loss: Loss,
         _compute_gradient_penalty(gradient_penalty_data, apply_discriminator_fn,
                                   gradient_penalty_target))
 
-    losses['gradient_penalty'] = gradient_penalty
+    losses['gradient_penalty'] = gradient_penalty  # pyrefly: ignore[unsupported-operation]
     total_loss = partial_loss + gradient_penalty
-    losses['total_loss'] = total_loss
+    losses['total_loss'] = total_loss  # pyrefly: ignore[unsupported-operation]
 
     return total_loss, (losses, discriminator_state)  # pytype: disable=bad-return-type  # jnp-type
 

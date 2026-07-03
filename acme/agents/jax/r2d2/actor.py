@@ -88,13 +88,13 @@ def get_actor_core(
     initial_core_state = networks.init_recurrent_state(state_rng, None)
     return R2D2ActorState(
         rng=rng,
-        epsilon=epsilon,
+        epsilon=epsilon,  # pyrefly: ignore[bad-argument-type]
         recurrent_state=initial_core_state,
         prev_recurrent_state=initial_core_state)
 
   def get_extras(
       state: R2D2ActorState[actor_core_lib.RecurrentState]) -> R2D2Extras:
-    return {'core_state': state.prev_recurrent_state}
+    return {'core_state': state.prev_recurrent_state}  # pyrefly: ignore[bad-return]
 
   return actor_core_lib.ActorCore(init=init, select_action=select_action,
                                   get_extras=get_extras)

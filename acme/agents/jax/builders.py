@@ -32,7 +32,7 @@ Policy = jax_types.Policy
 Sample = jax_types.Sample
 
 
-class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
+class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):  # pyrefly: ignore[invalid-type-var]
   """Interface for defining the components of an offline RL agent.
 
   Implementations of this interface contain a complete specification of a
@@ -103,7 +103,7 @@ class OfflineBuilder(abc.ABC, Generic[Networks, Policy, Sample]):
     """
 
 
-class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
+class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],  # pyrefly: ignore[invalid-type-var]
                           Generic[Networks, Policy, Sample]):
   """Defines an interface for defining the components of an RL agent.
 
@@ -226,7 +226,7 @@ class ActorLearnerBuilder(OfflineBuilder[Networks, Policy, Sample],
 
 
 @dataclasses.dataclass(frozen=True)
-class ActorLearnerBuilderWrapper(ActorLearnerBuilder[Networks, Policy, Sample],
+class ActorLearnerBuilderWrapper(ActorLearnerBuilder[Networks, Policy, Sample],  # pyrefly: ignore[invalid-type-var]
                                  Generic[Networks, Policy, Sample]):
   """An empty wrapper for ActorLearnerBuilder."""
 

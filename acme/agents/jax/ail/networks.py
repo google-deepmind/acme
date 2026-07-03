@@ -140,7 +140,7 @@ class SpectralNormalizedLinear(hk.Module):
         v = _l2_normalize(jnp.matmul(u, weights.transpose()), eps=self.eps)
         u = _l2_normalize(jnp.matmul(v, weights), eps=self.eps)
       u = jax.lax.stop_gradient(u)
-      v = jax.lax.stop_gradient(v)
+      v = jax.lax.stop_gradient(v)  # pyrefly: ignore[unbound-name]
       sigma = jnp.matmul(jnp.matmul(v, weights), jnp.transpose(u))[0, 0]
       hk.set_state('u', u)
       hk.set_state('v', v)
@@ -245,14 +245,14 @@ class DiscriminatorMLP(hk.Module):
       is_training: bool,
       rng: Optional[networks_lib.PRNGKey],
   ) -> networks_lib.Logits:
-    rng = hk.PRNGSequence(rng) if rng is not None else None
+    rng = hk.PRNGSequence(rng) if rng is not None else None  # pyrefly: ignore[bad-assignment]
 
     out = inputs
     for i, layer in enumerate(self._layers):
       if is_training:
         dropout_rate = (
             self._input_dropout_rate if i == 0 else self._hidden_dropout_rate)
-        out = hk.dropout(next(rng), dropout_rate, out)
+        out = hk.dropout(next(rng), dropout_rate, out)  # pyrefly: ignore[bad-argument-type]
       out = layer(out)
       if i < len(self._layers) - 1:
         out = self._activation(out)

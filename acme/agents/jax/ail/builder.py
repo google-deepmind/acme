@@ -310,7 +310,7 @@ class AILBuilder(builders.ActorLearnerBuilder[ail_networks.AILNetworks,
     # Some direct rl algorithms (such as PPO), might be passing extra data
     # which we won't be able to process here properly, so we need to ignore them
     return adders.ForkingAdder(
-        [adders.IgnoreExtrasAdder(ail_adder), direct_rl_adder])
+        [adders.IgnoreExtrasAdder(ail_adder), direct_rl_adder])  # pyrefly: ignore[bad-argument-type]
 
   def make_actor(
       self,

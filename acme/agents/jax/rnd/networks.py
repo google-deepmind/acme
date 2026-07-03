@@ -38,7 +38,7 @@ class RNDNetworks(Generic[DirectRLNetworks]):
   get_reward: Callable[
       [networks_lib.NetworkOutput, networks_lib.NetworkOutput, jnp.ndarray],
       jnp.ndarray]
-  direct_rl_networks: DirectRLNetworks = None
+  direct_rl_networks: DirectRLNetworks = None  # pyrefly: ignore[bad-assignment]
 
 
 # See Appendix A.2 of https://arxiv.org/pdf/1810.12894.pdf

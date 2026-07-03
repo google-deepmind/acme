@@ -92,7 +92,7 @@ class CQLBuilder(builders.OfflineBuilder[cql_networks.CQLNetworks,
     variable_client = variable_utils.VariableClient(
         variable_source, 'policy', device='cpu')
     return actors.GenericActor(
-        actor_core, random_key, variable_client, backend='cpu')
+        actor_core, random_key, variable_client, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
   def make_policy(self, networks: cql_networks.CQLNetworks,
                   environment_spec: specs.EnvironmentSpec,
@@ -104,6 +104,6 @@ class CQLBuilder(builders.OfflineBuilder[cql_networks.CQLNetworks,
         params: networks_lib.Params, key: networks_lib.PRNGKey,
         observation: networks_lib.Observation) -> networks_lib.Action:
       dist_params = networks.policy_network.apply(params, observation)
-      return networks.sample_eval(dist_params, key)
+      return networks.sample_eval(dist_params, key)  # pyrefly: ignore[not-callable]
 
     return evaluation_policy

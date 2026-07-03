@@ -108,13 +108,13 @@ def make_transform(
   if transform_next_observation:
     def transform(x: reverb.ReplaySample) -> reverb.ReplaySample:
       return x._replace(
-          data=x.data._replace(
-              observation=observation_transform(x.data.observation),
-              next_observation=observation_transform(x.data.next_observation)))
+          data=x.data._replace(  # pyrefly: ignore[missing-attribute]
+              observation=observation_transform(x.data.observation),  # pyrefly: ignore[missing-attribute]
+              next_observation=observation_transform(x.data.next_observation)))  # pyrefly: ignore[missing-attribute]
   else:
     def transform(x: reverb.ReplaySample) -> reverb.ReplaySample:
       return x._replace(
-          data=x.data._replace(
-              observation=observation_transform(x.data.observation)))
+          data=x.data._replace(  # pyrefly: ignore[missing-attribute]
+              observation=observation_transform(x.data.observation)))  # pyrefly: ignore[missing-attribute]
 
   return transform

@@ -41,7 +41,7 @@ def apply_and_sample_n(key: networks_lib.PRNGKey,
   """Applies the policy and samples num_samples actions."""
   dist_params = networks.policy_network.apply(params, obs)
   sampled_actions = jnp.array([
-      networks.sample(dist_params, key_n)
+      networks.sample(dist_params, key_n)  # pyrefly: ignore[not-callable]
       for key_n in jax.random.split(key, num_samples)
   ])
   sampled_log_probs = networks.log_prob(dist_params, sampled_actions)

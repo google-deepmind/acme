@@ -105,7 +105,7 @@ class WPOLearner(acme.Learner):
       dual_optimizer: optax.GradientTransformation | None = None,
       dual_learning_rate: optax.ScalarOrSchedule = 1e-2,
       grad_norm_clip: float = 40.0,
-      reward_clip: float = np.float32('inf'),
+      reward_clip: float = np.float32('inf'),  # pyrefly: ignore[bad-function-definition]
       value_tx_pair: rlax.TxPair = rlax.IDENTITY_PAIR,
       counter: counting.Counter | None = None,
       logger: loggers.Logger | None = None,
@@ -204,7 +204,7 @@ class WPOLearner(acme.Learner):
         action_dim=dummy_action_concat.shape[-1], dtype=jnp.float32)
 
     # Initialize optimizers.
-    opt_state = self._optimizer.init(network_params)
+    opt_state = self._optimizer.init(network_params)  # pyrefly: ignore[bad-argument-type]
     dual_opt_state = self._dual_optimizer.init(dual_params)
 
     # Initialise training state (parameters and optimiser state).
@@ -248,7 +248,7 @@ class WPOLearner(acme.Learner):
     # TODO(abef): break this function into separate functions for each critic.
     chex.assert_rank(target, 3)  # [N, Z, T] except for Categorical is [1, T, L]
     # TD error.
-    prediction = prediction.squeeze(axis=-1)  # [T]
+    prediction = prediction.squeeze(axis=-1)  # [T]  # pyrefly: ignore[missing-attribute]
     loss = 0.5 * jnp.square(target - prediction)
     chex.assert_equal_shape([target, loss])  # Check broadcasting.
     return jnp.mean(loss)  # [T] -> []
@@ -267,7 +267,7 @@ class WPOLearner(acme.Learner):
       if self._networks.torso is None:
         raise ValueError('Torso is not initialized.')
       initial_state = self._networks.torso.initial_state_fn(
-          params.torso_initial_state, None)
+          params.torso_initial_state, None)  # pyrefly: ignore[bad-argument-type]
 
     # Unroll the online core network. Note that this may pass the embeddings
     # unchanged if, say, the core is an hk.IdentityCore.
@@ -315,7 +315,7 @@ class WPOLearner(acme.Learner):
       if self._networks.torso is None:
         raise ValueError('Torso is not initialized.')
       initial_state = self._networks.torso.initial_state_fn(
-          target_params.torso_initial_state, None)
+          target_params.torso_initial_state, None)  # pyrefly: ignore[bad-argument-type]
 
     # Unroll the target core network. Note that this may pass the embeddings
     # unchanged if, say, the core is an hk.IdentityCore.
@@ -457,15 +457,15 @@ class WPOLearner(acme.Learner):
         params=dual_params,
         online_action_distribution=predictions.policy,  # [T, ...].
         target_action_distribution=targets.policy,  # [T, ...].
-        actions=predictions.actions,
-        q_values=targets.q_improvement,
-        q_values_grad=predictions.q_values_grad,
+        actions=predictions.actions,  # pyrefly: ignore[bad-argument-type]
+        q_values=targets.q_improvement,  # pyrefly: ignore[bad-argument-type]
+        q_values_grad=predictions.q_values_grad,  # pyrefly: ignore[bad-argument-type]
         is_terminal=is_terminal)  # [N, T]
 
     # Compute the critic loss on the states in the sequence.
     critic_loss = self._distributional_loss(
         prediction=predictions.q_value,  # [T-1, 1, ...]
-        target=targets.q_value)  # [N, Z, T-1]
+        target=targets.q_value)  # [N, Z, T-1]  # pyrefly: ignore[bad-argument-type]
 
     loss = (self._loss_scales.policy * policy_loss +
             self._loss_scales.critic * critic_loss)
@@ -521,12 +521,12 @@ class WPOLearner(acme.Learner):
 
     # Get optimizer updates and state.
     updates, opt_state = self._optimizer.update(
-        gradients, state.opt_state, state.params)
+        gradients, state.opt_state, state.params)  # pyrefly: ignore[bad-argument-type]
     dual_updates, dual_opt_state = self._dual_optimizer.update(
         dual_gradients, state.dual_opt_state, state.dual_params)
 
     # Apply optimizer updates to parameters.
-    params = optax.apply_updates(state.params, updates)
+    params = optax.apply_updates(state.params, updates)  # pyrefly: ignore[bad-argument-type]
     dual_params = optax.apply_updates(state.dual_params, dual_updates)
 
     # Clip dual params at some minimum value.
@@ -539,12 +539,12 @@ class WPOLearner(acme.Learner):
       target_params = optax.periodic_update(params, state.target_params, steps,  # pytype: disable=wrong-arg-types  # numpy-scalars
                                             self._target_update_period)
     elif self._target_update_rate:
-      target_params = optax.incremental_update(params, state.target_params,
+      target_params = optax.incremental_update(params, state.target_params,  # pyrefly: ignore[bad-argument-type]
                                                self._target_update_rate)
 
     new_state = TrainingState(  # pytype: disable=wrong-arg-types  # numpy-scalars
-        params=params,
-        target_params=target_params,
+        params=params,  # pyrefly: ignore[bad-argument-type]
+        target_params=target_params,  # pyrefly: ignore[bad-argument-type, unbound-name]
         dual_params=dual_params,
         opt_state=opt_state,
         dual_opt_state=dual_opt_state,
@@ -603,7 +603,7 @@ class WPOLearner(acme.Learner):
       if self._logger:
         self._logger.write({**metrics, **counts})
 
-  def get_variables(self, names: list[str]) -> network_lib.Params:
+  def get_variables(self, names: list[str]) -> network_lib.Params:  # pyrefly: ignore[bad-override]
     params = wpo_utils.get_from_first_device(self._state.target_params)
 
     variables = {

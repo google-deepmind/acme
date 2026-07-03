@@ -37,7 +37,7 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
 
   def __init__(
       self,
-      actor: actor_core.ActorCore[actor_core.State, actor_core.Extras],
+      actor: actor_core.ActorCore[actor_core.State, actor_core.Extras],  # pyrefly: ignore[invalid-type-var]
       random_key: network_lib.PRNGKey,
       variable_client: Optional[variable_utils.VariableClient],
       adder: Optional[adders.Adder] = None,
@@ -92,7 +92,7 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
   def observe(self, action: network_lib.Action, next_timestep: dm_env.TimeStep):
     if self._adder:
       self._adder.add(
-          action, next_timestep, extras=self._get_extras(self._state))
+          action, next_timestep, extras=self._get_extras(self._state))  # pyrefly: ignore[bad-argument-type]
 
   def update(self, wait: bool = False):
     if self._variable_client and not self._per_episode_update:

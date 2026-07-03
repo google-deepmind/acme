@@ -143,7 +143,7 @@ class RNDLearner(acme.Learner):
     self._logger = logger or loggers.make_default_logger(
         'learner',
         asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
+        serialize_fn=utils.fetch_devicearray,  # pyrefly: ignore[bad-argument-type]
         steps_key=self._counter.get_steps_key())
 
     loss = functools.partial(rnd_loss, networks=rnd_network)
@@ -196,12 +196,12 @@ class RNDLearner(acme.Learner):
     # Attempts to write the logs.
     self._logger.write({**metrics, **counts})
 
-    return sample._replace(data=sample.data._replace(reward=rewards))
+    return sample._replace(data=sample.data._replace(reward=rewards))  # pyrefly: ignore[missing-attribute]
 
   def step(self):
     self._direct_rl_learner.step()
 
-  def get_variables(self, names: List[str]) -> List[Any]:
+  def get_variables(self, names: List[str]) -> List[Any]:  # pyrefly: ignore[bad-override]
     rnd_variables = {
         'target_params': self._state.target_params,
         'predictor_params': self._state.params

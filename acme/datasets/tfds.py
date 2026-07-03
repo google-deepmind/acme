@@ -90,7 +90,7 @@ def _pad(x: jnp.ndarray) -> jnp.ndarray:
   # conditions for low enough sizes the excessive copying is not triggered.
   if x.shape[-1] % _BEST_DIVISOR != 0 and x.shape[-1] > 30:
     n = _BEST_DIVISOR - (x.shape[-1] % _BEST_DIVISOR)
-    x = np.pad(x, [(0, 0)] * (x.ndim - 1) + [(0, n)], 'constant')
+    x = np.pad(x, [(0, 0)] * (x.ndim - 1) + [(0, n)], 'constant')  # pyrefly: ignore[bad-assignment]
   return x
 
 

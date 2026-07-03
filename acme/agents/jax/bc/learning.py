@@ -65,8 +65,8 @@ def _create_loss_metrics(
     metrics = {}
 
   # Complete metrics dict and return it.
-  metrics['loss'] = loss
-  metrics['gradient_norm'] = optax.global_norm(gradients)
+  metrics['loss'] = loss  # pyrefly: ignore[unsupported-operation]
+  metrics['gradient_norm'] = optax.global_norm(gradients)  # pyrefly: ignore[unsupported-operation]
   return metrics
 
 
@@ -144,7 +144,7 @@ class BCLearner(acme.Learner):
     self._logger = logger or loggers.make_default_logger(
         'learner',
         asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
+        serialize_fn=utils.fetch_devicearray,  # pyrefly: ignore[bad-argument-type]
         steps_key=self._counter.get_steps_key())
 
     # Split the input batch to `num_sgd_steps_per_step` minibatches in order
@@ -198,7 +198,7 @@ class BCLearner(acme.Learner):
     # Attempts to write the logs.
     self._logger.write({**metrics, **counts})
 
-  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
+  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:  # pyrefly: ignore[bad-override]
     variables = {
         'policy': self._state.policy_params,
     }

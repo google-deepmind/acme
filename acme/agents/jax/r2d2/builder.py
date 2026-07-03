@@ -64,7 +64,7 @@ def _zero_pad(sequence_length: int) -> datasets.Transform:
   """Adds zero padding to the right so all samples have the same length."""
 
   def _zero_pad_transform(sample: reverb.ReplaySample) -> reverb.ReplaySample:
-    trajectory: reverb_base.Trajectory = sample.data
+    trajectory: reverb_base.Trajectory = sample.data  # pyrefly: ignore[bad-assignment]
 
     # Split steps and extras data (the extras won't be padded as they only
     # contain one element)
@@ -243,12 +243,12 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
     del environment_spec
     # Create variable client.
     variable_client = variable_utils.VariableClient(
-        variable_source,
+        variable_source,  # pyrefly: ignore[bad-argument-type]
         key='actor_variables',
         update_period=self._config.variable_update_period)
 
     return actors.GenericActor(
-        policy, random_key, variable_client, adder, backend='cpu')
+        policy, random_key, variable_client, adder, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
   def make_policy(self,
                   networks: r2d2_networks.R2D2Networks,

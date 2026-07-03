@@ -213,7 +213,7 @@ class PPOBuilder(
       obs_normalization_fns = self._config.obs_normalization_fns_factory(
           environment_spec.observations)
       actor = normalization.NormalizedGenericActor(
-          actor_core,
+          actor_core,  # pyrefly: ignore[bad-argument-type]
           obs_normalization_fns,
           random_key,
           variable_client,
@@ -229,7 +229,7 @@ class PPOBuilder(
           device='cpu',
           update_period=self._config.variable_update_period)
       actor = actors.GenericActor(
-          actor_core, random_key, variable_client, adder, backend='cpu')
+          actor_core, random_key, variable_client, adder, backend='cpu')  # pyrefly: ignore[bad-argument-type]
     return actor
 
   def make_policy(

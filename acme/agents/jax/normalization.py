@@ -100,7 +100,7 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
         observation_statistics: running_statistics.RunningStatisticsState,
         sample: reverb.ReplaySample
     ) -> Tuple[running_statistics.RunningStatisticsState, reverb.ReplaySample]:
-      observation = sample.data.observation
+      observation = sample.data.observation  # pyrefly: ignore[missing-attribute]
       observation_statistics = running_statistics.update(
           observation_statistics, observation)
       observation = running_statistics.normalize(
@@ -108,7 +108,7 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
           observation_statistics,
           max_abs_value=max_abs_observation)
       sample = reverb.ReplaySample(
-          sample.info, sample.data._replace(observation=observation))
+          sample.info, sample.data._replace(observation=observation))  # pyrefly: ignore[missing-attribute]
       if hasattr(sample.data, 'next_observation'):
         next_observation = running_statistics.normalize(
             sample.data.next_observation,
@@ -116,7 +116,7 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
             max_abs_value=max_abs_observation)
         sample = reverb.ReplaySample(
             sample.info,
-            sample.data._replace(next_observation=next_observation))
+            sample.data._replace(next_observation=next_observation))  # pyrefly: ignore[missing-attribute]
 
       return observation_statistics, sample
 
@@ -137,7 +137,7 @@ class NormalizationLearnerWrapper(core.Learner, core.Saveable):
   def step(self):
     self._wrapped_learner.step()
 
-  def get_variables(self, names: List[str]) -> List[types.NestedArray]:
+  def get_variables(self, names: List[str]) -> List[types.NestedArray]:  # pyrefly: ignore[bad-override]
     stats = self._observation_running_statistics
     # Make sure to only pass mean and std to minimize trafic.
     mean_std = running_statistics.NestedMeanStd(mean=stats.mean, std=stats.std)
@@ -228,7 +228,7 @@ class NormalizationBuilder(Generic[Networks, Policy],
                                     variable_source, adder)
     return NormalizationActorWrapper(
         actor,
-        variable_source,
+        variable_source,  # pyrefly: ignore[bad-argument-type]
         max_abs_observation=self.max_abs_observation,
         update_period=self.statistics_update_period,
         backend='cpu')
@@ -274,7 +274,7 @@ def input_normalization_builder(
   """Builder class decorator that adds support for input normalization."""
 
   # TODO(b/247075349): find a way to use ActorLearnerBuilderWrapper here.
-  class InputNormalizationBuilder(
+  class InputNormalizationBuilder(  # pyrefly: ignore[invalid-type-var]
       Generic[builders.Networks, builders.Policy, builders.Sample],
       builders.ActorLearnerBuilder[builders.Networks, builders.Policy,
                                    builders.Sample]):

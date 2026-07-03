@@ -89,7 +89,7 @@ class R2D2Learner(acme.Learner):
         # specifies a dynamically unrolled RNN as it will strictly enforce the
         # match between input/output state types.
         online_state = utils.maybe_recover_lstm_type(
-            sample.data.extras.get('core_state'))
+            sample.data.extras.get('core_state'))  # pyrefly: ignore[missing-attribute]
       else:
         key_grad, initial_state_rng = jax.random.split(key_grad)
         online_state = networks.init_recurrent_state(initial_state_rng,
@@ -145,7 +145,7 @@ class R2D2Learner(acme.Learner):
 
       # Importance weighting.
       probs = sample.info.probability
-      importance_weights = (1. / (probs + 1e-6)).astype(online_q.dtype)
+      importance_weights = (1. / (probs + 1e-6)).astype(online_q.dtype)  # pyrefly: ignore[missing-attribute]
       importance_weights **= importance_sampling_exponent
       importance_weights /= jnp.max(importance_weights)
       mean_loss = jnp.mean(importance_weights * batch_loss)
@@ -211,7 +211,7 @@ class R2D2Learner(acme.Learner):
     self._logger = logger or loggers.make_default_logger(
         'learner',
         asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
+        serialize_fn=utils.fetch_devicearray,  # pyrefly: ignore[bad-argument-type]
         time_delta=1.,
         steps_key=self._counter.get_steps_key())
 
@@ -232,7 +232,7 @@ class R2D2Learner(acme.Learner):
         params=initial_params,
         target_params=initial_params,
         opt_state=opt_state,
-        steps=jnp.array(0),
+        steps=jnp.array(0),  # pyrefly: ignore[bad-argument-type]
         random_key=random_key,
     )
     # Replicate parameters.
@@ -264,7 +264,7 @@ class R2D2Learner(acme.Learner):
     # Attempt to write logs.
     self._logger.write({**metrics, **counts})
 
-  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
+  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:  # pyrefly: ignore[bad-override]
     del names  # There's only one available set of params in this agent.
     # Return first replica of parameters.
     return utils.get_from_first_device([self._state.params])

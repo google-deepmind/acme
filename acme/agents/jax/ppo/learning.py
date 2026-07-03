@@ -267,7 +267,7 @@ class PPOLearner(acme.Learner):
 
       # Update the EMA counter and obtain the zero debiasing multiplier
       if normalize_advantage or normalize_value:
-        ema_counter = state.ema_counter + 1
+        ema_counter = state.ema_counter + 1  # pyrefly: ignore[unsupported-operation]
         state = state._replace(ema_counter=ema_counter)
         zero_debias = 1. / (1. - jnp.power(normalization_ema_tau, ema_counter))
 
@@ -302,13 +302,13 @@ class PPOLearner(acme.Learner):
             axis_name=pmap_axis_name)
 
         biased_value_first_moment = (
-            normalization_ema_tau * state.biased_value_first_moment +
+            normalization_ema_tau * state.biased_value_first_moment +  # pyrefly: ignore[unsupported-operation]
             (1. - normalization_ema_tau) * batch_value_first_moment)
         biased_value_second_moment = (
-            normalization_ema_tau * state.biased_value_second_moment +
+            normalization_ema_tau * state.biased_value_second_moment +  # pyrefly: ignore[unsupported-operation]
             (1. - normalization_ema_tau) * batch_value_second_moment)
 
-        value_mean = biased_value_first_moment * zero_debias
+        value_mean = biased_value_first_moment * zero_debias  # pyrefly: ignore[unbound-name]
         value_second_moment = biased_value_second_moment * zero_debias
         value_std = jnp.sqrt(jax.nn.relu(value_second_moment - value_mean**2))
 
@@ -319,7 +319,7 @@ class PPOLearner(acme.Learner):
             value_std=value_std,
         )
 
-        behavior_values = behavior_values * jnp.fmax(state.value_std,
+        behavior_values = behavior_values * jnp.fmax(state.value_std,  # pyrefly: ignore[bad-argument-type]
                                                      1e-6) + state.value_mean
 
       behavior_values = jax.lax.stop_gradient(behavior_values)
@@ -362,7 +362,7 @@ class PPOLearner(acme.Learner):
 
         # update the running statistics
         biased_advantage_scale = (
-            normalization_ema_tau * state.biased_advantage_scale +
+            normalization_ema_tau * state.biased_advantage_scale +  # pyrefly: ignore[unsupported-operation]
             (1. - normalization_ema_tau) * batch_advantage_scale)
         advantage_scale = biased_advantage_scale * zero_debias
         state = state._replace(
@@ -370,7 +370,7 @@ class PPOLearner(acme.Learner):
             advantage_scale=advantage_scale)
 
         # scale the advantages
-        scaled_advantages = batch.advantages / jnp.fmax(state.advantage_scale,
+        scaled_advantages = batch.advantages / jnp.fmax(state.advantage_scale,  # pyrefly: ignore[bad-argument-type]
                                                         1e-6)
         batch = batch._replace(advantages=scaled_advantages)
 
@@ -383,8 +383,8 @@ class PPOLearner(acme.Learner):
         metrics['advantage_scale'] = state.advantage_scale
 
       if normalize_value:
-        metrics['value_mean'] = value_mean
-        metrics['value_std'] = value_std
+        metrics['value_mean'] = value_mean  # pyrefly: ignore[unbound-name]
+        metrics['value_std'] = value_std  # pyrefly: ignore[unbound-name]
 
       delta_params_sgd_steps = (
           data.extras['params_num_sgd_steps'][:, 0] -
@@ -533,7 +533,7 @@ class PPOLearner(acme.Learner):
 
     self._num_full_update_steps += 1
 
-  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:
+  def get_variables(self, names: List[str]) -> List[networks_lib.Params]:  # pyrefly: ignore[bad-override]
     variables = self._cached_state
     return [getattr(variables, name) for name in names]
 
