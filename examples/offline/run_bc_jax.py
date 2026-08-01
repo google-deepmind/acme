@@ -71,7 +71,7 @@ def main(_):
   def evaluator_network(
       params: hk.Params, key: jax.Array, observation: jax.Array
   ) -> jax.Array:
-    dist_params = bc_networks.policy_network.apply(params, observation)
+    dist_params = bc_networks.policy_network.apply(params, observation)  # pyrefly: ignore[missing-argument]
     return rlax.epsilon_greedy(FLAGS.evaluation_epsilon).sample(
         key, dist_params)
 
@@ -80,7 +80,7 @@ def main(_):
   variable_client = variable_utils.VariableClient(
       learner, 'policy', device='cpu')
   evaluator = actors.GenericActor(
-      actor_core, key, variable_client, backend='cpu')
+      actor_core, key, variable_client, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
   eval_loop = acme.EnvironmentLoop(
       environment=environment,

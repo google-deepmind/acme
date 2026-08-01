@@ -82,7 +82,7 @@ def build_experiment_config() -> experiments.ExperimentConfig:
   return experiments.ExperimentConfig(
       builder=sqil_builder,
       environment_factory=environment_factory,
-      network_factory=sac.make_networks,
+      network_factory=sac.make_networks,  # pyrefly: ignore[bad-argument-type]
       seed=FLAGS.seed,
       max_num_actor_steps=FLAGS.num_steps)
 

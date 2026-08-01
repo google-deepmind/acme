@@ -92,7 +92,7 @@ class BVEBuilder(builders.OfflineBuilder[bve_networks.BVENetworks,
     """
     del environment_spec
     variable_client = variable_utils.VariableClient(
-        variable_source, 'policy', device='cpu')
+        variable_source, 'policy', device='cpu')  # pyrefly: ignore[bad-argument-type]
     return actors.GenericActor(policy, random_key, variable_client)
 
   def make_policy(

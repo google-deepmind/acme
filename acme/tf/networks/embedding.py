@@ -33,7 +33,7 @@ class OAREmbedding(snt.Module):
     """Embed each of the (observation, action, reward) inputs & concatenate."""
 
     # Add dummy trailing dimension to rewards if necessary.
-    if len(inputs.reward.shape.dims) == 1:
+    if len(inputs.reward.shape.dims) == 1:  # pyrefly: ignore[missing-attribute]
       inputs = inputs._replace(reward=tf.expand_dims(inputs.reward, axis=-1))
 
     features = self._torso(inputs.observation)  # [T?, B, D]

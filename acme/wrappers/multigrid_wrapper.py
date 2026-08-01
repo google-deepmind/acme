@@ -72,9 +72,9 @@ class MultigridWrapper(dm_env.Environment):
     obs_space = self._environment.observation_space
     act_space = self._environment.action_space
     self._observation_spec = _convert_to_spec(
-        obs_space, self.num_agents, name='observation')
+        obs_space, self.num_agents, name='observation')  # pyrefly: ignore[bad-argument-type]
     self._action_spec = _convert_to_spec(
-        act_space, self.num_agents, name='action')
+        act_space, self.num_agents, name='action')  # pyrefly: ignore[bad-argument-type]
 
   def process_obs(self, observation: types.NestedArray) -> types.NestedArray:
     # Convert observations to agent-index-first format
@@ -238,7 +238,7 @@ def _gym_to_spec(space: gym.Space,
     return specs.BoundedArray(
         shape=space.shape,
         dtype=space.dtype,
-        minimum=np.zeros(space.shape),
+        minimum=np.zeros(space.shape),  # pyrefly: ignore[no-matching-overload]
         maximum=space.nvec - 1,
         name=name)
 

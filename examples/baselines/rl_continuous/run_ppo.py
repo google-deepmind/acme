@@ -51,7 +51,7 @@ def build_experiment_config():
   return experiments.ExperimentConfig(
       builder=ppo_builder,
       environment_factory=lambda seed: helpers.make_environment(suite, task),
-      network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),
+      network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),  # pyrefly: ignore[bad-argument-type]
       seed=FLAGS.seed,
       max_num_actor_steps=FLAGS.num_steps)
 

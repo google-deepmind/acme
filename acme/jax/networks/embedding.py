@@ -35,7 +35,7 @@ class OAREmbedding(hk.Module):
     # Add dummy batch dimension to observation if necessary.
     # This is needed because Conv2D assumes a leading batch dimension, i.e.
     # that inputs are in [B, H, W, C] format.
-    expand_obs = len(inputs.observation.shape) == 3
+    expand_obs = len(inputs.observation.shape) == 3  # pyrefly: ignore[missing-attribute]
     if expand_obs:
       inputs = inputs._replace(
           observation=jnp.expand_dims(inputs.observation, axis=0))  # pyrefly: ignore[bad-argument-type]

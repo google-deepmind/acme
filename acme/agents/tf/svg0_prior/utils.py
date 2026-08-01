@@ -58,7 +58,7 @@ class OnlineTargetPiQ(snt.Module):
     if online_prior is not None:
       output_list += ['analytic_kl_divergence', 'analytic_kl_to_target']
     self._output_tuple = collections.namedtuple(
-        'OnlineTargetPiQ', output_list)
+        'OnlineTargetPiQ', output_list)  # pyrefly: ignore[bad-class-definition]
 
   def __call__(self, input_obs_and_action: Tuple[tf.Tensor, tf.Tensor]):
     (obs, action) = input_obs_and_action
@@ -81,7 +81,7 @@ class OnlineTargetPiQ(snt.Module):
 
     if self._online_prior is not None:
       prior_dist = self._online_prior(obs)
-      target_prior_dist = self._target_prior(obs)
+      target_prior_dist = self._target_prior(obs)  # pyrefly: ignore[not-callable]
       analytic_kl_divergence = online_pi_dist.kl_divergence(prior_dist)
       analytic_kl_to_target = online_pi_dist.kl_divergence(target_prior_dist)
 

@@ -189,7 +189,7 @@ class SVG0Learner(acme.Learner):
         *self._target_policy_network.variables,
     ]
     if self._prior_network is not None:
-      target_variables += [*self._target_prior_network.variables]
+      target_variables += [*self._target_prior_network.variables]  # pyrefly: ignore[missing-attribute]
     target_variables = tuple(target_variables)
 
     # Make online -> target network update ops.
@@ -264,7 +264,7 @@ class SVG0Learner(acme.Learner):
       # last action and consider the step type of the next step for masking.
       # Shape: [T, B].
       episode_start_mask = tf2_utils.batch_to_sequence(
-          sample.data.start_of_episode)[1:]
+          sample.data.start_of_episode)[1:]  # pyrefly: ignore[missing-attribute]
 
       rhos = svg0_utils.mask_out_restarting(rhos[:-1], episode_start_mask)
 
@@ -342,7 +342,7 @@ class SVG0Learner(acme.Learner):
     critic_gradients = tape.gradient(critic_loss, critic_variables)
     if self._prior_network is not None:
       prior_variables = self._prior_network.trainable_variables
-      prior_gradients = tape.gradient(prior_loss, prior_variables)
+      prior_gradients = tape.gradient(prior_loss, prior_variables)  # pyrefly: ignore[unbound-name]
 
     # Delete the tape manually because of the persistent=True flag.
     del tape
@@ -356,7 +356,7 @@ class SVG0Learner(acme.Learner):
     }
 
     if self._prior_network is not None:
-      self._prior_optimizer.apply(prior_gradients, prior_variables)
+      self._prior_optimizer.apply(prior_gradients, prior_variables)  # pyrefly: ignore[unbound-name]
       losses['prior_loss'] = prior_loss
 
     # Losses to track.
@@ -382,5 +382,5 @@ class SVG0Learner(acme.Learner):
       self._snapshotter.save()
     self._logger.write(fetches)
 
-  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
+  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:  # pyrefly: ignore[bad-override]
     return [tf2_utils.to_numpy(self._variables[name]) for name in names]

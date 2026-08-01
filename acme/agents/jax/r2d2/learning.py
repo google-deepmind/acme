@@ -197,7 +197,7 @@ class R2D2Learner(acme.Learner):
       keys, priorities = keys_and_priorities
       keys, priorities = tree.map_structure(
           # Fetch array and combine device and batch dimensions.
-          lambda x: utils.fetch_devicearray(x).reshape((-1,) + x.shape[2:]),
+          lambda x: utils.fetch_devicearray(x).reshape((-1,) + x.shape[2:]),  # pyrefly: ignore[missing-attribute]
           (keys, priorities))
       replay_client.mutate_priorities(  # pytype: disable=attribute-error
           table=adders.DEFAULT_PRIORITY_TABLE,

@@ -183,7 +183,7 @@ def make_actor_evaluator(
     variable_client = variable_utils.VariableClient(variable_source, 'policy',
                                                     device='cpu')
     actor = actors.GenericActor(
-        actor_core, random_key, variable_client, backend='cpu')
+        actor_core, random_key, variable_client, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
     # Logger.
     logger = loggers.make_default_logger(

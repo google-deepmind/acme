@@ -89,14 +89,14 @@ def main(_):
       params: hk.Params, key: jax.Array, observation: jax.Array
   ) -> jax.Array:
     dist_params = networks.policy_network.apply(params, observation)
-    return networks.sample_eval(dist_params, key)
+    return networks.sample_eval(dist_params, key)  # pyrefly: ignore[not-callable]
 
   actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
       evaluator_network)
   variable_client = variable_utils.VariableClient(
       learner, 'policy', device='cpu')
   evaluator = actors.GenericActor(
-      actor_core, key, variable_client, backend='cpu')
+      actor_core, key, variable_client, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
   eval_loop = acme.EnvironmentLoop(
       environment=environment,

@@ -69,7 +69,7 @@ class AilLossTest(absltest.TestCase):
         {},
         one_transition,
         zero_transition,
-        (),
+        (),  # pyrefly: ignore[bad-argument-type]
     )
 
     d_one = jax.nn.sigmoid(dummy_discriminator({}, one_transition)[0])
@@ -77,7 +77,7 @@ class AilLossTest(absltest.TestCase):
     expected_loss = -prior * jnp.log(
         d_one) + -jnp.log(1. - d_zero) - prior * -jnp.log(1 - d_one)
 
-    self.assertAlmostEqual(loss, expected_loss, places=6)
+    self.assertAlmostEqual(loss, expected_loss, places=6)  # pyrefly: ignore[no-matching-overload]
 
 
 if __name__ == '__main__':

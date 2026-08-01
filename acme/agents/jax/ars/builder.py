@@ -97,19 +97,19 @@ class ARSBuilder(
     del environment_spec
     assert variable_source is not None
 
-    kname, policy = policy
+    kname, policy = policy  # pyrefly: ignore[bad-assignment]
 
     normalization_apply_fn = (
         running_statistics.normalize if self._config.normalize_observations else
         (lambda a, b: a))
-    policy_to_run = get_policy(policy, normalization_apply_fn)
+    policy_to_run = get_policy(policy, normalization_apply_fn)  # pyrefly: ignore[bad-argument-type]
 
     actor_core = actor_core_lib.batched_feed_forward_with_extras_to_actor_core(
         policy_to_run)
     variable_client = variable_utils.VariableClient(variable_source, kname,
                                                     device='cpu')
     return actors.GenericActor(
-        actor_core,
+        actor_core,  # pyrefly: ignore[bad-argument-type]
         random_key,
         variable_client,
         adder,

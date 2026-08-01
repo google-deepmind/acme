@@ -68,7 +68,7 @@ def build_experiment_config():
   return experiments.ExperimentConfig(
       builder=impala_builder.IMPALABuilder(config),
       environment_factory=env_factory,
-      network_factory=impala.make_atari_networks,
+      network_factory=impala.make_atari_networks,  # pyrefly: ignore[bad-argument-type]
       seed=SEED.value,
       max_num_actor_steps=NUM_ACTOR_STEPS.value)
 

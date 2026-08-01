@@ -158,9 +158,9 @@ class MoGMPOLearner(acme.Learner):
 
     # Get data from replay (dropping extras if any). Note there is no
     # extra data here because we do not insert any into Reverb.
-    o_tm1, a_tm1, r_t, d_t, o_t = (inputs.data.observation, inputs.data.action,
-                                   inputs.data.reward, inputs.data.discount,
-                                   inputs.data.next_observation)
+    o_tm1, a_tm1, r_t, d_t, o_t = (inputs.data.observation, inputs.data.action,  # pyrefly: ignore[missing-attribute]
+                                   inputs.data.reward, inputs.data.discount,  # pyrefly: ignore[missing-attribute]
+                                   inputs.data.next_observation)  # pyrefly: ignore[missing-attribute]
 
     # Cast the additional discount to match the environment discount dtype.
     discount = tf.cast(self._discount, dtype=d_t.dtype)
@@ -294,7 +294,7 @@ class MoGMPOLearner(acme.Learner):
       self._snapshotter.save()
     self._logger.write(fetches)
 
-  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
+  def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:  # pyrefly: ignore[bad-override]
     return [tf2_utils.to_numpy(self._variables[name]) for name in names]
 
   def _maybe_update_target_networks(self):

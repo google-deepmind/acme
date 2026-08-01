@@ -67,7 +67,7 @@ def main(_):
 
   # Run the environment loop.
   loop = open_spiel_environment_loop.OpenSpielEnvironmentLoop(
-      environment, agents)
+      environment, agents)  # pyrefly: ignore[bad-argument-type]
   loop.run(num_episodes=100000)
 
 

@@ -168,7 +168,7 @@ class SGDLearner(acme.Learner):
         return
       keys, priorities = tree.map_structure(
           # Fetch array and combine device and batch dimensions.
-          lambda x: utils.fetch_devicearray(x).reshape((-1,) + x.shape[2:]),
+          lambda x: utils.fetch_devicearray(x).reshape((-1,) + x.shape[2:]),  # pyrefly: ignore[missing-attribute]
           (reverb_update.keys, reverb_update.priorities))
       replay_client.mutate_priorities(
           table=replay_table_name,

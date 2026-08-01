@@ -216,8 +216,8 @@ class RunningStatisticsTest(absltest.TestCase):
     self.assertEqual(state.mean, (jnp.mean(x) + 2 * jnp.mean(y)) / 3)
     big_z = jnp.concatenate([x, y, y])
     normalized = running_statistics.normalize(big_z, state)
-    self.assertAlmostEqual(jnp.mean(normalized), 0., places=6)
-    self.assertAlmostEqual(jnp.std(normalized), 1., places=6)
+    self.assertAlmostEqual(jnp.mean(normalized), 0., places=6)  # pyrefly: ignore[no-matching-overload]
+    self.assertAlmostEqual(jnp.std(normalized), 1., places=6)  # pyrefly: ignore[no-matching-overload]
 
   def test_normalize_config(self):
     x = jnp.arange(200, dtype=jnp.float32).reshape(20, 2, 5)

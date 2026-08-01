@@ -115,13 +115,13 @@ def build_experiment_config() -> (
   # Construct the agent
   iq_learn_config = iq_learn.IQLearnConfig(alpha=1.0)
   iq_learn_builder = iq_learn.IQLearnBuilder(  # pytype: disable=wrong-arg-types
-      config=iq_learn_config, make_demonstrations=make_demonstrations
+      config=iq_learn_config, make_demonstrations=make_demonstrations  # pyrefly: ignore[bad-argument-type]
   )
 
   return experiments.ExperimentConfig(
       builder=iq_learn_builder,
       environment_factory=environment_factory,
-      network_factory=iq_learn.make_networks,
+      network_factory=iq_learn.make_networks,  # pyrefly: ignore[bad-argument-type]
       seed=FLAGS.seed,
       max_num_actor_steps=FLAGS.num_steps,
   )

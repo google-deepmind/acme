@@ -171,7 +171,7 @@ class IQNLearner(core.Learner, tf2_savers.TFSaveable):
       self._snapshotter.save()
     self._logger.write(result)
 
-  def get_variables(self, names: List[str]) -> List[np.ndarray]:
+  def get_variables(self, names: List[str]) -> List[np.ndarray]:  # pyrefly: ignore[bad-override]
     return tf2_utils.to_numpy(self._variables)
 
   def _loss_and_fetches(

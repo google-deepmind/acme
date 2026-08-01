@@ -68,9 +68,9 @@ def make_atari_environment(
 
   if oar_wrapper:
     # E.g. IMPALA and R2D2 use this particular variant.
-    wrapper_list.append(wrappers.ObservationActionRewardWrapper)
+    wrapper_list.append(wrappers.ObservationActionRewardWrapper)  # pyrefly: ignore[bad-argument-type]
 
-  return wrappers.wrap_all(env, wrapper_list)
+  return wrappers.wrap_all(env, wrapper_list)  # pyrefly: ignore[bad-argument-type]
 
 
 def make_dqn_atari_network(

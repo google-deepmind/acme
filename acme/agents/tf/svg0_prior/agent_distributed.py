@@ -112,7 +112,7 @@ class DistributedSVG0:
                                           subdirectory='counter')
 
   def coordinator(self, counter: counting.Counter):
-    return lp_utils.StepsLimiter(counter, self._max_actor_steps)
+    return lp_utils.StepsLimiter(counter, self._max_actor_steps)  # pyrefly: ignore[bad-argument-type]
 
   def learner(
       self,

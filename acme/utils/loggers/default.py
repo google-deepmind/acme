@@ -57,7 +57,7 @@ def make_default_logger(
   loggers = [terminal_logger]
 
   if save_data:
-    loggers.append(csv.CSVLogger(label=label))
+    loggers.append(csv.CSVLogger(label=label))  # pyrefly: ignore[bad-argument-type]
 
   # Dispatch to all writers and filter Nones and by time.
   logger = aggregators.Dispatcher(loggers, serialize_fn)

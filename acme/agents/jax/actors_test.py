@@ -80,7 +80,7 @@ class ActorTest(parameterized.TestCase):
       actor_core = actor_core_lib.batched_feed_forward_to_actor_core(
           policy.apply)
     actor = actors.GenericActor(
-        actor_core,
+        actor_core,  # pyrefly: ignore[bad-argument-type]
         random_key=jax.random.PRNGKey(1),
         variable_client=variable_client)
 
@@ -131,7 +131,7 @@ class RecurrentActorTest(absltest.TestCase):
 
     actor_core = actor_core_lib.batched_recurrent_to_actor_core(
         policy, initial_state)
-    actor = actors.GenericActor(actor_core, jax.random.PRNGKey(1),
+    actor = actors.GenericActor(actor_core, jax.random.PRNGKey(1),  # pyrefly: ignore[bad-argument-type]
                                 variable_client)
 
     loop = environment_loop.EnvironmentLoop(environment, actor)

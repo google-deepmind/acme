@@ -73,7 +73,7 @@ def build_experiment_config():
 
   return experiments.ExperimentConfig(
       builder=r2d2.R2D2Builder(config),
-      network_factory=r2d2.make_atari_networks,
+      network_factory=r2d2.make_atari_networks,  # pyrefly: ignore[bad-argument-type]
       environment_factory=environment_factory,
       seed=FLAGS.seed,
       max_num_actor_steps=FLAGS.num_steps)

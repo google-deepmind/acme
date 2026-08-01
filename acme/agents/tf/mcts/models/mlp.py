@@ -133,7 +133,7 @@ class MLPModel(base.Model):
     gradients = tape.gradient(loss, self._variables)
     self._optimizer.apply(gradients, self._variables)
 
-    return loss
+    return loss  # pyrefly: ignore[bad-return]
 
   def step(self, action: types.Action):
     # Reset if required.

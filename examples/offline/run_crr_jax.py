@@ -119,7 +119,7 @@ def main(_):
   variable_client = variable_utils.VariableClient(
       learner, 'policy', device='cpu')
   evaluator = actors.GenericActor(
-      actor_core, key, variable_client, backend='cpu')
+      actor_core, key, variable_client, backend='cpu')  # pyrefly: ignore[bad-argument-type]
 
   eval_loop = acme.EnvironmentLoop(
       environment=environment,

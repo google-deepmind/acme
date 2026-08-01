@@ -96,7 +96,7 @@ class SnapshotterTest(test_utils.TestCase):
 
     models_snapshotter = snapshotter.JAXSnapshotter(
         variable_source=_DummyVariableSource(),
-        models=self._test_models,
+        models=self._test_models,  # pyrefly: ignore[bad-argument-type]
         path=directory,
         max_to_keep=2,
         add_uid=False,
@@ -120,7 +120,7 @@ class SnapshotterTest(test_utils.TestCase):
     time.sleep(1.1)
     models_snapshotter2 = snapshotter.JAXSnapshotter(
         variable_source=_DummyVariableSource(),
-        models=self._test_models,
+        models=self._test_models,  # pyrefly: ignore[bad-argument-type]
         path=directory,
         max_to_keep=2,
         add_uid=False,

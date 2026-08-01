@@ -46,9 +46,9 @@ class BuilderTest(absltest.TestCase):
         it0, it1, policy_to_expert_data_ratio=2, batch_size=3)
 
     np.testing.assert_array_equal(
-        next(weighted_it).data.observation, np.array([[1], [4], [5]]))
+        next(weighted_it).data.observation, np.array([[1], [4], [5]]))  # pyrefly: ignore[missing-attribute]
     np.testing.assert_array_equal(
-        next(weighted_it).data.observation, np.array([[7], [8], [2]]))
+        next(weighted_it).data.observation, np.array([[7], [8], [2]]))  # pyrefly: ignore[missing-attribute]
     self.assertRaises(StopIteration, lambda: next(weighted_it))
 
 

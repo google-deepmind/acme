@@ -80,7 +80,7 @@ def build_experiment_config() -> experiments.ExperimentConfig:
   }
   muzero_builder = muzero.MzBuilder(  # pytype: disable=wrong-arg-types  # jax-ndarray
       muzero_config,
-      extra_spec,
+      extra_spec,  # pyrefly: ignore[bad-argument-type]
   )
 
   checkpointing_config = experiments.CheckpointingConfig(
@@ -90,7 +90,7 @@ def build_experiment_config() -> experiments.ExperimentConfig:
   return experiments.ExperimentConfig(
       builder=muzero_builder,
       environment_factory=env_factory,
-      network_factory=network_factory,
+      network_factory=network_factory,  # pyrefly: ignore[bad-argument-type]
       seed=SEED.value,
       max_num_actor_steps=NUM_STEPS.value,
       checkpointing=checkpointing_config,

@@ -48,7 +48,7 @@ class BVELoss(dqn.LossFn):
       key: networks_lib.PRNGKey,
   ) -> Tuple[jax.Array, dqn.LossExtra]:
     """Calculate a loss on a single batch of data."""
-    transitions: types.Transition = batch.data
+    transitions: types.Transition = batch.data  # pyrefly: ignore[bad-assignment]
 
     # Forward pass.
     key1, key2 = jax.random.split(key)
@@ -73,5 +73,5 @@ class BVELoss(dqn.LossFn):
     loss = jnp.mean(batch_loss)  # []
     metrics = {'td_error': td_error, 'batch_loss': batch_loss}
     return loss, dqn.LossExtra(
-        metrics=metrics,
+        metrics=metrics,  # pyrefly: ignore[bad-argument-type]
         reverb_priorities=jnp.abs(td_error).astype(jnp.float64))

@@ -63,7 +63,7 @@ def build_experiment_config():
   return experiments.ExperimentConfig(
       builder=d4pg.D4PGBuilder(d4pg_config),
       environment_factory=lambda seed: helpers.make_environment(suite, task),
-      network_factory=network_factory,
+      network_factory=network_factory,  # pyrefly: ignore[bad-argument-type]
       seed=FLAGS.seed,
       max_num_actor_steps=FLAGS.num_steps)
 

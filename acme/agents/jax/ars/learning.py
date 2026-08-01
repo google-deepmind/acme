@@ -90,7 +90,7 @@ class ARSLearner(acme.Learner):
     self._logger = logger or loggers.make_default_logger(
         'learner',
         asynchronous=True,
-        serialize_fn=utils.fetch_devicearray,
+        serialize_fn=utils.fetch_devicearray,  # pyrefly: ignore[bad-argument-type]
         steps_key=self._counter.get_steps_key())
 
     # Iterator on demonstration transitions.
@@ -250,7 +250,7 @@ class ARSLearner(acme.Learner):
     # Attempts to write the logs.
     self._logger.write(counts)
 
-  def get_variables(self, names: List[str]) -> List[Any]:
+  def get_variables(self, names: List[str]) -> List[Any]:  # pyrefly: ignore[bad-override]
     assert (names == [ars_networks.BEHAVIOR_PARAMS_NAME] or
             names == [ars_networks.EVAL_PARAMS_NAME])
     if names == [ars_networks.EVAL_PARAMS_NAME]:

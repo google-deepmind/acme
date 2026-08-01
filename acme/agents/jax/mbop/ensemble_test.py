@@ -289,7 +289,7 @@ class EnsembleTest(absltest.TestCase):
     self.assertTrue((out[0] != out[1]).any())
 
     for i in range(9):
-      np.testing.assert_allclose(
+      np.testing.assert_allclose(  # pyrefly: ignore[no-matching-overload]
           out[i],
           ffn.apply(jax.tree.map(lambda p, i=i: p[i % 3], params), bx[i]),
           atol=1e-5,
@@ -319,7 +319,7 @@ class EnsembleTest(absltest.TestCase):
     # Check results explicitly:
     all_members = jnp.concatenate([
         jnp.expand_dims(
-            ffn.apply(jax.tree.map(lambda p, i=i: p[i], params), bx), axis=0
+            ffn.apply(jax.tree.map(lambda p, i=i: p[i], params), bx), axis=0  # pyrefly: ignore[bad-argument-type]
         )
         for i in range(3)
     ])
