@@ -210,6 +210,10 @@ class SACLearner(acme.Learner):
           jnp.abs(jnp.mean(transitions.reward, axis=0)))
       metrics['rewards_std'] = jnp.std(transitions.reward, axis=0)
 
+      metrics['rewards_mean'] = jnp.mean(
+          jnp.abs(jnp.mean(transitions.reward, axis=0)))
+      metrics['rewards_std'] = jnp.std(transitions.reward, axis=0)
+
       return new_state, metrics
 
     # General learner book-keeping and loggers.
