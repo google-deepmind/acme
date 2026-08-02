@@ -47,6 +47,27 @@ in our [technical report][Paper].
 [documentation]: https://dm-acme.readthedocs.io/
 [paper]: https://arxiv.org/abs/2006.00979
 
+### Understanding the examples and demonstrations
+
+Acme provides multiple entry points depending on how you prefer to learn:
+
+- The `examples/` directory contains working code examples that show how to
+  instantiate agents and run them in different environments.
+
+- The [quickstart notebook][Quickstart] provides the fastest path to running a
+  single agent end-to-end.
+
+- The [tutorial notebook][Tutorial] offers a deeper, step-by-step explanation
+  of how Acme agents are constructed internally.
+
+In addition, `bsuite_demonstrations.py` demonstrates how Acme agents are
+evaluated using the bsuite benchmark, showcasing a more research-oriented
+workflow with systematic evaluation and logging.
+
+New users are encouraged to start with the quickstart notebook, then explore
+the examples directory and bsuite demonstrations to better understand Acme’s
+design philosophy.
+
 ## Installation
 
 To get up and running quickly just follow the steps below:
