@@ -21,6 +21,7 @@ import tree
 
 from absl.testing import absltest
 
+from acme.wrappers import frame_stacking
 
 class FakeNonZeroObservationEnvironment(fakes.ContinuousEnvironment):
   """Fake environment with non-zero observations."""
@@ -75,6 +76,19 @@ class FrameStackingTest(absltest.TestCase):
     env.step(action_spec.generate_value())
     timestep = env.reset()
     self.assertTrue(np.all(timestep.observation[..., 0] == 0))
+
+  def test_fill_behavior(self):
+    original_env = FakeNonZeroObservationEnvironment()
+    env = wrappers.FrameStackingWrapper(
+      original_env, 2,
+      fill_behavior=frame_stacking.FillBehavior.FIRST,
+    )
+    action_spec = env.action_spec()
+
+    env.reset()
+    env.step(action_spec.generate_value())
+    timestep = env.reset()
+    self.assertTrue(np.all(timestep.observation == 1))
 
 
 if __name__ == '__main__':
