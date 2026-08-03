@@ -124,3 +124,15 @@ If you use Acme in your work, please cite the updated accompanying
 [dm_control]: https://github.com/deepmind/dm_env
 [dm_env]: https://github.com/deepmind/dm_env
 [bsuite]: https://github.com/deepmind/bsuite
+
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on
+how to report bugs, suggest features, and submit pull requests.
+
+By participating, you agree to our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+---
+
+*[Mukller](https://github.com/Mukller)*
