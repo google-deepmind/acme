@@ -18,10 +18,19 @@ from acme.tf import networks
 import tensorflow as tf
 
 
+def _validate_distribution(dist, name):
+  if not hasattr(dist, 'values') or not hasattr(dist, 'logits'):
+    raise TypeError(
+        f"Argument '{name}' must be a distribution with 'values' and 'logits' "
+        f"properties (e.g. from DiscreteValuedHead), but got {type(dist)}.")
+
+
 def categorical(q_tm1: networks.DiscreteValuedDistribution, r_t: tf.Tensor,
                 d_t: tf.Tensor,
                 q_t: networks.DiscreteValuedDistribution) -> tf.Tensor:
   """Implements the Categorical Distributional TD(0)-learning loss."""
+  _validate_distribution(q_tm1, 'q_tm1')
+  _validate_distribution(q_t, 'q_t')
 
   z_t = tf.reshape(r_t, (-1, 1)) + tf.reshape(d_t, (-1, 1)) * q_t.values
   p_t = tf.nn.softmax(q_t.logits)
