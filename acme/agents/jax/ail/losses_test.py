@@ -36,15 +36,25 @@ class AilLossTest(absltest.TestCase):
     zero_transition = tree.map_structure(lambda x: jnp.expand_dims(x, axis=0),
                                          zero_transition)
     self.assertEqual(
-        losses._compute_gradient_penalty(zero_transition, dummy_discriminator,
-                                         0.), 1**2 + 0**2)
+        losses._compute_gradient_penalty(
+            zero_transition,
+            dummy_discriminator,  # pyrefly: ignore[bad-argument-type]
+            0.,
+        ),
+        1**2 + 0**2,
+    )
 
     one_transition = types.Transition(1., 1., 0., 0., 0.)
     one_transition = tree.map_structure(lambda x: jnp.expand_dims(x, axis=0),
                                         one_transition)
     self.assertEqual(
-        losses._compute_gradient_penalty(one_transition, dummy_discriminator,
-                                         0.), 1**2 + 2**2)
+        losses._compute_gradient_penalty(
+            one_transition,
+            dummy_discriminator,  # pyrefly: ignore[bad-argument-type]
+            0.,
+        ),
+        1**2 + 2**2,
+    )
 
   def test_pugail(self):
 

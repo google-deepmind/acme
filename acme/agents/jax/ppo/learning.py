@@ -175,10 +175,10 @@ class PPOLearner(acme.Learner):
 
       total_ppo_loss = total_policy_loss + value_cost * value_loss + extra_loss
       return total_ppo_loss, {  # pytype: disable=bad-return-type  # numpy-scalars
-          'loss_total': total_ppo_loss,
-          'loss_policy_total': total_policy_loss,
-          'loss_extra': extra_loss,
-          'loss_policy_pg': clipped_ppo_policy_loss,
+          'loss_total': total_ppo_loss,  # pyrefly: ignore[bad-assignment]
+          'loss_policy_total': total_policy_loss,  # pyrefly: ignore[bad-assignment]
+          'loss_extra': extra_loss,  # pyrefly: ignore[bad-assignment]
+          'loss_policy_pg': clipped_ppo_policy_loss,  # pyrefly: ignore[bad-assignment]
           'loss_policy_entropy': policy_entropy_loss,
           'loss_critic': value_loss,
       }
@@ -348,10 +348,11 @@ class PPOLearner(acme.Learner):
       batch = Batch(
           observations=observations,
           actions=actions,
-          advantages=advantages,
+          advantages=advantages,  # pyrefly: ignore[bad-argument-type]
           target_values=target_values,
           behavior_values=behavior_values,
-          behavior_log_probs=behavior_log_probs)
+          behavior_log_probs=behavior_log_probs,
+      )
       batch = jax.tree_util.tree_map(
           lambda x: jnp.reshape(x, [batch_size] + list(x.shape[2:])), batch)
 

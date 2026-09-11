@@ -211,9 +211,10 @@ class CheckpointingRunner(core.Worker):
     self._wrapped = wrapped
     self._time_delta_minutes = time_delta_minutes
     self._checkpointer = Checkpointer(
-        objects_to_save={key: objects_to_save},  # pyrefly: ignore[bad-argument-type]
+        objects_to_save={key: objects_to_save},  # pyrefly: ignore[bad-argument-type, bad-assignment]
         time_delta_minutes=time_delta_minutes,
-        **kwargs)
+        **kwargs,
+    )
 
   # Handle preemption signal. Note that this must happen in the main thread.
   def _signal_handler(self):

@@ -191,8 +191,9 @@ class MPOLearner(acme.Learner):
       self._policy_loss_module = continuous_losses.MPO(
           **dataclasses.asdict(policy_loss_config))
 
-    self._policy_loss_module.__call__ = jax.named_call(
-        self._policy_loss_module.__call__, name='policy_loss')
+    self._policy_loss_module.__call__ = jax.named_call(  # pyrefly: ignore[bad-assignment]
+        self._policy_loss_module.__call__, name='policy_loss'
+    )
 
     # Create the dynamics model rollout loss.
     if model_rollout_length > 0:
@@ -478,8 +479,9 @@ class MPOLearner(acme.Learner):
           rlax.n_step_bootstrapped_returns,
           r_t=clipped_reward[:-1],
           discount_t=self._discount * sequence.discount[:-1],
-          n=self._n_step_for_sequence_bootstrap,
-          lambda_t=self._td_lambda)
+          n=self._n_step_for_sequence_bootstrap,  # pyrefly: ignore[bad-argument-type]
+          lambda_t=self._td_lambda,  # pyrefly: ignore[bad-argument-type]
+      )
       n_step_return_vfn = jax.vmap(jax.vmap(n_step_return_fn))
       q_value_target_itx = n_step_return_vfn(v_t=z_samples_itx[..., 1:])
 

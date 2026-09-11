@@ -67,7 +67,7 @@ class BVELoss(dqn.LossFn):
     next_action = transitions.extras['next_action']
     td_error = batch_error(q_tm1, transitions.action, r_t, d_t, q_t_value,
                            next_action)
-    batch_loss = rlax.huber_loss(td_error, self.huber_loss_parameter)
+    batch_loss = rlax.huber_loss(td_error, self.huber_loss_parameter)  # pyrefly: ignore[bad-argument-type]
 
     # Average:
     loss = jnp.mean(batch_loss)  # []

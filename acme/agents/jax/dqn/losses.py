@@ -64,7 +64,7 @@ class PrioritizedDoubleQLearning(learning_lib.LossFn):
     batch_error = jax.vmap(rlax.double_q_learning)
     td_error = batch_error(q_tm1, transitions.action, r_t, d_t, q_t_value,
                            q_t_selector)
-    batch_loss = rlax.huber_loss(td_error, self.huber_loss_parameter)
+    batch_loss = rlax.huber_loss(td_error, self.huber_loss_parameter)  # pyrefly: ignore[bad-argument-type]
 
     # Importance weighting.
     importance_weights = (1. / probs).astype(jnp.float32)  # pyrefly: ignore[missing-attribute]

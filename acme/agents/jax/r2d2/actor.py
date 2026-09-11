@@ -94,7 +94,7 @@ def get_actor_core(
 
   def get_extras(
       state: R2D2ActorState[actor_core_lib.RecurrentState]) -> R2D2Extras:
-    return {'core_state': state.prev_recurrent_state}  # pyrefly: ignore[bad-return]
+    return {'core_state': state.prev_recurrent_state}  # pyrefly: ignore[bad-assignment, bad-return]
 
   return actor_core_lib.ActorCore(init=init, select_action=select_action,
                                   get_extras=get_extras)
