@@ -163,7 +163,7 @@ class SequenceAdder(base.ReverbAdder):
     elif isinstance(end_of_episode_behavior, EndBehavior):
       self._end_of_episode_behavior = end_of_episode_behavior
     else:
-      raise ValueError('end_of_episod_behavior must be an instance of '
+      raise ValueError('end_of_episode_behavior must be an instance of '
                        f'EndBehavior, received {end_of_episode_behavior}.')
 
   def reset(self):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
