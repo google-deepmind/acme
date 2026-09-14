@@ -180,7 +180,7 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
         discount=self._config.discount)
 
   def _policy_epsilons(self, evaluation: bool) -> Sequence[float]:
-    if evaluation and self._config.eval_epsilon:
+    if evaluation and self._config.eval_epsilon is not None:
       epsilon = self._config.eval_epsilon
     else:
       epsilon = self._config.epsilon
