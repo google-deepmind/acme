@@ -14,7 +14,6 @@
 
 """Acme is a framework for reinforcement learning."""
 
-# Internal import.
 
 # Expose specs and types modules.
 from acme import specs
