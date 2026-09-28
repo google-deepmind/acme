@@ -196,10 +196,10 @@ class RCRRLearner(core.Learner):
   def _step(self, sample: reverb.ReplaySample) -> Dict[str, tf.Tensor]:
     # Transpose batch and sequence axes, i.e. [B, T, ...] to [T, B, ...].
     sample = tf2_utils.batch_to_sequence(sample)
-    observations = sample.observation
-    actions = sample.action
-    rewards = sample.reward
-    discounts = sample.discount
+    observations = sample.observation  # pyrefly: ignore[missing-attribute]
+    actions = sample.action  # pyrefly: ignore[missing-attribute]
+    rewards = sample.reward  # pyrefly: ignore[missing-attribute]
+    discounts = sample.discount  # pyrefly: ignore[missing-attribute]
 
     dtype = rewards.dtype
 
