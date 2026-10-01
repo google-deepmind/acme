@@ -122,7 +122,8 @@ def main(_):
       num_inference_servers=num_inference_servers,
       inference_server_config=inference_server_config,
   )
-  lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program,),)
+  lp_utils.launch_with_termination_handler(
+      program, xm_resources=lp_utils.make_xm_docker_resources(program))
 
 
 if __name__ == '__main__':
