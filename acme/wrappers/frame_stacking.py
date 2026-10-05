@@ -46,13 +46,14 @@ class FrameStackingWrapper(base.EnvironmentWrapper):
         self._stackers, original_spec)
 
   def _process_timestep(self, timestep: dm_env.TimeStep) -> dm_env.TimeStep:
+    if timestep.first():
+      for stacker in tree.flatten(self._stackers):
+        stacker.reset()
     observation = tree.map_structure(lambda stacker, x: stacker.step(x),
                                      self._stackers, timestep.observation)
     return timestep._replace(observation=observation)
 
   def reset(self) -> dm_env.TimeStep:
-    for stacker in tree.flatten(self._stackers):
-      stacker.reset()
     return self._process_timestep(self._environment.reset())
 
   def step(self, action: int) -> dm_env.TimeStep:
