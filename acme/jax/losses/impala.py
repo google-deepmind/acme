@@ -111,4 +111,4 @@ def impala_loss(
 
     return mean_loss, metrics
 
-  return utils.mapreduce(loss_fn, in_axes=(None, 0))  # pytype: disable=bad-return-type  # jax-devicearray
+  return utils.mapreduce(loss_fn, in_axes=(None, 0))  # pyrefly: ignore[bad-return]

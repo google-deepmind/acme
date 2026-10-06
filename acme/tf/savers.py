@@ -211,7 +211,7 @@ class CheckpointingRunner(core.Worker):
     self._wrapped = wrapped
     self._time_delta_minutes = time_delta_minutes
     self._checkpointer = Checkpointer(
-        objects_to_save={key: objects_to_save},  # pyrefly: ignore[bad-argument-type, bad-assignment]
+        objects_to_save={key: objects_to_save},  # pyrefly: ignore[bad-assignment]
         time_delta_minutes=time_delta_minutes,
         **kwargs,
     )

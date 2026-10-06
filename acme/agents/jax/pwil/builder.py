@@ -142,9 +142,9 @@ class PWILBuilder(builders.ActorLearnerBuilder[DirectRLNetworks,
   ) -> List[reverb.Table]:
     return self._rl_agent.make_replay_tables(environment_spec, policy)
 
-  def make_dataset_iterator(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
-      self,
-      replay_client: reverb.Client) -> Optional[Iterator[reverb.ReplaySample]]:
+  def make_dataset_iterator(  # pyrefly: ignore[bad-override]
+      self, replay_client: reverb.Client
+  ) -> Optional[Iterator[reverb.ReplaySample]]:
     # make_dataset_iterator is only called once (per learner), to pass the
     # iterator to make_learner. By using adders we ensure the transition types
     # (e.g. n-step transitions) that the direct RL agent expects.

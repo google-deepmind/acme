@@ -158,7 +158,7 @@ def make_xm_docker_resources(program,
         spec = importlib.util.spec_from_file_location('setup', setup)
         setup = importlib.util.module_from_spec(spec)  # pyrefly: ignore[bad-argument-type]
         try:
-          spec.loader.exec_module(setup)  # pytype: disable=attribute-error
+          spec.loader.exec_module(setup)  # pyrefly: ignore[missing-attribute]
         except SystemExit:
           pass
         atexit.register(os.remove, requirements)

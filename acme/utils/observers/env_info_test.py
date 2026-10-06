@@ -34,7 +34,7 @@ class GymEnvWithInfo(gym.Env):
 
   def reset(self):
     self._step = 0
-    return self.observation_space.sample()  # pyrefly: ignore[missing-attribute]
+    return self.observation_space.sample()
 
   def step(self, action: np.ndarray):
     self._step += 1
@@ -43,7 +43,7 @@ class GymEnvWithInfo(gym.Env):
       info['found_checkpoint'] = 1
     if self._step == 5:
       info['picked_up_an_apple'] = 1
-    return self.observation_space.sample(), 0, False, info  # pyrefly: ignore[missing-attribute]
+    return self.observation_space.sample(), 0, False, info
 
 
 class ActionNormTest(absltest.TestCase):

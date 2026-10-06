@@ -183,7 +183,7 @@ class IMPALABuilder(Generic[actor_core_lib.RecurrentState],
         client=variable_source,  # pyrefly: ignore[bad-argument-type]
         key='network',
         update_period=self._config.variable_update_period)
-    return actors_lib.GenericActor(policy, random_key, variable_client, adder)  # pyrefly: ignore[bad-argument-type]
+    return actors_lib.GenericActor(policy, random_key, variable_client, adder)
 
   def make_policy(self,
                   networks: impala_networks.IMPALANetworks,

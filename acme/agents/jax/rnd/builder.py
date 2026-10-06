@@ -59,7 +59,7 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
   def make_learner(
       self,
       random_key: networks_lib.PRNGKey,
-      networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],  # pyrefly: ignore[invalid-type-var]
+      networks: rnd_networks.RNDNetworks[rnd_networks.DirectRLNetworks],
       dataset: Iterator[reverb.ReplaySample],
       logger_fn: loggers.LoggerFactory,
       environment_spec: specs.EnvironmentSpec,
@@ -72,8 +72,9 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
     direct_rl_counter = counting.Counter(counter, 'direct_rl')
 
     def direct_rl_learner_factory(
-        networks: rnd_networks.DirectRLNetworks,  # pyrefly: ignore[invalid-type-var]
-        dataset: Iterator[reverb.ReplaySample]) -> core.Learner:
+        networks: rnd_networks.DirectRLNetworks,
+        dataset: Iterator[reverb.ReplaySample],
+    ) -> core.Learner:
       return self._rl_agent.make_learner(
           direct_rl_learner_key,
           networks,
@@ -103,9 +104,9 @@ class RNDBuilder(Generic[rnd_networks.DirectRLNetworks, Policy],
   ) -> List[reverb.Table]:
     return self._rl_agent.make_replay_tables(environment_spec, policy)
 
-  def make_dataset_iterator(  # pytype: disable=signature-mismatch  # overriding-return-type-checks
-      self,
-      replay_client: reverb.Client) -> Optional[Iterator[reverb.ReplaySample]]:
+  def make_dataset_iterator(  # pyrefly: ignore[bad-override]
+      self, replay_client: reverb.Client
+  ) -> Optional[Iterator[reverb.ReplaySample]]:
     return self._rl_agent.make_dataset_iterator(replay_client)
 
   def make_adder(self, replay_client: reverb.Client,

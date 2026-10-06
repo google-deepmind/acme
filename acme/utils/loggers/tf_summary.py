@@ -63,9 +63,7 @@ class TFSummaryLogger(base.Logger):
 
     with self.summary.as_default():
       # TODO(b/159065169): Remove this suppression once the bug is resolved.
-      # pytype: disable=unsupported-operands
       for key in values.keys() - [self._steps_key]:
-        # pytype: enable=unsupported-operands
         tf.summary.scalar(
             f'{self.label}/{_format_key(key)}', data=values[key], step=step)
     self._iter += 1

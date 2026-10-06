@@ -111,7 +111,7 @@ class WassersteinDistanceRewarder:
 
     """
     # If we run out of demonstrations, penalize further action.
-    if self._all_expert_weights_zero:  # pytype: disable=attribute-error
+    if self._all_expert_weights_zero:
       return np.float32(0.)
 
     # Scale observation and action.
@@ -132,11 +132,11 @@ class WassersteinDistanceRewarder:
     norms = np.array(self._compute_norm(self.expert_atoms, agent_atom))
     # We need to mask out states with zero weight, so that 'argmin' would not
     # return them.
-    adjusted_norms = (1 - np.sign(self.expert_weights)) * DELETED + norms  # pytype: disable=attribute-error
+    adjusted_norms = (1 - np.sign(self.expert_weights)) * DELETED + norms
     while weight > 0:
       # Get closest expert state action to agent's state action.
       argmin = adjusted_norms.argmin()
-      effective_weight = min(weight, self.expert_weights[argmin])  # pytype: disable=attribute-error
+      effective_weight = min(weight, self.expert_weights[argmin])
 
       if adjusted_norms[argmin] >= DELETED:
         self._all_expert_weights_zero = True
@@ -144,7 +144,7 @@ class WassersteinDistanceRewarder:
 
       # Update cost and weights.
       weight -= effective_weight
-      self.expert_weights[argmin] -= effective_weight  # pytype: disable=attribute-error
+      self.expert_weights[argmin] -= effective_weight
       cost += effective_weight * norms[argmin]
       adjusted_norms[argmin] = DELETED
 

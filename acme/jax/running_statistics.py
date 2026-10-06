@@ -92,13 +92,14 @@ def init_state(nest: types.Nest) -> RunningStatisticsState:
   """Initializes the running statistics for the given nested structure."""
   dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
 
-  return RunningStatisticsState(  # pytype: disable=wrong-arg-types  # jax-ndarray
-      count=0.,  # pyrefly: ignore[bad-argument-type]
+  return RunningStatisticsState(
+      count=0.0,  # pyrefly: ignore[bad-argument-type]
       mean=_zeros_like(nest, dtype=dtype),
       summed_variance=_zeros_like(nest, dtype=dtype),
       # Initialize with ones to make sure normalization works correctly
       # in the initial state.
-      std=_ones_like(nest, dtype=dtype))
+      std=_ones_like(nest, dtype=dtype),
+  )
 
 
 def _validate_batch_shapes(batch: types.NestedArray,
