@@ -71,7 +71,7 @@ class IQNLearner(core.Learner, tf2_savers.TFSaveable):
     """
 
     # Internalise agent components (replay buffer, networks, optimizer).
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator = iter(dataset)
     self._network = network
     self._target_network = target_network
     self._optimizer = snt.optimizers.Adam(learning_rate)

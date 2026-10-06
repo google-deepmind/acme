@@ -139,10 +139,12 @@ class D4PGLearner(acme.Learner):
           (critic_loss_value, critic_gradients), _PMAP_AXIS_NAME)
 
       # Get optimizer updates and state.
-      policy_updates, policy_opt_state = policy_optimizer.update(  # pytype: disable=attribute-error
-          policy_gradients, state.policy_opt_state)
-      critic_updates, critic_opt_state = critic_optimizer.update(  # pytype: disable=attribute-error
-          critic_gradients, state.critic_opt_state)
+      policy_updates, policy_opt_state = policy_optimizer.update(
+          policy_gradients, state.policy_opt_state
+      )
+      critic_updates, critic_opt_state = critic_optimizer.update(
+          critic_gradients, state.critic_opt_state
+      )
 
       # Apply optimizer updates to parameters.
       policy_params = optax.apply_updates(state.policy_params, policy_updates)
@@ -151,10 +153,12 @@ class D4PGLearner(acme.Learner):
       steps = state.steps + 1
 
       # Periodically update target networks.
-      target_policy_params, target_critic_params = optax.periodic_update(  # pytype: disable=wrong-arg-types  # numpy-scalars
+      target_policy_params, target_critic_params = optax.periodic_update(  # pyrefly: ignore[not-iterable]
           (policy_params, critic_params),
-          (state.target_policy_params, state.target_critic_params), steps,
-          self._target_update_period)
+          (state.target_policy_params, state.target_critic_params),
+          steps,
+          self._target_update_period,
+      )
 
       new_state = TrainingState(
           policy_params=policy_params,
@@ -205,8 +209,8 @@ class D4PGLearner(acme.Learner):
     policy_optimizer = policy_optimizer or optax.adam(1e-4)
 
     # Initialize optimizers.
-    initial_policy_opt_state = policy_optimizer.init(initial_policy_params)  # pytype: disable=attribute-error
-    initial_critic_opt_state = critic_optimizer.init(initial_critic_params)  # pytype: disable=attribute-error
+    initial_policy_opt_state = policy_optimizer.init(initial_policy_params)
+    initial_critic_opt_state = critic_optimizer.init(initial_critic_params)
 
     # Create the initial state and replicate it in all devices.
     self._state = utils.replicate_in_all_devices(

@@ -93,7 +93,8 @@ class BCBuilder(builders.OfflineBuilder[bc_networks.BCNetworks,
     variable_client = variable_utils.VariableClient(
         variable_source, 'policy', device='cpu')
     return actors.GenericActor(
-        actor_core, random_key, variable_client, backend='cpu')  # pyrefly: ignore[bad-argument-type]
+        actor_core, random_key, variable_client, backend='cpu'
+    )
 
   def make_policy(self,
                   networks: bc_networks.BCNetworks,

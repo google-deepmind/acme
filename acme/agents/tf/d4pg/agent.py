@@ -174,7 +174,7 @@ class D4PGBuilder:
     dataset = replicator.experimental_distribute_dataset(dataset)
 
     # TODO(b/155086959): Fix type stubs and remove.
-    return iter(dataset)  # pytype: disable=wrong-arg-types
+    return iter(dataset)
 
   def make_adder(
       self,

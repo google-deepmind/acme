@@ -105,7 +105,7 @@ class DDPGLearner(acme.Learner):
 
     # Create an iterator to go through the dataset.
     # TODO(b/155086959): Fix type stubs and remove.
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator = iter(dataset)
 
     # Create optimizers if they aren't given.
     self._critic_optimizer = critic_optimizer or snt.optimizers.Adam(1e-4)

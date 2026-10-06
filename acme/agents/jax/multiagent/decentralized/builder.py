@@ -162,7 +162,7 @@ class DecentralizedMultiAgentBuilder(
     return learner_set.SynchronousDecentralizedLearnerSet(
         sub_learners, separator=VARIABLE_SEPARATOR)
 
-  def make_adder(  # Internal pytype check.
+  def make_adder(  # pyrefly: ignore[bad-override]
       self,
       replay_client: reverb.Client,
       environment_spec: Optional[specs.EnvironmentSpec] = None,
@@ -175,7 +175,7 @@ class DecentralizedMultiAgentBuilder(
         for agent_id, b in self._builders.items()
     }
 
-  def make_actor(  # Internal pytype check.
+  def make_actor(  # pyrefly: ignore[bad-override]
       self,
       random_key: networks_lib.PRNGKey,
       policy: ma_types.MultiAgentPolicyNetworks,

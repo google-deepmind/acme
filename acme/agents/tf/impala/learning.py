@@ -58,7 +58,7 @@ class IMPALALearner(acme.Learner, tf2_savers.TFSaveable):
     self._network = network
     self._variables = network.variables
     # TODO(b/155086959): Fix type stubs and remove.
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator = iter(dataset)
 
     # Hyperparameters.
     self._discount = discount

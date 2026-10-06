@@ -73,7 +73,7 @@ class R2D2Learner(acme.Learner, tf2_savers.TFSaveable):
 
     # Internalise agent components (replay buffer, networks, optimizer).
     # TODO(b/155086959): Fix type stubs and remove.
-    self._iterator: Iterator[reverb.ReplaySample] = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator: Iterator[reverb.ReplaySample] = iter(dataset)
     self._network = network
     self._target_network = target_network
     self._optimizer = snt.optimizers.Adam(learning_rate, epsilon=1e-3)

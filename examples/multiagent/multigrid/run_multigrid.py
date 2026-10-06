@@ -74,7 +74,7 @@ def build_experiment_config() -> experiments.ExperimentConfig[
   environment = environment_factory(_SEED.value)
   agent_types = {
       str(i): decentralized.DefaultSupportedAgent.PPO
-      for i in range(environment.num_agents)  # pytype: disable=attribute-error
+      for i in range(environment.num_agents)  # pyrefly: ignore[missing-attribute]
   }
   # Example of how to set custom sub-agent configurations.
   ppo_configs = {'unroll_length': 16, 'num_minibatches': 32, 'num_epochs': 10}

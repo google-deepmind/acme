@@ -123,7 +123,8 @@ def make_reverb_dataset(
       datasets += (dataset,)
     if len(datasets) > 1:
       dataset = tf.data.Dataset.sample_from_datasets(
-          datasets, weights=tables.values())  # pyrefly: ignore[bad-argument-type]
+          datasets, weights=tables.values()
+      )
     else:
       dataset = datasets[0]
 

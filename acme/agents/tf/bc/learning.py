@@ -56,7 +56,7 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
     self._logger = logger or loggers.TerminalLogger('learner', time_delta=1.)
 
     # Get an iterator over the dataset.
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator = iter(dataset)
     # TODO(b/155086959): Fix type stubs and remove.
 
     self._network = network
@@ -84,7 +84,7 @@ class BCLearner(acme.Learner, tf2_savers.TFSaveable):
       # Evaluate our networks.
       logits = self._network(transitions.observation)
       cce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-      loss = cce(transitions.action, logits)  # pyrefly: ignore[not-callable]
+      loss = cce(transitions.action, logits)
 
     gradients = tape.gradient(loss, self._network.trainable_variables)
     self._optimizer.apply(gradients, self._network.trainable_variables)

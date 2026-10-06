@@ -83,7 +83,7 @@ class DistributionalMPOLearner(acme.Learner):
 
     # Batch dataset and create iterator.
     # TODO(b/155086959): Fix type stubs and remove.
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator = iter(dataset)
 
     self._policy_loss_module = policy_loss_module or losses.MPO(
         epsilon=1e-1,

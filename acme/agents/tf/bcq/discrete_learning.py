@@ -78,7 +78,7 @@ class _InternalBCQLearner(core.Learner, tf2_savers.TFSaveable):
 
     # Internalise agent components (replay buffer, networks, optimizer).
     # TODO(b/155086959): Fix type stubs and remove.
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator = iter(dataset)
     self._network = network
     self._q_network = network.q_network
     self._target_q_network = copy.deepcopy(network.q_network)

@@ -91,7 +91,7 @@ class Agent(core.Actor, core.VariableSource):
         return False
     return True
 
-  def update(self):  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
+  def update(self):  # pyrefly: ignore[bad-override]
     if self._iterator:
       # Perform learner steps as long as iterator has data.
       update_actor = False

@@ -27,9 +27,7 @@ from dm_env import specs
 import numpy as np
 import tree
 
-# pytype: disable=import-error
 import pyspiel
-# pytype: enable=import-error
 
 
 class OpenSpielEnvironmentLoop(core.Worker):

@@ -66,7 +66,7 @@ class DemonstrationRecorder:
   def make_tf_dataset(self):
     types = tree.map_structure(lambda x: x.dtype, self._demos[0])
     shapes = tree.map_structure(lambda x: x.shape, self._demos[0])
-    ds = tf.data.Dataset.from_generator(lambda: self._demos, types, shapes)  # pyrefly: ignore[bad-argument-type]
+    ds = tf.data.Dataset.from_generator(lambda: self._demos, types, shapes)
     return ds.repeat().shuffle(len(self._demos))
 
 

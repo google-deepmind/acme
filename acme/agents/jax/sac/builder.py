@@ -101,7 +101,8 @@ class SACBuilder(builders.ActorLearnerBuilder[sac_networks.SACNetworks,
     variable_client = variable_utils.VariableClient(
         variable_source, 'policy', device='cpu')
     return actors.GenericActor(
-        actor_core, random_key, variable_client, adder, backend='cpu')  # pyrefly: ignore[bad-argument-type]
+        actor_core, random_key, variable_client, adder, backend='cpu'
+    )
 
   def make_replay_tables(
       self,

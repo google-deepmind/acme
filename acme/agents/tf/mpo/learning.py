@@ -70,7 +70,7 @@ class MPOLearner(acme.Learner):
 
     # Batch dataset and create iterator.
     # TODO(b/155086959): Fix type stubs and remove.
-    self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
+    self._iterator = iter(dataset)
 
     # Store online and target networks.
     self._policy_network = policy_network
