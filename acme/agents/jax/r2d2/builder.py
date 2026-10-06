@@ -248,7 +248,8 @@ class R2D2Builder(Generic[actor_core_lib.RecurrentState],
         update_period=self._config.variable_update_period)
 
     return actors.GenericActor(
-        policy, random_key, variable_client, adder, backend='cpu')  # pyrefly: ignore[bad-argument-type]
+        policy, random_key, variable_client, adder, backend='cpu'
+    )
 
   def make_policy(self,
                   networks: r2d2_networks.R2D2Networks,

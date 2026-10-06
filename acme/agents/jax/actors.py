@@ -37,13 +37,13 @@ class GenericActor(core.Actor, Generic[actor_core.State, actor_core.Extras]):
 
   def __init__(
       self,
-      actor: actor_core.ActorCore[actor_core.State, actor_core.Extras],  # pyrefly: ignore[invalid-type-var]
+      actor: actor_core.ActorCore[actor_core.State, actor_core.Extras],
       random_key: network_lib.PRNGKey,
       variable_client: Optional[variable_utils.VariableClient],
       adder: Optional[adders.Adder] = None,
       jit: bool = True,
       backend: Optional[str] = 'cpu',
-      per_episode_update: bool = False
+      per_episode_update: bool = False,
   ):
     """Initializes a feed forward actor.
 

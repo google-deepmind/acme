@@ -126,7 +126,8 @@ def build_experiment_config() -> experiments.ExperimentConfig:
     transitions_iterator = tfds.get_tfds_dataset(
         dataset_name, num_demonstrations, env_spec=environment_spec)
     return pwil.PWILDemonstrations(
-        demonstrations=transitions_iterator, episode_length=1000)  # pyrefly: ignore[bad-argument-type]
+        demonstrations=transitions_iterator, episode_length=1000
+    )
 
   # Construct PWIL agent
   pwil_config = pwil.PWILConfig(num_transitions_rb=0)

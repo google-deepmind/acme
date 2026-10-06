@@ -181,8 +181,9 @@ class R2D2Learner(acme.Learner):
 
       # Periodically update target networks.
       steps = state.steps + 1
-      target_params = optax.periodic_update(new_params, state.target_params,  # pytype: disable=wrong-arg-types  # numpy-scalars
-                                            steps, self._target_update_period)
+      target_params = optax.periodic_update(
+          new_params, state.target_params, steps, self._target_update_period
+      )
 
       new_state = TrainingState(
           params=new_params,
@@ -199,9 +200,10 @@ class R2D2Learner(acme.Learner):
           # Fetch array and combine device and batch dimensions.
           lambda x: utils.fetch_devicearray(x).reshape((-1,) + x.shape[2:]),  # pyrefly: ignore[missing-attribute]
           (keys, priorities))
-      replay_client.mutate_priorities(  # pytype: disable=attribute-error
+      replay_client.mutate_priorities(  # pyrefly: ignore[missing-attribute]
           table=adders.DEFAULT_PRIORITY_TABLE,
-          updates=dict(zip(keys, priorities)))
+          updates=dict(zip(keys, priorities)),
+      )
 
     # Internalise components, hyperparameters, logger, counter, and methods.
     self._iterator = iterator
@@ -228,7 +230,7 @@ class R2D2Learner(acme.Learner):
     logging.info('Total number of params: %d',
                  sum(tree.flatten(sizes.values())))
 
-    state = TrainingState(  # pytype: disable=wrong-arg-types  # jnp-type
+    state = TrainingState(
         params=initial_params,
         target_params=initial_params,
         opt_state=opt_state,

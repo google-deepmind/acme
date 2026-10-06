@@ -136,7 +136,7 @@ class AdderTestMixin(absltest.TestCase):
         table=adders.DEFAULT_PRIORITY_TABLE,
         num_samples=self.num_items(),
         emit_timesteps=False)
-    return [sample.data for sample in sampler]  # pytype: disable=attribute-error
+    return [sample.data for sample in sampler]  # pyrefly: ignore[missing-attribute]
 
   def run_test_adder(
       self,

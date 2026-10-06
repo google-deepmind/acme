@@ -118,8 +118,9 @@ class SGDLearner(acme.Learner):
 
       # Periodically update target networks.
       steps = state.steps + 1
-      target_params = optax.periodic_update(new_params, state.target_params,  # pytype: disable=wrong-arg-types  # numpy-scalars
-                                            steps, target_update_period)
+      target_params = optax.periodic_update(
+          new_params, state.target_params, steps, target_update_period
+      )
 
       new_training_state = TrainingState(
           new_params, target_params, new_opt_state, steps, next_rng_key)

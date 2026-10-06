@@ -83,7 +83,7 @@ def _make_demonstration_dataset_factory(
         transitions_iterator, key=random_key, batch_size=batch_size
     )
 
-  return demonstration_dataset_factory  # pytype: disable=bad-return-type
+  return demonstration_dataset_factory  # pyrefly: ignore[bad-return]
 
 
 def build_experiment_config() -> (
@@ -114,7 +114,7 @@ def build_experiment_config() -> (
 
   # Construct the agent
   iq_learn_config = iq_learn.IQLearnConfig(alpha=1.0)
-  iq_learn_builder = iq_learn.IQLearnBuilder(  # pytype: disable=wrong-arg-types
+  iq_learn_builder = iq_learn.IQLearnBuilder(
       config=iq_learn_config, make_demonstrations=make_demonstrations  # pyrefly: ignore[bad-argument-type]
   )
 

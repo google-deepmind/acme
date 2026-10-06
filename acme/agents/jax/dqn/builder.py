@@ -97,11 +97,12 @@ class DQNBuilder(builders.ActorLearnerBuilder[dqn_networks.DQNNetworks,
     variable_client = variable_utils.VariableClient(
         variable_source, '', device='cpu')
     return actors.GenericActor(
-        actor=policy,  # pyrefly: ignore[bad-argument-type]
+        actor=policy,
         random_key=random_key,
         variable_client=variable_client,
         adder=adder,
-        backend=self._actor_backend)
+        backend=self._actor_backend,
+    )
 
   def make_replay_tables(
       self,

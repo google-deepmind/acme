@@ -47,7 +47,7 @@ def make_env_and_model(
   """Create environment and corresponding model (learned or simulator)."""
   raw_env = bsuite.load_from_id(bsuite_id)
   if FLAGS.simulator:
-    model = simulator.Simulator(raw_env)  # pytype: disable=attribute-error
+    model = simulator.Simulator(raw_env)
   else:
     model = mlp.MLPModel(
         specs.make_environment_spec(raw_env),
@@ -98,7 +98,7 @@ def main(_):
 
   # Run the environment loop.
   loop = acme.EnvironmentLoop(environment, agent)
-  loop.run(num_episodes=environment.bsuite_num_episodes)  # pytype: disable=attribute-error
+  loop.run(num_episodes=environment.bsuite_num_episodes)  # pyrefly: ignore[missing-attribute]
 
 
 if __name__ == '__main__':

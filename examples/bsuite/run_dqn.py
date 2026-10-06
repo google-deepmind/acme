@@ -53,7 +53,7 @@ def main(_):
 
   # Run the environment loop.
   loop = acme.EnvironmentLoop(environment, agent)
-  loop.run(num_episodes=environment.bsuite_num_episodes)  # pytype: disable=attribute-error
+  loop.run(num_episodes=environment.bsuite_num_episodes)
 
 
 if __name__ == '__main__':

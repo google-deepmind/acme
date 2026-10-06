@@ -58,7 +58,7 @@ def alternating_epsilons_actor_core(policy_network: EpsilonPolicy,
                        observation: networks_lib.Observation,
                        state: EpsilonActorState):
     random_key, key = jax.random.split(state.rng)
-    actions = policy_network(params, key, observation, state.epsilon)  # pytype: disable=wrong-arg-types  # jax-ndarray
+    actions = policy_network(params, key, observation, state.epsilon)  # pyrefly: ignore[bad-argument-type]
     return (actions.astype(jnp.int32),
             EpsilonActorState(rng=random_key, epsilon=state.epsilon))
 

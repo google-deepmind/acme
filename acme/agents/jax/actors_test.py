@@ -131,8 +131,9 @@ class RecurrentActorTest(absltest.TestCase):
 
     actor_core = actor_core_lib.batched_recurrent_to_actor_core(
         policy, initial_state)
-    actor = actors.GenericActor(actor_core, jax.random.PRNGKey(1),  # pyrefly: ignore[bad-argument-type]
-                                variable_client)
+    actor = actors.GenericActor(
+        actor_core, jax.random.PRNGKey(1), variable_client
+    )
 
     loop = environment_loop.EnvironmentLoop(environment, actor)
     loop.run(20)
