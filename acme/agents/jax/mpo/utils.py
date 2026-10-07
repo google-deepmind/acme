@@ -100,7 +100,7 @@ def make_sequences_from_transitions(
   )
   reward = duplicate(transitions.reward)
 
-  return adders.Step(  # pytype: disable=wrong-arg-types  # jnp-type
+  return adders.Step(
       observation=observation,
       action=duplicate(transitions.action),
       reward=reward,

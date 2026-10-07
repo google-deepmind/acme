@@ -177,17 +177,22 @@ class RolloutLoss:
       q_improvement = self._rolling_window(targets.q_improvement[:, 1:], axis=1)  # pyrefly: ignore[unsupported-operation]
 
       def policy_loss_fn(root_idx) -> jnp.ndarray:
-        chex.assert_shape((rollout.policy.logits, policy_targets.logits),  # pytype: disable=attribute-error  # numpy-scalars
-                          (self._model_rollout_length, num_rollouts - 1, None))
+        chex.assert_shape(
+            (rollout.policy.logits, policy_targets.logits),  # pyrefly: ignore[missing-attribute]
+            (self._model_rollout_length, num_rollouts - 1, None),
+        )
         chex.assert_shape(q_improvement,
                           (None, self._model_rollout_length, num_rollouts - 1))
         # Compute MPO's E-step unnormalized logits.
         temperature = discrete_losses.get_temperature_from_params(dual_params)  # pyrefly: ignore[bad-argument-type]
         policy_target_probs = jax.nn.softmax(
-            jnp.transpose(q_improvement[..., root_idx]) / temperature +  # pyrefly: ignore[bad-index]
-            jax.nn.log_softmax(policy_targets[:, root_idx].logits, axis=-1))  # pytype: disable=attribute-error  # numpy-scalars
-        return softmax_cross_entropy(rollout.policy[:, root_idx].logits,  # pytype: disable=bad-return-type  # numpy-scalars
-                                     jax.lax.stop_gradient(policy_target_probs))
+            jnp.transpose(q_improvement[..., root_idx]) / temperature  # pyrefly: ignore[bad-index]
+            + jax.nn.log_softmax(policy_targets[:, root_idx].logits, axis=-1)  # pyrefly: ignore[bad-index, missing-attribute]
+        )
+        return softmax_cross_entropy(  # pyrefly: ignore[bad-return]
+            rollout.policy[:, root_idx].logits,  # pyrefly: ignore[unsupported-operation]
+            jax.lax.stop_gradient(policy_target_probs),
+        )
 
       # Compute the MPO loss and add it to the overall rollout policy loss.
       mpo_policy_loss = jax.vmap(policy_loss_fn)(indices[:-1])
@@ -211,7 +216,7 @@ class RolloutLoss:
             rollout.policy.logits[:, root_idx],  # pyrefly: ignore[missing-attribute]
             bc_targets[:, root_idx],  # pyrefly: ignore[bad-index]
             rng=key)
-        return loss, top1_accuracy  # pytype: disable=bad-return-type  # numpy-scalars
+        return loss, top1_accuracy  # pyrefly: ignore[bad-return]
 
       # Compute each rollout loss by vmapping over the rollouts.
       bc_policy_loss, bc_policy_acc = jax.vmap(bc_policy_loss_fn)(indices[:-1])
@@ -234,4 +239,4 @@ class RolloutLoss:
         'rollout_loss': loss,
     }
 
-    return loss, logging_dict  # pytype: disable=bad-return-type  # jax-ndarray
+    return loss, logging_dict  # pyrefly: ignore[bad-return]

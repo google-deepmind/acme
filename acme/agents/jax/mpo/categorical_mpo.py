@@ -137,9 +137,12 @@ class CategoricalMPO:
 
     # Compute the E-step logits and the temperature loss, used to adapt the
     # tempering of Q-values.
-    logits_e_step, loss_temperature = compute_weights_and_temperature_loss(  # pytype: disable=wrong-arg-types  # jax-ndarray
-        q_values=q_values, logits=target_action_distribution.logits,  # pyrefly: ignore[bad-argument-type]
-        epsilon=self._epsilon, temperature=temperature)  # pyrefly: ignore[bad-argument-type]
+    logits_e_step, loss_temperature = compute_weights_and_temperature_loss(
+        q_values=q_values,
+        logits=target_action_distribution.logits,  # pyrefly: ignore[bad-argument-type]
+        epsilon=self._epsilon,
+        temperature=temperature,  # pyrefly: ignore[bad-argument-type]
+    )
     action_distribution_e_step = distrax.Categorical(logits=logits_e_step)
 
     # Only needed for diagnostics: Compute estimated actualized KL between the
@@ -165,7 +168,7 @@ class CategoricalMPO:
     loss = loss_policy + loss_kl + loss_dual
 
     # Create statistics.
-    stats = CategoricalMPOStats(  # pytype: disable=wrong-arg-types  # jnp-type
+    stats = CategoricalMPOStats(
         # Dual Variables.
         dual_alpha=jnp.mean(alpha),  # pyrefly: ignore[bad-argument-type]
         dual_temperature=jnp.mean(temperature),  # pyrefly: ignore[bad-argument-type]
@@ -238,4 +241,4 @@ def clip_categorical_mpo_params(
 
 
 def get_temperature_from_params(params: CategoricalMPOParams) -> float:
-  return jax.nn.softplus(params.log_temperature) + _MPO_FLOAT_EPSILON  # pytype: disable=bad-return-type  # jax-nn-types
+  return jax.nn.softplus(params.log_temperature) + _MPO_FLOAT_EPSILON  # pyrefly: ignore[bad-return]
