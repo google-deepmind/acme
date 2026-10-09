@@ -94,6 +94,23 @@ class CanonicalSpecDiscreteTest(absltest.TestCase):
     wrapped.step(np.array([-1.0, 1.0], dtype=np.float32))
     np.testing.assert_allclose(environment.last_action, [-2.0, 14.0])
 
+  def test_custom_continuous_bounded_array_still_scales(self):
+    class _CustomContinuousSpec(specs.BoundedArray):
+      pass
+
+    original = _CustomContinuousSpec(
+        (1,), np.float32, minimum=-4.0, maximum=8.0
+    )
+    environment = _ActionEnvironment(original)
+    wrapped = canonical_spec.CanonicalSpecWrapper(environment)
+
+    converted = wrapped.action_spec()
+    self.assertIsInstance(converted, _CustomContinuousSpec)
+    np.testing.assert_array_equal(converted.minimum, [-1.0])
+    np.testing.assert_array_equal(converted.maximum, [1.0])
+    wrapped.step(np.array([0.0], dtype=np.float32))
+    np.testing.assert_allclose(environment.last_action, [2.0])
+
   def test_nested_discrete_and_continuous_specs(self):
     environment = _ActionEnvironment(
         {
