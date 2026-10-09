@@ -59,7 +59,10 @@ def _convert_spec(nested_spec: types.NestedSpec) -> types.NestedSpec:
 
   def _convert_single_spec(spec: specs.Array) -> specs.Array:
     """Converts a single spec to canonical if bounded."""
-    if isinstance(spec, specs.BoundedArray):
+    # DiscreteArray also inherits BoundedArray, but its constructor takes
+    # num_values rather than minimum/maximum, and it is not continuous.
+    if (isinstance(spec, specs.BoundedArray) and
+        not isinstance(spec, specs.DiscreteArray)):
       return spec.replace(
           minimum=-np.ones(spec.shape), maximum=np.ones(spec.shape))
     else:
@@ -77,7 +80,9 @@ def _scale_nested_action(
 
   def _scale_action(action: np.ndarray, spec: specs.Array):
     """Converts a single canonical action back to the given action spec."""
-    if isinstance(spec, specs.BoundedArray):
+    # DiscreteArray values are indices, not continuous coordinates.
+    if (isinstance(spec, specs.BoundedArray) and
+        not isinstance(spec, specs.DiscreteArray)):
       # Get scale and offset of output action spec.
       scale = spec.maximum - spec.minimum
       offset = spec.minimum
