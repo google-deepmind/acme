@@ -18,17 +18,25 @@ import collections
 
 from acme import types
 from acme.wrappers import base
+import enum
 import dm_env
 from dm_env import specs as dm_env_specs
 import numpy as np
 import tree
 
 
+class FillBehavior(enum.Enum):
+  """Class to enumerate available options for frame-stacking behavior at episode starts."""
+  ZEROS = 'zeros'
+  FIRST = 'first'
+
+
 class FrameStackingWrapper(base.EnvironmentWrapper):
   """Wrapper that stacks observations along a new final axis."""
 
   def __init__(self, environment: dm_env.Environment, num_frames: int = 4,
-               flatten: bool = False):
+               flatten: bool = False,
+               fill_behavior: FillBehavior = FillBehavior.ZEROS):
     """Initializes a new FrameStackingWrapper.
 
     Args:
@@ -39,7 +47,8 @@ class FrameStackingWrapper(base.EnvironmentWrapper):
     self._environment = environment
     original_spec = self._environment.observation_spec()
     self._stackers = tree.map_structure(
-        lambda _: FrameStacker(num_frames=num_frames, flatten=flatten),
+        lambda _: FrameStacker(
+          num_frames=num_frames, flatten=flatten, fill_behavior=fill_behavior),
         self._environment.observation_spec())
     self._observation_spec = tree.map_structure(
         lambda stacker, spec: stacker.update_spec(spec),
@@ -65,9 +74,16 @@ class FrameStackingWrapper(base.EnvironmentWrapper):
 class FrameStacker:
   """Simple class for frame-stacking observations."""
 
-  def __init__(self, num_frames: int, flatten: bool = False):
+  def __init__(self,
+    num_frames: int,
+    flatten: bool = False,
+    fill_behavior: FillBehavior = FillBehavior.ZEROS
+  ):
     self._num_frames = num_frames
     self._flatten = flatten
+    if not isinstance(fill_behavior, FillBehavior):
+      raise TypeError("Expect fill_behavior to be an FillBehavior enum")
+    self._fill_behavior = fill_behavior
     self.reset()
 
   @property
@@ -80,8 +96,11 @@ class FrameStacker:
   def step(self, frame: np.ndarray) -> np.ndarray:
     """Append frame to stack and return the stack."""
     if not self._stack:
-      # Fill stack with blank frames if empty.
-      self._stack.extend([np.zeros_like(frame)] * (self._num_frames - 1))
+      if self._fill_behavior == FillBehavior.ZEROS:
+        # Fill stack with blank frames if empty.
+        self._stack.extend([np.zeros_like(frame)] * (self._num_frames - 1))
+      elif self._fill_behavior == FillBehavior.FIRST:
+        self._stack.extend([frame] * (self._num_frames - 1))
     self._stack.append(frame)
     stacked_frames = np.stack(self._stack, axis=-1)
 
