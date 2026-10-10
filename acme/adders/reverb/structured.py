@@ -254,7 +254,7 @@ def create_sequence_config(
 
   Raises:
     ValueError: If sequence_length is <= 0.
-    NotImplementedError: If `end_of_episod_behavior` is `ZERO_PAD`.
+    NotImplementedError: If `end_of_episode_behavior` is `ZERO_PAD`.
   """
   if sequence_length <= 0:
     raise ValueError(f'sequence_length must be > 0 but got {sequence_length}.')
@@ -359,7 +359,7 @@ def create_sequence_config(
       end_of_episode_configs.append(config)
   else:
     raise ValueError(
-        f'Unexpected `end_of_episod_behavior`: {end_of_episode_behavior}'
+        f'Unexpected `end_of_episode_behavior`: {end_of_episode_behavior}'
     )
 
   return [base_config] + end_of_episode_configs
