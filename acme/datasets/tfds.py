@@ -211,8 +211,11 @@ class JaxInMemoryRandomSampleIterator(Iterator[Any]):
         )
       self._sample = sample_and_postprocess
     else:
-      self._sample = jax.jit(
-          lambda key: sample_per_shard(self._jax_dataset, key))
+      # Pass the dataset as a dynamic JIT argument rather than closing over it.
+      # Capturing large device arrays embeds them as XLA constants and can
+      # exhaust compiler memory or stall GPU compilation.
+      jitted_sample = jax.jit(sample_per_shard)
+      self._sample = lambda key: jitted_sample(self._jax_dataset, key)
 
   def __next__(self) -> Any:
     data, self._key = self._sample(self._key)
