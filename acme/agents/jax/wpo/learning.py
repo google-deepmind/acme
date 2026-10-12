@@ -80,7 +80,7 @@ class WPOLearner(acme.Learner):
 
   _state: TrainingState
 
-  def __init__(  # pytype: disable=annotation-type-mismatch  # numpy-scalars
+  def __init__(
       self,
       environment_spec: specs.EnvironmentSpec,
       networks: wpo_networks.WPONetworks,
@@ -531,19 +531,23 @@ class WPOLearner(acme.Learner):
     dual_params = optax.apply_updates(state.dual_params, dual_updates)
 
     # Clip dual params at some minimum value.
-    dual_params = continuous_losses.clip_wpo_params(dual_params)  # pytype: disable=wrong-arg-types
+    dual_params = continuous_losses.clip_wpo_params(dual_params)  # pyrefly: ignore[bad-argument-type]
 
     steps = state.steps + 1
 
     # Periodically update target networks.
     if self._target_update_period:
-      target_params = optax.periodic_update(params, state.target_params, steps,  # pytype: disable=wrong-arg-types  # numpy-scalars
-                                            self._target_update_period)
+      target_params = optax.periodic_update(
+          params,
+          state.target_params,  # pyrefly: ignore[bad-argument-type]
+          steps,  # pyrefly: ignore[bad-argument-type]
+          self._target_update_period,
+      )
     elif self._target_update_rate:
       target_params = optax.incremental_update(params, state.target_params,  # pyrefly: ignore[bad-argument-type]
                                                self._target_update_rate)
 
-    new_state = TrainingState(  # pytype: disable=wrong-arg-types  # numpy-scalars
+    new_state = TrainingState(
         params=params,  # pyrefly: ignore[bad-argument-type]
         target_params=target_params,  # pyrefly: ignore[bad-argument-type, unbound-name]
         dual_params=dual_params,

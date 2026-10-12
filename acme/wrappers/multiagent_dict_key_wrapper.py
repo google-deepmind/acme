@@ -57,8 +57,9 @@ class MultiagentDictKeyWrapper(base.EnvironmentWrapper):
   def _dict_to_list(self, data: Union[Dict[str, V], V]) -> Union[List[V], V]:
     """Convert dict-indexed data to list-indexed, otherwise passthrough."""
     if isinstance(data, dict):
-      return [data[str(i_agent)]
-              for i_agent in range(self._environment.num_agents)]   # pytype: disable=attribute-error
+      return [
+          data[str(i_agent)] for i_agent in range(self._environment.num_agents)  # pyrefly: ignore[missing-attribute]
+      ]
     return data
 
   def _convert_timestep(self, timestep: dm_env.TimeStep) -> dm_env.TimeStep:
@@ -74,14 +75,14 @@ class MultiagentDictKeyWrapper(base.EnvironmentWrapper):
   def reset(self) -> dm_env.TimeStep:
     return self._convert_timestep(self._environment.reset())
 
-  def action_spec(self) -> types.NestedSpec:  # Internal pytype check.
+  def action_spec(self) -> types.NestedSpec:
     return self._action_spec
 
-  def discount_spec(self) -> types.NestedSpec:  # Internal pytype check.
+  def discount_spec(self) -> types.NestedSpec:
     return self._discount_spec
 
-  def observation_spec(self) -> types.NestedSpec:  # Internal pytype check.
+  def observation_spec(self) -> types.NestedSpec:
     return self._observation_spec
 
-  def reward_spec(self) -> types.NestedSpec:  # Internal pytype check.
+  def reward_spec(self) -> types.NestedSpec:
     return self._reward_spec

@@ -156,7 +156,9 @@ class PPOBuilder(
       optimizer = optax.chain(
           optax.clip_by_global_norm(self._config.max_gradient_norm),
           optax.scale_by_adam(eps=self._config.adam_epsilon),
-          optax.scale_by_schedule(self._config.learning_rate), optax.scale(-1))  # pytype: disable=wrong-arg-types  # numpy-scalars
+          optax.scale_by_schedule(self._config.learning_rate),  # pyrefly: ignore[bad-argument-type]
+          optax.scale(-1),
+      )
     else:
       optimizer = optax.chain(
           optax.clip_by_global_norm(self._config.max_gradient_norm),
@@ -213,7 +215,7 @@ class PPOBuilder(
       obs_normalization_fns = self._config.obs_normalization_fns_factory(
           environment_spec.observations)
       actor = normalization.NormalizedGenericActor(
-          actor_core,  # pyrefly: ignore[bad-argument-type]
+          actor_core,
           obs_normalization_fns,
           random_key,
           variable_client,
@@ -229,7 +231,8 @@ class PPOBuilder(
           device='cpu',
           update_period=self._config.variable_update_period)
       actor = actors.GenericActor(
-          actor_core, random_key, variable_client, adder, backend='cpu')  # pyrefly: ignore[bad-argument-type]
+          actor_core, random_key, variable_client, adder, backend='cpu'
+      )
     return actor
 
   def make_policy(

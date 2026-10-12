@@ -27,9 +27,7 @@ configuration using the wrapper defined in atari_wrapper.py.
 from typing import List
 
 from acme.wrappers import atari_wrapper
-# pytype: disable=import-error
 import cv2
-# pytype: enable=import-error
 import dm_env
 import numpy as np
 

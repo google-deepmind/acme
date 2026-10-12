@@ -32,9 +32,7 @@ import tree
 try:
   # The following import registers multigrid environments in gym. Do not remove.
   # pylint: disable=unused-import, disable=g-import-not-at-top
-  # pytype: disable=import-error
   from social_rl.gym_multigrid import multigrid
-  # pytype: enable=import-error
   # pylint: enable=unused-import, enable=g-import-not-at-top
 except ModuleNotFoundError as err:
   raise ModuleNotFoundError(
@@ -66,15 +64,17 @@ class MultigridWrapper(dm_env.Environment):
     self._environment = environment
     self._reset_next_step = True
     self._last_info = None
-    self.num_agents = environment.n_agents  # pytype: disable=attribute-error
+    self.num_agents = environment.n_agents
 
     # Convert action and observation specs.
     obs_space = self._environment.observation_space
     act_space = self._environment.action_space
     self._observation_spec = _convert_to_spec(
-        obs_space, self.num_agents, name='observation')  # pyrefly: ignore[bad-argument-type]
+        obs_space, self.num_agents, name='observation'
+    )
     self._action_spec = _convert_to_spec(
-        act_space, self.num_agents, name='action')  # pyrefly: ignore[bad-argument-type]
+        act_space, self.num_agents, name='action'
+    )
 
   def process_obs(self, observation: types.NestedArray) -> types.NestedArray:
     # Convert observations to agent-index-first format
@@ -124,13 +124,13 @@ class MultigridWrapper(dm_env.Environment):
       return dm_env.termination(reward, observation)
     return dm_env.transition(reward, observation)
 
-  def observation_spec(self) -> types.NestedSpec:  # Internal pytype check.
+  def observation_spec(self) -> types.NestedSpec:
     return self._observation_spec
 
-  def action_spec(self) -> types.NestedSpec:  # Internal pytype check.
+  def action_spec(self) -> types.NestedSpec:
     return self._action_spec
 
-  def reward_spec(self) -> types.NestedSpec:  # Internal pytype check.
+  def reward_spec(self) -> types.NestedSpec:
     return [specs.Array(shape=(), dtype=float, name='rewards')
            ] * self._environment.n_agents
 
@@ -238,9 +238,10 @@ def _gym_to_spec(space: gym.Space,
     return specs.BoundedArray(
         shape=space.shape,
         dtype=space.dtype,
-        minimum=np.zeros(space.shape),  # pyrefly: ignore[no-matching-overload]
+        minimum=np.zeros(space.shape),
         maximum=space.nvec - 1,
-        name=name)
+        name=name,
+    )
 
   elif isinstance(space, spaces.Tuple):
     return tuple(_gym_to_spec(s, name) for s in space.spaces)

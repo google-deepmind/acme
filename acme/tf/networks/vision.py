@@ -229,7 +229,7 @@ class DrQTorso(snt.Module):
     """Evaluates the ResidualPixelCore."""
 
     # Normalize to -0.5 to 0.5
-    preprocessed_inputs = _preprocess_inputs(inputs, self._output_dtype) - 0.5  # pyrefly: ignore[unsupported-operation]
+    preprocessed_inputs = _preprocess_inputs(inputs, self._output_dtype) - 0.5
 
     torso_output = self._network(preprocessed_inputs)
 

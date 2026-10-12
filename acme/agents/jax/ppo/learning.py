@@ -174,7 +174,7 @@ class PPOLearner(acme.Learner):
         value_loss = jnp.mean(unclipped_value_loss)
 
       total_ppo_loss = total_policy_loss + value_cost * value_loss + extra_loss
-      return total_ppo_loss, {  # pytype: disable=bad-return-type  # numpy-scalars
+      return total_ppo_loss, {  # pyrefly: ignore[bad-return]
           'loss_total': total_ppo_loss,  # pyrefly: ignore[bad-assignment]
           'loss_policy_total': total_policy_loss,  # pyrefly: ignore[bad-assignment]
           'loss_extra': extra_loss,  # pyrefly: ignore[bad-assignment]
@@ -496,7 +496,7 @@ class PPOLearner(acme.Learner):
             value_std=value_std)
 
       if normalize_obs:
-        obs_norm_params = obs_normalization_fns.init()  # pytype: disable=attribute-error
+        obs_norm_params = obs_normalization_fns.init()
         stacked_obs_norm_params = jax.tree_util.tree_map(
             lambda *xs: jnp.stack(xs),
             *[obs_norm_params] * len(self.local_learner_devices)

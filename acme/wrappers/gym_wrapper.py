@@ -41,8 +41,8 @@ class GymWrapper(dm_env.Environment):
     # Convert action and observation specs.
     obs_space = self._environment.observation_space
     act_space = self._environment.action_space
-    self._observation_spec = _convert_to_spec(obs_space, name='observation')  # pyrefly: ignore[bad-argument-type]
-    self._action_spec = _convert_to_spec(act_space, name='action')  # pyrefly: ignore[bad-argument-type]
+    self._observation_spec = _convert_to_spec(obs_space, name='observation')
+    self._action_spec = _convert_to_spec(act_space, name='action')
 
   def reset(self) -> dm_env.TimeStep:
     """Resets the episode."""
@@ -145,9 +145,10 @@ def _convert_to_spec(space: gym.Space,
     return specs.BoundedArray(
         shape=space.shape,
         dtype=space.dtype,
-        minimum=np.zeros(space.shape),  # pyrefly: ignore[no-matching-overload]
+        minimum=np.zeros(space.shape),
         maximum=space.nvec - 1,
-        name=name)
+        name=name,
+    )
 
   elif isinstance(space, spaces.Tuple):
     return tuple(_convert_to_spec(s, name) for s in space.spaces)
@@ -173,9 +174,7 @@ class GymAtariAdapter(GymWrapper):
 
   def _wrap_observation(self,
                         observation: types.NestedArray) -> types.NestedArray:
-    # pytype: disable=attribute-error
     return observation, self._environment.ale.lives()
-    # pytype: enable=attribute-error
 
   def reset(self) -> dm_env.TimeStep:
     """Resets the episode."""
@@ -203,4 +202,4 @@ class GymAtariAdapter(GymWrapper):
             specs.Array(shape=(), dtype=np.dtype('float64'), name='lives'))
 
   def action_spec(self) -> List[specs.BoundedArray]:
-    return [self._action_spec]  # pytype: disable=bad-return-type
+    return [self._action_spec]  # pyrefly: ignore[bad-return]

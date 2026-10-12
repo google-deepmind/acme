@@ -16,9 +16,7 @@
 
 from typing import Any, Callable, Iterable, Optional, Union
 
-# pytype: disable=import-error
 from acme.wrappers import open_spiel_wrapper
-# pytype: enable=import-error
 
 import numpy as np
 import sonnet as snt
@@ -119,7 +117,7 @@ class EpsilonGreedy(snt.Module):
     greedy_probs /= tf.reduce_sum(greedy_probs, axis=-1, keepdims=True)
 
     # Epsilon-greedy action distribution.
-    probs = self._epsilon * dither_probs + (1 - self._epsilon) * greedy_probs  # pyrefly: ignore[unsupported-operation]
+    probs = self._epsilon * dither_probs + (1 - self._epsilon) * greedy_probs
 
     # Make the policy object.
     policy = tfd.Categorical(probs=probs)

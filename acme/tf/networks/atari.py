@@ -95,7 +95,7 @@ class R2D2AtariNetwork(base.RNNCore):
     return action_values, new_state
 
   # TODO(b/171287329): Figure out why return type annotation causes error.
-  def initial_state(self, batch_size: int, **unused_kwargs) -> base.State:  # pytype: disable=invalid-annotation
+  def initial_state(self, batch_size: int, **unused_kwargs) -> base.State:  # pyrefly: ignore[bad-override]
     return self._core.initial_state(batch_size)  # pyrefly: ignore[bad-return]
 
   def unroll(

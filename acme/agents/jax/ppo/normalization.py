@@ -55,15 +55,17 @@ class NormalizedGenericActor(actors.GenericActor[actor_core.State,
                              Generic[actor_core.State, actor_core.Extras]):
   """A GenericActor that uses observation normalization."""
 
-  def __init__(self,
-               actor: actor_core.ActorCore[actor_core.State, actor_core.Extras],  # pyrefly: ignore[invalid-type-var]
-               normalization_fns: NormalizationFns,
-               random_key: network_lib.PRNGKey,
-               variable_client: Optional[variable_utils.VariableClient],
-               adder: Optional[adders.Adder] = None,
-               jit: bool = True,
-               backend: Optional[str] = 'cpu',
-               per_episode_update: bool = False):
+  def __init__(
+      self,
+      actor: actor_core.ActorCore[actor_core.State, actor_core.Extras],
+      normalization_fns: NormalizationFns,
+      random_key: network_lib.PRNGKey,
+      variable_client: Optional[variable_utils.VariableClient],
+      adder: Optional[adders.Adder] = None,
+      jit: bool = True,
+      backend: Optional[str] = 'cpu',
+      per_episode_update: bool = False,
+  ):
     """Initializes a feed forward actor.
 
     Args:
@@ -79,8 +81,15 @@ class NormalizedGenericActor(actors.GenericActor[actor_core.State,
       per_episode_update: if True, updates variable client params once at the
         beginning of each episode
     """
-    super().__init__(actor, random_key, variable_client, adder, jit, backend,  # pyrefly: ignore[bad-argument-type]
-                     per_episode_update)
+    super().__init__(
+        actor,
+        random_key,
+        variable_client,
+        adder,
+        jit,
+        backend,
+        per_episode_update,
+    )
     if jit:
       self._apply_normalization = jax.jit(
           normalization_fns.normalize, backend=backend)

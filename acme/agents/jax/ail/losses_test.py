@@ -74,7 +74,7 @@ class AilLossTest(absltest.TestCase):
     prior = .7
     loss_fn = losses.pugail_loss(
         positive_class_prior=prior, entropy_coefficient=0.)
-    loss, _ = loss_fn(  # pytype: disable=wrong-arg-types
+    loss, _ = loss_fn(
         dummy_discriminator,
         {},
         one_transition,

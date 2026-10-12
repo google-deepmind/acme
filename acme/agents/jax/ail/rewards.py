@@ -40,9 +40,9 @@ def fairl_reward(
       rewards = jnp.clip(
           rewards, min=-max_reward_magnitude, max=max_reward_magnitude
       )
-    return rewards  # pytype: disable=bad-return-type  # jax-types
+    return rewards  # pyrefly: ignore[bad-return]
 
-  return imitation_reward  # pytype: disable=bad-return-type  # jax-ndarray
+  return imitation_reward  # pyrefly: ignore[bad-return]
 
 
 def gail_reward(
@@ -73,6 +73,6 @@ def gail_reward(
       rewards = jnp.clip(
           rewards, min=-max_reward_magnitude, max=max_reward_magnitude
       )
-    return rewards  # pytype: disable=bad-return-type  # jnp-type
+    return rewards  # pyrefly: ignore[bad-return]
 
-  return imitation_reward  # pytype: disable=bad-return-type  # jax-ndarray
+  return imitation_reward  # pyrefly: ignore[bad-return]

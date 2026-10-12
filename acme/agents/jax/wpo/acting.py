@@ -87,7 +87,7 @@ def make_actor_core(wpo_networks: networks.WPONetworks,
     if store_log_prob:
       extras['log_prob'] = state.log_prob
 
-    return extras  # pytype: disable=bad-return-type  # jax-ndarray
+    return extras
 
   return actor_core_lib.ActorCore(
       init=init, select_action=select_action, get_extras=get_extras)

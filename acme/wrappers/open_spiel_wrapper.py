@@ -20,9 +20,7 @@ from acme import specs
 from acme import types
 import dm_env
 import numpy as np
-# pytype: disable=import-error
 from open_spiel.python import rl_environment
-# pytype: enable=import-error
 
 
 class OLT(NamedTuple):
