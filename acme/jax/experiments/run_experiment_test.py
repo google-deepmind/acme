@@ -14,6 +14,11 @@
 
 """Tests for the run_experiment function."""
 
+import importlib
+import math
+import sys
+from unittest import mock
+
 from acme.agents.jax import sac
 from acme.jax import experiments
 from acme.jax.experiments import test_utils as experiment_test_utils
@@ -22,6 +27,44 @@ from acme.testing import test_utils
 import dm_env
 from absl.testing import absltest
 from absl.testing import parameterized
+
+
+class DisableInsertBlockingTest(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      ('bounded', 8., 2., 1., 3),
+      ('zero_window', 2., 2., 1., 1),
+      ('unbounded', math.inf, -math.inf, None, 5),
+      ('positive_infinity', math.inf, 0., None, 5),
+      ('nan_window', math.nan, 0., None, 5),
+      ('finite_difference_overflow', 1e308, -1e308, 1., 5))
+  def test_sample_size_for_bounded_and_unbounded_limiters(
+      self, max_diff, min_diff, samples_per_insert, expected_size):
+    run_experiment_module = importlib.import_module(
+        'acme.jax.experiments.run_experiment')
+    rate_limiter_info = mock.Mock(
+        samples_per_insert=samples_per_insert,
+        min_size_to_sample=5,
+        min_diff=min_diff,
+        max_diff=max_diff)
+    table = mock.Mock()
+    table.info.rate_limiter_info = rate_limiter_info
+
+    with mock.patch.object(
+        run_experiment_module.reverb.rate_limiters, 'RateLimiter'
+    ) as make_rate_limiter:
+      modified_tables, sample_sizes = (
+          run_experiment_module._disable_insert_blocking([table]))
+
+    self.assertEqual(sample_sizes, [expected_size])
+    self.assertEqual(modified_tables, [table.replace.return_value])
+    table.replace.assert_called_once_with(
+        rate_limiter=make_rate_limiter.return_value)
+    make_rate_limiter.assert_called_once_with(
+        samples_per_insert=samples_per_insert,
+        min_size_to_sample=5,
+        min_diff=min_diff,
+        max_diff=sys.float_info.max)
 
 
 class RunExperimentTest(test_utils.TestCase):
