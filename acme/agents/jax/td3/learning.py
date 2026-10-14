@@ -111,7 +111,7 @@ class TD3Learner(acme.Learner):
           in_axes=(None, 0, 0))
       dq_da = grad_critic(critic_params, transition.observation, action)
       batch_dpg_learning = jax.vmap(rlax.dpg_loss, in_axes=(0, 0))
-      loss = jnp.mean(batch_dpg_learning(action, dq_da))
+      loss = jnp.mean(jnp.sum(batch_dpg_learning(action, dq_da), axis=-1))
       if bc_alpha is not None:
         # BC regularization for offline RL
         q_sa = networks.critic_network.apply(critic_params,
