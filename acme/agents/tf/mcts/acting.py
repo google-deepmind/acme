@@ -22,6 +22,7 @@ from acme import specs
 from acme.agents.tf.mcts import models
 from acme.agents.tf.mcts import search
 from acme.agents.tf.mcts import types
+from acme.tf import utils as tf2_utils
 from acme.tf import variable_utils as tf2_variable_utils
 
 import dm_env
@@ -66,7 +67,9 @@ class MCTSActor(acme.Actor):
   def _forward(
       self, observation: types.Observation) -> Tuple[types.Probs, types.Value]:
     """Performs a forward pass of the policy-value network."""
-    logits, value = self._network(tf.expand_dims(observation, axis=0))
+    # Use tree.map_structure to support nested observation structures.
+    batched_observation = tf2_utils.add_batch_dim(observation)
+    logits, value = self._network(batched_observation)
 
     # Convert to numpy & take softmax.
     logits = logits.numpy().squeeze(axis=0)
