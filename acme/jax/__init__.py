@@ -12,3 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""JAX-specific components for Acme."""
+
+# Expose the experiments submodule.
+from acme.jax import experiments
