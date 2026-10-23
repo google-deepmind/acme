@@ -17,7 +17,7 @@ r"""Run BCQ offline agent on Atari RL Unplugged datasets.
 Instructions:
 
 1 - Download dataset:
-> gsutil cp gs://rl_unplugged/atari/Pong/run_1-00000-of-00100 \
+> gcloud storage cp gs://rl_unplugged/atari/Pong/run_1-00000-of-00100 \
     /tmp/dataset/Pong/run_1-00000-of-00001
 
 2 - Install RL Unplugged dependencies:
