@@ -57,7 +57,7 @@ jax_requirements = [
     'jax==0.4.3',
     'jaxlib==0.4.3',
     'chex',
-    'dm-haiku',
+    'dm-haiku==0.0.10',
     'flax',
     'optax',
     'rlax',
