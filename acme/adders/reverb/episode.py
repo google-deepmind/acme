@@ -34,7 +34,26 @@ _PaddingFn = Callable[[Tuple[int, ...], np.dtype], np.ndarray]
 
 
 class EpisodeAdder(base.ReverbAdder):
-  """Adder which adds entire episodes as trajectories."""
+  """Adder which adds entire episodes as trajectories.
+
+  This adder accumulates all steps of an episode and inserts them as a single
+  trajectory item into Reverb at the end of the episode. It is useful for
+  algorithms that require full episodes (e.g., for offline learning or MCTS).
+
+  Args:
+    client: The Reverb client to use for data insertion.
+    max_sequence_length: The maximum length of an episode. Episodes longer
+      than this will raise a ValueError. If padding_fn is provided, episodes
+      shorter than this will be padded to this length.
+    delta_encoded: Whether to use delta encoding for the trajectory.
+    priority_fns: A mapping from table names to priority functions.
+    max_in_flight_items: The maximum number of items allowed to be in flight
+      (being sent to Reverb) at the same time.
+    padding_fn: An optional callable that takes a shape and dtype and returns
+      a zero-filled (or otherwise equivalent 'empty') array of that shape and
+      dtype. If provided, episodes shorter than max_sequence_length will be
+      padded.
+  """
 
   def __init__(
       self,
