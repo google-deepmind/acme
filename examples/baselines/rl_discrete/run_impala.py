@@ -79,7 +79,8 @@ def main(_):
     program = experiments.make_distributed_experiment(
         experiment=experiment_config,
         num_actors=4 if lp_utils.is_local_run() else 256)
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
+    lp_utils.launch_with_termination_handler(
+        program, xm_resources=lp_utils.make_xm_docker_resources(program))
   else:
     experiments.run_experiment(experiment_config)
 
