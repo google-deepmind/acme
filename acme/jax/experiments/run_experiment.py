@@ -14,6 +14,7 @@
 
 """Runners used for executing local agents."""
 
+import math
 import sys
 import time
 from typing import Optional, Sequence, Tuple
@@ -273,8 +274,13 @@ def _disable_insert_blocking(
         min_diff=rate_limiter_info.min_diff,
         max_diff=sys.float_info.max)
     modified_tables.append(table.replace(rate_limiter=rate_limiter))
-    # Target the middle of the rate limiter's insert-sample balance window.
-    sample_sizes.append(
-        max(1, int(
-            (rate_limiter_info.max_diff - rate_limiter_info.min_diff) / 2)))
+    # Target the middle of a bounded insert-sample balance window. An
+    # unbounded limiter uses infinite bounds, which cannot be cast to int.
+    balance_window = rate_limiter_info.max_diff - rate_limiter_info.min_diff
+    if math.isfinite(balance_window):
+      sample_size = max(1, int(balance_window / 2))
+    else:
+      # Wait until the unbounded table has its minimum sampleable size.
+      sample_size = max(1, int(rate_limiter_info.min_size_to_sample))
+    sample_sizes.append(sample_size)
   return modified_tables, sample_sizes
