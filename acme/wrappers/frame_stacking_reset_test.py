@@ -26,12 +26,13 @@ import tree
 class CountingEpisodes(dm_env.Environment):
   """A deterministic two-step environment with standard automatic resets."""
 
-  def __init__(self, nested=False, dtype=np.float32):
+  def __init__(self, nested=False, dtype=np.float32, terminal_discount=0.0):
     self.episode = 0
     self.position = 0
     self.needs_reset = True
     self.nested = nested
     self.dtype = dtype
+    self.terminal_discount = terminal_discount
 
   def observation(self):
     value = 10 * self.episode + self.position
@@ -55,7 +56,11 @@ class CountingEpisodes(dm_env.Environment):
     self.position += 1
     if self.position == 2:
       self.needs_reset = True
-      return dm_env.termination(2.0, self.observation())
+      if self.terminal_discount == 0.0:
+        return dm_env.termination(2.0, self.observation())
+      return dm_env.truncation(
+          2.0, self.observation(), discount=self.terminal_discount
+      )
     return dm_env.transition(1.0, self.observation(), discount=0.5)
 
   def observation_spec(self):
@@ -78,12 +83,17 @@ def expected_stack(observation, count, flatten):
 class FrameStackingResetTest(parameterized.TestCase):
 
   @parameterized.product(
-      count=[1, 3], flatten=[False, True], nested=[False, True]
+      count=[1, 3],
+      flatten=[False, True],
+      nested=[False, True],
+      terminal_discount=[0.0, 0.5],
   )
   def test_automatic_reset_clears_every_previous_episode_frame(
-      self, count, flatten, nested
+      self, count, flatten, nested, terminal_discount
   ):
-    env = CountingEpisodes(nested=nested)
+    env = CountingEpisodes(
+        nested=nested, terminal_discount=terminal_discount
+    )
     wrapper = frame_stacking.FrameStackingWrapper(
         env, num_frames=count, flatten=flatten
     )
@@ -94,7 +104,7 @@ class FrameStackingResetTest(parameterized.TestCase):
       last = wrapper.step(0)
       self.assertTrue(last.last())
       self.assertEqual(last.reward, 2.0)
-      self.assertEqual(last.discount, 0.0)
+      self.assertEqual(last.discount, terminal_discount)
       reset = wrapper.step(0)
       self.assertTrue(reset.first())
       self.assertIsNone(reset.reward)
