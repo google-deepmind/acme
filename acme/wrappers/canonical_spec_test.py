@@ -155,5 +155,23 @@ class CanonicalSpecDiscreteTest(absltest.TestCase):
     self.assertEqual(original.last_action, 6)
 
 
+  def test_single_precision_outside_canonical_spec_keeps_discrete_actions(self):
+    # Mirror the wrapper order in #294: SinglePrecision(CanonicalSpec(env)).
+    from acme.wrappers import single_precision
+
+    original = _ActionEnvironment(specs.DiscreteArray(7, dtype=np.int64))
+    wrapped = single_precision.SinglePrecisionWrapper(
+        canonical_spec.CanonicalSpecWrapper(original, clip=True)
+    )
+
+    converted = wrapped.action_spec()
+    self.assertIsInstance(converted, specs.DiscreteArray)
+    self.assertEqual(converted.num_values, 7)
+    self.assertEqual(converted.dtype, np.dtype(np.int32))
+
+    wrapped.step(np.int32(6))
+    self.assertEqual(original.last_action, 6)
+
+
 if __name__ == '__main__':
   absltest.main()
