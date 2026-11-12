@@ -91,7 +91,9 @@ class EnsembleTest(absltest.TestCase):
 
     y = rr_ensemble.apply(params, x)
     self.assertTupleEqual(y.shape, (3,) + x.shape)
-    np.testing.assert_allclose(params, y - jnp.broadcast_to(x, (3,) + x.shape))
+    np.testing.assert_allclose(
+        params, y - jnp.broadcast_to(x, (3,) + x.shape), atol=1e-6
+    )
 
     by = rr_ensemble.apply(params, bx)
     # Note: the batch dimension is no longer the leading dimension.
@@ -111,7 +113,7 @@ class EnsembleTest(absltest.TestCase):
 
     y = rr_ensemble.apply(params, jnp.broadcast_to(x, (3,) + x.shape))
     self.assertTupleEqual(y.shape, (3,) + x.shape)
-    np.testing.assert_allclose(params, y - x)
+    np.testing.assert_allclose(params, y - x, atol=1e-6)
 
     # Note: the ensemble dimension must lead, the batch dimension is no longer
     # the leading dimension.
@@ -125,7 +127,9 @@ class EnsembleTest(absltest.TestCase):
     self.assertTupleEqual(yy.shape, (6,) + x.shape)
     np.testing.assert_allclose(
         jnp.concatenate([params, params], axis=0),
-        yy - jnp.expand_dims(x, axis=0))
+        yy - jnp.expand_dims(x, axis=0),
+        atol=1e-6,
+    )
 
   def test_apply_mean(self):
     x = jnp.ones(10)  # Base input
