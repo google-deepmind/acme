@@ -25,6 +25,7 @@ from acme.agents.jax import actors
 from acme.agents.jax import builders
 from acme.agents.jax.ars import config as ars_config
 from acme.agents.jax.ars import learning
+from acme.agents.jax.ars import networks as ars_networks
 from acme.jax import networks as networks_lib
 from acme.jax import running_statistics
 from acme.jax import utils
@@ -145,6 +146,15 @@ class ARSBuilder(
         table=self._config.replay_table_name,
         max_in_flight_samples_per_worker=1)
     return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
+
+  def make_policy(
+      self,
+      networks: networks_lib.FeedForwardNetwork,
+      environment_spec: specs.EnvironmentSpec,
+      evaluation: bool = False,
+  ) -> Tuple[str, networks_lib.FeedForwardNetwork]:
+    del environment_spec
+    return ars_networks.make_policy_network(networks, eval_mode=evaluation)
 
   def make_adder(
       self, replay_client: reverb.Client,
