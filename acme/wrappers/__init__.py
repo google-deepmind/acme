@@ -24,8 +24,11 @@ from acme.wrappers.delayed_reward import DelayedRewardWrapper
 from acme.wrappers.expand_scalar_observation_shapes import ExpandScalarObservationShapesWrapper
 from acme.wrappers.frame_stacking import FrameStacker
 from acme.wrappers.frame_stacking import FrameStackingWrapper
-from acme.wrappers.gym_wrapper import GymAtariAdapter
-from acme.wrappers.gym_wrapper import GymWrapper
+try:
+  from acme.wrappers.gym_wrapper import GymAtariAdapter
+  from acme.wrappers.gym_wrapper import GymWrapper
+except ImportError:
+  pass
 from acme.wrappers.noop_starts import NoopStartsWrapper
 from acme.wrappers.observation_action_reward import ObservationActionRewardWrapper
 from acme.wrappers.single_precision import SinglePrecisionWrapper
@@ -36,5 +39,11 @@ from acme.wrappers.video import VideoWrapper
 try:
   # pylint: disable=g-import-not-at-top
   from acme.wrappers.open_spiel_wrapper import OpenSpielWrapper
+except ImportError:
+  pass
+
+try:
+  # pylint: disable=g-import-not-at-top
+  from acme.wrappers.gymnasium_wrapper import GymnasiumWrapper
 except ImportError:
   pass

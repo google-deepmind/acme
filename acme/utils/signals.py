@@ -19,7 +19,10 @@ import ctypes
 import threading
 from typing import Any, Callable, Optional
 
-import launchpad
+try:
+  import launchpad
+except ImportError:
+  launchpad = None
 
 _Handler = Callable[[], Any]
 
@@ -37,6 +40,10 @@ def runtime_terminator(callback: Optional[_Handler] = None):
   Yields:
       None.
   """
+  if launchpad is None:
+    yield
+    return
+
   worker_id = threading.get_ident()
   def signal_handler():
     if callback:
