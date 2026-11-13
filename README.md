@@ -7,6 +7,10 @@
 [![acme-tests][tests-badge]][tests]
 [![Documentation Status][rtd-badge]][documentation]
 
+<p align="center">
+  <b>English</b> · <a href="https://github.com/google-deepmind/acme/blob/master/README.zh.md">简体中文</a>
+</p>
+
 [pypi-versions-badge]: https://img.shields.io/pypi/pyversions/dm-acme
 [pypi-badge]: https://badge.fury.io/py/dm-acme.svg
 [pypi]: https://pypi.org/project/dm-acme/
