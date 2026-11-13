@@ -65,4 +65,6 @@ class NoopStartsWrapper(base.EnvironmentWrapper):
       if timestep.last():
         timestep = self.environment.reset()
 
-    return timestep._replace(step_type=dm_env.StepType.FIRST)
+    # The random no-op steps belong to initialization, not to the returned
+    # episode. A FIRST timestep has no preceding reward or discount.
+    return dm_env.restart(timestep.observation)
