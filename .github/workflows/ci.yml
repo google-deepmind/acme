@@ -9,7 +9,7 @@ jobs:
         docker-image: ["python:3.8", "python:3.9"]
     steps:
     - name: Checkout acme
-      uses: actions/checkout@v2
+      uses: actions/checkout@v6
     - name: Run tests in docker
       run: |
         docker run --mount "type=bind,src=$(pwd),dst=/tmp/acme" \
