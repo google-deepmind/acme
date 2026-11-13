@@ -73,6 +73,13 @@ class DelayedRewardWrapper(base.EnvironmentWrapper):
   def step(self, action: types.NestedArray) -> dm_env.TimeStep:
     """Performs one step and maybe returns a reward."""
     timestep = self.environment.step(action)
+    if timestep.first():
+      # A dm_env can automatically reset on step() after a terminal timestep.
+      # FIRST has no reward to accumulate and must start a fresh episode.
+      self._delayed_reward = self._zero_reward
+      self._accumulation_counter = 0
+      return timestep
+
     self._delayed_reward = tree.map_structure(operator.iadd,
                                               self._delayed_reward,
                                               timestep.reward)
